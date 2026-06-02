@@ -7,8 +7,9 @@ default. Checkpoint with a handoff (update this file) if context runs low.
 
 ## 0. First steps
 1. **Verify green state** (all confirmed green at handoff 2026-06-02, session 2):
-   - luqen: `master == origin == 0afbc49` (Item A `cca049d` + C#3 MCP tool `0afbc49`);
-     live `/login` → 200, `/api/v1/entitlement` → 401.
+   - luqen: `master == origin == bb3c2e5` (Item A `cca049d`, C#3 MCP `0afbc49`,
+     C#1 alt-text `62b6973`, C#2 VPAT foundation `bb3c2e5`); live `/login` → 200,
+     `/api/v1/entitlement` → 401. ONLY Item B (WP mirror) + human UAT remain.
    - luqen-wordpress: `master == origin == 8fdf14e`, **v0.26.0**, WP CI green. PRIVATE repo.
 2. **Load these memory files before planning:**
    - `project_v3_6_milestone_state` — what's DONE vs remaining (do NOT rebuild done work).
@@ -50,20 +51,37 @@ provider 400s on image turns (graceful, but no vision).
 ### Item C#3 — DONE 2026-06-02 (`0afbc49`). `llm_analyse_visual` MCP tool added.
 ### Item C#4 — already satisfied (`analyse-visual` ∈ `CAPABILITY_NAMES` → surfaces on /admin/llm).
 
-### Item B — WordPress vision mirror (luqen-wordpress repo, PRIVATE, separate CI)
-Bring the LLM-vision heading-semantics (and, if Item C lands, alt-text) check to the WP plugin.
-- **Enterprise mode (connected to a Luqen instance):** WP scans delegate to the dashboard
-  `/api/v1/scans`, so vision findings already flow through automatically once the connected
-  Luqen has a vision model configured. CONFIRM this end-to-end and surface vision findings in
-  the WP findings UI (they arrive as `runner='vision'` issues). Likely small.
-- **Standalone mode (axe-core client-side, no dashboard):** the real work. The in-browser
-  scan runner (`assets/js/scan-runner.js`, injected by `includes/class-scan-runner.php`)
-  already drives an iframe — capture a screenshot + heading outline client-side, then POST to
-  the connected Luqen's `analyse-visual` (vision REQUIRES an LLM, so standalone-with-no-
-  connection cannot do vision — gate the feature on a configured connection; degrade silently
-  otherwise). Map verdicts into the existing findings POST
-  (`/wp-json/luqen/v1/scans/<uid>/findings`).
+### Item B — WordPress vision mirror (luqen-wordpress repo, PRIVATE, separate CI) — NOT STARTED
+Bring the LLM-vision checks (heading-semantics→1.3.1, alt-text→1.1.1, `runner='vision'`) to the
+WP plugin. **Scoped 2026-06-02 via read-only exploration — exact edit points below.**
+
+**BLOCKER (both modes):** `includes/class-scan-store.php:~326` `sanitize_runner()` whitelists
+ONLY `['axe-core','behavioral']` — it silently downgrades any `runner='vision'` to `axe-core`.
+First edit: add `'vision'` to that array. The `wp_luqen_scan_findings` table already has the
+`runner` column (indexed); the REST proxy (`class-rest.php`) does NOT filter by runner.
+
+- **Enterprise mode (connected) — small (~2–3h):** scans delegate to the dashboard `/api/v1/scans`,
+  so once the connected Luqen has a vision model on `agent-conversation`/deep-scan, vision
+  findings already return with `runner='vision'`. After the sanitizer fix, surface them in the
+  findings UI: `includes/class-issues-table.php` (referenced by `class-issues-page.php:70` — a
+  WP_List_Table; add a "vision" pill/badge in the runner column) and the scans-page findings
+  table (`class-scans-page.php:~316+`). Optional: a runner filter (mirror the severity filter at
+  `class-issues-page.php:145–166`). CONFIRM end-to-end on wp-test.
+- **Standalone mode (axe-core client-side) — the real work (~half day):** the in-browser runner
+  (`assets/js/scan-runner.js`, injected by `includes/class-scan-runner.php:38–83`) drives an
+  iframe + axe-core + `behavioral.js`. Vision REQUIRES an LLM, so standalone with NO connection
+  CANNOT do vision — gate on `Luqen_Module_Registry::instance()->is_connected('dashboard')`
+  (`class-module-registry.php:25–75`); degrade silently otherwise. When connected: capture a
+  screenshot client-side (NO screenshot lib is currently bundled — only axe-core + plain-JS
+  behavioral.js; you'd `npm i html2canvas` and enqueue it before the runner, OR use the iframe
+  `<canvas>`/`captureBeam` — weigh CORS + payload bloat ~100–500 KB/page) + heading outline,
+  POST to the connected Luqen's `/api/v1/analyse-visual` via `Luqen_Module_Client`
+  (`class-module-client.php:69–147` — the existing authed request helper), map verdicts into the
+  findings POST (`class-scan-runner.php:111–230` receive endpoint; copy the `behavioral` payload
+  handler at ~184–208) → `runner='vision'`. Consider gating screenshot capture behind an opt-in.
 - Respect single-tier: do NOT gate behind Pro/Agency (those surfaces are dormant).
+- Suggested smallest first ship: sanitizer fix + enterprise-mode badge (low risk), defer
+  standalone screenshot capture to a follow-up.
 - **Testing is mandatory via the wp-test lxc + Playwright** (`feedback_wp_plugin_testing_lxc`):
   rsync the plugin to lxc `192.168.3.160`, restart wp-now (`:8881`), run PHPCS/PHPUnit/smoke
   ON the box, Playwright from the dev box via the `:8881` tunnel. For DB-seeded UAT drop a
