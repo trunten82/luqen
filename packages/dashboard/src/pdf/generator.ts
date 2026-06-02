@@ -822,18 +822,29 @@ export async function generateVpatPdf(
         doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Body')
           .text(
             `A dated, good-faith record of remediation activity for this site: `
-            + `${rem.summary.aiProposed} AI-proposed fix action(s), `
+            + `${rem.summary.aiProposed} AI-proposed draft fix(es), `
             + `${rem.summary.developerVerified} developer-verified, across `
             + `${rem.scanTrend.length} completed scan(s)`
             + `${rem.summary.firstActivity ? ` since ${rem.summary.firstActivity}` : ''}. `
-            + `It documents an active, ongoing remediation effort; it does not assert conformance.`,
+            + `Luqen's AI only drafts candidate fixes; a human developer reviews each one, and a change takes `
+            + `effect only when a person accepts and merges it. The AI assists drafting under human supervision — `
+            + `it never applies changes on its own, and it is not the basis of the conformance verdicts in this `
+            + `report. This section evidences an ongoing remediation effort; it does not assert conformance.`,
             left, doc.y, { lineGap: 2, width: pageWidth },
+          );
+        doc.moveDown(0.3);
+        doc.fontSize(7.5).fillColor(TEXT_SECONDARY).font('Body')
+          .text(
+            '"AI-proposed (draft)" counts fixes the AI drafted as candidate code changes for a developer to review '
+            + '— drafts, not applied or accepted changes. "Developer-verified" counts the changes a human developer '
+            + 'actually reviewed and merged.',
+            left, doc.y, { lineGap: 1.5, width: pageWidth },
           );
         doc.moveDown(0.4);
         doc.x = left;
 
         const remLabel = (t: string): string =>
-          t === 'ai-proposed' ? 'AI-proposed'
+          t === 'ai-proposed' ? 'AI-proposed (draft)'
           : t === 'developer-verified' ? 'Developer-verified'
           : 'Manual-verified';
 
