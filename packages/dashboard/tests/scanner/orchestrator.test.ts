@@ -1242,31 +1242,37 @@ describe('ScanOrchestrator', () => {
       // let's test the coreModule === null path by un-mocking temporarily
       vi.doUnmock('@luqen/core');
 
-      // Re-import the orchestrator to pick up the unmocked version
-      const { ScanOrchestrator: FreshOrchestrator } = await import('../../src/scanner/orchestrator.js');
-      const freshOrch = new FreshOrchestrator(storage, '/tmp/reports', 2);
+      // Re-import the orchestrator to pick up the unmocked version. This pulls
+      // in the REAL @luqen/core (browser deps) and runs a real scan path, which
+      // is slow to cold-start on CI — hence the generous per-test timeout below.
+      // The mock MUST be restored in a finally, or a timeout here leaks the
+      // unmocked core into later tests (e.g. the pagesSkipped assertion).
+      try {
+        const { ScanOrchestrator: FreshOrchestrator } = await import('../../src/scanner/orchestrator.js');
+        const freshOrch = new FreshOrchestrator(storage, '/tmp/reports', 2);
 
-      const eventsPromise = waitForScan(freshOrch, 'scan-nocore');
-      freshOrch.startScan('scan-nocore', baseScanConfig());
-      const events = await eventsPromise;
+        const eventsPromise = waitForScan(freshOrch, 'scan-nocore');
+        freshOrch.startScan('scan-nocore', baseScanConfig());
+        const events = await eventsPromise;
 
-      const completeEvent = events.find((e) => e.type === 'complete');
-      // If core is not available, it still completes but with 0 pages
-      if (completeEvent) {
-        expect(completeEvent.data.pagesScanned).toBe(0);
+        const completeEvent = events.find((e) => e.type === 'complete');
+        // If core is not available, it still completes but with 0 pages
+        if (completeEvent) {
+          expect(completeEvent.data.pagesScanned).toBe(0);
+        }
+      } finally {
+        // Re-mock for other tests — always, even if the above timed out/threw.
+        vi.doMock('@luqen/core', () => ({
+          createScanner: mockCreateScanner,
+          discoverUrls: mockDiscoverUrls,
+          scanUrls: mockScanUrls,
+          WebserviceClient: mockWebserviceClient,
+          WebservicePool: mockWebservicePool,
+          DirectScanner: mockDirectScanner,
+          computeContentHashes: mockComputeContentHashes,
+        }));
       }
-
-      // Re-mock for other tests
-      vi.doMock('@luqen/core', () => ({
-        createScanner: mockCreateScanner,
-        discoverUrls: mockDiscoverUrls,
-        scanUrls: mockScanUrls,
-        WebserviceClient: mockWebserviceClient,
-        WebservicePool: mockWebservicePool,
-        DirectScanner: mockDirectScanner,
-        computeContentHashes: mockComputeContentHashes,
-      }));
-    });
+    }, 30000);
 
     // ── Queue behavior ──────────────────────────────────────────────────
 
