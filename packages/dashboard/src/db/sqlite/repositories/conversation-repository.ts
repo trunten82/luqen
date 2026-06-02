@@ -6,6 +6,7 @@ import type {
   ConversationRepository,
   ConversationSearchHit,
   CreateConversationInput,
+  ImageInput,
   ListConversationsOptions,
   Message,
   MessageRole,
@@ -40,6 +41,37 @@ interface MessageRow {
   created_at: string;
   in_window: number;
   superseded_at?: string | null;
+  images?: string | null;
+}
+
+/**
+ * Phase 83 multimodal — validate + normalise a persisted `images` JSON blob
+ * back into `ImageInput[]`. Defensive: a malformed blob (hand-edited DB, schema
+ * drift) degrades to `null` rather than throwing inside a read path.
+ */
+function parseImages(raw: string | null | undefined): readonly ImageInput[] | null {
+  if (raw === null || raw === undefined || raw === '') return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+    const out: ImageInput[] = [];
+    for (const item of parsed) {
+      if (
+        item !== null &&
+        typeof item === 'object' &&
+        typeof (item as { mediaType?: unknown }).mediaType === 'string' &&
+        typeof (item as { data?: unknown }).data === 'string'
+      ) {
+        out.push({
+          mediaType: (item as ImageInput).mediaType,
+          data: (item as ImageInput).data,
+        });
+      }
+    }
+    return out.length > 0 ? out : null;
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -127,10 +159,15 @@ export class SqliteConversationRepository implements ConversationRepository {
 
     const insertMsg = this.db.prepare(`
       INSERT INTO agent_messages
-        (id, conversation_id, role, content, tool_call_json, tool_result_json, status, created_at, in_window)
+        (id, conversation_id, role, content, tool_call_json, tool_result_json, status, created_at, in_window, images)
       VALUES
-        (@id, @conversationId, @role, @content, @toolCallJson, @toolResultJson, @status, @createdAt, 1)
+        (@id, @conversationId, @role, @content, @toolCallJson, @toolResultJson, @status, @createdAt, 1, @images)
     `);
+
+    const imagesJson =
+      input.images !== undefined && input.images.length > 0
+        ? JSON.stringify(input.images)
+        : null;
 
     const updateConv = this.db.prepare(`
       UPDATE agent_conversations
@@ -187,6 +224,7 @@ export class SqliteConversationRepository implements ConversationRepository {
         toolResultJson: input.toolResultJson ?? null,
         status,
         createdAt: now,
+        images: imagesJson,
       });
       updateConv.run({ now, conversationId: input.conversationId });
 
@@ -488,6 +526,7 @@ export class SqliteConversationRepository implements ConversationRepository {
       createdAt: row.created_at,
       inWindow: row.in_window === 1,
       supersededAt: row.superseded_at ?? null,
+      images: parseImages(row.images),
     };
   }
 }

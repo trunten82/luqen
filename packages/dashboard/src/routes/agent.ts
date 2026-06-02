@@ -79,10 +79,48 @@ export interface RegisterAgentRoutesOptions {
 // TypeBox bodies / queries (Phase 41-04 — D-06 migration from Zod)
 // ---------------------------------------------------------------------------
 
+// Phase 83 multimodal — images attached to a user turn. `data` is raw base64
+// WITHOUT a `data:` URI prefix (the client strips it before POSTing); the
+// pattern rejects prefixes + whitespace. Caps bound request size and the LLM
+// context: at most MAX_MESSAGE_IMAGES per message, each ≤ ~5 MB of binary
+// (≈ 7 MB of base64). Mirrors the @luqen/llm ImageInput contract.
+const MAX_MESSAGE_IMAGES = 4;
+const MAX_IMAGE_DATA_CHARS = 7_000_000;
+const ImageInputSchema = Type.Object(
+  {
+    mediaType: Type.Union([
+      Type.Literal('image/png'),
+      Type.Literal('image/jpeg'),
+      Type.Literal('image/webp'),
+      Type.Literal('image/gif'),
+    ]),
+    data: Type.String({
+      minLength: 1,
+      maxLength: MAX_IMAGE_DATA_CHARS,
+      pattern: '^[A-Za-z0-9+/]+={0,2}$',
+    }),
+  },
+  { additionalProperties: false },
+);
+
+const ImagesArraySchema = Type.Array(ImageInputSchema, {
+  maxItems: MAX_MESSAGE_IMAGES,
+});
+
 const MessageBodySchema = Type.Object(
   {
     conversationId: Type.Optional(Type.String()),
-    content: Type.String({ minLength: 1, maxLength: 8000 }),
+    // Content is optional when images are attached (image-only turns). The
+    // "at least one of content/images" rule is enforced in the handler.
+    content: Type.Optional(Type.String({ maxLength: 8000 })),
+    // JSON callers (and tests) send a structured array …
+    images: Type.Optional(ImagesArraySchema),
+    // … while the urlencoded drawer form (htmx:configRequest) sends the same
+    // payload as a JSON string, parsed + re-validated against ImagesArraySchema
+    // in the handler. Bounded so a hostile body cannot exhaust memory.
+    imagesJson: Type.Optional(
+      Type.String({ maxLength: MAX_MESSAGE_IMAGES * MAX_IMAGE_DATA_CHARS + 1024 }),
+    ),
   },
   { additionalProperties: true },
 );
@@ -409,6 +447,11 @@ export async function registerAgentRoutes(
 
     // ── POST /agent/message ────────────────────────────────────────────
     scope.post('/message', {
+      // Phase 83 multimodal — raise the per-route body limit above Fastify's
+      // 1 MB default so base64 image attachments (≤4 × ~7 MB, sent as the
+      // urlencoded imagesJson field) are not rejected with 413. Scoped to this
+      // route only; every other route keeps the conservative global default.
+      bodyLimit: MAX_MESSAGE_IMAGES * MAX_IMAGE_DATA_CHARS + 64 * 1024,
       schema: {
         tags: ['agent'],
         summary: 'Post a user message to the conversation',
@@ -427,6 +470,33 @@ export async function registerAgentRoutes(
       const parsed = safeValidate(MessageBodySchema, request.body);
       if (!parsed.success) {
         return reply.code(400).send({ error: 'invalid_body', issues: parsed.error.issues });
+      }
+      // Phase 83 multimodal — a message must carry text OR at least one image.
+      const content = parsed.data.content ?? '';
+      let images = parsed.data.images ?? [];
+      // The urlencoded drawer form delivers images as a JSON string; parse and
+      // re-validate it through the same schema so both transports are bound by
+      // identical mediaType / base64 / cap rules.
+      if (
+        images.length === 0 &&
+        typeof parsed.data.imagesJson === 'string' &&
+        parsed.data.imagesJson.trim() !== ''
+      ) {
+        let rawImages: unknown;
+        try {
+          rawImages = JSON.parse(parsed.data.imagesJson);
+        } catch {
+          return reply.code(400).send({ error: 'invalid_images_json' });
+        }
+        // Direct Value.Check (NOT safeValidate, which flattens arrays into
+        // objects while trimming string fields).
+        if (!Value.Check(ImagesArraySchema, rawImages)) {
+          return reply.code(400).send({ error: 'invalid_images' });
+        }
+        images = rawImages;
+      }
+      if (content.trim() === '' && images.length === 0) {
+        return reply.code(400).send({ error: 'empty_message' });
       }
       // Verify the conversation belongs to the authenticated org.
       const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
@@ -459,16 +529,25 @@ export async function registerAgentRoutes(
       const msg = await storage.conversations.appendMessage({
         conversationId: convId,
         role: 'user',
-        content: parsed.data.content,
+        content,
         status: 'sent',
+        ...(images.length > 0 ? { images } : {}),
       });
       // Return a minimal HTMX partial so the drawer can optimistically render
-      // the user row. Plan 06 replaces this with the handlebars partial.
+      // the user row, including any attached image thumbnails.
       void reply.type('text/html');
       void reply.header('x-conversation-id', convId);
+      const thumbs = images
+        .map(
+          (img) =>
+            `<img class="agent-msg__image" src="data:${escapeHtml(img.mediaType)};base64,${escapeHtml(img.data)}" alt="">`,
+        )
+        .join('');
+      const thumbsBlock = thumbs === '' ? '' : `<div class="agent-msg__images">${thumbs}</div>`;
       return reply.code(202).send(
         `<div class="agent-msg agent-msg--user" data-message-id="${escapeHtml(msg.id)}">` +
-          escapeHtml(parsed.data.content) +
+          escapeHtml(content) +
+          thumbsBlock +
           `</div>`,
       );
     });
@@ -853,6 +932,7 @@ export async function registerAgentRoutes(
         readonly toolCallJson: string | null;
         readonly toolResultJson: string | null;
         readonly status: string;
+        readonly images?: ReadonlyArray<{ readonly mediaType: string; readonly data: string }> | null;
       }> = [];
       if (conversationId.length > 0) {
         const conv = await storage.conversations.getConversation(conversationId, orgId);
@@ -1578,6 +1658,8 @@ interface PanelMessage {
   readonly toolCallJson: string | null;
   readonly toolResultJson: string | null;
   readonly status: string;
+  /** Phase 83 multimodal — images attached to a user message (history rehydrate). */
+  readonly images?: ReadonlyArray<{ readonly mediaType: string; readonly data: string }> | null;
 }
 
 let cachedAgentMessagesTemplate: HandlebarsTemplateDelegate | null = null;

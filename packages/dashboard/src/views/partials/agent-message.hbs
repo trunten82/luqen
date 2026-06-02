@@ -2,6 +2,13 @@
   <div class="agent-msg agent-msg--user{{#if (eq status "stopped")}} agent-msg--stopped{{/if}}{{#if (eq status "superseded")}} agent-msg--superseded{{/if}}" data-message-id="{{id}}" data-status="{{status}}">
     <span class="agent-msg__role">{{t "agent.role.user"}}</span>
     <div class="agent-msg__body">{{content}}</div>
+    {{#if images}}
+      <div class="agent-msg__images">
+        {{#each images}}
+          <img class="agent-msg__image" src="data:{{mediaType}};base64,{{data}}" alt="{{t "agent.image.alt"}}">
+        {{/each}}
+      </div>
+    {{/if}}
     {{#if (eq status "stopped")}}{{> agent-msg-stopped-chip}}{{/if}}
     {{> agent-msg-actions id=id role=role isMostRecentUserMessage=isMostRecentUserMessage}}
   </div>

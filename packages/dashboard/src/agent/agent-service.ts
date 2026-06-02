@@ -77,6 +77,15 @@ export interface AgentChatMessage {
   readonly toolCallId?: string;
   readonly toolName?: string;
   readonly toolCalls?: ReadonlyArray<ToolCallInput>;
+  /**
+   * Phase 83 multimodal: images attached to a `role='user'` message. Carried
+   * verbatim across the agent-conversation HTTP boundary so the @luqen/llm
+   * provider adapters render them into provider-native multimodal blocks.
+   */
+  readonly images?: ReadonlyArray<{
+    readonly mediaType: 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif';
+    readonly data: string;
+  }>;
 }
 
 export interface AgentToolDef {
@@ -1172,7 +1181,11 @@ export function windowToChatMessages(window: readonly Message[]): AgentChatMessa
       continue;
     }
     coveredIds = new Set();
-    out.push({ role: 'user' as const, content: m.content ?? '' });
+    out.push(
+      m.images !== null && m.images !== undefined && m.images.length > 0
+        ? { role: 'user' as const, content: m.content ?? '', images: m.images }
+        : { role: 'user' as const, content: m.content ?? '' },
+    );
   }
   return out;
 }
