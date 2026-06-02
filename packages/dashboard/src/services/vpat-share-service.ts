@@ -62,11 +62,13 @@ export async function loadVpatForScan(
   }
   if (reportData === null) return null;
 
-  const manualResults = await storage.manualTests.getManualTests(scan.id);
+  const manualResults = storage.manualTests
+    ? await storage.manualTests.getManualTests(scan.id)
+    : [];
   const evidenceCounts = new Map(
-    (await storage.manualTestEvidence.countByCriterion(scan.id)).map((c) => [c.criterionId, c.count]),
+    ((await storage.manualTestEvidence?.countByCriterion(scan.id)) ?? []).map((c) => [c.criterionId, c.count]),
   );
-  const reasonedChangeCount = await storage.manualTestAudit.countReasonedChanges(scan.id);
+  const reasonedChangeCount = (await storage.manualTestAudit?.countReasonedChanges(scan.id)) ?? 0;
   const remOrgId = scan.orgId ?? 'system';
   const [remediationEvents, siteScans] = await Promise.all([
     storage.remediationEvents.listForSite(remOrgId, scan.siteUrl),
@@ -85,7 +87,7 @@ export async function loadVpatForScan(
     remediation,
   );
   const evidenceGroups = buildVpatEvidenceGroups(
-    await storage.manualTestEvidence.listEvidence(scan.id),
+    (await storage.manualTestEvidence?.listEvidence(scan.id)) ?? [],
     vpat,
   );
   const scanMeta: PdfScanMeta = {

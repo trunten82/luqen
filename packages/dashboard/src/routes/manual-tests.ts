@@ -193,14 +193,18 @@ export async function manualTestRoutes(
         return reply.code(404).send({ error: 'Report not found' });
       }
 
+      if (!storage.manualTests || !storage.manualTestEvidence || !storage.manualTestAudit) {
+        return reply.code(503).send({ error: 'Manual testing is not available on this storage backend' });
+      }
+
       // Load saved results for this scan
-      const savedResults = await storage.manualTests.getManualTests(id);
+      const savedResults = await storage.manualTests!.getManualTests(id);
       const resultMap = new Map(
         savedResults.map((r) => [r.criterionId, r]),
       );
 
       // Load evidence artifacts (Slice C), grouped per criterion.
-      const evidenceRows = await storage.manualTestEvidence.listEvidence(id);
+      const evidenceRows = await storage.manualTestEvidence!.listEvidence(id);
       const evidenceMap = new Map<string, ManualTestEvidenceRecord[]>();
       for (const e of evidenceRows) {
         const list = evidenceMap.get(e.criterionId) ?? [];
@@ -209,7 +213,7 @@ export async function manualTestRoutes(
       }
 
       // Load verdict-change audit history, grouped per criterion (newest first).
-      const auditRows = await storage.manualTestAudit.listAudit(id);
+      const auditRows = await storage.manualTestAudit!.listAudit(id);
       const auditMap = new Map<string, typeof auditRows>();
       for (const a of auditRows) {
         const list = auditMap.get(a.criterionId) ?? [];
@@ -289,6 +293,10 @@ export async function manualTestRoutes(
         return reply.code(404).send({ error: 'Report not found' });
       }
 
+      if (!storage.manualTests || !storage.manualTestAudit) {
+        return reply.code(503).send({ error: 'Manual testing is not available on this storage backend' });
+      }
+
       // Phase 55 task 5 — cross-org guard must mirror reports.ts: admin role
       // sees any org's scans. Without the admin bypass, an admin who opens a
       // report belonging to another org could view the report-detail page but
@@ -326,12 +334,12 @@ export async function manualTestRoutes(
       const comment = (body.comment ?? '').trim();
 
       // Capture the prior verdict so the audit row records from → to.
-      const prior = (await storage.manualTests.getManualTests(id)).find(
+      const prior = (await storage.manualTests!.getManualTests(id)).find(
         (r) => r.criterionId === criterionId,
       );
       const fromStatus = prior?.status ?? 'untested';
 
-      const result = await storage.manualTests.upsertManualTest({
+      const result = await storage.manualTests!.upsertManualTest({
         scanId: id,
         criterionId,
         status,
@@ -346,7 +354,7 @@ export async function manualTestRoutes(
         | { fromStatus: string; toStatus: string; comment: string | null; actor: string | null; createdAt: string }
         | null = null;
       if (status !== fromStatus || comment !== '') {
-        const rec = await storage.manualTestAudit.appendAudit({
+        const rec = await storage.manualTestAudit!.appendAudit({
           scanId: id,
           criterionId,
           fromStatus,
@@ -364,7 +372,7 @@ export async function manualTestRoutes(
         };
       }
 
-      const allResults = await storage.manualTests.getManualTests(id);
+      const allResults = await storage.manualTests!.getManualTests(id);
       const stats = computeStats(allResults, MANUAL_CRITERIA.length);
 
       // JSON response — the client updates the criterion in place (badge,
@@ -421,6 +429,10 @@ export async function manualTestRoutes(
       const guard = await guardScan(request, reply, id);
       if (guard === null) return reply;
 
+      if (!storage.manualTestEvidence) {
+        return reply.code(503).header('content-type', 'text/html').send('Manual testing is not available on this storage backend');
+      }
+
       if (MANUAL_CRITERIA.find((c) => c.id === criterionId) === undefined) {
         return reply.code(400).header('content-type', 'text/html').send('Unknown criterion ID');
       }
@@ -469,7 +481,7 @@ export async function manualTestRoutes(
         .replace(/[^\w.\- ]+/g, '_')
         .slice(0, 200) || 'evidence';
 
-      await storage.manualTestEvidence.addEvidence({
+      await storage.manualTestEvidence!.addEvidence({
         scanId: id,
         criterionId,
         filePath: `/uploads/${orgId}/evidence/${storedName}`,
@@ -479,7 +491,7 @@ export async function manualTestRoutes(
         orgId,
       });
 
-      const items = (await storage.manualTestEvidence.listEvidence(id)).filter(
+      const items = (await storage.manualTestEvidence!.listEvidence(id)).filter(
         (e) => e.criterionId === criterionId,
       );
       return reply.type('text/html').send(renderEvidenceList(id, criterionId, items));
@@ -497,7 +509,11 @@ export async function manualTestRoutes(
       const guard = await guardScan(request, reply, id);
       if (guard === null) return reply;
 
-      const record = await storage.manualTestEvidence.getEvidence(evidenceId);
+      if (!storage.manualTestEvidence) {
+        return reply.code(503).header('content-type', 'text/html').send('Manual testing is not available on this storage backend');
+      }
+
+      const record = await storage.manualTestEvidence!.getEvidence(evidenceId);
       if (record === null || record.scanId !== id) {
         return reply.code(404).header('content-type', 'text/html').send('Evidence not found');
       }
@@ -505,9 +521,9 @@ export async function manualTestRoutes(
       // Best-effort: remove the file from disk (path → uploads root).
       const relative = record.filePath.replace(/^\/uploads\//, '');
       await unlink(join(uploadsDir ?? './uploads', relative)).catch(() => undefined);
-      await storage.manualTestEvidence.deleteEvidence(evidenceId);
+      await storage.manualTestEvidence!.deleteEvidence(evidenceId);
 
-      const items = (await storage.manualTestEvidence.listEvidence(id)).filter(
+      const items = (await storage.manualTestEvidence!.listEvidence(id)).filter(
         (e) => e.criterionId === record.criterionId,
       );
       return reply.type('text/html').send(renderEvidenceList(id, record.criterionId, items));

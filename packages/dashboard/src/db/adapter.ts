@@ -59,10 +59,20 @@ export interface StorageAdapter {
   readonly plugins: PluginRepository;
   readonly apiKeys: ApiKeyRepository;
   readonly pageHashes: PageHashRepository;
-  readonly manualTests: ManualTestRepository;
-  readonly manualTestEvidence: ManualTestEvidenceRepository;
-  readonly manualTestAudit: ManualTestAuditRepository;
-  readonly reportShares: ReportShareRepository;
+  /**
+   * Slice C/D manual-testing + secure-sharing repositories. OPTIONAL on purpose,
+   * same rationale as `reportIdentities`: out-of-repo Postgres/Mongo
+   * StorageAdapter plugins must not break on required new fields. Consumers
+   * guard with `storage.manualTests?.` etc. and degrade gracefully — the
+   * VPAT/ACR builds from scan data only (no manual verdicts/evidence) and the
+   * secure-sharing surface reports "unavailable on this storage backend" when
+   * the repository is absent. The bundled SQLite adapter implements all four,
+   * so the default deployment is unchanged.
+   */
+  readonly manualTests?: ManualTestRepository;
+  readonly manualTestEvidence?: ManualTestEvidenceRepository;
+  readonly manualTestAudit?: ManualTestAuditRepository;
+  readonly reportShares?: ReportShareRepository;
   readonly gitHosts: GitHostRepository;
   readonly branding: BrandingRepository;
   readonly brandScores: BrandScoreRepository;
