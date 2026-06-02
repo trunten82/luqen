@@ -5,7 +5,8 @@
 - ✅ **v2.7.0 – v3.0.0** — Phases 01-33 (shipped) — see `milestones/` archives
 - ✅ **v3.1.0 Agent Companion v2 + Tech Debt & Docs** — Phases 34-42 (shipped)
 - ✅ **v3.2.0 – v3.4.0 WP Plugin, UI Revision, LLM Cost Telemetry** — Phases 43-77 (shipped directly to master)
-- 🚧 **v3.5.0 Commercial positioning & agency monetization** — Phases 78-82 (in progress)
+- ✅ **v3.5.0 Commercial positioning & agency monetization** — Phases 78-82 (shipped). NOTE: product is **single-tier** ([[project_single_tier_decision]]); the Free/Pro/Agency surfaces ship but are **dormant** — do not build on them.
+- 🚧 **v3.6.0 Agent surface + semantic depth** — Phases 83-84 (next): MCP servers + Agent Companion; LLM-vision behavioral checks. Plus carry-over already done this run: DB-plugin tolerance fix + widget→VPAT public ACR.
 
 > Note: `.planning` artifacts lagged behind a sustained direct-to-master run (phases 43–77 — WordPress plugin, UI revision, and the LLM cost-telemetry stack 71–77). Git reality is v3.4.0. This milestone resumes formal roadmapping at **Phase 78**. Earlier milestone detail lives in `milestones/` archives.
 
@@ -115,3 +116,28 @@ Two parallelizable tracks: the WordPress track (78 `readme.txt`, 79) and the pla
 | 80. Credit-metered AI fixes | v3.5.0 | 1/1 | ✅ Done | 2026-06-01 |
 | 81. Agency tier | v3.5.0 | 1/1 | ✅ Done | 2026-06-01 |
 | 82. Pricing & packaging | v3.5.0 | 1/1 | ✅ Done | 2026-06-01 |
+
+---
+
+## Next Milestone: v3.6.0 Agent surface + semantic depth
+
+**Goal:** Two large, mostly-independent efforts that deepen the product where it's genuinely thin — an org-aware agent surface, and the semantic (vision) accessibility checks that no static scanner can do. Both are milestone-sized; run each as a proper GSD phase.
+
+**Status:** IN PROGRESS (started 2026-06-02). Single-tier confirmed — do NOT build on or extend the dormant Free/Pro/Agency surfaces.
+
+**KEY DISCOVERY (2026-06-02):** Phase 83 was ~90% already shipped by prior milestones (v3.0.0 Phases 28–33 MCP + v3.1.0 Phases 34–42 Agent Companion v2). MCP servers exist across ALL services (llm/compliance/branding/dashboard/monitor — tools, resources, prompts, RBAC, org-scoped). The dashboard already has a working org-aware **text** companion + **speech-to-text** (Web Speech API, `agent-speech.js`). The ONLY gaps were **text-to-speech (voice output)** and **multimodal image input** — and the image-input gap IS the Phase 84 vision adapter. **User decision:** scope = "Vision adapter + TTS" (converge the two phases on one vision adapter, plus browser TTS for the companion).
+
+**SHIPPED THIS SESSION (foundation, all on master, CI green):**
+- `85be72a` **vision adapter** — `ImageInput` + optional `images[]` on `CompletionOptions`/`ChatMessage`; OpenAI/Anthropic/Ollama all attach images on `complete()` + `completeStream()`. (packages/llm/src/providers/)
+- `85be72a` **analyse-visual capability** + `POST /api/v1/analyse-visual` — heading-semantics (1.3.1) + alt-text (1.1.1) checks, structured verdict, graceful degrade. (packages/llm/src/capabilities/analyse-visual.ts)
+- `941c956` **core `captureVisualContext()`** — browser-side screenshot + heading outline + image inventory; LLM-agnostic. (packages/core/src/behavioral/visual.ts)
+
+**REMAINING (next sessions):**
+- [ ] **Phase 84 integration** — dashboard scan-pipeline orchestration: during the behavioral pass, call `captureVisualContext()`, send to `analyse-visual` via the LLM client, map verdicts → `Issue`s (runner `vision`), merge into the scan; wire VPAT/ACR rows "Not Evaluated" → evidence-backed. Opt-in like the behavioral layer; degrade silently when no vision model configured.
+- [ ] **Phase 83 finish** — companion **multimodal**: image-upload/paste in the agent drawer → thread images through `/agent/message` + the agent service into `ChatMessage.images`. Companion **TTS**: browser `speechSynthesis` voice output (toggle in drawer), respecting `navigator.language`.
+- [ ] (optional) expose `analyse-visual` as an LLM **MCP tool** for agent access.
+- [ ] WP mirror of vision checks is a separate later effort (WP standalone uses axe-core client-side; vision needs the dashboard/enterprise path).
+
+### Already shipped this run (carry-overs, not part of 83/84)
+- DB-plugin breaking-change tolerance fix (`55445c5`): Slice C/D repos optional + guarded.
+- widget→VPAT public ACR: dashboard `/reports/:id/acr` (`bc21e3a`) + WP a11y-statement ACR link (`a52d053`, v0.26.0).
