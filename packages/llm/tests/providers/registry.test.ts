@@ -11,6 +11,7 @@ import { createAdapter, getSupportedTypes } from '../../src/providers/registry.j
 import { OllamaAdapter } from '../../src/providers/ollama.js';
 import { OpenAIAdapter } from '../../src/providers/openai.js';
 import { AnthropicAdapter } from '../../src/providers/anthropic.js';
+import { GeminiAdapter } from '../../src/providers/gemini.js';
 
 describe('Provider Registry', () => {
   describe('createAdapter', () => {
@@ -30,6 +31,12 @@ describe('Provider Registry', () => {
       expect(adapter.type).toBe('anthropic');
     });
 
+    it('returns a GeminiAdapter instance for type "gemini" with type="gemini"', () => {
+      const adapter = createAdapter('gemini');
+      expect(adapter).toBeInstanceOf(GeminiAdapter);
+      expect(adapter.type).toBe('gemini');
+    });
+
     it('throws Error with descriptive message for unsupported type', () => {
       expect(() => createAdapter('unknown' as never)).toThrow(
         'Unsupported provider type: unknown',
@@ -38,10 +45,10 @@ describe('Provider Registry', () => {
   });
 
   describe('getSupportedTypes', () => {
-    it('Test 17: returns ollama + openai + anthropic (order-insensitive)', () => {
+    it('Test 17: returns ollama + openai + anthropic + gemini (order-insensitive)', () => {
       const types = getSupportedTypes();
       const sorted = [...types].sort();
-      expect(sorted).toEqual(['anthropic', 'ollama', 'openai']);
+      expect(sorted).toEqual(['anthropic', 'gemini', 'ollama', 'openai']);
     });
 
     it('returns an array containing "ollama"', () => {
@@ -57,6 +64,11 @@ describe('Provider Registry', () => {
     it('returns an array containing "anthropic"', () => {
       const types = getSupportedTypes();
       expect(types).toContain('anthropic');
+    });
+
+    it('returns an array containing "gemini"', () => {
+      const types = getSupportedTypes();
+      expect(types).toContain('gemini');
     });
 
     it('returns a non-empty readonly array', () => {
