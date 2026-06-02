@@ -35,6 +35,34 @@ describe('deriveLegalFramings', () => {
     expect(deriveLegalFramings(['US-CA'], ['Unruh']).framings.map((f) => f.id)).toContain('us-unruh');
   });
 
+  it('emits distinct context blocks for NY State + NYC LL12 + NYC HRL when those regulations are selected', () => {
+    const r = deriveLegalFramings(
+      ['US'],
+      ['US-ADA', 'US-ADA-T2-WEB', 'US-NY-WEB', 'US-NY-NYC-LL12', 'US-NY-NYC-HRL'],
+    );
+    const ids = r.framings.map((f) => f.id);
+    expect(ids).toContain('us-ada');
+    expect(ids).toContain('us-ny-web');
+    expect(ids).toContain('us-nyc-ll12');
+    expect(ids).toContain('us-nyc-hrl');
+    // Each NY/NYC block names its law and disclaims certification.
+    const byId = Object.fromEntries(r.framings.map((f) => [f.id, f]));
+    expect(byId['us-ny-web'].body).toMatch(/New York State/i);
+    expect(byId['us-nyc-ll12'].body).toMatch(/Local Law 12/i);
+    expect(byId['us-nyc-hrl'].body).toMatch(/8-107/);
+    for (const id of ['us-ny-web', 'us-nyc-ll12', 'us-nyc-hrl']) {
+      expect(byId[id].body.toLowerCase()).toContain('not');
+    }
+  });
+
+  it('does NOT emit NYC blocks for a plain US/ADA scan (no NY tokens)', () => {
+    const ids = deriveLegalFramings(['US'], ['US-ADA']).framings.map((f) => f.id);
+    expect(ids).toContain('us-ada');
+    expect(ids).not.toContain('us-ny-web');
+    expect(ids).not.toContain('us-nyc-ll12');
+    expect(ids).not.toContain('us-nyc-hrl');
+  });
+
   it('falls back to a generic block listing exactly what was selected when nothing distinctive matches', () => {
     const r = deriveLegalFramings(['Atlantis'], ['Some Local Rule']);
     expect(r.framings).toHaveLength(1);

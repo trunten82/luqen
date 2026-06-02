@@ -102,6 +102,38 @@ const FRAMINGS: readonly FramingDef[] = [
     shortLabel: 'ADA Title II & III',
   },
   {
+    id: 'us-ny-web',
+    keywords: ['ny-web'],
+    heading: 'New York State web accessibility context',
+    body:
+      'New York State ITS Policy ITS-P23-001 requires state agencies to make web content conform to '
+      + 'WCAG 2.1 Level AA (aligned with Section 508). This report documents a good-faith effort toward that '
+      + 'benchmark; it is not legal advice and does not certify compliance.',
+    shortLabel: 'NY State (ITS-P23-001)',
+  },
+  {
+    id: 'us-nyc-ll12',
+    keywords: ['nyc-ll12', 'll12'],
+    heading: 'New York City Local Law 12 of 2023 context',
+    body:
+      'New York City Local Law 12 of 2023 (NYC Admin Code § 23-802.1) requires City agencies — and contractors '
+      + 'providing public-facing websites — to meet WCAG 2.1 Level AA, with annual reporting and remediation '
+      + 'timelines, independently of New York State policy. This report supports that obligation as a transparency '
+      + 'and remediation document; it is not legal advice and does not certify compliance.',
+    shortLabel: 'NYC LL12/2023',
+  },
+  {
+    id: 'us-nyc-hrl',
+    keywords: ['nyc-hrl'],
+    heading: 'NYC Human Rights Law context',
+    body:
+      'The New York City Human Rights Law (NYC Admin Code § 8-107(4)) prohibits discrimination by places of public '
+      + 'accommodation; the NYC Commission on Human Rights has interpreted it to extend to commercial websites and '
+      + 'mobile apps serving NYC residents, and it is frequently invoked alongside the ADA. This report documents a '
+      + 'good-faith remediation effort; it is not legal advice and does not certify compliance.',
+    shortLabel: 'NYC HRL § 8-107(4)',
+  },
+  {
     id: 'us-unruh',
     keywords: ['unruh'],
     heading: 'California Unruh Civil Rights Act context',
