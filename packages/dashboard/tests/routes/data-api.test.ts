@@ -341,6 +341,28 @@ describe('Data API routes', () => {
       expect(body.data).toHaveLength(2);
     });
 
+    it('exposes the runner field so consumers (WP plugin) can flag vision findings', async () => {
+      const report = {
+        summary: { url: 'https://example.com', pagesScanned: 1, totalIssues: 2 },
+        pages: [
+          {
+            url: 'https://example.com',
+            issueCount: 2,
+            issues: [
+              { type: 'error', code: '1_3_1', message: 'Styled div heading', selector: 'div', context: '<div>', runner: 'vision' },
+              { type: 'warning', code: '1_4_3', message: 'Contrast', selector: 'p', context: '<p>' },
+            ],
+          },
+        ],
+      };
+      const id = await makeCompletedScanWithReport(ctx, 'https://example.com', report);
+      const response = await ctx.server.inject({ method: 'GET', url: `/api/v1/scans/${id}/issues` });
+      const body = response.json() as { data: Array<{ runner: string | null }> };
+      expect(body.data[0].runner).toBe('vision');
+      // Issues without an explicit runner come back as null (not undefined/stripped).
+      expect(body.data[1].runner).toBeNull();
+    });
+
     it('filters issues by severity', async () => {
       const report = {
         pages: [
