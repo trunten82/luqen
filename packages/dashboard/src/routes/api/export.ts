@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import type { StorageAdapter } from '../../db/index.js';
 import { extractCriterion, getWcagDescription } from '../wcag-enrichment.js';
-import { generatePdfFromData } from '../../pdf/generator.js';
+import { generatePdfFromData, generateVpatPdf } from '../../pdf/generator.js';
 import type { PdfReportData, PdfScanMeta } from '../../pdf/generator.js';
 import { normalizeReportData, inferComponent } from '../../services/report-service.js';
 import { buildVpat } from '../../services/vpat-service.js';
@@ -13,6 +13,7 @@ import { resolveRegulationDetails } from '../../services/regulation-catalog.js';
 import { buildVpatEvidenceGroups } from '../../services/vpat-evidence.js';
 import { buildAcrView, type AcrEvidenceGroup } from '../../services/acr-view.js';
 import { generateAcrPdf } from '../../services/acr-render.js';
+import { pdfWithFallback } from '../../services/pdf-fallback.js';
 import { join } from 'node:path';
 import { buildRemediationRecord } from '../../services/remediation-service.js';
 import { buildFleetReportBundle } from '../../services/fleet-report-service.js';
@@ -667,7 +668,20 @@ export async function exportRoutes(
           ...(logoUrl ? { logoUrl } : {}),
           evidence: acrEvidence,
         });
-        const pdfBuffer = await generateAcrPdf(acrView);
+        // Canonical path: render the shared ACR template via headless Chromium
+        // (matches the WordPress plugin). If no browser can launch (CI, or a
+        // host without Chromium), degrade to the dependency-free PDFKit VPAT
+        // renderer so a valid PDF is always served — logged so a silent
+        // regression off the single-source template is observable.
+        const pdfBuffer = await pdfWithFallback(
+          () => generateAcrPdf(acrView),
+          () => generateVpatPdf(scanMeta, vpat, { groups: evidenceGroups, uploadsRoot }),
+          (err) =>
+            request.log.warn(
+              err,
+              'ACR HTML→PDF failed; served PDFKit VPAT fallback (non-canonical layout)',
+            ),
+        );
 
         let hostname: string;
         try {
