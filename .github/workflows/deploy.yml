@@ -55,20 +55,28 @@ jobs:
           # or runtime. Slower than skipping, but deploys aren't frequent.
           npm ci
 
-      - name: Build core
+      - name: Build packages
+        # Build core FIRST (the services import @luqen/core). Then every
+        # deployed service package — previously only core + dashboard were
+        # built, so changes to llm / compliance / branding never reached the
+        # live services (their dist went stale). Build all four service
+        # packages so every live unit tracks master.
         run: |
           cd /root/luqen
           npm run build -w packages/core
-
-      - name: Build dashboard
-        run: |
-          cd /root/luqen
+          npm run build -w packages/compliance
+          npm run build -w packages/llm
+          npm run build -w packages/branding
           npm run build -w packages/dashboard
 
-      - name: Restart service
+      - name: Restart services
+        # Restart every live unit so the freshly-built dist is loaded. Each
+        # service is independent; restart compliance/llm/branding before the
+        # dashboard (the dashboard fans out to them).
         run: |
-          systemctl restart luqen-dashboard
-          systemctl is-active luqen-dashboard
+          systemctl restart luqen-compliance luqen-llm luqen-branding luqen-dashboard
+          sleep 3
+          systemctl is-active luqen-compliance luqen-llm luqen-branding luqen-dashboard
 
       - name: Smoke check
         run: |
