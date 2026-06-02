@@ -764,6 +764,15 @@ html[data-density="plain"] .verdict-line__sentence {
   line-height: 1.35;
 }
 
+/* The ACR call-to-action has a long label ("View our Accessibility Conformance
+   Report (ACR)"). The base .btn is white-space:nowrap, which overflows the
+   viewport on narrow screens — allow it to wrap and stay within bounds. */
+.verdict-line__acr .btn {
+  white-space: normal;
+  max-width: 100%;
+  text-align: center;
+}
+
 /* ============================================================
    Docket — home page two-column layout (Phase 57 / R2 Move D)
    Left rail = org posture as type. Right column = activity stream.
