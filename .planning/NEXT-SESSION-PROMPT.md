@@ -7,11 +7,14 @@ default. Checkpoint with a handoff (update this file) if context runs low.
 
 ## 0. First steps
 1. **Verify green state** (all confirmed green at handoff 2026-06-02, session 2):
-   - luqen: `master == origin == 446beda` (Item A `cca049d`, C#3 MCP `0afbc49`,
-     C#1 alt-text `62b6973`, C#2 VPAT foundation `bb3c2e5`, Item B enabler `446beda`);
-     live `/login` → 200, `/api/v1/entitlement` → 401.
-   - luqen-wordpress: `master == origin == e5516fe`, **v0.27.0**, WP CI green. PRIVATE repo.
-     ONLY Item B standalone-mode + human UAT remain.
+   - luqen: `master == origin == a254768` (Item A `cca049d`, C#3 `0afbc49`, C#1 `62b6973`,
+     C#2 `bb3c2e5`, Item B enabler `446beda`, **Gemini adapter `fbe84c2`**, **deploy-all-services
+     fix `a254768`**); live `/login` → 200. Gemini is WIRED LIVE (flash fallback everywhere +
+     analyse-visual primary; pro backup); live analyse-visual round-trip verified.
+   - luqen-wordpress: `master == origin == 548f4bf`, **v0.28.0**, WP CI green. PRIVATE repo.
+     Item B (enterprise + standalone vision) COMPLETE.
+   - REMAINING: human UAT (image upload + TTS + WP standalone vision live capture); C#2 VPAT
+     producer wiring + legal review; optionally promote gemini-2.5-pro/3-pro for analyse-visual.
 2. **Load these memory files before planning:**
    - `project_v3_6_milestone_state` — what's DONE vs remaining (do NOT rebuild done work).
    - `project_single_tier_decision` — product is SINGLE-TIER; Free/Pro/Agency surfaces are
