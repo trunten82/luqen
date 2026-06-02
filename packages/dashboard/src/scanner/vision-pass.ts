@@ -49,32 +49,76 @@ export function mapVisionFindingToIssue(
 /**
  * Build an `onVisualContext` analyzer bound to an LLM client + org. Runs the
  * heading-semantics check (accessibility-tree-vs-visual, WCAG 1.3.1) against the
- * full-page screenshot + heading outline. Returns [] on any failure.
+ * full-page screenshot + heading outline, plus a per-image alt-text check (WCAG
+ * 1.1.1) on the images whose rendered bytes were captured. Every call is
+ * independently guarded — vision is additive, so any failure degrades to [].
  */
+
+/**
+ * Max images per page to run the alt-text vision check on. Each is a separate
+ * LLM call, so this bounds cost; @luqen/core also caps how many image bytes it
+ * captures (`visualImageBytes`).
+ */
+export const MAX_ALT_TEXT_IMAGES = 5;
+
 export function buildVisionAnalyzer(
   client: LLMClient,
   orgId: string | undefined,
 ): (ctx: VisualContext, url: string) => Promise<readonly Issue[]> {
+  const org = orgId !== undefined ? { orgId } : {};
   return async (ctx: VisualContext): Promise<readonly Issue[]> => {
-    if (!ctx.headingOutline || ctx.headingOutline.trim().length === 0) {
-      return [];
-    }
-    try {
-      const result = await client.analyseVisual({
-        check: 'heading-semantics',
-        image: ctx.screenshot,
-        context: ctx.headingOutline,
-        ...(orgId !== undefined ? { orgId } : {}),
-      });
-      if (result.verdict !== 'issue' || !Array.isArray(result.findings)) {
-        return [];
+    const issues: Issue[] = [];
+
+    // --- heading-semantics (WCAG 1.3.1) — full-page screenshot + outline ---
+    if (ctx.headingOutline && ctx.headingOutline.trim().length > 0) {
+      try {
+        const result = await client.analyseVisual({
+          check: 'heading-semantics',
+          image: ctx.screenshot,
+          context: ctx.headingOutline,
+          ...org,
+        });
+        if (result.verdict === 'issue' && Array.isArray(result.findings)) {
+          for (const f of result.findings) {
+            issues.push(mapVisionFindingToIssue(f, 'document', ctx.headingOutline.slice(0, 200)));
+          }
+        }
+      } catch {
+        // degrade silently — heading-semantics is additive.
       }
-      return result.findings.map((f) =>
-        mapVisionFindingToIssue(f, 'document', ctx.headingOutline.slice(0, 200)),
-      );
-    } catch {
-      // Vision is additive — degrade silently when unavailable.
-      return [];
     }
+
+    // --- alt-text (WCAG 1.1.1) — per image whose bytes were captured ---
+    const withBytes = ctx.images.filter((img) => img.bytes !== undefined).slice(0, MAX_ALT_TEXT_IMAGES);
+    for (const img of withBytes) {
+      try {
+        const context = [img.alt !== null ? `current alt: "${img.alt}"` : 'no alt attribute', img.surroundingText]
+          .filter((s) => s.length > 0)
+          .join(' — ');
+        const result = await client.analyseVisual({
+          check: 'alt-text',
+          image: img.bytes!,
+          context,
+          ...org,
+        });
+        if (result.verdict !== 'issue' || !Array.isArray(result.findings)) continue;
+        const suffix =
+          typeof result.suggestedAlt === 'string' && result.suggestedAlt.length > 0
+            ? ` — suggested alt: "${result.suggestedAlt}"`
+            : '';
+        for (const f of result.findings) {
+          const issue = mapVisionFindingToIssue(
+            { ...f, wcagCriterion: f.wcagCriterion || '1.1.1' },
+            img.selector,
+            img.surroundingText.slice(0, 200),
+          );
+          issues.push(suffix === '' ? issue : { ...issue, message: `${issue.message}${suffix}` });
+        }
+      } catch {
+        // one image's failure must not sink the rest of the pass.
+      }
+    }
+
+    return issues;
   };
 }

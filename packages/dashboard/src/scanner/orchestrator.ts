@@ -482,7 +482,7 @@ export class ScanOrchestrator {
             ...(config.headers !== undefined ? { headers: config.headers } : {}),
             ...(config.actions !== undefined && config.actions.length > 0 ? { actions: config.actions } : {}),
             ...(config.behavioral === true ? { behavioral: true } : {}),
-            ...(visionAnalyzer !== null ? { onVisualContext: visionAnalyzer } : {}),
+            ...(visionAnalyzer !== null ? { onVisualContext: visionAnalyzer, visualImageBytes: 5 } : {}),
             ...(config.deepScan === true ? { runners: ['htmlcs', 'axe'], lighthouse: true, ibm: true, reflow: true, a11yTree: true } : {}),
             onProgress: (progress: { type: string; url: string; current: number; total: number }) => {
               if (progress.type === 'scan:start') {
