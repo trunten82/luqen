@@ -8,6 +8,31 @@ default. Checkpoint with a handoff (update this file) if context runs low.
 ═══════════════════════════════════════════════════════════════════════════════
 ## ★ TOP PRIORITY (2026-06-02 PM) — ACR/VPAT report refinement + finish vision rollout
 ═══════════════════════════════════════════════════════════════════════════════
+**UPDATE 2026-06-02 (session 3): TOP-PRIORITY ITEMS 0 + 1 DONE + DELIVERED.**
+- **Item 1 (explicit coverage) SHIPPED** (`ec1cb5a` HTML + `818a175` PDF, CI green, deployed,
+  verified live). VPAT/ACR now renders a "Standards & laws evaluated against" section
+  enumerating each selected regulation by full name from `scan.regulations`
+  (`legal-framings.ts deriveEvaluatedStandards` + built-in id→name catalog; catalog-only so
+  HTML view, PDF export, and token-share all render identically). i18n ×6. The PDF generator
+  (`pdf/generator.ts`, PDFKit — a SEPARATE renderer from `vpat.hbs`) needed the section added
+  too; now done. ADA is named explicitly, never folded into "US".
+- **Item 0 (Aperol delivery) DONE.** Re-ran the deep+vision site scan (the first one died to a
+  deploy restart — see [[Luqen deploy restart kills in-flight scans]]). New scan
+  `b4b5254e-3011-4e68-976a-70c29c9b56cd`: 15 pages, 7000 issues, multi-engine
+  (htmlcs/axe/ibm/lighthouse/behavioral/**vision**). One real `runner='vision'` finding (1.3.1):
+  the Italian age-gate title "HAI L'ETÀ LEGALE PER BERE?" is a visual heading marked up as a
+  `<div>`. ACR PDF delivered to the user. C#2 "Supports-from-vision" correctly did NOT fire
+  (Aperol has 6805 errors → 1.3.1 = Does Not Support; the upgrade only fires on a CLEAN
+  vision-evaluated criterion — correct conservative behavior).
+- NOTE: Aperol is an alcohol brand with an AGE GATE; the crawler largely stayed on age-gate
+  pages. For a meaningful full-content ACR, bypass the gate via pa11y actions/cookies on
+  `/scan/new`. The pipeline itself is proven.
+
+REMAINING (all user-gated or optional): HUMAN UAT (Item A image upload + TTS); LEGAL sign-off
+on the C#2 "Supports-from-vision" wording before relying on it in a legal doc; optionally
+promote gemini-2.5-pro to analyse-visual primary (flash performed well — found the age-gate
+finding); #9 automated UAT harness. Original detail retained below.
+
 Gemini vision is BUILT + WIRED LIVE (see below). User reviewed the first delivered ACR
 and gave feedback. Tackle in order:
 
