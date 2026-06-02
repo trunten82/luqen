@@ -21,6 +21,7 @@ import { executeExtractRequirements } from '../capabilities/extract-requirements
 import { executeGenerateFix } from '../capabilities/generate-fix.js';
 import { executeAnalyseReport } from '../capabilities/analyse-report.js';
 import { executeDiscoverBranding } from '../capabilities/discover-branding.js';
+import { executeAnalyseVisual } from '../capabilities/analyse-visual.js';
 import { CapabilityNotConfiguredError, CapabilityExhaustedError } from '../capabilities/types.js';
 import { VERSION } from '../version.js';
 import { LLM_TOOL_METADATA } from './metadata.js';
@@ -32,6 +33,7 @@ const TOOL_NAMES = [
   'llm_analyse_report',
   'llm_discover_branding',
   'llm_extract_requirements',
+  'llm_analyse_visual',
 ] as const;
 
 // ---- Classification (MCPI-04 — no cross-org data leakage) ----
@@ -229,6 +231,45 @@ export async function createLlmMcpServer(
           regulationId: args.regulationId,
           regulationName: args.regulationName,
           ...(args.jurisdictionId != null ? { jurisdictionId: args.jurisdictionId } : {}),
+          orgId,
+        });
+        const payload = {
+          ...capResult.data,
+          model: capResult.model,
+          provider: capResult.provider,
+          attempts: capResult.attempts,
+        };
+        return { content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }] };
+      } catch (err) {
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ error: mapCapabilityError(err) }) }],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  // ---- llm_analyse_visual ----
+  server.registerTool(
+    'llm_analyse_visual',
+    {
+      description: 'Run an LLM-vision accessibility check on a screenshot. check="heading-semantics" judges whether the visual heading hierarchy matches the document outline (WCAG 1.3.1); check="alt-text" judges whether an image\'s alt text is appropriate (WCAG 1.1.1). Returns a structured verdict (pass/issue/uncertain) with findings; degrades to "uncertain" when no vision model is configured.',
+      inputSchema: z.object({
+        check: z.enum(['heading-semantics', 'alt-text']).describe('Which visual check to run'),
+        imageBase64: z.string().describe('Raw base64-encoded image (no data: URI prefix)'),
+        mediaType: z.enum(['image/png', 'image/jpeg', 'image/webp', 'image/gif']).describe('Image MIME type'),
+        context: z.string().optional().describe('Optional: text context (e.g. the heading outline, or the alt text under review)'),
+      }),
+    },
+    // orgId: N/A (global — inputs supplied by caller; orgId used only for per-org prompt overrides)
+    async (args) => {
+      const _ctx = getCurrentToolContext();
+      const orgId = resolveOrgId();
+      try {
+        const capResult = await executeAnalyseVisual(db, adapterFactory, {
+          check: args.check,
+          image: { mediaType: args.mediaType, data: args.imageBase64 },
+          context: args.context ?? '',
           orgId,
         });
         const payload = {

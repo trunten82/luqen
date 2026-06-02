@@ -139,7 +139,7 @@ describe('POST /api/v1/mcp — llm', () => {
     expect(serverInfo?.name).toBe('luqen-llm');
   });
 
-  it('tools/list with read scope — returns exactly the 4 LLM tools', async () => {
+  it('tools/list with read scope — returns exactly the 5 LLM tools', async () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/mcp',
@@ -158,10 +158,11 @@ describe('POST /api/v1/mcp — llm', () => {
     expect(names).toContain('llm_analyse_report');
     expect(names).toContain('llm_discover_branding');
     expect(names).toContain('llm_extract_requirements');
-    expect(names.length).toBe(4);
+    expect(names).toContain('llm_analyse_visual');
+    expect(names.length).toBe(5);
   });
 
-  it('tools/list admin scope — all 4 LLM tools visible via scope fallback', async () => {
+  it('tools/list admin scope — all 5 LLM tools visible via scope fallback', async () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/mcp',
@@ -176,7 +177,7 @@ describe('POST /api/v1/mcp — llm', () => {
     const parsed = parseSseOrJson(response.body);
     const result = parsed['result'] as { tools?: Array<{ name: string }> } | undefined;
     const names = (result?.tools ?? []).map((t) => t.name);
-    expect(names.length).toBe(4);
+    expect(names.length).toBe(5);
   });
 
   it('MCPI-04 runtime guard — NO LLM tool inputSchema contains orgId (D-13)', async () => {
@@ -184,15 +185,15 @@ describe('POST /api/v1/mcp — llm', () => {
     const freshDb = new SqliteAdapter(':memory:');
     const { server, metadata, toolNames } = await createLlmMcpServer({ db: freshDb });
 
-    // Metadata + toolNames shape check: all 4 tools present, no orgId anywhere.
-    expect(toolNames.length).toBe(4);
-    expect(metadata.length).toBe(4);
+    // Metadata + toolNames shape check: all 5 tools present, no orgId anywhere.
+    expect(toolNames.length).toBe(5);
+    expect(metadata.length).toBe(5);
 
     const registered = (server as unknown as {
       _registeredTools?: Record<string, { inputSchema?: unknown }>;
     })._registeredTools ?? {};
     const entries = Object.entries(registered);
-    expect(entries.length).toBe(4);
+    expect(entries.length).toBe(5);
 
     for (const [name, tool] of entries) {
       // McpServer stores the raw zod SCHEMA at inputSchema. We try every
@@ -235,23 +236,23 @@ describe('POST /api/v1/mcp — llm', () => {
     await freshDb.close();
   });
 
-  it('Classification coverage — all 4 LLM handlers are GLOBAL, NO TODO(phase-30) deferrals', async () => {
+  it('Classification coverage — all 5 LLM handlers are GLOBAL, NO TODO(phase-30) deferrals', async () => {
     const source = await readFile(resolve(__dirname, '../../src/mcp/server.ts'), 'utf-8');
     expect(source).not.toMatch(/TODO\(phase-30\)/);
     expect(source).not.toMatch(/TODO phase-30/);
     expect(source).not.toMatch(/TODO phase 30/);
 
-    // Every one of the 4 tool handlers must carry EITHER a GLOBAL marker
+    // Every one of the 5 tool handlers must carry EITHER a GLOBAL marker
     // ("orgId: N/A") OR an ORG-SCOPED marker ("orgId: ctx.orgId"). The total
-    // classification comments must be exactly 4 — one per tool — with no gaps.
+    // classification comments must be exactly 5 — one per tool — with no gaps.
     const globalMatches = source.match(/\/\/ orgId: N\/A /g) ?? [];
     const orgScopedMatches = source.match(/\/\/ orgId: ctx\.orgId /g) ?? [];
     const totalClassifications = globalMatches.length + orgScopedMatches.length;
-    expect(totalClassifications).toBe(4);
+    expect(totalClassifications).toBe(5);
 
-    // All 4 LLM tools are GLOBAL (D-06) — no org-scoped DB reads. orgId is
+    // All 5 LLM tools are GLOBAL (D-06) — no org-scoped DB reads. orgId is
     // used only for per-org prompt overrides inside the capability executor.
-    expect(globalMatches.length).toBe(4);
+    expect(globalMatches.length).toBe(5);
     expect(orgScopedMatches.length).toBe(0);
 
     // D-13 invariant — no zod schema declares an orgId field.
