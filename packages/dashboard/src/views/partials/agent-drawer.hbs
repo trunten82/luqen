@@ -113,6 +113,17 @@
         <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
       </svg>
     </button>
+    <button type="button" class="chat-btn--icon btn btn--ghost" id="agent-tts"
+            aria-label="{{t "agent.tts.enable"}}"
+            data-label-enable="{{t "agent.tts.enable"}}"
+            data-label-disable="{{t "agent.tts.disable"}}"
+            aria-pressed="false"
+            hidden>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M3 9v6h4l5 5V4L7 9H3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M16 9a3 3 0 0 1 0 6M19 6a7 7 0 0 1 0 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
     <label for="agent-input" class="sr-only">{{t "agent.input.placeholder" name=agentDisplayName}}</label>
     <textarea id="agent-input" name="content"
               placeholder="{{t "agent.input.placeholder" name=agentDisplayName}}"

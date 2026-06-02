@@ -1321,6 +1321,8 @@
   "agent.speech.listening": "[FR] Listening…",
   "agent.speech.error": "[FR] Could not capture audio. Try again or type your message.",
   "agent.speech.unsupported": "[FR] Voice input isn't supported in this browser. Type your message below.",
+  "agent.tts.enable": "Lire les réponses à voix haute",
+  "agent.tts.disable": "Arrêter la lecture à voix haute",
   "agent.stream.stop": "[FR] Stop response",
   "agent.stream.ariaLabel": "[FR] {{name}} is responding",
   "agent.role.user": "You",
