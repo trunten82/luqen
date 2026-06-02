@@ -9,7 +9,7 @@
     "luqen-dashboard": "dist/cli.js"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc && cp -r src/views dist/views && cp -r src/static dist/static && cp -r src/i18n/locales dist/i18n/locales && cp src/i18n/glossary.json dist/i18n/glossary.json && cp -r src/pdf/fonts dist/pdf/fonts && cp plugin-registry.json dist/",
+    "build": "rm -rf dist && tsc && cp -r src/views dist/views && cp -r src/static dist/static && cp -r src/i18n/locales dist/i18n/locales && cp src/i18n/glossary.json dist/i18n/glossary.json && cp -r src/pdf/fonts dist/pdf/fonts && cp plugin-registry.json dist/ && mkdir -p dist/acr && cp ../../shared/acr/acr.css ../../shared/acr/acr.template.html dist/acr/",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -88,7 +88,9 @@
     "pdfkit": "^0.18.0",
     "tar": "^7.5.12",
     "zod": "^4.3.6",
-    "zod-to-json-schema": "^3.24.6"
+    "zod-to-json-schema": "^3.24.6",
+    "mustache": "^4.2.0",
+    "puppeteer": "^25.1.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",

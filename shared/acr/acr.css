@@ -244,6 +244,22 @@
 .acr__col-conf { width: 26%; }
 .acr__col-crit { width: 28%; }
 
+/* ── Evidence appendix ──────────────────────────────────────────────────── */
+
+.acr__evidence { margin-top: var(--acr-space-3); }
+.acr__evidence-crit { font-size: 9pt; margin-bottom: var(--acr-space-1); }
+.acr__evidence-items { display: flex; flex-wrap: wrap; gap: var(--acr-space-2); align-items: center; }
+.acr__evidence-thumb { max-width: 160px; max-height: 120px; border: 1px solid var(--acr-border-subtle); border-radius: 3px; }
+.acr__evidence-doc {
+	display: inline-block;
+	font-size: 8pt;
+	padding: 2px var(--acr-space-2);
+	border: 1px solid var(--acr-border-subtle);
+	border-radius: 3px;
+	background: var(--acr-bg-surface);
+	color: var(--acr-text-secondary);
+}
+
 /* ── Footer ─────────────────────────────────────────────────────────────── */
 
 .acr__footer {
