@@ -138,6 +138,29 @@ describe('VPAT report identity — PDF ACR', () => {
     expect(pdf.length).toBeGreaterThan(1000);
     expect(pdf.subarray(0, 5).toString('latin1')).toBe('%PDF-');
   }, 60000);
+
+  it('renders the explicit "Standards & laws evaluated against" section (HTML + PDF) for selected regulations', async () => {
+    const usScan: VpatScanInput = {
+      siteUrl: 'https://acme.example',
+      standard: 'WCAG2AA',
+      jurisdictions: ['US'],
+      regulations: ['US-ADA', 'US-NY-NYC-LL12'],
+    };
+    const vpat = buildVpat(makeReport(), usScan, [], { generatedAt: GEN_AT });
+    // HTML view enumerates each regulation by full name.
+    const html = await renderVpat(vpat, { siteUrl: usScan.siteUrl });
+    expect(html).toContain('Standards &amp; laws evaluated against');
+    expect(html).toContain('Americans with Disabilities Act');
+    expect(html).toContain('(US-ADA)');
+    expect(html).toContain('Local Law 12');
+    // PDF render exercises the new branch without throwing.
+    const pdf = await generateVpatPdf(
+      { ...scanMeta, regulations: 'US-ADA, US-NY-NYC-LL12' },
+      vpat,
+    );
+    expect(pdf.length).toBeGreaterThan(1000);
+    expect(pdf.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+  }, 60000);
 });
 
 describe('VPAT report identity — storage round-trip (migration 082)', () => {
