@@ -1108,6 +1108,8 @@
             var lastMid = last.getAttribute('data-message-id');
             if (lastMid && lastMid.length > 0) recordMarkdownSource(lastMid, rawText);
             else if (streamingMessageId) recordMarkdownSource(streamingMessageId, rawText);
+            // Phase 84: speak the completed assistant text when voice output is on.
+            if (window.__luqenAgentTts) window.__luqenAgentTts.speakIfEnabled(rawText);
             renderMarkdownInto(body, rawText);
           }
         }
@@ -1216,6 +1218,14 @@
       e.preventDefault();
       if (window.__luqenAgentSpeech && typeof window.__luqenAgentSpeech.toggle === 'function') {
         window.__luqenAgentSpeech.toggle(speechEl);
+      }
+      return;
+    }
+    var ttsEl = e.target.closest('#agent-tts');
+    if (ttsEl) {
+      e.preventDefault();
+      if (window.__luqenAgentTts && typeof window.__luqenAgentTts.toggle === 'function') {
+        window.__luqenAgentTts.toggle(ttsEl);
       }
       return;
     }

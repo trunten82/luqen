@@ -1330,6 +1330,8 @@
   "agent.speech.listening": "[IT] Listening…",
   "agent.speech.error": "[IT] Could not capture audio. Try again or type your message.",
   "agent.speech.unsupported": "[IT] Voice input isn't supported in this browser. Type your message below.",
+  "agent.tts.enable": "Leggi le risposte ad alta voce",
+  "agent.tts.disable": "Interrompi la lettura ad alta voce",
   "agent.stream.stop": "[IT] Stop response",
   "agent.stream.ariaLabel": "[IT] {{name}} is responding",
   "agent.role.user": "You",

@@ -1741,6 +1741,8 @@
   "agent.speech.listening": "Listening…",
   "agent.speech.error": "Could not capture audio. Try again or type your message.",
   "agent.speech.unsupported": "Voice input isn't supported in this browser. Type your message below.",
+  "agent.tts.enable": "Read responses aloud",
+  "agent.tts.disable": "Stop reading responses aloud",
   "agent.stream.stop": "Stop response",
   "agent.stream.ariaLabel": "{{name}} is responding",
   "agent.role.user": "You",
