@@ -55,7 +55,12 @@ export async function runBehavioralChecks(
       // the already-open page and delegates analysis to the injected callback.
       if (opts.onVisualContext) {
         try {
-          const ctx = await captureVisualContext(page);
+          const ctx = await captureVisualContext(
+            page,
+            opts.visualImageBytes !== undefined && opts.visualImageBytes > 0
+              ? { maxImageBytes: opts.visualImageBytes }
+              : {},
+          );
           issues.push(...(await opts.onVisualContext(ctx, url)));
         } catch (err) {
           errors.push({ url, message: `vision check failed: ${toMessage(err)}` });

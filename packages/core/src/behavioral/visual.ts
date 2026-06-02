@@ -26,6 +26,13 @@ export interface CapturedImage {
   readonly role: string | null;
   /** Trimmed text of the nearest meaningful ancestor — context for decorative-vs-informational. */
   readonly surroundingText: string;
+  /**
+   * Phase 84 (alt-text) — the rendered PNG bytes of this image element, when
+   * byte capture is enabled (`maxImageBytes > 0`) and the element screenshotted
+   * successfully. Feeds the LLM `analyse-visual` alt-text check one layer up.
+   * Absent for elements that are hidden / zero-size / failed to screenshot.
+   */
+  readonly bytes?: CapturedScreenshot;
 }
 
 export interface VisualContext {
@@ -38,6 +45,13 @@ export interface VisualContext {
 export interface CaptureVisualOptions {
   /** Max images to inventory (default 20). */
   readonly maxImages?: number;
+  /**
+   * Phase 84 (alt-text) — max images for which to also capture rendered PNG
+   * bytes (via per-element screenshot) for the LLM alt-text check. 0 disables
+   * byte capture entirely (the default — byte capture is opt-in because each
+   * element screenshot adds latency). Capped at `maxImages`.
+   */
+  readonly maxImageBytes?: number;
 }
 
 const DEFAULT_MAX_IMAGES = 20;
@@ -120,9 +134,35 @@ export async function captureVisualContext(
     return { headingOutline: lines.join('\n'), images };
   }, maxImages);
 
+  // Phase 84 (alt-text) — optionally capture per-image rendered bytes. The
+  // evaluate() above walks `img` elements in document order sliced to
+  // `maxImages`; `page.$$('img')` yields handles in the SAME order, so handle
+  // index N matches images[N]. Each screenshot is guarded: a hidden / detached /
+  // zero-size element simply yields no bytes for that entry (degrade, never throw).
+  const maxImageBytes = Math.min(opts.maxImageBytes ?? 0, maxImages);
+  let imagesOut: CapturedImage[] = images as CapturedImage[];
+  if (maxImageBytes > 0 && images.length > 0) {
+    const handles = await page.$$('img');
+    const limit = Math.min(maxImageBytes, images.length, handles.length);
+    imagesOut = await Promise.all(
+      images.map(async (img, i): Promise<CapturedImage> => {
+        if (i >= limit) return img;
+        try {
+          const b = (await handles[i].screenshot({ encoding: 'base64' })) as unknown as string;
+          if (typeof b === 'string' && b.length > 0) {
+            return { ...img, bytes: { mediaType: 'image/png', data: b } };
+          }
+        } catch {
+          // hidden / detached / zero-size element — no bytes for this entry.
+        }
+        return img;
+      }),
+    );
+  }
+
   return {
     screenshot: { mediaType: 'image/png', data },
     headingOutline,
-    images,
+    images: imagesOut,
   };
 }

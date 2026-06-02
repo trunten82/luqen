@@ -75,6 +75,22 @@ describe('captureVisualContext', () => {
     expect(logo!.alt).toBe('Acme logo');
   }, TEST_TIMEOUT);
 
+  it('does not capture per-image bytes by default (maxImageBytes = 0)', async () => {
+    const ctx = await withPage(baseUrl, {}, (page) => captureVisualContext(page));
+    expect(ctx.images.every((i) => i.bytes === undefined)).toBe(true);
+  }, TEST_TIMEOUT);
+
+  it('captures rendered PNG bytes per image when maxImageBytes > 0 (Phase 84 alt-text)', async () => {
+    const ctx = await withPage(baseUrl, {}, (page) => captureVisualContext(page, { maxImageBytes: 5 }));
+    const withBytes = ctx.images.filter((i) => i.bytes !== undefined);
+    expect(withBytes.length).toBeGreaterThan(0);
+    for (const img of withBytes) {
+      expect(img.bytes!.mediaType).toBe('image/png');
+      expect(img.bytes!.data.length).toBeGreaterThan(50);
+      expect(img.bytes!.data.startsWith('data:')).toBe(false);
+    }
+  }, TEST_TIMEOUT);
+
   it('runBehavioralChecks invokes onVisualContext and merges its issues', async () => {
     let receivedOutline = '';
     const visionIssue: Issue = {

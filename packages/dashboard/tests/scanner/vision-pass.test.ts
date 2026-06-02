@@ -71,8 +71,72 @@ describe('buildVisionAnalyzer', () => {
   it('skips the call entirely when the heading outline is empty', async () => {
     const analyseVisual = vi.fn();
     const analyzer = buildVisionAnalyzer(clientWith(analyseVisual), 'org-1');
-    const empty: VisualContext = { ...CTX, headingOutline: '' };
+    const empty: VisualContext = { ...CTX, headingOutline: '', images: [] };
     expect(await analyzer(empty, 'u')).toEqual([]);
     expect(analyseVisual).not.toHaveBeenCalled();
+  });
+});
+
+const imgWithBytes = (selector: string, alt: string | null) => ({
+  selector,
+  src: 'https://x.test/a.png',
+  alt,
+  role: null,
+  surroundingText: 'around the image',
+  bytes: { mediaType: 'image/png' as const, data: 'IMGB64' },
+});
+
+describe('buildVisionAnalyzer — alt-text (Phase 84 C#1)', () => {
+  it('runs an alt-text check per image that has captured bytes and maps issue findings to 1.1.1 with the image selector', async () => {
+    const analyseVisual = vi.fn(async (input: { check: string }) => {
+      if (input.check === 'heading-semantics') return { verdict: 'pass', findings: [] };
+      return {
+        verdict: 'issue',
+        findings: [{ description: 'Alt text does not describe the chart', wcagCriterion: '1.1.1', confidence: 'medium' as const }],
+        suggestedAlt: 'Bar chart of quarterly revenue',
+      };
+    });
+    const ctx: VisualContext = { ...CTX, headingOutline: '', images: [imgWithBytes('img:nth-of-type(1)', 'logo')] };
+    const analyzer = buildVisionAnalyzer(clientWith(analyseVisual as unknown as LLMClient['analyseVisual']), 'org-1');
+    const issues = await analyzer(ctx, 'https://x.test/');
+
+    const altCall = analyseVisual.mock.calls.find((c) => c[0].check === 'alt-text');
+    expect(altCall).toBeDefined();
+    expect(altCall?.[0]).toMatchObject({ check: 'alt-text', image: { mediaType: 'image/png', data: 'IMGB64' }, orgId: 'org-1' });
+    expect(issues).toHaveLength(1);
+    expect(issues[0].code).toBe('1_1_1');
+    expect(issues[0].selector).toBe('img:nth-of-type(1)');
+    expect(issues[0].runner).toBe('vision');
+    // The suggested alt is surfaced to the remediator.
+    expect(issues[0].message).toContain('Bar chart of quarterly revenue');
+  });
+
+  it('does not run alt-text for images without captured bytes', async () => {
+    const analyseVisual = vi.fn().mockResolvedValue({ verdict: 'pass', findings: [] });
+    const noBytes = { selector: 'img', src: 's', alt: 'x', role: null, surroundingText: '' };
+    const ctx: VisualContext = { ...CTX, headingOutline: '', images: [noBytes] };
+    const analyzer = buildVisionAnalyzer(clientWith(analyseVisual), 'org-1');
+    expect(await analyzer(ctx, 'u')).toEqual([]);
+    expect(analyseVisual).not.toHaveBeenCalled();
+  });
+
+  it('caps the number of per-image alt-text calls', async () => {
+    const analyseVisual = vi.fn().mockResolvedValue({ verdict: 'pass', findings: [] });
+    const many = Array.from({ length: 12 }, (_v, i) => imgWithBytes(`img:nth-of-type(${i + 1})`, null));
+    const ctx: VisualContext = { ...CTX, headingOutline: '', images: many };
+    const analyzer = buildVisionAnalyzer(clientWith(analyseVisual), 'org-1');
+    await analyzer(ctx, 'u');
+    const altCalls = analyseVisual.mock.calls.filter((c) => c[0].check === 'alt-text');
+    expect(altCalls.length).toBeLessThanOrEqual(5);
+  });
+
+  it('a single failing alt-text call does not sink the whole pass', async () => {
+    const analyseVisual = vi.fn(async (input: { check: string }) => {
+      if (input.check === 'alt-text') throw new Error('HTTP 503');
+      return { verdict: 'pass', findings: [] };
+    });
+    const ctx: VisualContext = { ...CTX, headingOutline: '', images: [imgWithBytes('img', null)] };
+    const analyzer = buildVisionAnalyzer(clientWith(analyseVisual as unknown as LLMClient['analyseVisual']), 'org-1');
+    expect(await analyzer(ctx, 'u')).toEqual([]);
   });
 });

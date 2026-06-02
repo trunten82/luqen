@@ -35,6 +35,14 @@ export interface BehavioralOptions {
     ctx: VisualContext,
     url: string,
   ) => Promise<readonly Issue[]>;
+  /**
+   * Phase 84 (alt-text) — when > 0, capture rendered PNG bytes for up to this
+   * many image elements (in addition to the inventory metadata) so the
+   * `onVisualContext` callback can run a per-image alt-text vision check.
+   * Defaults to 0 (no byte capture — each element screenshot adds latency).
+   * Only meaningful alongside `onVisualContext`.
+   */
+  readonly visualImageBytes?: number;
 }
 
 export interface BehavioralResult {
