@@ -189,6 +189,31 @@ function parseCodeExample(codeExample: string, context: string): { oldText: stri
   return { oldText, newText };
 }
 
+/**
+ * A fix resolved to concrete repo text, regardless of which engine produced it
+ * (the core proposer or the local fallback). `file` is the repo-relative path
+ * the change applies to, or null when it must be guessed at apply time.
+ */
+interface ResolvedFix {
+  readonly file: string | null;
+  readonly criterion: string;
+  readonly message: string;
+  readonly oldText: string;
+  readonly newText: string;
+}
+
+/**
+ * Derive a dotted WCAG success-criterion id (e.g. "1.1.1") from a runner issue
+ * code. Scan reports encode the criterion inside the code in several formats —
+ * htmlcs ("WCAG2AA.Principle1.Guideline1_1.1_1_1.H37"), Lighthouse/IBM
+ * ("Luqen.Lighthouse.3_1_1.html-has-lang"), etc. — always as an underscore
+ * triple. Axe-style codes ("image-alt") carry no criterion and yield "".
+ */
+function wcagCriterionFromCode(code: string): string {
+  const m = code.match(/(\d+)_(\d+)_(\d+)/);
+  return m !== null ? `${m[1]}.${m[2]}.${m[3]}` : '';
+}
+
 // ---------------------------------------------------------------------------
 // Route registration
 // ---------------------------------------------------------------------------
@@ -302,21 +327,7 @@ export async function fixPrRoutes(
           : reply.code(422).send({ error: msg });
       }
 
-      // 9. Build fix list and select requested indices
-      const allIssues = collectIssuesFromReport(rawReport, scan.siteUrl);
-      const allFixes = buildFixList(allIssues);
-      const selectedFixes = fixIndices
-        .filter((idx) => idx < allFixes.length)
-        .map((idx) => allFixes[idx]);
-
-      if (selectedFixes.length === 0) {
-        const msg = 'Selected fix indices are out of range';
-        return isHtmx
-          ? reply.code(422).send(toastHtml(msg, 'error'))
-          : reply.code(422).send({ error: msg });
-      }
-
-      // 10. Extract repo slug (owner/repo) from the connected repo URL
+      // 9. Extract repo slug (owner/repo) from the connected repo URL
       const repoSlug = extractRepoSlug(repo.repoUrl);
       if (repoSlug === null) {
         const msg = 'Cannot parse repository URL';
@@ -325,15 +336,17 @@ export async function fixPrRoutes(
           : reply.code(422).send({ error: msg });
       }
 
-      // 11. For each fix, read the file from the repo and apply replacements
-      const changedFiles = new Map<string, string>();
       const repoPath = repo.repoPath ?? '';
       const baseBranch = repo.branch;
-      // Build source map override: strip scanned URL prefix to get repo-relative paths
+      // Build source map override: strip the scanned URL path prefix to get
+      // repo-relative paths. Trailing slash(es) MUST be removed — a pattern like
+      // ".../luqen-a11y-demo/" would otherwise yield "/luqen-a11y-demo//*"
+      // (double slash) that never matches, so no source file resolves and zero
+      // fixes are produced.
       const siteUrlBase = repo.siteUrlPattern.replace(/%$/, '');
       const sourceMapOverrides: Record<string, string> = {};
       try {
-        const basePathname = new URL(siteUrlBase).pathname;
+        const basePathname = new URL(siteUrlBase).pathname.replace(/\/+$/, '');
         sourceMapOverrides[`${basePathname}/*`] = '';
       } catch { /* use empty overrides */ }
 
@@ -345,60 +358,78 @@ export async function fixPrRoutes(
         token,
       });
 
-      // Try the core's proposeFixesFromReport with remote reader (may not accept
-      // the 4th parameter yet — the core FileReader change is a parallel task).
+      // 10. Build the authoritative fix list. Prefer @luqen/core's
+      // proposeFixesFromReport — the SAME engine the GET /reports/:id/fixes page
+      // uses, which reads the actual repo files via the remote reader and derives
+      // oldText/newText from real source. Fall back to the local suggestion
+      // engine only when core lacks FileReader support. (The local engine keys
+      // off issue.wcagCriterion, which scan reports populate as issue.code, so it
+      // is intentionally a last resort.)
+      const allIssues = collectIssuesFromReport(rawReport, scan.siteUrl);
+      let allFixes: ResolvedFix[] = [];
       let usedCoreProposer = false;
       try {
         const { proposeFixesFromReport } = await import('@luqen/core');
-        // Check if proposeFixesFromReport accepts a 4th argument (FileReader)
         if (proposeFixesFromReport.length >= 4) {
           const proposals = await (proposeFixesFromReport as (
             report: unknown, repoPath: string, overrides: Record<string, string>, reader: RemoteFileReader,
-          ) => Promise<{ fixes: ReadonlyArray<{ file: string; oldText: string; newText: string }> }>)(
+          ) => Promise<{ fixes: ReadonlyArray<{ file: string; issue: string; description: string; oldText: string; newText: string }> }>)(
             rawReport, repoPath, sourceMapOverrides, remoteReader,
           );
-
-          // Filter to selected fixes only
-          const selectedProposals = proposals.fixes.filter((_, i) => fixIndices.includes(i));
-
-          for (const proposal of selectedProposals) {
-            const filePath = proposal.file;
-            let content = changedFiles.get(filePath);
-            if (content === undefined) {
-              content = await remoteReader.read(filePath) ?? undefined;
-            }
-            if (content !== undefined && proposal.oldText && content.includes(proposal.oldText)) {
-              changedFiles.set(filePath, content.replace(proposal.oldText, proposal.newText));
-            }
-          }
-
+          allFixes = proposals.fixes.map((p) => ({
+            file: p.file,
+            criterion: wcagCriterionFromCode(p.issue),
+            message: p.description,
+            oldText: p.oldText,
+            newText: p.newText,
+          }));
           usedCoreProposer = true;
         }
       } catch {
-        // Core not built with FileReader support yet — fall back to naive approach
+        // Core not built with FileReader support yet — fall back below.
       }
 
-      // Fallback: naive file-path guessing when core proposer is unavailable
       if (!usedCoreProposer) {
-        for (const fix of selectedFixes) {
-          if (fix.oldText === '' || fix.newText === '' || fix.oldText === fix.newText) {
-            continue;
+        allFixes = buildFixList(allIssues).map((f) => ({
+          file: repoPath !== '' ? repoPath : null,
+          criterion: f.criterion,
+          message: f.message,
+          oldText: f.oldText,
+          newText: f.newText,
+        }));
+      }
+
+      // 11. Select the requested indices (index space matches the GET page,
+      // which assigns checkbox values in core-proposer order).
+      const selectedFixes = fixIndices
+        .filter((idx) => idx >= 0 && idx < allFixes.length)
+        .map((idx) => allFixes[idx]);
+
+      if (selectedFixes.length === 0) {
+        const msg = 'Selected fix indices are out of range';
+        return isHtmx
+          ? reply.code(422).send(toastHtml(msg, 'error'))
+          : reply.code(422).send({ error: msg });
+      }
+
+      // 12. Apply each selected fix to its repo file.
+      const changedFiles = new Map<string, string>();
+      for (const fix of selectedFixes) {
+        if (fix.oldText === '' || fix.newText === '' || fix.oldText === fix.newText) {
+          continue;
+        }
+        const candidatePaths = fix.file !== null
+          ? [fix.file]
+          : (repoPath !== '' ? [repoPath] : ['index.html', 'src/index.html', 'public/index.html']);
+
+        for (const filePath of candidatePaths) {
+          let content = changedFiles.get(filePath);
+          if (content === undefined) {
+            content = await remoteReader.read(filePath) ?? undefined;
           }
-
-          const filePaths = repoPath !== ''
-            ? [repoPath]
-            : ['index.html', 'src/index.html', 'public/index.html'];
-
-          for (const filePath of filePaths) {
-            let content = changedFiles.get(filePath);
-            if (content === undefined) {
-              content = await remoteReader.read(filePath) ?? undefined;
-            }
-
-            if (content !== undefined && content.includes(fix.oldText)) {
-              changedFiles.set(filePath, content.replace(fix.oldText, fix.newText));
-              break;
-            }
+          if (content !== undefined && content.includes(fix.oldText)) {
+            changedFiles.set(filePath, content.replace(fix.oldText, fix.newText));
+            break;
           }
         }
       }

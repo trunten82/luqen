@@ -415,7 +415,11 @@ export async function repoRoutes(
               const siteUrlBase = connectedRepo.siteUrlPattern.replace(/%$/, '');
               const overrides: Record<string, string> = {};
               try {
-                const basePathname = new URL(siteUrlBase).pathname;
+                // Strip trailing slash(es): a pattern like ".../luqen-a11y-demo/"
+                // would otherwise yield an override key "/luqen-a11y-demo//*"
+                // (double slash) that never matches the scanned URL path, so no
+                // source file is resolved and zero fixes are proposed.
+                const basePathname = new URL(siteUrlBase).pathname.replace(/\/+$/, '');
                 overrides[`${basePathname}/*`] = '';
               } catch { /* use empty overrides */ }
 
