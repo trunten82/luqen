@@ -13,6 +13,13 @@ import type { Issue } from '../types.js';
 import type { BehavioralOptions, BehavioralResult } from './types.js';
 
 export type { BehavioralOptions, BehavioralResult } from './types.js';
+export {
+  captureVisualContext,
+  type VisualContext,
+  type CapturedImage,
+  type CapturedScreenshot,
+  type CaptureVisualOptions,
+} from './visual.js';
 
 /**
  * Run all behavioral accessibility checks against a single URL.
