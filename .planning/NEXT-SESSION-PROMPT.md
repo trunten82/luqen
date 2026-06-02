@@ -6,8 +6,9 @@ ROADMAP/STATE. Only stop for a genuine product/legal fork you cannot reasonably
 default. Checkpoint with a handoff (update this file) if context runs low.
 
 ## 0. First steps
-1. **Verify green state** (all confirmed green at handoff 2026-06-02):
-   - luqen: `master == origin == 63893bb`; live `/login` → 200, `/api/v1/entitlement` → 401.
+1. **Verify green state** (all confirmed green at handoff 2026-06-02, session 2):
+   - luqen: `master == origin == 0afbc49` (Item A `cca049d` + C#3 MCP tool `0afbc49`);
+     live `/login` → 200, `/api/v1/entitlement` → 401.
    - luqen-wordpress: `master == origin == 8fdf14e`, **v0.26.0**, WP CI green. PRIVATE repo.
 2. **Load these memory files before planning:**
    - `project_v3_6_milestone_state` — what's DONE vs remaining (do NOT rebuild done work).
@@ -34,17 +35,20 @@ this run (all on master, CI green, deployed):
 
 ## 2. REMAINING WORK (suggested order)
 
-### Item A — Phase 83 companion multimodal image upload (last core v3.6.0 item)
-- Image upload/paste in the agent drawer (`packages/dashboard/src/views/partials/agent-drawer.hbs`,
-  `packages/dashboard/src/static/agent.js`).
-- Thread base64 images: `POST /agent/message` (`routes/agent.ts`) → agent service
-  (`agent/agent-service.ts`) → `ChatMessage.images` (field already exists end-to-end; the
-  provider adapters already accept images on `completeStream`). Verify the `agent-conversation`
-  capability/exec route forwards `images`.
-- Render image thumbnails in the message log (`views/partials/agent-message*.hbs`); persist
-  with the message.
-- New `{{t}}` keys in ALL 6 locales (flat dotted keys, e.g. `"agent.image.add"`).
-- **Human UAT required** (UI) — also UAT the already-shipped TTS toggle (mic + speaker icons).
+### Item A — DONE 2026-06-02 (`cca049d`, CI green, deployed)
+Phase 83 companion multimodal image upload shipped. Image upload + clipboard paste
+in the drawer (`agent-images.js`, staging tray, ≤4 × ≤5 MB png/jpeg/webp/gif), base64
+threaded through `POST /agent/message` (new `images` array + urlencoded `imagesJson`,
+both validated through one schema; image-only turns allowed; per-route `bodyLimit`
+raised) → migration 085 `agent_messages.images` → `windowToChatMessages` carries
+`images` → LLM `agent-conversation` spreads into `completeStream` (adapters render).
+Thumbnails in the optimistic bubble + history rehydrate. i18n ×6, CSS, openapi regen.
+Full dashboard suite green (3965). **STILL NEEDS HUMAN UAT** — and a vision-capable
+model must be assigned to the `agent-conversation` capability on `/admin/llm`, else the
+provider 400s on image turns (graceful, but no vision).
+
+### Item C#3 — DONE 2026-06-02 (`0afbc49`). `llm_analyse_visual` MCP tool added.
+### Item C#4 — already satisfied (`analyse-visual` ∈ `CAPABILITY_NAMES` → surfaces on /admin/llm).
 
 ### Item B — WordPress vision mirror (luqen-wordpress repo, PRIVATE, separate CI)
 Bring the LLM-vision heading-semantics (and, if Item C lands, alt-text) check to the WP plugin.
@@ -67,19 +71,25 @@ Bring the LLM-vision heading-semantics (and, if Item C lands, alt-text) check to
 - Bump version + CHANGELOG + readme.txt (keep `Stable tag:` == header Version — it has lagged)
   + regen `.pot`. WP gates: PHPCS (errors only) + PHPUnit + smoke + Playwright.
 
-### Item C — optional polish (dashboard)
-- **alt-text** vision check: capture currently feeds only the full-page screenshot + heading
-  outline to `heading-semantics`. For per-image alt-text, capture each `<img>`'s bytes
-  (puppeteer `element.screenshot()` or fetch src) in `captureVisualContext`, then call
-  `analyse-visual` with `check:'alt-text'`; map `suggestedAlt` into the finding.
-- **Positive-pass VPAT upgrade**: today a vision *finding* moves 1.3.1 off "Not Evaluated"
-  (good), but a *clean* vision pass does not upgrade to "Supports". Add a "behaviorally
-  evaluated criteria" signal to `vpat-service.ts deriveRow` + an attestation line.
-- Expose `analyse-visual` as an LLM **MCP tool** (`packages/llm/src/mcp/{metadata,server}.ts`).
-- Verify a vision model is assignable to `analyse-visual` on `/admin/llm` (it's in
-  `CAPABILITY_NAMES`, so it should surface).
+### Item C — optional polish (dashboard) — C#3 + C#4 DONE; C#1 + C#2 remain
+- **C#1 alt-text vision check (DEFERRED — higher effort):** `captureVisualContext`
+  (`@luqen/core/behavioral/visual.ts`) captures `CapturedImage.src` but NOT per-image
+  BYTES. To do alt-text: capture each `<img>`'s bytes (puppeteer ElementHandle
+  `imgEl.screenshot()` or fetch the src), then in dashboard `scanner/vision-pass.ts`
+  `buildVisionAnalyzer` call `analyseVisual({check:'alt-text', image, context:altText})`
+  per image and map `suggestedAlt`→1.1.1 `Issue`. Cost: one LLM call per image (cap it).
+  NOTE: core behavioral/browser tests are LOCAL-only (`npm run test:browser -w packages/core`),
+  NOT in CI — verify there.
+- **C#2 positive-pass VPAT upgrade (DEFERRED — legally sensitive):** today a vision
+  *finding* moves 1.3.1 off "Not Evaluated" (good), but a *clean* vision pass does not
+  upgrade to "Supports". `vpat-service.ts deriveRow` deliberately keeps `requiresManual`
+  criteria at "Not Evaluated" on a clean automated scan (anti-over-claim, FTC/accessiBe
+  precedent). To upgrade, plumb a "vision/behaviorally-evaluated criteria" SET from the
+  scan into the VPAT builder and add a careful attestation line — frame conservatively.
+- ~~C#3 analyse-visual MCP tool~~ DONE (`0afbc49`). ~~C#4 admin/llm surfacing~~ verified.
 
 When v3.6.0's items ship, consider `/gsd:complete-milestone` to archive the milestone.
+Suggested next order: **HUMAN UAT (A + TTS)** → Item B (WP) → C#1 → C#2.
 
 ## 3. GATES (do not forget)
 - Dashboard: `tsc --noEmit` clean; full `vitest run` green (CI authoritative; ~3900 tests/
