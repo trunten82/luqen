@@ -16,6 +16,8 @@
  * Pure, side-effect-free — unit-tests deterministically.
  */
 
+import type { RegulationDetail } from './regulation-catalog.js';
+
 export interface LegalFraming {
   /** Stable id (for keys/tests). */
   readonly id: string;
@@ -39,6 +41,16 @@ export interface EvaluatedStandard {
   readonly token: string;
   /** Resolved full name, e.g. "Americans with Disabilities Act". */
   readonly name: string;
+  /** Short label, e.g. "ADA" (from the compliance record when available). */
+  readonly shortName?: string;
+  /** Legal citation / reference, e.g. "42 U.S.C. § 12101". */
+  readonly reference?: string;
+  /** One-line factual description (the programmatic context note). */
+  readonly description?: string;
+  /** Enforcement / in-force date (ISO), when known. */
+  readonly enforcementDate?: string;
+  /** Canonical URL for the regulation, when known. */
+  readonly url?: string;
 }
 
 export interface LegalFramingResult {
@@ -294,20 +306,33 @@ function normalise(tokens: readonly string[]): string[] {
 
 /**
  * Resolves the ordered, de-duplicated list of selected regulations to explicit
- * full names. Resolution order per token: live override map → built-in catalog →
- * the raw token itself (so an unknown selection is still shown, never dropped).
+ * full names plus the programmatic context fields (citation, description,
+ * enforcement date, url) from the live compliance records. Resolution order for
+ * the NAME: live record → built-in catalog → the raw token itself (so an unknown
+ * selection is still shown, never dropped). The context fields are attached only
+ * when the live record supplies them — so the per-regulation note is programmatic
+ * and covers every selected regulation, with graceful degradation to name-only.
  */
 function deriveEvaluatedStandards(
   regulations: readonly string[],
-  regulationNames?: ReadonlyMap<string, string>,
+  regulationDetails?: ReadonlyMap<string, RegulationDetail>,
 ): EvaluatedStandard[] {
   const seen = new Set<string>();
   const out: EvaluatedStandard[] = [];
   for (const token of regulations) {
     if (typeof token !== 'string' || token.trim() === '' || seen.has(token)) continue;
     seen.add(token);
-    const name = regulationNames?.get(token) ?? KNOWN_STANDARD_NAMES[token] ?? token;
-    out.push({ token, name });
+    const detail = regulationDetails?.get(token);
+    const name = detail?.name ?? KNOWN_STANDARD_NAMES[token] ?? token;
+    out.push({
+      token,
+      name,
+      ...(detail?.shortName ? { shortName: detail.shortName } : {}),
+      ...(detail?.reference ? { reference: detail.reference } : {}),
+      ...(detail?.description ? { description: detail.description } : {}),
+      ...(detail?.enforcementDate ? { enforcementDate: detail.enforcementDate } : {}),
+      ...(detail?.url ? { url: detail.url } : {}),
+    });
   }
   return out;
 }
@@ -319,7 +344,7 @@ function deriveEvaluatedStandards(
 export function deriveLegalFramings(
   jurisdictions: readonly string[] = [],
   regulations: readonly string[] = [],
-  regulationNames?: ReadonlyMap<string, string>,
+  regulationDetails?: ReadonlyMap<string, RegulationDetail>,
 ): LegalFramingResult {
   const tokens = normalise([...jurisdictions, ...regulations]);
   const has = (def: FramingDef): boolean =>
@@ -369,7 +394,7 @@ export function deriveLegalFramings(
 
   return {
     framings,
-    evaluatedStandards: deriveEvaluatedStandards(regulations, regulationNames),
+    evaluatedStandards: deriveEvaluatedStandards(regulations, regulationDetails),
     includeFunctionalPerformance,
     functionalPerformanceHeading,
     standardsLabel,

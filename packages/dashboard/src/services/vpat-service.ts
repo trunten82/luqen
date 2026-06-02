@@ -20,6 +20,7 @@ import { MANUAL_CRITERIA, type ManualTestResult } from '../manual-criteria.js';
 import { deriveSection508, type Section508Report } from './section508.js';
 import type { VpatIdentity } from './vpat-identity.js';
 import { deriveLegalFramings, type LegalFraming, type EvaluatedStandard } from './legal-framings.js';
+import type { RegulationDetail } from './regulation-catalog.js';
 import type { RemediationRecord } from './remediation-service.js';
 import { computeEngineCorroboration, type normalizeReportData } from './report-service.js';
 
@@ -171,12 +172,13 @@ export interface BuildVpatOptions {
    */
   readonly behaviorallyEvaluatedCriteria?: ReadonlySet<string>;
   /**
-   * Live regulation token → full-name map resolved from the compliance service.
-   * Drives the explicit "Standards & laws evaluated against" enumeration; takes
-   * precedence over the built-in catalog so the report always names the exact
-   * laws selected. Absent → falls back to the built-in catalog, then the token.
+   * Live regulation token → full record map resolved from the compliance
+   * service (name, citation, description, enforcement date, url). Drives the
+   * programmatic per-regulation context notes in the "Standards & laws evaluated
+   * against" section, for every selected regulation. Absent/empty → the section
+   * falls back to the built-in name catalog (name + token only, no description).
    */
-  readonly regulationNames?: ReadonlyMap<string, string>;
+  readonly regulationDetails?: ReadonlyMap<string, RegulationDetail>;
 }
 
 /** Minimal shape of the scan record needed to build a VPAT. */
@@ -398,7 +400,7 @@ export function buildVpat(
   const generatedAt = opts.generatedAt ?? new Date().toISOString().slice(0, 10);
   // Legal framing is driven by the scan's selected jurisdictions/regulations,
   // not a hardcoded US frame.
-  const framing = deriveLegalFramings(scan.jurisdictions ?? [], scan.regulations ?? [], opts.regulationNames);
+  const framing = deriveLegalFramings(scan.jurisdictions ?? [], scan.regulations ?? [], opts.regulationDetails);
 
   const groupsByCriterion = new Map<string, IssueGroup>();
   for (const g of reportData.allIssueGroups ?? []) {

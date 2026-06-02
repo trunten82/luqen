@@ -9,6 +9,7 @@ import { generatePdfFromData, generateVpatPdf } from '../../pdf/generator.js';
 import type { PdfReportData, PdfScanMeta } from '../../pdf/generator.js';
 import { normalizeReportData, inferComponent } from '../../services/report-service.js';
 import { buildVpat } from '../../services/vpat-service.js';
+import { resolveRegulationDetails } from '../../services/regulation-catalog.js';
 import { buildVpatEvidenceGroups } from '../../services/vpat-evidence.js';
 import { buildRemediationRecord } from '../../services/remediation-service.js';
 import { buildFleetReportBundle } from '../../services/fleet-report-service.js';
@@ -601,6 +602,7 @@ export async function exportRoutes(
         ]);
         const remediation = buildRemediationRecord(remediationEvents, siteScans);
         const identity = await resolveScanIdentity(storage, scan);
+        const regulationDetails = await resolveRegulationDetails(scan.regulations ?? [], scan.orgId);
         const vpat = buildVpat(
           reportData,
           scan,
@@ -609,6 +611,7 @@ export async function exportRoutes(
             evidenceCounts,
             reasonedChangeCount,
             behaviorallyEvaluatedCriteria: new Set(reportData.behaviorallyEvaluatedCriteria ?? []),
+            regulationDetails,
             ...(identity ? { identity } : {}),
           },
           remediation,

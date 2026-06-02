@@ -345,14 +345,23 @@ describe('buildVpat', () => {
     expect(names.join(' ')).toContain('Local Law 12');
   });
 
-  it('lets a regulationNames override map drive evaluatedStandards names', () => {
+  it('lets a regulationDetails map drive programmatic per-regulation context notes', () => {
     const report = makeReport([]);
     const usScan = { siteUrl: 'https://example.com', standard: 'WCAG2AA', jurisdictions: ['US'], regulations: ['US-ADA'] };
     const vpat = buildVpat(report, usScan, [], {
       generatedAt: GEN_AT,
-      regulationNames: new Map([['US-ADA', 'ADA (from live compliance)']]),
+      regulationDetails: new Map([['US-ADA', {
+        id: 'US-ADA',
+        name: 'ADA (from live compliance)',
+        reference: '42 U.S.C. § 12101',
+        description: 'The ADA prohibits discrimination against people with disabilities.',
+        enforcementDate: '1990-07-26',
+      }]]),
     });
-    expect(vpat.evaluatedStandards[0]?.name).toBe('ADA (from live compliance)');
+    const std = vpat.evaluatedStandards[0];
+    expect(std?.name).toBe('ADA (from live compliance)');
+    expect(std?.reference).toBe('42 U.S.C. § 12101');
+    expect(std?.description).toMatch(/prohibits discrimination/);
   });
 
   it('excludes WCAG 2.2 AAA criteria from an AA scan but includes them at AAA', () => {

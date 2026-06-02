@@ -165,15 +165,21 @@
 </table>
 <p class="methodology__disclaimer">{{t "vpat.attestationStatement"}}</p>
 
-{{! ── Standards & laws evaluated against (explicit coverage enumeration) ── }}
+{{! ── Standards & laws evaluated against (programmatic per-regulation notes) ── }}
 {{#if vpat.evaluatedStandards.length}}
 <h2>{{t "vpat.standardsEvaluatedHeading"}}</h2>
 <p class="intro">{{t "vpat.standardsEvaluatedIntro"}}</p>
-<ul class="standards-evaluated">
-  {{#each vpat.evaluatedStandards}}
-  <li><strong>{{this.name}}</strong> <span class="text-muted">({{this.token}})</span></li>
-  {{/each}}
-</ul>
+{{#each vpat.evaluatedStandards}}
+<div class="standard-note">
+  <h3 class="standard-note__title">
+    {{#if this.url}}<a href="{{this.url}}" target="_blank" rel="noopener">{{this.name}}</a>{{else}}{{this.name}}{{/if}}
+    <span class="text-muted">({{this.token}})</span>
+  </h3>
+  {{#if this.reference}}<p class="standard-note__cite text-muted">{{t "vpat.standardReference"}}: {{this.reference}}{{#if this.enforcementDate}} · {{t "vpat.standardEnforced"}} {{this.enforcementDate}}{{/if}}</p>{{/if}}
+  {{#if this.description}}<p class="standard-note__body">{{this.description}}</p>{{/if}}
+</div>
+{{/each}}
+<p class="methodology__disclaimer">{{t "vpat.standardsEvaluatedDisclaimer"}}</p>
 {{/if}}
 
 {{#if vpat.tablesByLevel.length}}
@@ -244,11 +250,10 @@
 </table>
 {{/if}}
 
-{{! ── Jurisdiction-driven legal framing (from the scan's selected jurisdictions/regulations) ── }}
-{{#each vpat.legalFramings}}
-<h2>{{this.heading}}</h2>
-<p class="intro">{{this.body}}</p>
-{{/each}}
+{{! Per-regulation legal context now renders programmatically in the
+    "Standards & laws evaluated against" section above (one note per selected
+    regulation, sourced from the compliance records). The curated per-law
+    paragraph catalog was retired in favour of that data-driven coverage. }}
 
 {{! ── Remediation record (dated, good-faith) ── }}
 {{#if vpat.remediation}}

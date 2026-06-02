@@ -103,13 +103,28 @@ describe('deriveLegalFramings — evaluatedStandards (explicit coverage enumerat
     expect(r.evaluatedStandards.map((s) => s.name).join(' ')).toContain('Americans with Disabilities Act');
   });
 
-  it('prefers a live name-resolution override map over the built-in catalog', () => {
-    const overrides = new Map([['US-ADA', 'Americans with Disabilities Act (live)']]);
-    const r = deriveLegalFramings(['US'], ['US-ADA', 'XX-UNKNOWN'], overrides);
-    const byToken = Object.fromEntries(r.evaluatedStandards.map((s) => [s.token, s.name]));
-    expect(byToken['US-ADA']).toBe('Americans with Disabilities Act (live)');
-    // Unknown token with no override and no catalog entry falls back to the token itself.
-    expect(byToken['XX-UNKNOWN']).toBe('XX-UNKNOWN');
+  it('prefers a live compliance record over the built-in catalog and attaches its context fields', () => {
+    const details = new Map([
+      ['US-ADA', {
+        id: 'US-ADA',
+        name: 'Americans with Disabilities Act (live)',
+        shortName: 'ADA',
+        reference: '42 U.S.C. § 12101',
+        description: 'The ADA prohibits discrimination against people with disabilities.',
+        enforcementDate: '1990-07-26',
+        url: 'https://example.gov/ada',
+      }],
+    ]);
+    const r = deriveLegalFramings(['US'], ['US-ADA', 'XX-UNKNOWN'], details);
+    const byToken = Object.fromEntries(r.evaluatedStandards.map((s) => [s.token, s]));
+    expect(byToken['US-ADA'].name).toBe('Americans with Disabilities Act (live)');
+    expect(byToken['US-ADA'].reference).toBe('42 U.S.C. § 12101');
+    expect(byToken['US-ADA'].description).toMatch(/prohibits discrimination/);
+    expect(byToken['US-ADA'].enforcementDate).toBe('1990-07-26');
+    // Unknown token with no record and no catalog entry falls back to the token,
+    // with no context fields (graceful name-only degradation).
+    expect(byToken['XX-UNKNOWN'].name).toBe('XX-UNKNOWN');
+    expect(byToken['XX-UNKNOWN'].description).toBeUndefined();
   });
 
   it('preserves selection order and de-duplicates repeated tokens', () => {

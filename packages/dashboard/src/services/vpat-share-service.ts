@@ -8,6 +8,7 @@ import type { ScanRecord } from '../db/types.js';
 import { normalizeReportData } from './report-service.js';
 import type { JsonReportFile } from './report-service.js';
 import { buildVpat, type VpatReport } from './vpat-service.js';
+import { resolveRegulationDetails } from './regulation-catalog.js';
 import { buildVpatEvidenceGroups, type VpatEvidenceGroup } from './vpat-evidence.js';
 import { resolveReportIdentity, type VpatIdentity } from './vpat-identity.js';
 
@@ -80,6 +81,7 @@ export async function loadVpatForScan(
   // token-share view, and the evidence-pack PDF (all routed through this
   // assembly) render it identically.
   const identity = await resolveScanIdentity(storage, scan);
+  const regulationDetails = await resolveRegulationDetails(scan.regulations ?? [], scan.orgId);
   const vpat = buildVpat(
     reportData,
     scan,
@@ -88,6 +90,7 @@ export async function loadVpatForScan(
       evidenceCounts,
       reasonedChangeCount,
       behaviorallyEvaluatedCriteria: new Set(reportData.behaviorallyEvaluatedCriteria ?? []),
+      regulationDetails,
       ...(identity ? { identity } : {}),
     },
     remediation,

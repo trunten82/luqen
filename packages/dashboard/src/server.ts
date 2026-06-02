@@ -80,6 +80,7 @@ import { setupRoutes } from './routes/api/setup.js';
 import { startEmailScheduler } from './email/scheduler.js';
 import { startSourceMonitorScheduler } from './source-monitor-scheduler.js';
 import { ComplianceService } from './services/compliance-service.js';
+import { initRegulationCatalog } from './services/regulation-catalog.js';
 import { BrandingService } from './services/branding-service.js';
 import { EmbeddedBrandingAdapter } from './services/branding/embedded-branding-adapter.js';
 import { RemoteBrandingAdapter } from './services/branding/remote-branding-adapter.js';
@@ -877,6 +878,11 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   const complianceService = new ComplianceService(config, getComplianceTokenManager, storage.organizations);
   server.decorate('complianceService', complianceService);
   server.addHook('onClose', () => { complianceService.destroyOrgTokenManagers(); });
+  // Wire the shared regulation-catalog resolver ONCE so every VPAT/ACR render
+  // path (web view, PDF, token-share, public ACR, accessibility statement,
+  // fleet bundles) can resolve programmatic per-regulation context notes from
+  // the compliance records with no per-route plumbing. Graceful before/without.
+  initRegulationCatalog(complianceService);
 
   server.addHook('preHandler', async (request: FastifyRequest) => {
     // Bearer-only MCP bypasses the per-org service-token injector —

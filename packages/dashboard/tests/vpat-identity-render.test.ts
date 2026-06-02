@@ -146,13 +146,35 @@ describe('VPAT report identity — PDF ACR', () => {
       jurisdictions: ['US'],
       regulations: ['US-ADA', 'US-NY-NYC-LL12'],
     };
-    const vpat = buildVpat(makeReport(), usScan, [], { generatedAt: GEN_AT });
-    // HTML view enumerates each regulation by full name.
+    const vpat = buildVpat(makeReport(), usScan, [], {
+      generatedAt: GEN_AT,
+      regulationDetails: new Map([
+        ['US-ADA', {
+          id: 'US-ADA',
+          name: 'Americans with Disabilities Act',
+          reference: '42 U.S.C. § 12101',
+          description: 'The ADA prohibits discrimination against people with disabilities.',
+          enforcementDate: '1990-07-26',
+        }],
+        ['US-NY-NYC-LL12', {
+          id: 'US-NY-NYC-LL12',
+          name: 'New York City Local Law 12 of 2023 — Website Accessibility',
+          reference: 'NYC Admin Code § 23-802.1',
+          description: 'Requires NYC agencies to meet WCAG 2.1 Level AA.',
+        }],
+      ]),
+    });
+    // HTML view renders a programmatic note per regulation: name, citation, description.
     const html = await renderVpat(vpat, { siteUrl: usScan.siteUrl });
     expect(html).toContain('Standards &amp; laws evaluated against');
     expect(html).toContain('Americans with Disabilities Act');
     expect(html).toContain('(US-ADA)');
+    expect(html).toContain('42 U.S.C.');
+    expect(html).toContain('The ADA prohibits discrimination');
     expect(html).toContain('Local Law 12');
+    expect(html).toContain('Requires NYC agencies to meet WCAG 2.1 Level AA.');
+    // Section-level disclaimer present; curated per-law paragraphs retired.
+    expect(html).toContain('do not constitute legal advice');
     // PDF render exercises the new branch without throwing.
     const pdf = await generateVpatPdf(
       { ...scanMeta, regulations: 'US-ADA, US-NY-NYC-LL12' },
