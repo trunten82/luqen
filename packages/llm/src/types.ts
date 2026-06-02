@@ -31,7 +31,8 @@ export type CapabilityName =
   | 'analyse-report'
   | 'discover-branding'
   | 'agent-conversation'
-  | 'generate-notification-content';
+  | 'generate-notification-content'
+  | 'analyse-visual';
 
 export const CAPABILITY_NAMES: readonly CapabilityName[] = [
   'extract-requirements',
@@ -40,6 +41,7 @@ export const CAPABILITY_NAMES: readonly CapabilityName[] = [
   'discover-branding',
   'agent-conversation',
   'generate-notification-content',
+  'analyse-visual',
 ] as const;
 
 export interface CapabilityAssignment {

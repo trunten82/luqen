@@ -75,6 +75,29 @@ describe('OpenAIAdapter', () => {
     expect(body.temperature).toBe(0.5);
   });
 
+  it('complete attaches image_url content blocks when options.images present', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: 'a styled div, not an h2' } }],
+        usage: { prompt_tokens: 60, completion_tokens: 12 },
+      }),
+    });
+
+    await adapter.complete('Is this a real heading?', {
+      model: 'gpt-4o',
+      images: [{ mediaType: 'image/png', data: 'PNGDATA' }],
+    });
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    const userMsg = body.messages.find((m: { role: string }) => m.role === 'user');
+    expect(Array.isArray(userMsg.content)).toBe(true);
+    const textPart = userMsg.content.find((p: { type: string }) => p.type === 'text');
+    expect(textPart.text).toBe('Is this a real heading?');
+    const imgPart = userMsg.content.find((p: { type: string }) => p.type === 'image_url');
+    expect(imgPart.image_url.url).toBe('data:image/png;base64,PNGDATA');
+  });
+
   it('complete includes system prompt as first message when provided', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,

@@ -116,6 +116,27 @@ describe('OllamaAdapter', () => {
     expect(body.messages[1]).toEqual({ role: 'user', content: 'User message' });
   });
 
+  it('complete attaches bare base64 images array to the user message when options.images present', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        message: { content: 'decorative image' },
+        prompt_eval_count: 8,
+        eval_count: 4,
+      }),
+    });
+
+    await adapter.complete('Describe this image for alt text', {
+      model: 'llama3.2-vision',
+      images: [{ mediaType: 'image/png', data: 'OLLAMAB64' }],
+    });
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    const userMsg = body.messages.find((m: { role: string }) => m.role === 'user');
+    expect(userMsg.content).toBe('Describe this image for alt text');
+    expect(userMsg.images).toEqual(['OLLAMAB64']);
+  });
+
   // ========================================================================
   // Phase 32-01 streaming tests (D-11)
   // ========================================================================

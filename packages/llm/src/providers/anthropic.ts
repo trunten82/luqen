@@ -5,6 +5,7 @@ import type {
   CompletionResult,
   RemoteModel,
   ChatMessage,
+  ImageInput,
   StreamFrame,
   ToolCall,
   ToolDef,
@@ -62,7 +63,7 @@ export class AnthropicAdapter implements LLMProviderAdapter {
       model: options.model,
       max_tokens: options.maxTokens ?? 2048,
       temperature: options.temperature ?? 0.3,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content: toAnthropicUserContent(prompt, options.images) }],
     };
     if (options.systemPrompt) {
       createParams.system = options.systemPrompt;
@@ -285,6 +286,10 @@ function splitSystemMessages(messages: readonly ChatMessage[]): {
       out.push({ role: 'assistant', content: blocks });
       continue;
     }
+    if (m.role === 'user' && m.images && m.images.length > 0) {
+      out.push({ role: 'user', content: toAnthropicUserContent(m.content, m.images) });
+      continue;
+    }
     out.push({ role: m.role, content: m.content });
   }
 
@@ -292,6 +297,24 @@ function splitSystemMessages(messages: readonly ChatMessage[]): {
     system: systemParts.length > 0 ? systemParts.join('\n\n') : undefined,
     anthropicMessages: out,
   };
+}
+
+/**
+ * Build the Anthropic user-message `content` field. With no images it stays a
+ * plain string (the historical shape); with images it becomes an ordered block
+ * array — images first, then the text — per Anthropic's recommended layout.
+ */
+function toAnthropicUserContent(
+  text: string,
+  images?: readonly ImageInput[],
+): string | Array<Record<string, unknown>> {
+  if (!images || images.length === 0) return text;
+  const blocks: Array<Record<string, unknown>> = images.map((img) => ({
+    type: 'image',
+    source: { type: 'base64', media_type: img.mediaType, data: img.data },
+  }));
+  if (text && text.length > 0) blocks.push({ type: 'text', text });
+  return blocks;
 }
 
 function toAnthropicTool(tool: ToolDef): Record<string, unknown> {

@@ -10,6 +10,7 @@ import { executeAnalyseReport } from '../../capabilities/analyse-report.js';
 import { executeDiscoverBranding } from '../../capabilities/discover-branding.js';
 import { executeAgentConversation } from '../../capabilities/agent-conversation.js';
 import { executeGenerateNotificationContent } from '../../capabilities/generate-notification-content.js';
+import { executeAnalyseVisual } from '../../capabilities/analyse-visual.js';
 import { CapabilityNotConfiguredError, CapabilityExhaustedError } from '../../capabilities/types.js';
 
 // ----- Bodies -----
@@ -171,6 +172,44 @@ const GenerateFixData = Type.Object(
     source: Type.Optional(
       Type.Union([Type.Literal('llm'), Type.Literal('hardcoded'), Type.Literal('cache')]),
     ),
+    model: Type.Optional(Type.String()),
+    provider: Type.Optional(Type.String()),
+    attempts: Type.Optional(Type.Number()),
+  },
+  { additionalProperties: true },
+);
+
+const AnalyseVisualBody = Type.Object(
+  {
+    check: Type.Optional(Type.String()),
+    image: Type.Optional(Type.Any()),
+    context: Type.Optional(Type.String()),
+    orgId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const AnalyseVisualData = Type.Object(
+  {
+    verdict: Type.Optional(
+      Type.Union([Type.Literal('pass'), Type.Literal('issue'), Type.Literal('uncertain')]),
+    ),
+    findings: Type.Optional(
+      Type.Array(
+        Type.Object(
+          {
+            description: Type.String(),
+            wcagCriterion: Type.String(),
+            confidence: Type.Union([Type.Literal('low'), Type.Literal('medium'), Type.Literal('high')]),
+          },
+          { additionalProperties: true },
+        ),
+      ),
+    ),
+    altClassification: Type.Optional(
+      Type.Union([Type.Literal('decorative'), Type.Literal('informational')]),
+    ),
+    suggestedAlt: Type.Optional(Type.String()),
     model: Type.Optional(Type.String()),
     provider: Type.Optional(Type.String()),
     attempts: Type.Optional(Type.Number()),
@@ -369,6 +408,76 @@ export async function registerCapabilityExecRoutes(
         const consumed = await db.consumeCredit(orgId, 1, 'generate-fix');
         void reply.header('X-Luqen-Credits-Remaining', String(consumed.balance.balance));
       }
+
+      await reply.send({
+        ...capResult.data,
+        model: capResult.model,
+        provider: capResult.provider,
+        attempts: capResult.attempts,
+      });
+    } catch (err) {
+      if (err instanceof CapabilityNotConfiguredError) {
+        await reply.status(503).send({ error: err.message, statusCode: 503 });
+        return;
+      }
+      if (err instanceof CapabilityExhaustedError) {
+        await reply.status(504).send({ error: err.message, statusCode: 504 });
+        return;
+      }
+      await reply.status(502).send({ error: 'Upstream LLM error', statusCode: 502 });
+    }
+  });
+
+  // POST /api/v1/analyse-visual — Phase 84 vision (multimodal) a11y check
+  app.post('/api/v1/analyse-visual', {
+    preHandler: [requireScope('read')],
+    schema: {
+      tags: ['capabilities'],
+      summary: 'Analyse a screenshot/image for visual-semantic accessibility issues',
+      security: [{ bearerAuth: [] }],
+      body: AnalyseVisualBody,
+      response: {
+        200: LuqenResponse(AnalyseVisualData),
+        400: ErrorEnvelope,
+        502: ErrorEnvelope,
+        503: ErrorEnvelope,
+        504: ErrorEnvelope,
+      },
+    },
+  }, async (request, reply) => {
+    const body = request.body as Record<string, unknown>;
+
+    const check = body.check;
+    if (check !== 'heading-semantics' && check !== 'alt-text') {
+      await reply.status(400).send({ error: "check must be 'heading-semantics' or 'alt-text'", statusCode: 400 });
+      return;
+    }
+    const image = body.image as { mediaType?: unknown; data?: unknown } | undefined;
+    if (!image || typeof image.mediaType !== 'string' || typeof image.data !== 'string' || image.data.length === 0) {
+      await reply.status(400).send({ error: 'image with { mediaType, data } (base64) is required', statusCode: 400 });
+      return;
+    }
+    const allowedMedia = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+    if (!allowedMedia.includes(image.mediaType)) {
+      await reply.status(400).send({ error: `image.mediaType must be one of ${allowedMedia.join(', ')}`, statusCode: 400 });
+      return;
+    }
+    const context = typeof body.context === 'string' ? body.context : '';
+
+    const reqOrgId = (request as unknown as { orgId: string }).orgId;
+    const orgId = typeof body.orgId === 'string' && body.orgId.length > 0 ? body.orgId : reqOrgId;
+
+    try {
+      const capResult = await executeAnalyseVisual(
+        db,
+        (type: string) => createAdapter(type as import('../../types.js').ProviderType),
+        {
+          check,
+          image: { mediaType: image.mediaType as 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif', data: image.data },
+          context,
+          orgId,
+        },
+      );
 
       await reply.send({
         ...capResult.data,

@@ -40,13 +40,17 @@ export class OllamaAdapter implements LLMProviderAdapter {
   }
 
   async complete(prompt: string, options: CompletionOptions): Promise<CompletionResult> {
-    const messages: Array<{ role: string; content: string }> = [];
+    const messages: Array<Record<string, unknown>> = [];
 
     if (options.systemPrompt) {
       messages.push({ role: 'system', content: options.systemPrompt });
     }
 
-    messages.push({ role: 'user', content: prompt });
+    const userMsg: Record<string, unknown> = { role: 'user', content: prompt };
+    if (options.images && options.images.length > 0) {
+      userMsg.images = options.images.map((img) => img.data);
+    }
+    messages.push(userMsg);
 
     const body = {
       model: options.model,
@@ -280,6 +284,10 @@ function toOllamaMessages(messages: readonly ChatMessage[]): Array<Record<string
     // Ollama 400s on assistant messages with neither content nor tool_calls.
     // Skip them — they can appear in conversation history after a failed turn.
     if (m.role === 'assistant' && (m.content == null || m.content.length === 0)) {
+      continue;
+    }
+    if (m.role === 'user' && m.images && m.images.length > 0) {
+      out.push({ role: 'user', content: m.content, images: m.images.map((img) => img.data) });
       continue;
     }
     out.push({ role: m.role, content: m.content });
