@@ -5,6 +5,57 @@ same flow per item: plan → TDD → real UAT → CI green → deploy → docs +
 ROADMAP/STATE. Only stop for a genuine product/legal fork you cannot reasonably
 default. Checkpoint with a handoff (update this file) if context runs low.
 
+═══════════════════════════════════════════════════════════════════════════════
+## ★ TOP PRIORITY (2026-06-02 PM) — ACR/VPAT report refinement + finish vision rollout
+═══════════════════════════════════════════════════════════════════════════════
+Gemini vision is BUILT + WIRED LIVE (see below). User reviewed the first delivered ACR
+and gave feedback. Tackle in order:
+
+**0. FIRST: collect the in-flight Aperol scan + deliver its ACR.**
+   A full-site deep+vision scan is running: scan id `17db33a0-3826-4f67-8722-0d86b4bfe249`
+   (https://www.aperol.com/, scanMode=site maxPages=15, behavioral+deepScan+vision,
+   jurisdiction US + regulations US-ADA, US-ADA-T2-WEB, US-NY-WEB, US-NY-NYC-LL12,
+   US-NY-NYC-HRL). Poll `GET https://luqen.alessandrolanna.it/api/v1/scans/<id>` with
+   `Authorization: Bearer ae5463c86937407b4fba61c1526287a8a4b17b859b76f19572c0e81c0b9328f3`
+   until status=completed, then fetch `/reports/<id>/vpat` (session-auth: log in testadmin /
+   T3st!Admin2026, grab `_csrf`) and deliver. Confirm `runner='vision'` findings appear
+   (Aperol is a real consumer site → expect heading/alt issues) and the C#2 "Supports"
+   upgrade shows (once 2533ff4 has deployed).
+
+**1. MAKE COVERAGE EXPLICIT in the VPAT/ACR (the core feedback).** User: "we need to be
+   explicit on what we have covered… if we are including all US requirements." Today the
+   bottom note (`src/services/legal-framings.ts` `deriveLegalFramings`, rendered via
+   `vpat-service.ts` + the vpat view) is a GENERIC jurisdiction-level note (US/EU). Add an
+   explicit **"Standards & laws evaluated against"** section that ENUMERATES each selected
+   regulation by full name, derived from `scan.regulations`. The names exist in the
+   compliance DB (shortName → name): US-ADA=Americans with Disabilities Act,
+   US-ADA-T2-WEB=ADA Title II Web Accessibility Rule (2024), US-NY-WEB=New York State Web
+   Accessibility Policy, US-NY-NYC-LL12=NYC Local Law 12 of 2023, US-NY-NYC-HRL=NYC Human
+   Rights Law §8-107(4), US-508=Section 508, EU-EAA, EU-WAD, etc. ADA must be named
+   explicitly, not folded into "US". TDD `vpat-service.test.ts` + `legal-framings`.
+
+**2. ADA/NY/NYC are ALL available** — the compliance data already has them (tokens above).
+   The first doc only showed NY *State* (not NYC) because I selected jurisdiction US broadly;
+   selecting the explicit regulation tokens (as the Aperol scan does) pulls ADA + NY + NYC.
+   Consider a UI affordance to pick these regulation bundles easily on `/scan/new`.
+
+**3. "Fewer issues than expected"** = the first doc was a SINGLE-PAGE scan of an accessible
+   site (w3.org/WAI). The full-site Aperol scan addresses this.
+
+Then the rest of the dev (details in §2 below): verify C#2 deploy (2533ff4) + the Supports
+upgrade; #7 promote gemini-2.5-pro for analyse-visual; #9 automated UAT; LEGAL sign-off on
+the C#2 "Supports-from-vision" wording before relying on it in a legal doc.
+
+**Gemini/LLM live-ops (critical):** key at `/root/.gemini` on lxc-kg (192.168.3.238) — NEVER
+commit/log it. Configure providers/models/capabilities via `node dist/cli.js …` on lxc-luqen
+(`cd /root/luqen/packages/llm`). Capability assignments MUST use `--org ''` (universal
+fallback) — resolution matches caller-org OR '' only; `org='system'` rows are INERT for real
+scans (fixed this session). Deploy now rebuilds ALL services (deploy.yml fixed). Gemini is
+wired: flash p10 fallback on every capability + flash p0 primary / pro p10 backup on
+analyse-visual.
+═══════════════════════════════════════════════════════════════════════════════
+
+
 ## 0. First steps
 1. **Verify green state** (all confirmed green at handoff 2026-06-02, session 2):
    - luqen: `master == origin == a254768` (Item A `cca049d`, C#3 `0afbc49`, C#1 `62b6973`,
