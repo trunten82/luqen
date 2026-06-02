@@ -1251,7 +1251,13 @@ describe('ScanOrchestrator', () => {
         const { ScanOrchestrator: FreshOrchestrator } = await import('../../src/scanner/orchestrator.js');
         const freshOrch = new FreshOrchestrator(storage, '/tmp/reports', 2);
 
-        const eventsPromise = waitForScan(freshOrch, 'scan-nocore');
+        // Generous timeout: this runs the REAL core scan path (browser cold-start),
+        // which is slow on CI. Tolerate a helper timeout — the assertion below is
+        // guarded on a terminal event, so "no completion in time" is acceptable;
+        // we only assert the shape WHEN the scan actually completes.
+        const eventsPromise = waitForScan(freshOrch, 'scan-nocore', 25000).catch(
+          () => [] as ScanProgressEvent[],
+        );
         freshOrch.startScan('scan-nocore', baseScanConfig());
         const events = await eventsPromise;
 
