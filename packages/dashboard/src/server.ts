@@ -45,6 +45,7 @@ import { sourceApiRoutes } from './routes/api/sources.js';
 import { generateApiKey, storeApiKey } from './auth/api-key.js';
 import { exportRoutes } from './routes/api/export.js';
 import { shareRoutes } from './routes/share.js';
+import { publicAcrRoutes } from './routes/public-acr.js';
 import { dataApiRoutes } from './routes/api/data.js';
 import { brandingApiRoutes } from './routes/api/branding.js';
 import { wpNetworkApiRoutes } from './routes/api/wp-network.js';
@@ -177,6 +178,9 @@ function isPublicPath(path: string): boolean {
   if (path.startsWith('/api/v1/badge/')) return true;
   // Phase 58 R5: public self-scan report (only the dashboard's own host).
   if (/^\/reports\/[^/]+\/public$/.test(path)) return true;
+  // widget→VPAT: public, dynamic Accessibility Conformance Report (gated by the
+  // per-scan publicShareEnabled opt-in inside the handler, same as the badge).
+  if (/^\/reports\/[^/]+\/acr(\.pdf)?$/.test(path)) return true;
   // Secure external report shares — anonymous, token-authorised (the token in
   // the path IS the authorisation; covers /share/:token and its downloads).
   if (path.startsWith('/share/')) return true;
@@ -1124,6 +1128,14 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await shareRoutes(
     server,
     storage,
+    resolve(config.dbPath ? join(config.dbPath, '..', 'uploads') : './uploads'),
+  );
+
+  // ── Public dynamic ACR (widget→VPAT) — gated by the per-scan public opt-in ─
+  await publicAcrRoutes(
+    server,
+    storage,
+    config.selfScanId,
     resolve(config.dbPath ? join(config.dbPath, '..', 'uploads') : './uploads'),
   );
 

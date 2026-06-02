@@ -1,16 +1,12 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
-import { readFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import type { StorageAdapter } from '../db/index.js';
 import type { ScanRecord, ReportShareRecord } from '../db/types.js';
 import { HtmlPageSchema } from '../api/schemas/envelope.js';
-import { loadVpatForScan, buildEvidencePackZip } from '../services/vpat-share-service.js';
+import { loadVpatForScan, buildEvidencePackZip, renderVpatHtml } from '../services/vpat-share-service.js';
 import { generateVpatPdf } from '../pdf/generator.js';
 import { t } from '../i18n/index.js';
 
-const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const ShareTokenParams = Type.Object({ token: Type.String() }, { additionalProperties: true });
 
 /**
@@ -74,31 +70,14 @@ export async function shareRoutes(
       const loaded = await loadVpatForScan(storage, scan);
       if (loaded === null) return notAvailablePage(reply, 410);
 
-      const handlebars = (await import('handlebars')).default;
-      const viewsDir = resolve(join(__dirname, '..', 'views'));
-      handlebars.registerHelper('conformanceBadge', (conformance: string) => {
-        const cls =
-          conformance === 'Supports' ? 'badge--success' :
-          conformance === 'Partially Supports' ? 'badge--warning' :
-          conformance === 'Does Not Support' ? 'badge--error' : 'badge--neutral';
-        const escaped = handlebars.escapeExpression(conformance);
-        return new handlebars.SafeString(`<span class="badge ${cls}">${escaped}</span>`);
+      // External viewer: download links point at the token routes (the internal
+      // export routes are RBAC-gated and would 403), and the app-only "close
+      // window" control is hidden.
+      const html = await renderVpatHtml(scan, loaded, {
+        pdfUrl: `/share/${encodeURIComponent(token)}/vpat.pdf`,
+        packUrl: loaded.evidenceGroups.length > 0 ? `/share/${encodeURIComponent(token)}/evidence-pack.zip` : null,
+        isShared: true,
       });
-      const template = handlebars.compile(await readFile(join(viewsDir, 'vpat.hbs'), 'utf-8'));
-      const html = template(
-        {
-          scan,
-          vpat: loaded.vpat,
-          evidenceGroups: loaded.evidenceGroups,
-          // External viewer: download links point at the token routes (the
-          // internal export routes are RBAC-gated and would 403), and the
-          // app-only "close window" control is hidden.
-          pdfUrl: `/share/${encodeURIComponent(token)}/vpat.pdf`,
-          packUrl: loaded.evidenceGroups.length > 0 ? `/share/${encodeURIComponent(token)}/evidence-pack.zip` : null,
-          isShared: true,
-        },
-        { data: { root: { locale: 'en' } } },
-      );
       return reply.type('text/html').send(html);
     },
   );
