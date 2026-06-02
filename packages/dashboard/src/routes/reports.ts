@@ -240,7 +240,9 @@ export async function reportRoutes(
       }
 
       // Compute manual testing completion stats
-      const manualResults = await storage.manualTests.getManualTests(id);
+      const manualResults = storage.manualTests
+        ? await storage.manualTests.getManualTests(id)
+        : [];
       const manualTested = manualResults.filter(
         (r) => r.status === 'pass' || r.status === 'fail' || r.status === 'na',
       ).length;
@@ -524,11 +526,13 @@ export async function reportRoutes(
         return reply.code(404).send({ error: 'Report data not available' });
       }
 
-      const manualResults = await storage.manualTests.getManualTests(id);
+      const manualResults = storage.manualTests
+        ? await storage.manualTests.getManualTests(id)
+        : [];
       const evidenceCounts = new Map(
-        (await storage.manualTestEvidence.countByCriterion(id)).map((c) => [c.criterionId, c.count]),
+        ((await storage.manualTestEvidence?.countByCriterion(id)) ?? []).map((c) => [c.criterionId, c.count]),
       );
-      const reasonedChangeCount = await storage.manualTestAudit.countReasonedChanges(id);
+      const reasonedChangeCount = (await storage.manualTestAudit?.countReasonedChanges(id)) ?? 0;
       // Assemble the dated good-faith remediation record (events + completed-scan
       // trend). Keyed by scan.orgId to match how events are recorded. Empty
       // input → empty record, so the section stays hidden.
@@ -551,7 +555,7 @@ export async function reportRoutes(
       // remarks via evidenceCounts). The browser fetches files via filePath
       // (/uploads/...); no on-disk resolution needed here.
       const evidenceGroups = buildVpatEvidenceGroups(
-        await storage.manualTestEvidence.listEvidence(id),
+        (await storage.manualTestEvidence?.listEvidence(id)) ?? [],
         vpat,
       );
 
@@ -591,7 +595,7 @@ export async function reportRoutes(
       const perms = (request as unknown as { permissions?: Set<string> }).permissions;
       const canShare = perms?.has('reports.export') === true;
       const now = Date.now();
-      const shareLinks = canShare
+      const shareLinks = canShare && storage.reportShares
         ? (await storage.reportShares.listForScan(id))
             .filter((s) => s.revokedAt === null && (s.expiresAt === null || Date.parse(s.expiresAt) > now))
             .map((s) => ({ id: s.id, token: s.token, expiresAt: s.expiresAt }))
@@ -643,6 +647,9 @@ export async function reportRoutes(
       preHandler: requirePermission('reports.export'),
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      if (!storage.reportShares) {
+        return reply.code(503).send({ error: 'Secure sharing is not available on this storage backend' });
+      }
       const { id } = request.params as { id: string };
       const scan = await storage.scans.getScan(id);
       if (scan === null) return reply.code(404).send({ error: 'Report not found' });
@@ -677,6 +684,9 @@ export async function reportRoutes(
       preHandler: requirePermission('reports.export'),
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      if (!storage.reportShares) {
+        return reply.code(503).send({ error: 'Secure sharing is not available on this storage backend' });
+      }
       const { id, shareId } = request.params as { id: string; shareId: string };
       const share = await storage.reportShares.getShare(shareId);
       if (share === null || share.scanId !== id) {

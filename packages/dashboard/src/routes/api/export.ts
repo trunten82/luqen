@@ -585,11 +585,13 @@ export async function exportRoutes(
         }
 
         const reportData = normalizeReportData(reportJson, scan);
-        const manualResults = await storage.manualTests.getManualTests(scan.id);
+        const manualResults = storage.manualTests
+          ? await storage.manualTests.getManualTests(scan.id)
+          : [];
         const evidenceCounts = new Map(
-          (await storage.manualTestEvidence.countByCriterion(scan.id)).map((c) => [c.criterionId, c.count]),
+          ((await storage.manualTestEvidence?.countByCriterion(scan.id)) ?? []).map((c) => [c.criterionId, c.count]),
         );
-        const reasonedChangeCount = await storage.manualTestAudit.countReasonedChanges(scan.id);
+        const reasonedChangeCount = (await storage.manualTestAudit?.countReasonedChanges(scan.id)) ?? 0;
         // Dated good-faith remediation record (keyed by scan.orgId to match how
         // events are recorded). Empty input → empty record (section hidden).
         const remOrgId = scan.orgId ?? 'system';
@@ -609,7 +611,7 @@ export async function exportRoutes(
         // Manual-test evidence ARTIFACTS — embed screenshots + list documents
         // per criterion in the ACR appendix. Resolved on disk from uploadsRoot.
         const evidenceGroups = buildVpatEvidenceGroups(
-          await storage.manualTestEvidence.listEvidence(scan.id),
+          (await storage.manualTestEvidence?.listEvidence(scan.id)) ?? [],
           vpat,
         );
 

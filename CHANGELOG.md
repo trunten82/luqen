@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Out-of-repo Postgres/Mongo StorageAdapter plugins no longer break on the Slice C/D repositories.** The manual-testing + secure-sharing repos (`manualTests`, `manualTestEvidence`, `manualTestAudit`, `reportShares`) are now **optional** on `StorageAdapter` (same pattern as `reportIdentities`), and every dashboard consumer guards for their absence: the VPAT/ACR builds from scan data alone (no manual verdicts/evidence) and the manual-testing + secure-sharing surfaces report "not available on this storage backend" (503) rather than crashing. The bundled SQLite adapter implements all four, so the default deployment is byte-identical.
+
 ### Added
 
 - **Pricing & packaging — canonical plan/feature matrix (v3.5.0 Phase 82).** Free / Pro / Agency are now codified as an explicit feature matrix in `packages/dashboard/src/plan-matrix.ts` — the single platform-side source of truth, aligned with the WordPress plugin's `Luqen_Entitlement::FEATURES`. A new **Plans & pricing** reference page (`/admin/plans`) renders the matrix plus per-tier pricing anchors, and the matrix is documented in `docs/reference/plans.md`. Pricing is admin-controlled: **Pro and Agency price anchors are deliberately left as `null` placeholders pending the in-flight enterprise-pricing research** (the page and docs carry an explicit TODO and the competitor-comparable validation ranges only — no invented published prices).

@@ -31,6 +31,10 @@ export async function shareRoutes(
   async function resolveActiveShare(
     token: string,
   ): Promise<{ share: ReportShareRecord; scan: ScanRecord } | { reason: 'gone' | 'notfound' }> {
+    // Storage backends without the optional reportShares repo cannot resolve any
+    // token — treat every share link as non-existent (renders the 404 "not
+    // available" page, matching the bad-token path).
+    if (!storage.reportShares) return { reason: 'notfound' };
     const share = await storage.reportShares.getByToken(token);
     if (share === null) return { reason: 'notfound' };
     if (share.revokedAt !== null) return { reason: 'gone' };

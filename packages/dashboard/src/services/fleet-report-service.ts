@@ -62,7 +62,9 @@ async function buildVpatPdfForScan(
   if (reportJson === null) return null;
 
   const reportData = normalizeReportData(reportJson, scan);
-  const manualResults = await storage.manualTests.getManualTests(scan.id);
+  const manualResults = storage.manualTests
+    ? await storage.manualTests.getManualTests(scan.id)
+    : [];
   const orgId = scan.orgId ?? 'system';
   const [remediationEvents, siteScans] = await Promise.all([
     storage.remediationEvents.listForSite(orgId, scan.siteUrl),

@@ -505,18 +505,26 @@ async function migrateManualTests(
   dryRun: boolean,
   sourceAdapter: StorageAdapter,
 ): Promise<number> {
+  // Skip when either adapter lacks the optional manual-test repository
+  // (out-of-repo Postgres/Mongo plugins may not implement Slice C/D repos).
+  if (source.manualTests === undefined || target.manualTests === undefined) {
+    return 0;
+  }
+  const sourceManualTests = source.manualTests;
+  const targetManualTests = target.manualTests;
+
   // ManualTestRepository only exposes getManualTests(scanId).
   // Enumerate scanIds from the scans repository.
   const scans = await sourceAdapter.scans.listScans();
 
   let count = 0;
   for (const scan of scans) {
-    const tests = await source.manualTests.getManualTests(scan.id);
+    const tests = await sourceManualTests.getManualTests(scan.id);
     count += tests.length;
     if (!dryRun) {
       for (const test of tests) {
         try {
-          await target.manualTests.upsertManualTest({
+          await targetManualTests.upsertManualTest({
             scanId: test.scanId,
             criterionId: test.criterionId,
             status: test.status,
