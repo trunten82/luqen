@@ -393,12 +393,14 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     // Phase 84: resolve an org-scoped vision analyzer for the behavioral pass.
     // Returns null when no LLM is configured; the analyzer itself degrades to
     // [] when the org has no vision-capable model (analyse-visual → 503).
-    resolveVisionAnalyzer: async (orgId) => {
+    resolveVisionAnalyzer: async (orgId, evaluatedSink) => {
       const systemClient = getLLMClient();
       if (systemClient === null) return null;
       const { client } = await resolveOrgLLMClient(systemClient, storage.organizations, orgId);
       if (client === null) return null;
-      return buildVisionAnalyzer(client, orgId);
+      // Phase 84 C#2: thread the orchestrator's evaluated-criteria sink so a
+      // real scan records which WCAG criteria the vision pass evaluated cleanly.
+      return buildVisionAnalyzer(client, orgId, evaluatedSink);
     },
   });
 

@@ -36,6 +36,14 @@ export interface JsonReportFile {
     }>;
   }>;
   errors?: Array<{ url: string; code: string; message: string }>;
+  /**
+   * Phase 84 C#2: WCAG criteria (dotted, e.g. "1.3.1", "1.1.1") that the
+   * LLM-vision behavioral pass evaluated definitively during this scan. Read
+   * back by buildVpat to elevate a clean, no-findings manual-judgement
+   * criterion from "Not Evaluated" to "Supports". Absent on legacy / non-vision
+   * scans (treated as none).
+   */
+  behaviorallyEvaluatedCriteria?: string[];
   compliance?: {
     summary?: {
       passing?: number;
@@ -673,5 +681,8 @@ export function normalizeReportData(raw: JsonReportFile, scan: { siteUrl: string
         regulations: g.regulations,
       })),
     ...(brandingSummary !== undefined ? { branding: brandingSummary } : {}),
+    // Phase 84 C#2: carry the vision-evaluated criteria through to buildVpat
+    // callers. Normalized to a string[] (empty when absent).
+    behaviorallyEvaluatedCriteria: raw.behaviorallyEvaluatedCriteria ?? [],
   };
 }

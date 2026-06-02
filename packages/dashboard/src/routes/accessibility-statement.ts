@@ -67,7 +67,12 @@ async function loadVpatForSite(
     ? await storage.manualTests.getManualTests(scan.id)
     : [];
   // Honour the configured target level rather than the scan's own standard.
-  const vpat = buildVpat(reportData, { siteUrl: scan.siteUrl, standard: toStandard(wcagLevel) }, manualResults);
+  const vpat = buildVpat(
+    reportData,
+    { siteUrl: scan.siteUrl, standard: toStandard(wcagLevel) },
+    manualResults,
+    { behaviorallyEvaluatedCriteria: new Set(reportData.behaviorallyEvaluatedCriteria ?? []) },
+  );
   const assessmentDate = scan.completedAt
     ? scan.completedAt.slice(0, 10)
     : scan.createdAt.slice(0, 10);

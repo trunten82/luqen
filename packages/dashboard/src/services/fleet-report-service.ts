@@ -71,7 +71,15 @@ async function buildVpatPdfForScan(
     storage.scans.getScansForSite(orgId, scan.siteUrl),
   ]);
   const remediation = buildRemediationRecord(remediationEvents, siteScans);
-  const vpat = buildVpat(reportData, scan, manualResults, {}, remediation);
+  // Phase 84 C#2: forward the vision-evaluated criteria so cleanly-evaluated
+  // criteria are elevated to "Supports" in the VPAT.
+  const vpat = buildVpat(
+    reportData,
+    scan,
+    manualResults,
+    { behaviorallyEvaluatedCriteria: new Set(reportData.behaviorallyEvaluatedCriteria ?? []) },
+    remediation,
+  );
 
   return generateVpatPdf(
     {
