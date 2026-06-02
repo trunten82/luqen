@@ -22,6 +22,7 @@ import type { StorageAdapter } from '../db/adapter.js';
 import type { ScanRecord } from '../db/types.js';
 import { normalizeReportData, type JsonReportFile } from './report-service.js';
 import { buildVpat } from './vpat-service.js';
+import { resolveRegulationDetails } from './regulation-catalog.js';
 import { buildRemediationRecord } from './remediation-service.js';
 import { generateVpatPdf } from '../pdf/generator.js';
 
@@ -71,13 +72,17 @@ async function buildVpatPdfForScan(
     storage.scans.getScansForSite(orgId, scan.siteUrl),
   ]);
   const remediation = buildRemediationRecord(remediationEvents, siteScans);
+  const regulationDetails = await resolveRegulationDetails(scan.regulations ?? [], scan.orgId);
   // Phase 84 C#2: forward the vision-evaluated criteria so cleanly-evaluated
   // criteria are elevated to "Supports" in the VPAT.
   const vpat = buildVpat(
     reportData,
     scan,
     manualResults,
-    { behaviorallyEvaluatedCriteria: new Set(reportData.behaviorallyEvaluatedCriteria ?? []) },
+    {
+      behaviorallyEvaluatedCriteria: new Set(reportData.behaviorallyEvaluatedCriteria ?? []),
+      regulationDetails,
+    },
     remediation,
   );
 

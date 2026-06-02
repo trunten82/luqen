@@ -17,6 +17,7 @@ import { resolveOrgLLMClient } from '../llm-client.js';
 import { t } from '../i18n/index.js';
 import { filterDrilldownIssues, isValidDimension } from '../services/brand-drilldown.js';
 import { buildVpat } from '../services/vpat-service.js';
+import { resolveRegulationDetails } from '../services/regulation-catalog.js';
 import { resolveScanIdentity } from '../services/vpat-share-service.js';
 import { buildVpatEvidenceGroups } from '../services/vpat-evidence.js';
 import { buildRemediationRecord } from '../services/remediation-service.js';
@@ -543,6 +544,7 @@ export async function reportRoutes(
       ]);
       const remediation = buildRemediationRecord(remediationEvents, siteScans);
       const identity = await resolveScanIdentity(storage, scan);
+      const regulationDetails = await resolveRegulationDetails(scan.regulations ?? [], scan.orgId ?? orgId);
       const vpat = buildVpat(
         reportData,
         scan,
@@ -551,6 +553,7 @@ export async function reportRoutes(
           evidenceCounts,
           reasonedChangeCount,
           behaviorallyEvaluatedCriteria: new Set(reportData.behaviorallyEvaluatedCriteria ?? []),
+          regulationDetails,
           ...(identity ? { identity } : {}),
         },
         remediation,

@@ -638,7 +638,7 @@ export async function generateVpatPdf(
       doc.moveDown(0.7);
       doc.x = left;
 
-      // ── Standards & laws evaluated against (explicit coverage enumeration) ──
+      // ── Standards & laws evaluated against (programmatic per-regulation notes) ──
       if (vpat.evaluatedStandards.length > 0) {
         if (doc.y > doc.page.height - doc.page.margins.bottom - 80) {
           doc.addPage();
@@ -651,15 +651,38 @@ export async function generateVpatPdf(
             + 'as selected for this scan. Each is named in full so the scope of coverage is unambiguous.',
             left, doc.y, { lineGap: 2, width: pageWidth },
           );
-        doc.moveDown(0.2);
+        doc.moveDown(0.3);
         for (const std of vpat.evaluatedStandards) {
-          if (doc.y > doc.page.height - doc.page.margins.bottom - 24) {
+          if (doc.y > doc.page.height - doc.page.margins.bottom - 48) {
             doc.addPage();
           }
+          // Regulation name + token.
           doc.fontSize(8).fillColor(TEXT_PRIMARY).font('Body-Bold')
-            .text(`•  ${std.name}  `, left, doc.y, { continued: true })
+            .text(`${std.name}  `, left, doc.y, { continued: true })
             .fillColor(TEXT_SECONDARY).font('Body').text(`(${std.token})`);
+          // Citation + enforcement date (programmatic).
+          const cite = [
+            std.reference ? `Reference: ${std.reference}` : null,
+            std.enforcementDate ? `in force since ${std.enforcementDate}` : null,
+          ].filter((s): s is string => s !== null).join(' · ');
+          if (cite) {
+            doc.fontSize(7).fillColor(TEXT_SECONDARY).font('Body')
+              .text(cite, left, doc.y, { width: pageWidth });
+          }
+          // One-line factual description (the programmatic context note).
+          if (std.description) {
+            doc.fontSize(8).fillColor(TEXT_PRIMARY).font('Body')
+              .text(std.description, left, doc.y, { lineGap: 1.5, width: pageWidth });
+          }
+          doc.moveDown(0.35);
         }
+        doc.fontSize(8).fillColor(STATUS_WARNING).font('Body')
+          .text(
+            'These descriptions summarise the cited standards and laws for context only; they do not '
+            + 'constitute legal advice, and this report records a good-faith evaluation rather than a '
+            + 'certification of compliance.',
+            left, doc.y, { lineGap: 2, width: pageWidth },
+          );
         doc.moveDown(0.7);
         doc.x = left;
       }
@@ -780,21 +803,10 @@ export async function generateVpatPdf(
       doc.x = left;
       } // end if (vpat.includeFunctionalPerformance)
 
-      // ── Jurisdiction-driven legal framing (from selected jurisdictions/regulations) ──
-      for (const framing of vpat.legalFramings) {
-        if (doc.y > doc.page.height - doc.page.margins.bottom - 90) {
-          doc.addPage();
-        }
-        doc.fontSize(12).fillColor(TEXT_PRIMARY).font('Body-Bold')
-          .text(framing.heading, left, doc.y);
-        doc.moveTo(left, doc.y).lineTo(left + pageWidth, doc.y)
-          .lineWidth(0.5).strokeColor(BORDER_STRONG).stroke();
-        doc.moveDown(0.2);
-        doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Body')
-          .text(framing.body, left, doc.y, { lineGap: 2, width: pageWidth });
-        doc.moveDown(0.7);
-        doc.x = left;
-      }
+      // Per-regulation legal context now renders programmatically in the
+      // "Standards & laws evaluated against" section above (one note per selected
+      // regulation, from the compliance records). The curated per-law paragraph
+      // catalog was retired in favour of that data-driven coverage.
 
       // ── Remediation record (dated, good-faith) ──
       const rem = vpat.remediation;
