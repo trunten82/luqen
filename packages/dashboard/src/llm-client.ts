@@ -436,6 +436,25 @@ export class LLMClient {
     );
   }
 
+  // -- Analyse Visual (Phase 84 LLM-vision) ───────────────────────────────
+
+  async analyseVisual(input: {
+    readonly check: 'heading-semantics' | 'alt-text';
+    readonly image: { readonly mediaType: 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif'; readonly data: string };
+    readonly context: string;
+    readonly orgId?: string;
+  }): Promise<{
+    verdict: 'pass' | 'issue' | 'uncertain';
+    findings: Array<{ description: string; wcagCriterion: string; confidence: 'low' | 'medium' | 'high' }>;
+    altClassification?: 'decorative' | 'informational';
+    suggestedAlt?: string;
+  }> {
+    return this.apiFetch(`${this._baseUrl}/api/v1/analyse-visual`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
   // -- Analyse Report ─────────────────────────────────────────────────────
 
   async analyseReport(input: {

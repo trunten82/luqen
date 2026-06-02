@@ -36,13 +36,14 @@ export { runA11yTreeChecks } from './a11y-tree/index.js';
 export type { A11yTreeOptions, A11yTreeResult } from './a11y-tree/types.js';
 export { mapA11yTreeObservations, KIND_MAP as A11Y_TREE_KIND_MAP } from './a11y-tree/index.js';
 export type { A11yTreeObservation, A11yTreeObservationKind } from './a11y-tree/index.js';
-export type { DiscoveredUrl, PageResult, AccessibilityIssue, ScanProgress, ScanError, ProgressListener, ComplianceEnrichment } from './types.js';
+export type { DiscoveredUrl, PageResult, AccessibilityIssue, Issue, ScanProgress, ScanError, ProgressListener, ComplianceEnrichment } from './types.js';
 
 import { discoverUrls } from './discovery/discover.js';
 import { scanUrls, type ScanOptions } from './scanner/scanner.js';
 import { WebserviceClient, WebservicePool } from './scanner/webservice-client.js';
 import { DirectScanner } from './scanner/direct-scanner.js';
 import { runBehavioralChecks } from './behavioral/index.js';
+import type { BehavioralOptions } from './behavioral/types.js';
 import { runLighthouseChecks } from './lighthouse/index.js';
 import { runIbmChecks } from './ibm/index.js';
 import { runReflowChecks } from './reflow/index.js';
@@ -90,6 +91,14 @@ export interface CreateScannerOptions {
    * (behavioral checks are far more expensive than a static scan). Default: 10.
    */
   readonly behavioralMaxPages?: number;
+  /**
+   * Optional LLM-vision analyzer (Phase 84). Runs as part of the behavioral
+   * pass (reuses the open browser page): captures the page's visual context and
+   * delegates to this caller-supplied callback. Dependency-injected so core
+   * stays LLM-free. Only effective when `behavioral` is true. Findings should
+   * carry runner='vision'.
+   */
+  readonly onVisualContext?: BehavioralOptions['onVisualContext'];
   /**
    * When true, run the Lighthouse accessibility engine (Google Lighthouse's
    * accessibility category — a curated axe-core audit set) on each scanned page
@@ -327,6 +336,7 @@ async function runBehavioralPass(
       const behavioral = await runBehavioralChecks(page.url, {
         ...(opts.timeout !== undefined ? { timeout: opts.timeout } : {}),
         ...(opts.headers !== undefined ? { headers: { ...opts.headers } } : {}),
+        ...(opts.onVisualContext !== undefined ? { onVisualContext: opts.onVisualContext } : {}),
       });
       if (behavioral.issues.length === 0) {
         out.push(page);

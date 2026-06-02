@@ -10,6 +10,8 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { withPage } from '../../src/behavioral/browser.js';
 import { captureVisualContext } from '../../src/behavioral/visual.js';
+import { runBehavioralChecks } from '../../src/behavioral/index.js';
+import type { Issue } from '../../src/types.js';
 
 const TEST_TIMEOUT = 30000;
 
@@ -71,5 +73,39 @@ describe('captureVisualContext', () => {
     expect(chart!.surroundingText).toContain('Quarterly revenue by region');
     const logo = ctx.images.find((i) => i.src.includes('logo.png'));
     expect(logo!.alt).toBe('Acme logo');
+  }, TEST_TIMEOUT);
+
+  it('runBehavioralChecks invokes onVisualContext and merges its issues', async () => {
+    let receivedOutline = '';
+    const visionIssue: Issue = {
+      type: 'error',
+      code: '1_3_1',
+      message: 'Styled div used as a heading',
+      selector: 'div.fake-heading',
+      context: '<div class="fake-heading">Styled Div Heading</div>',
+      runner: 'vision',
+    };
+    const result = await runBehavioralChecks(baseUrl, {
+      onVisualContext: async (ctx, url) => {
+        receivedOutline = ctx.headingOutline;
+        expect(url).toBe(baseUrl);
+        expect(ctx.screenshot.data.length).toBeGreaterThan(100);
+        return [visionIssue];
+      },
+    });
+    expect(receivedOutline).toContain('Styled Div Heading');
+    const vision = result.issues.filter((i) => i.runner === 'vision');
+    expect(vision).toHaveLength(1);
+    expect(vision[0].code).toBe('1_3_1');
+  }, TEST_TIMEOUT);
+
+  it('records a non-fatal error when onVisualContext throws (other checks survive)', async () => {
+    const result = await runBehavioralChecks(baseUrl, {
+      onVisualContext: async () => {
+        throw new Error('LLM unreachable');
+      },
+    });
+    expect(result.pagesChecked).toBe(1);
+    expect(result.errors.some((e) => e.message.includes('vision check failed'))).toBe(true);
   }, TEST_TIMEOUT);
 });

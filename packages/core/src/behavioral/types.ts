@@ -9,6 +9,7 @@
  */
 
 import type { Issue } from '../types.js';
+import type { VisualContext } from './visual.js';
 
 export interface BehavioralOptions {
   /** Navigation/goto timeout in ms (default 30000). */
@@ -21,6 +22,19 @@ export interface BehavioralOptions {
   readonly maxTabStops?: number;
   /** Extra puppeteer launch config, merged over the defaults. */
   readonly chromeLaunchConfig?: Record<string, unknown>;
+  /**
+   * Optional LLM-vision analyzer (Phase 84). When provided, the behavioral pass
+   * captures the page's visual context (screenshot + heading outline + image
+   * inventory) and hands it to this caller-supplied callback, merging any
+   * returned issues. Dependency-injected so @luqen/core stays LLM-free; the
+   * dashboard supplies a callback that calls the `analyse-visual` capability and
+   * degrades to `[]` when no vision model is configured. Errors are caught by
+   * the orchestrator and recorded as a non-fatal error.
+   */
+  readonly onVisualContext?: (
+    ctx: VisualContext,
+    url: string,
+  ) => Promise<readonly Issue[]>;
 }
 
 export interface BehavioralResult {

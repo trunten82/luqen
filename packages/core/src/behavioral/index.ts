@@ -9,6 +9,7 @@
 import { withPage } from './browser.js';
 import { checkKeyboard } from './keyboard.js';
 import { checkDynamicStates } from './dynamic-state.js';
+import { captureVisualContext } from './visual.js';
 import type { Issue } from '../types.js';
 import type { BehavioralOptions, BehavioralResult } from './types.js';
 
@@ -48,6 +49,17 @@ export async function runBehavioralChecks(
         issues.push(...(await checkDynamicStates(page, opts)));
       } catch (err) {
         errors.push({ url, message: `dynamic-state check failed: ${toMessage(err)}` });
+      }
+
+      // Optional LLM-vision pass (Phase 84). Captures the visual context with
+      // the already-open page and delegates analysis to the injected callback.
+      if (opts.onVisualContext) {
+        try {
+          const ctx = await captureVisualContext(page);
+          issues.push(...(await opts.onVisualContext(ctx, url)));
+        } catch (err) {
+          errors.push({ url, message: `vision check failed: ${toMessage(err)}` });
+        }
       }
 
       return { issues, pagesChecked: 1, errors };
