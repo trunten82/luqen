@@ -127,15 +127,17 @@ Two parallelizable tracks: the WordPress track (78 `readme.txt`, 79) and the pla
 
 **KEY DISCOVERY (2026-06-02):** Phase 83 was ~90% already shipped by prior milestones (v3.0.0 Phases 28–33 MCP + v3.1.0 Phases 34–42 Agent Companion v2). MCP servers exist across ALL services (llm/compliance/branding/dashboard/monitor — tools, resources, prompts, RBAC, org-scoped). The dashboard already has a working org-aware **text** companion + **speech-to-text** (Web Speech API, `agent-speech.js`). The ONLY gaps were **text-to-speech (voice output)** and **multimodal image input** — and the image-input gap IS the Phase 84 vision adapter. **User decision:** scope = "Vision adapter + TTS" (converge the two phases on one vision adapter, plus browser TTS for the companion).
 
-**SHIPPED THIS SESSION (foundation, all on master, CI green):**
+**SHIPPED THIS SESSION (all on master, CI green, deployed):**
 - `85be72a` **vision adapter** — `ImageInput` + optional `images[]` on `CompletionOptions`/`ChatMessage`; OpenAI/Anthropic/Ollama all attach images on `complete()` + `completeStream()`. (packages/llm/src/providers/)
 - `85be72a` **analyse-visual capability** + `POST /api/v1/analyse-visual` — heading-semantics (1.3.1) + alt-text (1.1.1) checks, structured verdict, graceful degrade. (packages/llm/src/capabilities/analyse-visual.ts)
 - `941c956` **core `captureVisualContext()`** — browser-side screenshot + heading outline + image inventory; LLM-agnostic. (packages/core/src/behavioral/visual.ts)
+- `3343063` **Phase 84 vision integration (DONE)** — core `BehavioralOptions.onVisualContext` callback (capture + inject, reuses open browser, keeps core LLM-free); dashboard `LLMClient.analyseVisual()`, `scanner/vision-pass.ts` (heading-semantics mapping → `Issue` runner='vision', degrade to [] on 503), orchestrator `resolveVisionAnalyzer` + server.ts wiring. Vision findings flow into reports + VPAT (move 1.3.1 off "Not Evaluated"). Runs as part of the deep behavioral scan; no new UI toggle.
+- `9a018de` **Phase 83 TTS (DONE)** — browser `speechSynthesis` voice-output toggle in the agent drawer (`static/agent-tts.js`), spoken on the SSE 'done' frame; i18n in all 6 locales.
 
-**REMAINING (next sessions):**
-- [ ] **Phase 84 integration** — dashboard scan-pipeline orchestration: during the behavioral pass, call `captureVisualContext()`, send to `analyse-visual` via the LLM client, map verdicts → `Issue`s (runner `vision`), merge into the scan; wire VPAT/ACR rows "Not Evaluated" → evidence-backed. Opt-in like the behavioral layer; degrade silently when no vision model configured.
-- [ ] **Phase 83 finish** — companion **multimodal**: image-upload/paste in the agent drawer → thread images through `/agent/message` + the agent service into `ChatMessage.images`. Companion **TTS**: browser `speechSynthesis` voice output (toggle in drawer), respecting `navigator.language`.
-- [ ] (optional) expose `analyse-visual` as an LLM **MCP tool** for agent access.
+**REMAINING (next session):**
+- [ ] **Phase 83 companion multimodal** — image upload/paste in the agent drawer → thread base64 images through `POST /agent/message` → agent service → `ChatMessage.images` (field exists). Render thumbnails in the message log. (Only remaining v3.6.0 item.)
+- [ ] (optional) Phase 84 polish: **alt-text** vision check needs per-image bytes (capture currently only feeds the full-page screenshot + heading outline to heading-semantics); positive-pass VPAT upgrade ("clean vision pass → Supports") needs a deriveRow change in vpat-service. Expose `analyse-visual` as an LLM **MCP tool**.
+- [ ] HUMAN UAT: TTS + (future) image upload are UI — need real-browser cross-persona UAT ([[feedback_ui_phase_uat]]).
 - [ ] WP mirror of vision checks is a separate later effort (WP standalone uses axe-core client-side; vision needs the dashboard/enterprise path).
 
 ### Already shipped this run (carry-overs, not part of 83/84)
