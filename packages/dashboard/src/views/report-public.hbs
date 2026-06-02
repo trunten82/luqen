@@ -30,6 +30,11 @@
       <p class="verdict-line__eyebrow verdict-line__eyebrow--{{verdictColourClass}}">Verdict</p>
       <p class="verdict-line__sentence">{{verdictSentence}}</p>
       <p class="verdict-line__meta">{{verdictMeta}}</p>
+      {{#if acrUrl}}
+      <p class="verdict-line__acr" style="margin-top:.75rem">
+        <a class="btn btn--secondary" href="{{acrUrl}}" rel="noopener">View our Accessibility Conformance Report (ACR)</a>
+      </p>
+      {{/if}}
     </section>
 
     <section class="report-public__summary" aria-label="Scan summary">

@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import JSZip from 'jszip';
 import type { StorageAdapter } from '../db/index.js';
 import type { ScanRecord } from '../db/types.js';
@@ -98,6 +99,42 @@ export async function loadVpatForScan(
     createdAtDisplay: new Date(scan.createdAt).toLocaleString(),
   };
   return { vpat, evidenceGroups, scanMeta };
+}
+
+/**
+ * Render a loaded VPAT/ACR to standalone public HTML using the shared vpat.hbs
+ * template. Used by BOTH the token-share view (`/share/:token`) and the public
+ * dynamic ACR view (`/reports/:id/acr`) so the two surfaces render identically.
+ * Download links are supplied by the caller (each surface routes downloads
+ * through its own public path).
+ */
+export async function renderVpatHtml(
+  scan: ScanRecord,
+  loaded: LoadedVpat,
+  opts: { pdfUrl: string; packUrl: string | null; isShared: boolean },
+): Promise<string> {
+  const handlebars = (await import('handlebars')).default;
+  const viewsDir = resolve(join(fileURLToPath(new URL('.', import.meta.url)), '..', 'views'));
+  handlebars.registerHelper('conformanceBadge', (conformance: string) => {
+    const cls =
+      conformance === 'Supports' ? 'badge--success' :
+      conformance === 'Partially Supports' ? 'badge--warning' :
+      conformance === 'Does Not Support' ? 'badge--error' : 'badge--neutral';
+    const escaped = handlebars.escapeExpression(conformance);
+    return new handlebars.SafeString(`<span class="badge ${cls}">${escaped}</span>`);
+  });
+  const template = handlebars.compile(await readFile(join(viewsDir, 'vpat.hbs'), 'utf-8'));
+  return template(
+    {
+      scan,
+      vpat: loaded.vpat,
+      evidenceGroups: loaded.evidenceGroups,
+      pdfUrl: opts.pdfUrl,
+      packUrl: opts.packUrl,
+      isShared: opts.isShared,
+    },
+    { data: { root: { locale: 'en' } } },
+  );
 }
 
 /**

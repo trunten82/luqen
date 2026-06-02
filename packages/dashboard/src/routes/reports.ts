@@ -920,6 +920,8 @@ export async function reportRoutes(
         verdictColourClass,
         verdictMeta,
         badgeSrc: `/api/v1/badge/${id}.svg`,
+        // widget→VPAT: deep-link to the live public Accessibility Conformance Report.
+        acrUrl: `/reports/${encodeURIComponent(id)}/acr`,
       });
       return reply.type('text/html').send(html);
     },
