@@ -134,11 +134,11 @@ Two parallelizable tracks: the WordPress track (78 `readme.txt`, 79) and the pla
 - `3343063` **Phase 84 vision integration (DONE)** — core `BehavioralOptions.onVisualContext` callback (capture + inject, reuses open browser, keeps core LLM-free); dashboard `LLMClient.analyseVisual()`, `scanner/vision-pass.ts` (heading-semantics mapping → `Issue` runner='vision', degrade to [] on 503), orchestrator `resolveVisionAnalyzer` + server.ts wiring. Vision findings flow into reports + VPAT (move 1.3.1 off "Not Evaluated"). Runs as part of the deep behavioral scan; no new UI toggle.
 - `9a018de` **Phase 83 TTS (DONE)** — browser `speechSynthesis` voice-output toggle in the agent drawer (`static/agent-tts.js`), spoken on the SSE 'done' frame; i18n in all 6 locales.
 
-**REMAINING (next session):**
-- [ ] **Phase 83 companion multimodal** — image upload/paste in the agent drawer → thread base64 images through `POST /agent/message` → agent service → `ChatMessage.images` (field exists). Render thumbnails in the message log. (Only remaining v3.6.0 item.)
-- [ ] (optional) Phase 84 polish: **alt-text** vision check needs per-image bytes (capture currently only feeds the full-page screenshot + heading outline to heading-semantics); positive-pass VPAT upgrade ("clean vision pass → Supports") needs a deriveRow change in vpat-service. Expose `analyse-visual` as an LLM **MCP tool**.
-- [ ] HUMAN UAT: TTS + (future) image upload are UI — need real-browser cross-persona UAT ([[feedback_ui_phase_uat]]).
-- [ ] WP mirror of vision checks is a separate later effort (WP standalone uses axe-core client-side; vision needs the dashboard/enterprise path).
+**REMAINING (next session — full detail in `.planning/NEXT-SESSION-PROMPT.md`):**
+- [ ] **A. Phase 83 companion multimodal** — image upload/paste in the agent drawer → thread base64 images through `POST /agent/message` → agent service → `ChatMessage.images` (field exists). Render thumbnails in the message log. Last core v3.6.0 item.
+- [ ] **B. WordPress vision mirror** (luqen-wordpress, PRIVATE): enterprise mode inherits dashboard vision automatically (confirm + surface in WP findings UI); standalone mode = capture screenshot + heading outline client-side in `scan-runner.js` → POST to the connected Luqen's `analyse-visual` (gate on a configured connection; degrade silently). Single-tier (no Pro/Agency gate). Test via wp-test lxc + Playwright; bump version/CHANGELOG/readme/.pot.
+- [ ] **C. (optional) dashboard polish** — alt-text vision check (per-image bytes); positive-pass VPAT upgrade ("clean vision pass → Supports" via `vpat-service.ts deriveRow`); `analyse-visual` as an LLM MCP tool.
+- [ ] HUMAN UAT: TTS + image upload are UI — need real-browser cross-persona UAT ([[feedback_ui_phase_uat]]).
 
 ### Already shipped this run (carry-overs, not part of 83/84)
 - DB-plugin breaking-change tolerance fix (`55445c5`): Slice C/D repos optional + guarded.
