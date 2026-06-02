@@ -1419,6 +1419,8 @@
     "attEvaluator": "Bewerter",
     "identityContact": "Kontakt",
     "attestationStatement": "Dieser Bericht spiegelt eine nach Treu und Glauben durchgeführte Bewertung der Website zum Bewertungsdatum wider, durchgeführt mit den oben genannten Methoden. Er dokumentiert den Konformitätsstand zu diesem Zeitpunkt und die laufende Mängelbeseitigung; er ist keine Zertifizierung und garantiert keine Konformität.",
+    "standardsEvaluatedHeading": "Geprüfte Normen und Gesetze",
+    "standardsEvaluatedIntro": "Dieser Bericht wurde ausdrücklich anhand jeder der folgenden Normen und Gesetze bewertet, die für diesen Scan ausgewählt wurden. Jede ist vollständig benannt, damit der Abdeckungsumfang eindeutig ist.",
     "attReasonedChanges": "Dokumentierte Bewertungsänderungen (mit Begründung)",
     "evidenceHeading": "Nachweise der manuellen Tests",
     "evidenceIntro": "Während der manuellen Tests erfasste Nachweisdateien, nach Erfolgskriterium gegliedert. Diese Artefakte — Screenshots und Dokumente — belegen die oben festgehaltenen manuellen Bewertungen und sind Teil des datierten, nach Treu und Glauben geführten Testprotokolls. Sie dienen der Transparenz und stellen keine Konformitätszertifizierung dar.",
