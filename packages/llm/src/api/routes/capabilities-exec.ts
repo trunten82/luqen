@@ -372,23 +372,10 @@ export async function registerCapabilityExecRoutes(
       ? body.orgId
       : reqOrgId;
 
-    // Phase 80 — credit metering. System/unscoped calls are unmetered; real
-    // orgs are gated on their AI-fix credit balance. When exhausted we never
-    // hard-error the user flow: a 402 lets the caller fall back to its
-    // deterministic fix path (the same degrade path as an unavailable LLM).
+    // Single product, no gates: AI fixes are NEVER blocked on a credit balance.
+    // The per-org ledger below stays purely as usage accounting — it records
+    // consumption for the usage page but never gates the call (no 402, no paywall).
     const metered = typeof orgId === 'string' && orgId.length > 0 && orgId !== 'system';
-    if (metered) {
-      const bal = await db.getCreditBalance(orgId);
-      if (bal.balance <= 0) {
-        void reply.header('X-Luqen-Credits-Remaining', '0');
-        await reply.status(402).send({
-          error: 'AI-fix credits exhausted for this organisation',
-          statusCode: 402,
-          creditsExhausted: true,
-        });
-        return;
-      }
-    }
 
     try {
       const capResult = await executeGenerateFix(
