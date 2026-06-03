@@ -1,0 +1,74 @@
+<section aria-label="{{t "acrWording.admin.title"}}">
+  <h2>{{t "acrWording.admin.title"}}</h2>
+  <p class="text-muted text-sm mb-md">{{t "acrWording.admin.intro"}}</p>
+
+  {{#if saved}}<div class="alert alert--success mb-md" role="status">{{t "acrWording.admin.saved"}}</div>{{/if}}
+  {{#if imported}}
+    {{#if (startsWith imported "error")}}
+    <div class="alert alert--warning mb-md">{{t "acrWording.admin.importError"}}</div>
+    {{else}}
+    <div class="alert alert--success mb-md" role="status">{{t "acrWording.admin.imported" n=imported}}</div>
+    {{/if}}
+  {{/if}}
+  {{#unless supported}}<div class="alert alert--warning mb-md">{{t "acrWording.admin.unsupported"}}</div>{{/unless}}
+
+  <nav class="tabs mb-md" aria-label="{{t "acrWording.admin.localeLabel"}}">
+    {{#each locales}}
+    <a class="tab {{#if this.active}}is-active{{/if}}" href="/admin/acr-wording?locale={{this.code}}">{{this.label}}</a>
+    {{/each}}
+  </nav>
+
+  {{#if anyUnreviewed}}<div class="alert alert--info mb-md">{{t "acrWording.admin.needsReview"}}</div>{{/if}}
+
+  <table class="table">
+    <thead><tr>
+      <th scope="col">{{t "acrWording.admin.colKey"}}</th>
+      <th scope="col">{{t "acrWording.admin.colText"}}</th>
+      <th scope="col">{{t "acrWording.admin.colSource"}}</th>
+    </tr></thead>
+    <tbody>
+      {{#each rows}}
+      <tr>
+        <td><code class="text-sm">{{this.key}}</code></td>
+        <td>
+          <form method="post" action="/admin/acr-wording">
+            <input type="hidden" name="_csrf" value="{{../csrfToken}}">
+            <input type="hidden" name="locale" value="{{../locale}}">
+            <input type="hidden" name="key" value="{{this.key}}">
+            <textarea name="text" class="input text-sm" rows="2" aria-label="{{this.key}}">{{this.text}}</textarea>
+            {{#unless this.isCustom}}<p class="text-muted text-sm">{{t "acrWording.admin.standardLabel"}} {{this.standardText}}</p>{{/unless}}
+            <div class="form-actions">
+              <button type="submit" class="btn btn--sm btn--primary"{{#unless ../supported}} disabled{{/unless}}>{{t "acrWording.admin.save"}}</button>
+            </div>
+          </form>
+          {{#if this.isOverride}}
+          <form method="post" action="/admin/acr-wording/reset" class="mt-xs">
+            <input type="hidden" name="_csrf" value="{{../csrfToken}}">
+            <input type="hidden" name="locale" value="{{../locale}}">
+            <input type="hidden" name="key" value="{{this.key}}">
+            <button type="submit" class="btn btn--sm btn--ghost">{{t "acrWording.admin.reset"}}</button>
+            {{#if this.translatedAt}}<span class="text-muted text-sm"> · {{this.translatedBy}} · {{this.translatedAt}}</span>{{/if}}
+          </form>
+          {{/if}}
+        </td>
+        <td><span class="badge {{#if this.isCustom}}badge--warning{{else}}badge--neutral{{/if}}">{{t this.sourceLabelKey}}</span>{{#unless this.reviewed}} <span class="badge badge--info">!</span>{{/unless}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+
+  <h3 class="mt-lg">{{t "acrWording.admin.bulkHeading"}}</h3>
+  <p class="text-muted text-sm mb-md">{{t "acrWording.admin.bulkIntro"}}</p>
+  <p><a class="btn btn--ghost btn--sm" href="/admin/acr-wording/export.json?locale={{locale}}">{{t "acrWording.admin.download"}}</a></p>
+  <form method="post" action="/admin/acr-wording/import" class="form-grid">
+    <input type="hidden" name="_csrf" value="{{csrfToken}}">
+    <input type="hidden" name="locale" value="{{locale}}">
+    <div class="form-group">
+      <label for="acrw-payload">JSON</label>
+      <textarea id="acrw-payload" name="payload" class="input text-sm" rows="10">{{exportJson}}</textarea>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn--primary"{{#unless supported}} disabled{{/unless}}>{{t "acrWording.admin.import"}}</button>
+    </div>
+  </form>
+</section>

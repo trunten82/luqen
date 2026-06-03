@@ -258,6 +258,14 @@
         </svg>
         {{t "nav.reportIdentity"}}
       </a>
+      <a class="sidebar__item {{#if (startsWith currentPath '/admin/acr-wording')}}is-active{{/if}}"
+         href="/admin/acr-wording"
+         aria-current="{{#if (startsWith currentPath '/admin/acr-wording')}}page{{/if}}">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M4 5h12M4 10h12M4 15h8M15 13l2 2-2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        {{t "nav.acrWording"}}
+      </a>
       <a class="sidebar__item {{#if (startsWith currentPath '/admin/agency')}}is-active{{/if}}"
          href="/admin/agency"
          aria-current="{{#if (startsWith currentPath '/admin/agency')}}page{{/if}}">

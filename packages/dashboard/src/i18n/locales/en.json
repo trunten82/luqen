@@ -115,7 +115,8 @@
     "accessibilityStatement": "Accessibility Statement",
     "reportIdentity": "Report Identity",
     "agencyConsole": "Agency console",
-    "plansPricing": "Plans & pricing"
+    "plansPricing": "Plans & pricing",
+    "acrWording": "ACR wording"
   },
   "auth": {
     "signInTitle": "Sign in",
@@ -2015,5 +2016,31 @@
     "verdictConforms": "{{site}} conforms to {{standard}} across {{pages}} page(s).",
     "verdictPartial": "{{site}} partially conforms to {{standard}} across {{pages}} page(s).",
     "verdictMeta": "Evaluated {{date}} · {{supports}} of {{total}} criteria supported · {{doesNotSupport}} not supported · {{notEvaluated}} pending manual evaluation"
+  },
+  "acrWording": {
+    "admin": {
+      "title": "ACR wording",
+      "intro": "Edit the standard VPAT wording per language. Each string defaults to the standard localized wording; override any string with your own or an officially-translated text. Changes apply to every Accessibility Conformance Report your organisation generates.",
+      "saved": "Wording saved.",
+      "unsupported": "Wording management is not available on this storage backend.",
+      "localeLabel": "Language",
+      "needsReview": "Some standard wording in this language has not yet been human-reviewed for legal use. Review and save each string to confirm it.",
+      "colKey": "String",
+      "colText": "Wording",
+      "colSource": "Source",
+      "sourceStandard": "Standard",
+      "sourceVpat": "VPAT standard",
+      "sourceTranslated": "Translated from English",
+      "sourceCustom": "Custom",
+      "standardLabel": "Standard:",
+      "save": "Save",
+      "reset": "Reset to standard",
+      "bulkHeading": "Bulk translations",
+      "bulkIntro": "Download the current strings for this language, edit the values, then paste the JSON back and import. Strings left identical to the standard wording are ignored.",
+      "download": "Download template (JSON)",
+      "import": "Import",
+      "imported": "Imported {{n}} string(s).",
+      "importError": "Could not parse the JSON. Please check the format."
+    }
   }
 }
