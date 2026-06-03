@@ -16,7 +16,8 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { StorageAdapter } from '../db/adapter.js';
 import { requirePermission } from '../auth/middleware.js';
-import { HtmlPageSchema } from '../api/schemas/envelope.js';
+import { Type } from '@sinclair/typebox';
+import { HtmlPageSchema, ErrorEnvelope } from '../api/schemas/envelope.js';
 import { t, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from '../i18n/index.js';
 import {
   ACR_WORDING_KEYS,
@@ -181,7 +182,10 @@ export async function acrWordingRoutes(
   // ── Admin: download the current strings for a locale as a JSON template ───
   server.get(
     '/admin/acr-wording/export.json',
-    { preHandler: requirePermission('admin.system', 'admin.org') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.org'),
+      schema: { tags: ['export'], response: { 200: Type.String(), 401: ErrorEnvelope } },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = orgOf(request);
       const locale = resolveLocale((request.query as { locale?: string }).locale);
