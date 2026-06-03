@@ -222,8 +222,8 @@ describe('VPAT / ACR E2E', () => {
       expect(res.statusCode).toBe(200);
       expect(res.headers['content-type']).toContain('text/html');
       const html = res.body;
-      // Document chrome
-      expect(html).toContain('<!DOCTYPE html>');
+      // Document chrome (shared ACR template emits a lowercase doctype)
+      expect(html).toMatch(/<!doctype html>/i);
       expect(html).toContain('vpat-test.example.com');
       // Conformance vocabulary present
       expect(html).toContain('Does Not Support');
@@ -288,11 +288,14 @@ describe('VPAT / ACR E2E', () => {
       const res = await ctx.server.inject({ method: 'GET', url: `/reports/${id}/vpat` });
 
       expect(res.statusCode).toBe(200);
-      const html = res.body;
+      // Mustache escapes '/' to '&#x2F;' in attribute values (parity-locked with
+      // the WP renderer); browsers decode it. Normalise for URL assertions.
+      const html = res.body.replace(/&#x2F;/g, '/');
       // Appendix heading (i18n en) + intro.
       expect(html).toContain('Manual test evidence');
-      // Image evidence rendered as a thumbnail <img> pointing at the served path.
-      expect(html).toContain('<img src="/uploads/system/evidence/screenshot-alt.png"');
+      // Image evidence rendered as a thumbnail whose download link keeps the
+      // served /uploads path (the inline <img> src is a self-contained data URI).
+      expect(html).toContain('href="/uploads/system/evidence/screenshot-alt.png"');
       // Document evidence rendered as a filename link.
       expect(html).toContain('href="/uploads/system/evidence/sr-transcript.pdf"');
       expect(html).toContain('sr-transcript.pdf');

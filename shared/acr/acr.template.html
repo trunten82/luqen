@@ -29,10 +29,18 @@
 		<div class="acr__links" role="group" aria-label="Report links">
 			{{#links.liveReportUrl}}<a class="acr__link acr__link--badge" href="{{links.liveReportUrl}}">{{#links.badgeUrl}}<img class="acr__badge" src="{{links.badgeUrl}}" alt="{{strings.verifiedBadge}}">{{/links.badgeUrl}}{{strings.viewLiveReport}}</a>{{/links.liveReportUrl}}
 			{{#links.dashboardReportUrl}}<a class="acr__link" href="{{links.dashboardReportUrl}}">{{strings.viewDashboardReport}}</a>{{/links.dashboardReportUrl}}
+			{{#links.pdfUrl}}<a class="acr__link" href="{{links.pdfUrl}}">{{strings.downloadPdf}}</a>{{/links.pdfUrl}}
 			{{#links.packUrl}}<a class="acr__link" href="{{links.packUrl}}">{{strings.downloadPack}}</a>{{/links.packUrl}}
 		</div>
 		{{/hasLinks}}
 	</header>
+
+	{{#staleNotice}}
+	<div class="acr__stale" role="alert">
+		<span>{{message}}</span>
+		<a href="{{latestUrl}}">{{linkLabel}}</a>
+	</div>
+	{{/staleNotice}}
 
 	<hr class="acr__rule">
 

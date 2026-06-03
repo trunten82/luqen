@@ -73,6 +73,13 @@
       </div>
 
       <div class="form-group">
+        <label for="as-acr-url">{{t "a11yStatement.admin.acrUrl"}}</label>
+        <input type="url" id="as-acr-url" name="acrUrl" class="input" value="{{config.acrUrl}}"
+               placeholder="https://example.com/reports/live/...">
+        <p class="text-muted text-sm">{{t "a11yStatement.admin.acrUrlHelp"}}</p>
+      </div>
+
+      <div class="form-group">
         <label for="as-commitment">{{t "a11yStatement.admin.commitment"}}</label>
         <textarea id="as-commitment" name="commitment" class="input" rows="4"
                   placeholder="{{t "a11yStatement.admin.commitmentPlaceholder"}}">{{config.commitment}}</textarea>

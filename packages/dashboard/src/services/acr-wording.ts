@@ -134,6 +134,7 @@ export const ACR_WORDING_KEYS: readonly AcrWordingKey[] = [
   { key: 'evidenceIntro', i18nKey: 'vpat.evidenceIntro' },
   { key: 'evidenceDownload', i18nKey: 'acr.evidenceDownload' },
   { key: 'downloadPack', i18nKey: 'vpat.downloadPack' },
+  { key: 'downloadPdf', i18nKey: 'vpat.downloadPdf' },
   // Links / badge (populated by the report page in a later milestone)
   { key: 'viewLiveReport', i18nKey: 'acr.viewLiveReport' },
   { key: 'verifiedBadge', i18nKey: 'acr.verifiedBadge' },

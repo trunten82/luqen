@@ -1459,7 +1459,9 @@
       "previewAssessed": "Sur la base d'une analyse du",
       "previewLimitations": "Limitations connues :",
       "previewPending": "Examen manuel en attente :",
-      "previewNoScan": "Aucune analyse achevée n'a encore été trouvée pour le site configuré — définissez une URL de site et lancez une analyse pour renseigner les limitations connues."
+      "previewNoScan": "Aucune analyse achevée n'a encore été trouvée pour le site configuré — définissez une URL de site et lancez une analyse pour renseigner les limitations connues.",
+      "acrUrl": "Lien vers le Rapport de Conformité d’Accessibilité (ACR)",
+      "acrUrlHelp": "Facultatif. Un lien public vers votre ACR/VPAT complet, affiché sur la déclaration sous « Voir notre Rapport de Conformité d’Accessibilité »."
     },
     "public": {
       "pageTitle": "Déclaration d'accessibilité — {{entity}}",
@@ -1484,7 +1486,8 @@
       "feedbackForm": "Formulaire de contact :",
       "feedbackNoChannel": "Aucun canal de retour n'a encore été configuré. Veuillez contacter l'exploitant du site pour signaler un obstacle d'accessibilité.",
       "lastAssessed": "Dernière évaluation le",
-      "disclaimer": "Cette déclaration reflète les tests automatisés et comportementaux ainsi que tout examen manuel enregistré. Il s'agit d'un état des lieux de bonne foi de nos efforts en matière d'accessibilité ; elle ne constitue ni une certification légale de conformité ni un conseil juridique."
+      "disclaimer": "Cette déclaration reflète les tests automatisés et comportementaux ainsi que tout examen manuel enregistré. Il s'agit d'un état des lieux de bonne foi de nos efforts en matière d'accessibilité ; elle ne constitue ni une certification légale de conformité ni un conseil juridique.",
+      "viewAcr": "Voir notre Rapport de Conformité d’Accessibilité"
     }
   },
   "fleet": {
@@ -1543,6 +1546,15 @@
     "wordingCustomLabel": "Formulation personnalisée",
     "verdictConforms": "{{site}} est conforme à {{standard}} sur {{pages}} page(s).",
     "verdictPartial": "{{site}} est partiellement conforme à {{standard}} sur {{pages}} page(s).",
-    "verdictMeta": "Évalué le {{date}} · {{supports}} critères pris en charge sur {{total}} · {{doesNotSupport}} non pris en charge · {{notEvaluated}} en attente d’évaluation manuelle"
+    "verdictMeta": "Évalué le {{date}} · {{supports}} critères pris en charge sur {{total}} · {{doesNotSupport}} non pris en charge · {{notEvaluated}} en attente d’évaluation manuelle",
+    "staleNotice": "Une version plus récente de ce rapport est disponible.",
+    "staleNoticeLink": "Voir le rapport le plus récent"
+  },
+  "reportPage": {
+    "revisionsHeading": "Historique du rapport",
+    "revisionsIntro": "Chaque analyse terminée est conservée comme une révision datée de ce rapport.",
+    "current": "Actuelle",
+    "view": "Voir",
+    "latest": "La plus récente"
   }
 }

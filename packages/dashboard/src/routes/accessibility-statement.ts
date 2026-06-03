@@ -155,6 +155,7 @@ export async function accessibilityStatementRoutes(
         ...(body.contactEmail?.trim() ? { contactEmail: body.contactEmail.trim() } : {}),
         ...(body.contactUrl?.trim() ? { contactUrl: body.contactUrl.trim() } : {}),
         ...(body.commitment?.trim() ? { commitment: body.commitment.trim() } : {}),
+        ...(body.acrUrl?.trim() ? { acrUrl: body.acrUrl.trim() } : {}),
       };
 
       await storage.accessibilityStatements.upsert(orgId, input, userId);

@@ -2216,4 +2216,14 @@ CREATE TABLE IF NOT EXISTS acr_wording (
 CREATE INDEX IF NOT EXISTS idx_acr_wording_org_locale ON acr_wording(org_id, locale);
     `,
   },
+  {
+    id: '087',
+    name: 'add-accessibility-statement-acr-url',
+    sql: `
+-- The public accessibility statement can link to the org's full Accessibility
+-- Conformance Report (ACR/VPAT), mirroring the WordPress plugin's acr_url. NULL
+-- when not configured (the statement renders without the ACR link, as before).
+ALTER TABLE accessibility_statements ADD COLUMN acr_url TEXT;
+    `,
+  },
 ];

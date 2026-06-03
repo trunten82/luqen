@@ -1,7 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import JSZip from 'jszip';
 import type { StorageAdapter } from '../db/index.js';
 import type { ScanRecord } from '../db/types.js';
@@ -32,6 +31,16 @@ export async function resolveScanIdentity(
 import { buildRemediationRecord } from './remediation-service.js';
 import { generateVpatPdf } from '../pdf/generator.js';
 import type { PdfScanMeta } from '../pdf/generator.js';
+import {
+  buildAcrView,
+  type AcrView,
+  type AcrEvidenceGroup,
+  type AcrLinks,
+  type AcrStaleNotice,
+} from './acr-view.js';
+import { generateAcrPdf, renderAcrHtml, type AcrHtmlChrome } from './acr-render.js';
+import { pdfWithFallback } from './pdf-fallback.js';
+import { t, SUPPORTED_LOCALES } from '../i18n/index.js';
 
 /**
  * Shared VPAT/ACR assembly used by the authenticated export routes AND the
@@ -110,38 +119,146 @@ export async function loadVpatForScan(
 }
 
 /**
- * Render a loaded VPAT/ACR to standalone public HTML using the shared vpat.hbs
- * template. Used by BOTH the token-share view (`/share/:token`) and the public
- * dynamic ACR view (`/reports/:id/acr`) so the two surfaces render identically.
- * Download links are supplied by the caller (each surface routes downloads
- * through its own public path).
+ * Validate a candidate locale against the supported set, falling back to 'en'.
  */
-export async function renderVpatHtml(
+export function resolveLocale(candidate: string | undefined): string {
+  return candidate !== undefined && (SUPPORTED_LOCALES as readonly string[]).includes(candidate)
+    ? candidate
+    : 'en';
+}
+
+/**
+ * Resolve a stored upload path (e.g. `/uploads/x.png`) to a base64 data URI so
+ * the shared ACR template renders self-contained (HTML→PDF has no base URL, and
+ * public viewers must not depend on an authenticated /uploads path). Only
+ * PNG/JPEG are embedded; anything else returns '' (the caller lists it by name).
+ */
+async function uploadToDataUri(uploadsRoot: string, publicPath: string): Promise<string> {
+  if (!/\.(png|jpe?g)$/i.test(publicPath)) return '';
+  const abs = join(uploadsRoot, publicPath.replace(/^\/uploads\//, ''));
+  if (!existsSync(abs)) return '';
+  try {
+    const mime = /\.png$/i.test(abs) ? 'image/png' : 'image/jpeg';
+    return `data:${mime};base64,${(await readFile(abs)).toString('base64')}`;
+  } catch {
+    return '';
+  }
+}
+
+/** Options shared by the ACR view assembly. */
+export interface ScanAcrViewOptions {
+  /** Already-validated locale (use {@link resolveLocale}). */
+  readonly locale: string;
+  /** On-disk uploads root for resolving evidence images + the org logo. */
+  readonly uploadsRoot: string;
+  /** Surface-specific links (pdf/pack/live-report/badge/dashboard). */
+  readonly links?: AcrLinks;
+  /** Stale-revision banner (only on a non-latest Time Machine revision). */
+  readonly staleNotice?: AcrStaleNotice;
+}
+
+/**
+ * THE single ACR view assembly for the dashboard. Maps a loaded VPAT onto the
+ * shared-template view shape, fully localized and content-complete: per-org
+ * wording overrides, the verdict-change audit trail, evidence images inlined as
+ * data URIs, the org logo, and surface-specific links. Every render path (web,
+ * public, token-share, evidence-pack PDF, authed export) builds its AcrView here
+ * so all surfaces stay byte-identical for the same view JSON + locale.
+ */
+export async function buildScanAcrView(
+  storage: StorageAdapter,
   scan: ScanRecord,
   loaded: LoadedVpat,
-  opts: { pdfUrl: string; packUrl: string | null; isShared: boolean },
-): Promise<string> {
-  const handlebars = (await import('handlebars')).default;
-  const viewsDir = resolve(join(fileURLToPath(new URL('.', import.meta.url)), '..', 'views'));
-  handlebars.registerHelper('conformanceBadge', (conformance: string) => {
-    const cls =
-      conformance === 'Supports' ? 'badge--success' :
-      conformance === 'Partially Supports' ? 'badge--warning' :
-      conformance === 'Does Not Support' ? 'badge--error' : 'badge--neutral';
-    const escaped = handlebars.escapeExpression(conformance);
-    return new handlebars.SafeString(`<span class="badge ${cls}">${escaped}</span>`);
+  opts: ScanAcrViewOptions,
+): Promise<AcrView> {
+  const orgId = scan.orgId ?? 'system';
+
+  // Verdict-change audit trail — only rows carrying a recorded reason are
+  // surfaced; that is the defensible evidence of a reasoned evaluation process.
+  const auditRows = (await storage.manualTestAudit?.listAudit(scan.id)) ?? [];
+  const auditHistory = auditRows
+    .filter((a) => (a.comment ?? '').trim() !== '')
+    .map((a) => ({
+      criterion: a.criterionId,
+      change: `${a.fromStatus ?? 'untested'} → ${a.toStatus}`,
+      reason: a.comment ?? '',
+      actor: a.actor ?? '—',
+      date: a.createdAt.slice(0, 10),
+    }));
+
+  // Evidence images are inlined as data URIs so the document renders
+  // self-contained (HTML→PDF has no base URL; public viewers need no auth). The
+  // download `href` keeps the original /uploads path so authed viewers can still
+  // open the full-resolution artifact (and documents, which are never inlined).
+  const evidence: AcrEvidenceGroup[] = await Promise.all(
+    loaded.evidenceGroups.map(async (g) => ({
+      criterion: g.criterion,
+      title: g.title,
+      items: await Promise.all(
+        g.items.map(async (it) => ({
+          fileName: it.fileName,
+          isImage: it.isImage,
+          src: it.isImage ? await uploadToDataUri(opts.uploadsRoot, it.filePath) : '',
+          href: it.filePath,
+        })),
+      ),
+    })),
+  );
+
+  const logoUrl = loaded.vpat.identity?.logoPath
+    ? await uploadToDataUri(opts.uploadsRoot, loaded.vpat.identity.logoPath)
+    : '';
+
+  const wordingOverrides = (await storage.acrWording?.listForOrg(orgId, opts.locale)) ?? [];
+
+  return buildAcrView(loaded.vpat, loaded.scanMeta, {
+    locale: opts.locale,
+    t: t as unknown as Parameters<typeof buildAcrView>[2]['t'],
+    wordingOverrides,
+    auditHistory,
+    ...(opts.links ? { links: opts.links } : {}),
+    ...(logoUrl ? { logoUrl } : {}),
+    evidence,
+    ...(opts.staleNotice ? { staleNotice: opts.staleNotice } : {}),
   });
-  const template = handlebars.compile(await readFile(join(viewsDir, 'vpat.hbs'), 'utf-8'));
-  return template(
-    {
-      scan,
-      vpat: loaded.vpat,
-      evidenceGroups: loaded.evidenceGroups,
-      pdfUrl: opts.pdfUrl,
-      packUrl: opts.packUrl,
-      isShared: opts.isShared,
-    },
-    { data: { root: { locale: 'en' } } },
+}
+
+/**
+ * Render a loaded VPAT/ACR to standalone HTML using the SHARED ACR template
+ * (the single source of truth, identical to the WordPress plugin and the PDF).
+ * Used by the public dynamic ACR (`/reports/:id/acr`), the token-share view
+ * (`/share/:token`), the per-site report page, and the authenticated web view
+ * (which passes interactive `chrome`). Replaces the retired `vpat.hbs`.
+ */
+export async function renderScanAcrHtml(
+  storage: StorageAdapter,
+  scan: ScanRecord,
+  loaded: LoadedVpat,
+  opts: ScanAcrViewOptions,
+  chrome: AcrHtmlChrome = {},
+): Promise<string> {
+  const view = await buildScanAcrView(storage, scan, loaded, opts);
+  return renderAcrHtml(view, { locale: opts.locale, ...chrome });
+}
+
+/**
+ * Render a loaded VPAT/ACR to a PDF buffer via the shared template + headless
+ * Chromium (the single-source path that matches the WordPress plugin). Degrades
+ * to the dependency-free PDFKit VPAT renderer when no browser can launch (CI, or
+ * a host without Chromium) so a valid PDF is always served — logged on degrade.
+ */
+export async function renderScanAcrPdf(
+  storage: StorageAdapter,
+  scan: ScanRecord,
+  loaded: LoadedVpat,
+  opts: ScanAcrViewOptions,
+  onFallback?: (err: unknown) => void,
+): Promise<Buffer> {
+  const view = await buildScanAcrView(storage, scan, loaded, opts);
+  return pdfWithFallback(
+    () => generateAcrPdf(view),
+    () => generateVpatPdf(loaded.scanMeta, loaded.vpat, { groups: loaded.evidenceGroups, uploadsRoot: opts.uploadsRoot }),
+    onFallback,
   );
 }
 
@@ -169,12 +286,19 @@ export async function buildEvidencePackZip(
   storage: StorageAdapter,
   scan: ScanRecord,
   uploadsRoot: string,
+  locale: string = 'en',
 ): Promise<Buffer | null> {
   const loaded = await loadVpatForScan(storage, scan);
   if (loaded === null) return null;
-  const { vpat, evidenceGroups, scanMeta } = loaded;
+  const { vpat, evidenceGroups } = loaded;
 
-  const pdfBuffer = await generateVpatPdf(scanMeta, vpat, { groups: evidenceGroups, uploadsRoot });
+  // The pack's ACR PDF renders through the shared template (Chromium), with the
+  // PDFKit VPAT as the no-browser fallback — same single source as every other
+  // surface, so the pack PDF matches the standalone download byte-for-byte.
+  const pdfBuffer = await renderScanAcrPdf(storage, scan, loaded, {
+    locale: resolveLocale(locale),
+    uploadsRoot,
+  });
 
   const zip = new JSZip();
   zip.file('accessibility-conformance-report.pdf', pdfBuffer);

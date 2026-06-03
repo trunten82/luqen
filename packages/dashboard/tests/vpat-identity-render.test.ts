@@ -9,22 +9,25 @@
  *   - the REAL SqliteStorageAdapter (migration 082) + resolveScanIdentity
  *     round-trip a stored identity and degrade to null when unset.
  */
-import { describe, it, expect, afterEach } from 'vitest';
-import { readFile } from 'node:fs/promises';
+import { describe, it, expect, afterEach, beforeAll } from 'vitest';
 import { writeFileSync, mkdirSync, rmSync, existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
-import HandlebarsLib from 'handlebars';
-import { buildVpat, type VpatScanInput } from '../src/services/vpat-service.js';
+import { buildVpat, type VpatScanInput, type VpatReport } from '../src/services/vpat-service.js';
 import { generateVpatPdf, type PdfScanMeta } from '../src/pdf/generator.js';
 import { resolveScanIdentity } from '../src/services/vpat-share-service.js';
+import { buildAcrView } from '../src/services/acr-view.js';
+import { renderAcrHtml } from '../src/services/acr-render.js';
+import { loadTranslations, t } from '../src/i18n/index.js';
 import { SqliteStorageAdapter } from '../src/db/sqlite/index.js';
 import type { VpatIdentity } from '../src/services/vpat-identity.js';
 
-const __dirname = resolve(fileURLToPath(new URL('.', import.meta.url)));
 const GEN_AT = '2026-06-01';
+
+beforeAll(async () => {
+  await loadTranslations();
+});
 
 function makeReport(): ReturnType<typeof import('../src/services/report-service.js').normalizeReportData> {
   return {
@@ -54,17 +57,12 @@ const identity: VpatIdentity = {
   preparedBy: 'Acme Accessibility Office',
 };
 
-// Render vpat.hbs the way the share/report routes do, with the helpers it needs.
-async function renderVpat(vpat: unknown, scan: unknown): Promise<string> {
-  const hb = HandlebarsLib.create();
-  const en = JSON.parse(await readFile(join(__dirname, '..', 'src', 'i18n', 'locales', 'en.json'), 'utf8'));
-  hb.registerHelper('t', (key: string) =>
-    String(key).split('.').reduce((o: unknown, k) => (o as Record<string, unknown> | undefined)?.[k], en) ?? key,
-  );
-  hb.registerHelper('formatStandard', (s: unknown) => String(s));
-  hb.registerHelper('conformanceBadge', (c: string) => new hb.SafeString(`<span class="badge">${hb.escapeExpression(c)}</span>`));
-  const tpl = hb.compile(await readFile(join(__dirname, '..', 'src', 'views', 'vpat.hbs'), 'utf8'));
-  return tpl({ vpat, scan }, { data: { root: { locale: 'en' } } });
+// Render the SINGLE-SOURCE shared ACR template the way the share/report routes
+// do (buildAcrView → renderAcrHtml). `logoUrl` is the data URI / path the route
+// would resolve for the org logo.
+async function renderVpat(vpat: VpatReport, meta: PdfScanMeta, logoUrl?: string): Promise<string> {
+  const view = buildAcrView(vpat, meta, { locale: 'en', t, ...(logoUrl ? { logoUrl } : {}) });
+  return renderAcrHtml(view, { locale: 'en' });
 }
 
 describe('VPAT report identity — buildVpat threading', () => {
@@ -81,28 +79,30 @@ describe('VPAT report identity — buildVpat threading', () => {
   });
 });
 
-describe('VPAT report identity — vpat.hbs render', () => {
-  it('renders the entity name, contact mailto, address and evaluator row', async () => {
+describe('VPAT report identity — shared ACR template render', () => {
+  it('renders the entity name, contact mailto, address, logo and evaluator row', async () => {
     const vpat = buildVpat(makeReport(), scanAA, [], {
       generatedAt: GEN_AT,
       identity: { ...identity, logoPath: '/uploads/org-1/branding-images/logo.png' },
     });
-    const html = await renderVpat(vpat, { siteUrl: scanAA.siteUrl });
+    // The route resolves the logo to a (data URI) src; here we pass the path.
+    const html = await renderVpat(vpat, scanMeta, '/uploads/org-1/branding-images/logo.png');
     expect(html).toContain('Acme Corporation, Inc.');
     expect(html).toContain('mailto:a11y@acme.example');
     expect(html).toContain('1 Main St, Anytown');
-    expect(html).toContain('report-identity__logo');
-    expect(html).toContain('/uploads/org-1/branding-images/logo.png');
+    expect(html).toContain('<div class="acr__identity">');
+    // Mustache escapes '/' → '&#x2F;' in attributes (browsers decode it).
+    expect(html.replace(/&#x2F;/g, '/')).toContain('/uploads/org-1/branding-images/logo.png');
     // The attestation evaluator row renders the preparer org.
     expect(html).toContain('Acme Accessibility Office');
   });
 
   it('omits the identity block entirely when no identity is set', async () => {
     const vpat = buildVpat(makeReport(), scanAA, [], { generatedAt: GEN_AT });
-    const html = await renderVpat(vpat, { siteUrl: scanAA.siteUrl });
-    // The .report-identity CSS rules are always present; assert the rendered
-    // block + entity attribution are absent.
-    expect(html).not.toContain('<div class="report-identity">');
+    const html = await renderVpat(vpat, scanMeta);
+    // The .acr__identity CSS rules are always inlined; assert the rendered
+    // element + entity attribution are absent.
+    expect(html).not.toContain('<div class="acr__identity">');
     expect(html).not.toContain('Acme Corporation');
   });
 });
@@ -165,10 +165,10 @@ describe('VPAT report identity — PDF ACR', () => {
       ]),
     });
     // HTML view renders a programmatic note per regulation: name, citation, description.
-    const html = await renderVpat(vpat, { siteUrl: usScan.siteUrl });
+    const html = await renderVpat(vpat, scanMeta);
     expect(html).toContain('Standards &amp; laws evaluated against');
     expect(html).toContain('Americans with Disabilities Act');
-    expect(html).toContain('(US-ADA)');
+    expect(html).toContain('US-ADA');
     expect(html).toContain('42 U.S.C.');
     expect(html).toContain('The ADA prohibits discrimination');
     expect(html).toContain('Local Law 12');

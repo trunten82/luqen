@@ -88,9 +88,11 @@ describe('GET /share/:token', () => {
     expect(res.statusCode).toBe(200);
     expect(res.headers['content-type']).toContain('text/html');
     expect(res.body).toContain('share-test.example.com');
-    // External download links point at the token routes, NOT the gated internal ones.
-    expect(res.body).toContain(`/share/${share.token}/vpat.pdf`);
-    expect(res.body).not.toContain('/api/v1/export/scans/');
+    // External download links point at the token routes, NOT the gated internal
+    // ones. Mustache escapes '/' → '&#x2F;' in attributes; normalise to assert.
+    const body = res.body.replace(/&#x2F;/g, '/');
+    expect(body).toContain(`/share/${share.token}/vpat.pdf`);
+    expect(body).not.toContain('/api/v1/export/scans/');
   });
 
   it('serves a token-authorised VPAT PDF and evidence pack', async () => {

@@ -144,7 +144,10 @@
               <span class="text-muted">disabled</span>
               {{/if}}
             </td>
-            <td>{{siteUrl}}</td>
+            <td>
+              {{siteUrl}}
+              {{#if enabled}}<br><a href="{{reportUrl}}" target="_blank" rel="noopener" class="text-muted admin-badges__hint">View report &rarr;</a>{{/if}}
+            </td>
             {{#if @root.isAdminSystem}}<td><code>{{orgId}}</code></td>{{/if}}
             <td>
               {{#if enabled}}

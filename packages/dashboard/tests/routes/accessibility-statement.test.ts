@@ -126,6 +126,31 @@ describe('accessibility statement routes', () => {
     expect(after.body).toContain('a11yStatement.public.noAssessment');
   });
 
+  it('persists the ACR link and renders "View our ACR" on the public statement', async () => {
+    const save = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/accessibility-statement',
+      payload: new URLSearchParams({
+        enabled: 'on',
+        entityName: 'Acme Corp',
+        siteUrl: 'https://acme.example',
+        wcagVersion: '2.1',
+        wcagLevel: 'AA',
+        acrUrl: 'https://acme.example/reports/live/badge-123',
+      }).toString(),
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+    expect(save.statusCode).toBe(302);
+
+    const stored = await ctx.storage.accessibilityStatements.get(ctx.orgId);
+    expect(stored?.acrUrl).toBe('https://acme.example/reports/live/badge-123');
+
+    const pub = await ctx.server.inject({ method: 'GET', url: `/accessibility-statement/${ctx.orgSlug}` });
+    expect(pub.statusCode).toBe(200);
+    expect(pub.body).toContain('href="https://acme.example/reports/live/badge-123"');
+    expect(pub.body).toContain('a11yStatement.public.viewAcr');
+  });
+
   it('404s for an unknown slug', async () => {
     const res = await ctx.server.inject({ method: 'GET', url: '/accessibility-statement/does-not-exist' });
     expect(res.statusCode).toBe(404);

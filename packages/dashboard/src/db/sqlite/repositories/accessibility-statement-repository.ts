@@ -16,6 +16,7 @@ interface StatementRow {
   contact_email: string | null;
   contact_url: string | null;
   commitment: string | null;
+  acr_url: string | null;
   updated_at: string;
   updated_by: string | null;
 }
@@ -32,6 +33,7 @@ function rowToRecord(row: StatementRow): AccessibilityStatementRecord {
     ...(row.contact_email !== null ? { contactEmail: row.contact_email } : {}),
     ...(row.contact_url !== null ? { contactUrl: row.contact_url } : {}),
     ...(row.commitment !== null ? { commitment: row.commitment } : {}),
+    ...(row.acr_url !== null ? { acrUrl: row.acr_url } : {}),
     ...(row.updated_by !== null ? { updatedBy: row.updated_by } : {}),
   };
 }
@@ -78,10 +80,10 @@ export class SqliteAccessibilityStatementRepository
       .prepare(
         `INSERT INTO accessibility_statements (
            org_id, enabled, entity_name, site_url, wcag_version, wcag_level,
-           contact_email, contact_url, commitment, updated_at, updated_by
+           contact_email, contact_url, commitment, acr_url, updated_at, updated_by
          ) VALUES (
            @orgId, @enabled, @entityName, @siteUrl, @wcagVersion, @wcagLevel,
-           @contactEmail, @contactUrl, @commitment, @updatedAt, @updatedBy
+           @contactEmail, @contactUrl, @commitment, @acrUrl, @updatedAt, @updatedBy
          )
          ON CONFLICT(org_id) DO UPDATE SET
            enabled = @enabled,
@@ -92,6 +94,7 @@ export class SqliteAccessibilityStatementRepository
            contact_email = @contactEmail,
            contact_url = @contactUrl,
            commitment = @commitment,
+           acr_url = @acrUrl,
            updated_at = @updatedAt,
            updated_by = @updatedBy`,
       )
@@ -105,6 +108,7 @@ export class SqliteAccessibilityStatementRepository
         contactEmail: data.contactEmail ?? null,
         contactUrl: data.contactUrl ?? null,
         commitment: data.commitment ?? null,
+        acrUrl: data.acrUrl ?? null,
         updatedAt: now,
         updatedBy: updatedBy ?? null,
       });

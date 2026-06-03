@@ -41,6 +41,8 @@ export interface AccessibilityStatementView {
   readonly statementDate: string;
   readonly contactEmail?: string;
   readonly contactUrl?: string;
+  /** Public link to the org's full ACR/VPAT, shown as a "View our ACR" link. */
+  readonly acrUrl?: string;
   /** Custom remediation-commitment prose; empty → template uses the default. */
   readonly commitment: string;
   /** Criteria that automated testing alone cannot confirm (pending manual review). */
@@ -109,6 +111,7 @@ export function buildAccessibilityStatement(
     ...(opts.assessmentDate !== undefined ? { assessmentDate: opts.assessmentDate } : {}),
     ...(config.contactEmail !== undefined ? { contactEmail: config.contactEmail } : {}),
     ...(config.contactUrl !== undefined ? { contactUrl: config.contactUrl } : {}),
+    ...(config.acrUrl !== undefined && config.acrUrl.trim() !== '' ? { acrUrl: config.acrUrl.trim() } : {}),
     ...(vpat !== null ? { summary: vpat.summary } : {}),
   };
 }

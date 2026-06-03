@@ -135,6 +135,35 @@ describe('buildAcrView', () => {
     expect(v.hasEvidence).toBe(false);
   });
 
+  it('surfaces a PDF download link and the localized download label', () => {
+    const v = buildAcrView(baseVpat(), scanMeta, { ...en, links: { pdfUrl: '/r/acr.pdf' } });
+    expect(v.hasLinks).toBe(true);
+    expect(v.links.pdfUrl).toBe('/r/acr.pdf');
+    expect(v.strings.downloadPdf).toBe('Download PDF');
+  });
+
+  it('has no links when none are provided', () => {
+    const v = buildAcrView(baseVpat(), scanMeta, en);
+    expect(v.hasLinks).toBe(false);
+  });
+
+  it('carries a stale-revision notice when supplied (Time Machine non-latest)', () => {
+    const v = buildAcrView(baseVpat(), scanMeta, {
+      ...en,
+      staleNotice: { message: 'A newer version of this report is available.', linkLabel: 'View the latest report', latestUrl: '/reports/live/abc' },
+    });
+    expect(v.staleNotice).toEqual({
+      message: 'A newer version of this report is available.',
+      linkLabel: 'View the latest report',
+      latestUrl: '/reports/live/abc',
+    });
+  });
+
+  it('omits the stale notice by default', () => {
+    const v = buildAcrView(baseVpat(), scanMeta, en);
+    expect(v.staleNotice).toBeUndefined();
+  });
+
   it('applies a custom wording override and flips the indicator', () => {
     const v = buildAcrView(baseVpat(), scanMeta, {
       ...en,

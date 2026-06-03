@@ -1459,7 +1459,9 @@
       "previewAssessed": "Basierend auf einem Scan vom",
       "previewLimitations": "Bekannte Einschränkungen:",
       "previewPending": "Ausstehende manuelle Prüfung:",
-      "previewNoScan": "Für die konfigurierte Website wurde noch kein abgeschlossener Scan gefunden — legen Sie eine Website-URL fest und führen Sie einen Scan durch, um bekannte Einschränkungen zu erfassen."
+      "previewNoScan": "Für die konfigurierte Website wurde noch kein abgeschlossener Scan gefunden — legen Sie eine Website-URL fest und führen Sie einen Scan durch, um bekannte Einschränkungen zu erfassen.",
+      "acrUrl": "Link zum Accessibility Conformance Report (ACR)",
+      "acrUrlHelp": "Optional. Ein öffentlicher Link zu Ihrem vollständigen ACR/VPAT – in der Erklärung als „Unseren Accessibility Conformance Report ansehen“ angezeigt."
     },
     "public": {
       "pageTitle": "Erklärung zur Barrierefreiheit — {{entity}}",
@@ -1484,7 +1486,8 @@
       "feedbackForm": "Kontaktformular:",
       "feedbackNoChannel": "Es wurde noch kein Rückmeldekanal konfiguriert. Bitte wenden Sie sich an den Betreiber der Website, um eine Barriere bei der Barrierefreiheit zu melden.",
       "lastAssessed": "Zuletzt bewertet am",
-      "disclaimer": "Diese Erklärung spiegelt automatisierte und verhaltensbezogene Tests zusammen mit etwaigen erfassten manuellen Prüfungen wider. Sie ist ein nach Treu und Glauben erstellter Nachweis unserer Bemühungen um Barrierefreiheit und stellt weder eine rechtliche Konformitätsbescheinigung noch eine Rechtsberatung dar."
+      "disclaimer": "Diese Erklärung spiegelt automatisierte und verhaltensbezogene Tests zusammen mit etwaigen erfassten manuellen Prüfungen wider. Sie ist ein nach Treu und Glauben erstellter Nachweis unserer Bemühungen um Barrierefreiheit und stellt weder eine rechtliche Konformitätsbescheinigung noch eine Rechtsberatung dar.",
+      "viewAcr": "Unseren Accessibility Conformance Report ansehen"
     }
   },
   "fleet": {
@@ -1543,6 +1546,15 @@
     "wordingCustomLabel": "Angepasster Wortlaut",
     "verdictConforms": "{{site}} entspricht {{standard}} über {{pages}} Seite(n).",
     "verdictPartial": "{{site}} entspricht {{standard}} teilweise über {{pages}} Seite(n).",
-    "verdictMeta": "Bewertet am {{date}} · {{supports}} von {{total}} Kriterien unterstützt · {{doesNotSupport}} nicht unterstützt · {{notEvaluated}} ausstehende manuelle Bewertung"
+    "verdictMeta": "Bewertet am {{date}} · {{supports}} von {{total}} Kriterien unterstützt · {{doesNotSupport}} nicht unterstützt · {{notEvaluated}} ausstehende manuelle Bewertung",
+    "staleNotice": "Eine neuere Version dieses Berichts ist verfügbar.",
+    "staleNoticeLink": "Aktuellen Bericht ansehen"
+  },
+  "reportPage": {
+    "revisionsHeading": "Berichtsverlauf",
+    "revisionsIntro": "Jeder abgeschlossene Scan wird als datierte Revision dieses Berichts aufbewahrt.",
+    "current": "Aktuell",
+    "view": "Ansehen",
+    "latest": "Neueste"
   }
 }
