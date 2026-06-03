@@ -8,6 +8,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **ACR program — single-source, localizable, content-complete, Snapshot-aware (M1–M2).** The Accessibility Conformance Report is now one localizable, wording-managed document rendered by every dashboard surface from the single `shared/acr/` template:
+  - **Localizable + wording-managed.** The template carries no hardcoded prose — every string resolves from a per-locale wording catalog (`acr-wording.ts`) with org-overridable text and provenance (`standard`/`vpat-standard`/`custom` + reviewed flag + translator + revision date). New per-org `acr_wording` store (migration 086) + `/admin/acr-wording` editor with bulk JSON import/export. All 6 locales scaffolded (non-English flagged needs-human-revision).
+  - **Convergence.** Every render path now uses the shared template via one assembly (`vpat-share-service.ts`: `buildScanAcrView`/`renderScanAcrHtml`/`renderScanAcrPdf`): the web report `/reports/:id/vpat` (with an injected print + secure-share-manager chrome), the public `/reports/:id/acr(.pdf)`, the token `/share/:token(.pdf)`, the evidence-pack PDF, and the authenticated export. PDFKit (`generateVpatPdf`) is now the no-Chromium fallback only; `views/vpat.hbs` is retired.
+  - **Content-complete.** Restored + added: remediation stat cards + per-event actor, the verdict-change **audit history**, per-file evidence download links, fuller legal caveats, and report links.
+  - **Snapshot report page** `/reports/live/:badgeId` (keyed on the public site-badge handle — no org/scan-id leak): the latest ACR + a browsable revisions timeline; viewing a non-latest revision shows a "newer version available" disclaimer. The live badge JSON + `/admin/badges` link to it.
+  - **Public evidence pack** `/reports/:id/acr-pack.zip` (exposed under the same gate as the public report) and an **ACR-link field** on the dashboard accessibility statement (migration 087) → "View our Accessibility Conformance Report".
+  - The WordPress plugin mirrors all of the above (luqen-wordpress v0.32.0); the shared template renders byte-identically across mustache.js and the PHP `Luqen_Mustache` port (verified `en` + `it`).
+
 ### Fixed
 
 - **Out-of-repo Postgres/Mongo StorageAdapter plugins no longer break on the Slice C/D repositories.** The manual-testing + secure-sharing repos (`manualTests`, `manualTestEvidence`, `manualTestAudit`, `reportShares`) are now **optional** on `StorageAdapter` (same pattern as `reportIdentities`), and every dashboard consumer guards for their absence: the VPAT/ACR builds from scan data alone (no manual verdicts/evidence) and the manual-testing + secure-sharing surfaces report "not available on this storage backend" (503) rather than crashing. The bundled SQLite adapter implements all four, so the default deployment is byte-identical.
