@@ -2,17 +2,17 @@
   Luqen — Accessibility Conformance Report (ACR / VPAT) template.
 
   SINGLE SOURCE OF TRUTH. Logic-less (Mustache) markup rendered identically by
-  the dashboard (Handlebars) and the WordPress plugin (a tiny PHP renderer).
-  Static legal prose lives HERE so it is single-source by construction; only
-  dynamic values are interpolated. Pair with acr.css. Edit here; sync to
-  consumers. Tags used: {{x}} escaped, {{{x}}} raw HTML, {{#x}}…{{/x}} section,
-  {{^x}}…{{/x}} inverted.
+  the dashboard (mustache.js) and the WordPress plugin (a tiny PHP renderer).
+  It carries NO prose: every string comes from {{strings.*}} (localized,
+  org-overridable wording). Only dynamic values + {{strings.*}} are
+  interpolated. Pair with acr.css. Edit here; sync to consumers. Tags:
+  {{x}} escaped, {{{x}}} raw HTML, {{#x}}…{{/x}} section, {{^x}}…{{/x}} inverted.
 -->
 <section class="acr" aria-label="Accessibility Conformance Report">
 	<header>
 		<div class="acr__wordmark"><span class="acr__mark" aria-hidden="true"></span>LUQEN</div>
-		<h1 class="acr__title">Accessibility Conformance Report (VPAT&reg;)</h1>
-		<p class="acr__meta">{{meta.siteUrl}}<span class="acr__dot">&middot;</span>{{meta.standardLabel}}<span class="acr__dot">&middot;</span>Generated {{meta.generatedAt}}</p>
+		<h1 class="acr__title">{{strings.title}}</h1>
+		<p class="acr__meta">{{meta.siteUrl}}<span class="acr__dot">&middot;</span>{{meta.standardLabel}}<span class="acr__dot">&middot;</span>{{strings.generatedAt}} {{meta.generatedAt}}</p>
 
 		{{#identity}}
 		<div class="acr__identity">
@@ -20,10 +20,18 @@
 			<div>
 				<p class="acr__identity-name">{{entityName}}</p>
 				{{#postalAddress}}<p>{{postalAddress}}</p>{{/postalAddress}}
-				{{#contactEmail}}<p>Contact: <a href="mailto:{{contactEmail}}">{{contactEmail}}</a></p>{{/contactEmail}}
+				{{#contactEmail}}<p>{{strings.identityContact}}: <a href="mailto:{{contactEmail}}">{{contactEmail}}</a></p>{{/contactEmail}}
 			</div>
 		</div>
 		{{/identity}}
+
+		{{#hasLinks}}
+		<div class="acr__links" role="group" aria-label="Report links">
+			{{#links.liveReportUrl}}<a class="acr__link acr__link--badge" href="{{links.liveReportUrl}}">{{#links.badgeUrl}}<img class="acr__badge" src="{{links.badgeUrl}}" alt="{{strings.verifiedBadge}}">{{/links.badgeUrl}}{{strings.viewLiveReport}}</a>{{/links.liveReportUrl}}
+			{{#links.dashboardReportUrl}}<a class="acr__link" href="{{links.dashboardReportUrl}}">{{strings.viewDashboardReport}}</a>{{/links.dashboardReportUrl}}
+			{{#links.packUrl}}<a class="acr__link" href="{{links.packUrl}}">{{strings.downloadPack}}</a>{{/links.packUrl}}
+		</div>
+		{{/hasLinks}}
 	</header>
 
 	<hr class="acr__rule">
@@ -33,35 +41,35 @@
 	<p class="acr__verdict-meta">{{verdict.meta}}</p>
 
 	<div class="acr__tally" role="group" aria-label="Conformance summary">
-		<span class="acr__tally-item" data-k="supports"><span class="acr__tally-n">{{tally.supports}}</span> Supports</span>
-		<span class="acr__tally-item" data-k="partial"><span class="acr__tally-n">{{tally.partial}}</span> Partially Supports</span>
-		<span class="acr__tally-item" data-k="does-not"><span class="acr__tally-n">{{tally.doesNotSupport}}</span> Does Not Support</span>
-		<span class="acr__tally-item" data-k="na"><span class="acr__tally-n">{{tally.notApplicable}}</span> Not Applicable</span>
-		<span class="acr__tally-item" data-k="eval"><span class="acr__tally-n">{{tally.notEvaluated}}</span> Not Evaluated</span>
-		<span class="acr__tally-item" data-k="total"><span class="acr__tally-n">{{tally.total}}</span> criteria assessed</span>
+		<span class="acr__tally-item" data-k="supports"><span class="acr__tally-n">{{tally.supports}}</span> {{strings.tallySupports}}</span>
+		<span class="acr__tally-item" data-k="partial"><span class="acr__tally-n">{{tally.partial}}</span> {{strings.tallyPartial}}</span>
+		<span class="acr__tally-item" data-k="does-not"><span class="acr__tally-n">{{tally.doesNotSupport}}</span> {{strings.tallyDoesNotSupport}}</span>
+		<span class="acr__tally-item" data-k="na"><span class="acr__tally-n">{{tally.notApplicable}}</span> {{strings.tallyNotApplicable}}</span>
+		<span class="acr__tally-item" data-k="eval"><span class="acr__tally-n">{{tally.notEvaluated}}</span> {{strings.tallyNotEvaluated}}</span>
+		<span class="acr__tally-item" data-k="total"><span class="acr__tally-n">{{tally.total}}</span> {{strings.tallyTotal}}</span>
 	</div>
 
-	<!-- Methodology & scope (static prose — single-source) -->
+	<!-- Methodology & scope -->
 	<section class="acr__section">
-		<h2 class="acr__eyebrow">Methodology &amp; scope</h2>
-		<p class="acr__prose">Conformance is derived from automated testing (axe-core and complementary engines) combined with any recorded manual test results. Automated testing reliably detects only a portion of WCAG success criteria (industry estimates around 30 to 40 percent); it can confirm machine-verifiable failures but cannot, on its own, prove that a criterion requiring human judgement (such as meaningful alternative text, logical reading order, or keyboard operability) is fully met. Criteria that automated testing cannot conclusively verify are reported as &ldquo;Not Evaluated&rdquo; until a manual test is recorded; they are not assumed to pass. Where AI-assisted fixes were applied, they were reviewed and accepted under human supervision.</p>
-		<p class="acr__caveat">This report is a transparency and remediation-planning document. It is not a certificate of compliance and does not constitute legal advice or a guarantee against accessibility claims. No automated tool or report can make a site &ldquo;lawsuit-proof&rdquo;; ongoing manual testing and remediation are required.</p>
+		<h2 class="acr__eyebrow">{{strings.methodologyHeading}}</h2>
+		<p class="acr__prose">{{strings.methodologyBody}}</p>
+		<p class="acr__caveat">{{strings.methodologyCaveat}}</p>
 	</section>
 
 	<!-- Evaluation methodology & attestation -->
 	<section class="acr__section">
-		<h2 class="acr__eyebrow">Evaluation methodology &amp; attestation</h2>
+		<h2 class="acr__eyebrow">{{strings.attestationHeading}}</h2>
 		<dl class="acr__att">
 			{{#attestation}}<div><dt>{{label}}</dt><dd>{{value}}</dd></div>{{/attestation}}
 		</dl>
-		<p class="acr__caveat">This report reflects a good-faith evaluation of the site as of the evaluation date, performed using the methods listed above. It records the state of conformance at that time and the ongoing remediation effort; it is not a certification and does not guarantee conformance.</p>
+		<p class="acr__caveat">{{strings.attestationStatement}}</p>
 	</section>
 
 	<!-- Standards & laws evaluated against -->
 	{{#hasStandards}}
 	<section class="acr__section">
-		<h2 class="acr__eyebrow">Standards &amp; laws evaluated against</h2>
-		<p class="acr__prose">This report was evaluated explicitly against each of the following standards and laws, as selected for this scan. Each is named in full so the scope of coverage is unambiguous.</p>
+		<h2 class="acr__eyebrow">{{strings.standardsHeading}}</h2>
+		<p class="acr__prose">{{strings.standardsIntro}}</p>
 		{{#standards}}
 		<div class="acr__std">
 			<div class="acr__std-name">{{#url}}<a href="{{url}}">{{name}}</a>{{/url}}{{^url}}{{name}}{{/url}} <span class="acr__std-token">{{token}}</span></div>
@@ -69,19 +77,19 @@
 			{{#description}}<div class="acr__std-desc">{{description}}</div>{{/description}}
 		</div>
 		{{/standards}}
-		<p class="acr__caveat">These descriptions summarise the cited standards and laws for context only; they do not constitute legal advice, and this report records a good-faith evaluation rather than a certification of compliance.</p>
+		<p class="acr__caveat">{{strings.standardsDisclaimer}}</p>
 	</section>
 	{{/hasStandards}}
 
 	<!-- WCAG conformance tables -->
 	{{#tables}}
 	<section class="acr__section">
-		<h2 class="acr__table-heading">WCAG Level {{level}}</h2>
+		<h2 class="acr__table-heading">{{levelLabel}}</h2>
 		<table>
 			<thead><tr>
-				<th class="acr__col-crit" scope="col">Criteria</th>
-				<th class="acr__col-conf" scope="col">Conformance Level</th>
-				<th scope="col">Remarks and Explanations</th>
+				<th class="acr__col-crit" scope="col">{{strings.colCriteria}}</th>
+				<th class="acr__col-conf" scope="col">{{strings.colConformance}}</th>
+				<th scope="col">{{strings.colRemarks}}</th>
 			</tr></thead>
 			<tbody>
 				{{#rows}}
@@ -99,13 +107,13 @@
 	<!-- Section 508 Functional Performance Criteria -->
 	{{#fpc.include}}
 	<section class="acr__section">
-		<h2 class="acr__table-heading">Section 508 &mdash; Functional Performance Criteria (&sect;302)</h2>
-		<p class="acr__prose">The WCAG tables above constitute the success-criteria evidence. The functional needs below describe end-to-end outcomes and are reported conservatively: a related WCAG failure marks a need &ldquo;Does Not Support&rdquo;, while a clean scan leaves it &ldquo;Not Evaluated&rdquo; pending manual testing with assistive technology.</p>
+		<h2 class="acr__table-heading">{{strings.fpcHeading}}</h2>
+		<p class="acr__prose">{{strings.fpcIntro}}</p>
 		<table>
 			<thead><tr>
-				<th class="acr__col-crit" scope="col">Criterion</th>
-				<th class="acr__col-conf" scope="col">Conformance Level</th>
-				<th scope="col">Remarks and Explanations</th>
+				<th class="acr__col-crit" scope="col">{{strings.fpcColId}}</th>
+				<th class="acr__col-conf" scope="col">{{strings.colConformance}}</th>
+				<th scope="col">{{strings.colRemarks}}</th>
 			</tr></thead>
 			<tbody>
 				{{#fpc.rows}}
@@ -123,16 +131,23 @@
 	<!-- Remediation record -->
 	{{#remediation.present}}
 	<section class="acr__section">
-		<h2 class="acr__table-heading">Remediation record</h2>
-		<p class="acr__prose">{{remediation.intro}}</p>
-		<p class="acr__caveat">&ldquo;AI-proposed (draft)&rdquo; counts fixes the AI drafted as candidate changes for a person to review; they are drafts, not accepted changes. &ldquo;Developer-verified&rdquo; counts changes a human reviewed and applied. This section evidences an ongoing remediation effort; it does not assert conformance.</p>
+		<h2 class="acr__table-heading">{{strings.remediationHeading}}</h2>
+		<p class="acr__prose">{{strings.remediationIntro}}</p>
+		<div class="acr__stats" role="group" aria-label="Remediation summary">
+			<div class="acr__stat"><span class="acr__stat-n">{{remediation.stats.aiProposed}}</span><span class="acr__stat-l">{{strings.remLabelAiProposed}}</span></div>
+			<div class="acr__stat"><span class="acr__stat-n">{{remediation.stats.developerVerified}}</span><span class="acr__stat-l">{{strings.remLabelDeveloperVerified}}</span></div>
+			<div class="acr__stat"><span class="acr__stat-n">{{remediation.stats.total}}</span><span class="acr__stat-l">{{strings.remLabelTotal}}</span></div>
+			<div class="acr__stat"><span class="acr__stat-n">{{remediation.stats.completedScans}}</span><span class="acr__stat-l">{{strings.remLabelScans}}</span></div>
+		</div>
+		<p class="acr__caveat">{{strings.remediationCaveat}}</p>
 		{{#remediation.hasEvents}}
 		<table>
 			<thead><tr>
-				<th scope="col">Date</th>
-				<th scope="col">Action</th>
-				<th scope="col">Criterion</th>
-				<th scope="col">Detail</th>
+				<th scope="col">{{strings.remColDate}}</th>
+				<th scope="col">{{strings.remColAction}}</th>
+				<th scope="col">{{strings.remColCriterion}}</th>
+				<th scope="col">{{strings.remColActor}}</th>
+				<th scope="col">{{strings.remColDetail}}</th>
 			</tr></thead>
 			<tbody>
 				{{#remediation.events}}
@@ -140,27 +155,57 @@
 					<td>{{date}}</td>
 					<td><span class="acr__crit" style="font-family:var(--acr-font-sans)">{{action}}</span></td>
 					<td><span class="acr__crit">{{criterion}}</span></td>
+					<td>{{actor}}</td>
 					<td>{{detail}}</td>
 				</tr>
 				{{/remediation.events}}
 			</tbody>
 		</table>
 		{{/remediation.hasEvents}}
+		<p class="acr__caveat">{{strings.remediationDisclaimer}}</p>
 	</section>
 	{{/remediation.present}}
+
+	<!-- Audit history — the verdict-change trail (proving actions) -->
+	{{#hasAuditHistory}}
+	<section class="acr__section">
+		<h2 class="acr__table-heading">{{strings.auditHeading}}</h2>
+		<p class="acr__prose">{{strings.auditIntro}}</p>
+		<table>
+			<thead><tr>
+				<th scope="col">{{strings.auditColDate}}</th>
+				<th scope="col">{{strings.auditColCriterion}}</th>
+				<th scope="col">{{strings.auditColChange}}</th>
+				<th scope="col">{{strings.auditColActor}}</th>
+				<th scope="col">{{strings.auditColReason}}</th>
+			</tr></thead>
+			<tbody>
+				{{#auditHistory}}
+				<tr>
+					<td>{{date}}</td>
+					<td><span class="acr__crit">{{criterion}}</span></td>
+					<td>{{change}}</td>
+					<td>{{actor}}</td>
+					<td>{{reason}}</td>
+				</tr>
+				{{/auditHistory}}
+			</tbody>
+		</table>
+	</section>
+	{{/hasAuditHistory}}
 
 	<!-- Manual-test evidence appendix -->
 	{{#hasEvidence}}
 	<section class="acr__section">
-		<h2 class="acr__table-heading">Manual test evidence</h2>
-		<p class="acr__prose">Supporting evidence captured during manual testing, grouped by success criterion.</p>
+		<h2 class="acr__table-heading">{{strings.evidenceHeading}}</h2>
+		<p class="acr__prose">{{strings.evidenceIntro}}</p>
 		{{#evidence}}
 		<div class="acr__evidence">
 			<div class="acr__evidence-crit"><span class="acr__crit">{{criterion}}</span> {{title}}</div>
 			<div class="acr__evidence-items">
 				{{#items}}
-				{{#isImage}}<img class="acr__evidence-thumb" src="{{src}}" alt="{{fileName}}">{{/isImage}}
-				{{^isImage}}<span class="acr__evidence-doc">{{fileName}}</span>{{/isImage}}
+				{{#isImage}}<a class="acr__evidence-thumb-link" href="{{href}}"><img class="acr__evidence-thumb" src="{{src}}" alt="{{fileName}}"></a>{{/isImage}}
+				{{^isImage}}<a class="acr__evidence-doc" href="{{href}}">{{fileName}}</a>{{/isImage}}
 				{{/items}}
 			</div>
 		</div>
@@ -168,5 +213,8 @@
 	</section>
 	{{/hasEvidence}}
 
-	<footer class="acr__footer">Generated by Luqen. This Accessibility Conformance Report follows the VPAT&reg; 2.x section model. It is a good-faith record of evaluation and remediation, not a certification of compliance, and does not constitute legal advice.</footer>
+	<footer class="acr__footer">
+		<p class="acr__wording-note">{{#wording.anyCustom}}{{strings.wordingCustomLabel}}{{/wording.anyCustom}}{{^wording.anyCustom}}{{strings.wordingStandardLabel}}{{/wording.anyCustom}}</p>
+		<p>{{strings.footer}}</p>
+	</footer>
 </section>

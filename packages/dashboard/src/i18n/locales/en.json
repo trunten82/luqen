@@ -1995,5 +1995,25 @@
       "save": "Save report identity",
       "title": "Report Identity"
     }
+  },
+  "acr": {
+    "fpcIntro": "The WCAG tables above constitute the success-criteria evidence. The functional needs below describe end-to-end outcomes and are reported conservatively: a related WCAG failure marks a need “Does Not Support”, while a clean scan leaves it “Not Evaluated” pending manual testing with assistive technology.",
+    "remColActor": "By",
+    "auditHeading": "Audit history",
+    "auditIntro": "A dated trail of every manual-test verdict change, with the recorded reason and who made it — evidence of an ongoing, reasoned evaluation process.",
+    "auditColCriterion": "Criterion",
+    "auditColChange": "Verdict change",
+    "auditColReason": "Reason",
+    "auditColActor": "By",
+    "auditColDate": "Date",
+    "evidenceDownload": "Download",
+    "viewLiveReport": "View the live report",
+    "verifiedBadge": "Verified by Luqen",
+    "viewDashboardReport": "View on the Luqen dashboard",
+    "wordingStandardLabel": "Standard VPAT wording",
+    "wordingCustomLabel": "Custom wording",
+    "verdictConforms": "{{site}} conforms to {{standard}} across {{pages}} page(s).",
+    "verdictPartial": "{{site}} partially conforms to {{standard}} across {{pages}} page(s).",
+    "verdictMeta": "Evaluated {{date}} · {{supports}} of {{total}} criteria supported · {{doesNotSupport}} not supported · {{notEvaluated}} pending manual evaluation"
   }
 }

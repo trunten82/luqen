@@ -260,6 +260,49 @@
 	color: var(--acr-text-secondary);
 }
 
+/* ── Report links / badge (consumer chrome, not part of the legal text) ───── */
+
+.acr__links {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--acr-space-2) var(--acr-space-3);
+	align-items: center;
+	margin-top: var(--acr-space-4);
+}
+.acr__link {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--acr-space-2);
+	font-size: 8.5pt;
+	font-weight: 600;
+	color: var(--acr-id-accent);
+	text-decoration: none;
+	padding: var(--acr-space-1) var(--acr-space-3);
+	border: 1px solid var(--acr-border-subtle);
+	border-radius: 4px;
+}
+.acr__link--badge { border-color: var(--acr-border-strong); }
+.acr__badge { height: 18px; width: auto; }
+
+/* ── Remediation summary stats (typographic, not cards-with-shadows) ──────── */
+
+.acr__stats {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--acr-space-3) var(--acr-space-5);
+	margin: var(--acr-space-3) 0;
+	padding: var(--acr-space-3) 0;
+	border-top: 1px solid var(--acr-border-subtle);
+	border-bottom: 1px solid var(--acr-border-subtle);
+}
+.acr__stat { display: flex; flex-direction: column; gap: 1px; }
+.acr__stat-n { font-size: 15pt; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--acr-text-primary); line-height: 1; }
+.acr__stat-l { font-size: 7.5pt; color: var(--acr-text-secondary); }
+
+/* Evidence download affordances (links, not bare names) */
+.acr__evidence-thumb-link { display: inline-block; line-height: 0; }
+.acr__evidence-doc { color: var(--acr-id-accent); text-decoration: none; }
+
 /* ── Footer ─────────────────────────────────────────────────────────────── */
 
 .acr__footer {
@@ -268,4 +311,12 @@
 	border-top: 1px solid var(--acr-border-subtle);
 	font-size: 7.5pt;
 	color: var(--acr-text-muted);
+}
+.acr__wording-note {
+	font-family: var(--acr-font-mono);
+	font-size: 7pt;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--acr-text-muted);
+	margin-bottom: var(--acr-space-1);
 }

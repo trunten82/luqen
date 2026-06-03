@@ -1524,5 +1524,25 @@
       "save": "Save report identity",
       "title": "Identidad del informe"
     }
+  },
+  "acr": {
+    "fpcIntro": "Las tablas WCAG anteriores constituyen la evidencia a nivel de criterios de éxito. Las necesidades funcionales siguientes describen resultados de extremo a extremo y se informan de forma conservadora: un fallo WCAG relacionado marca una necesidad como «No es compatible», mientras que un análisis sin incidencias la deja como «No evaluado» a la espera de pruebas manuales con tecnología de asistencia.",
+    "remColActor": "Por",
+    "auditHeading": "Historial de auditoría",
+    "auditIntro": "Un registro fechado de cada cambio de veredicto en las pruebas manuales, con el motivo registrado y quién lo realizó: evidencia de un proceso de evaluación continuo y razonado.",
+    "auditColCriterion": "Criterio",
+    "auditColChange": "Cambio de veredicto",
+    "auditColReason": "Motivo",
+    "auditColActor": "Por",
+    "auditColDate": "Fecha",
+    "evidenceDownload": "Descargar",
+    "viewLiveReport": "Ver el informe en vivo",
+    "verifiedBadge": "Verificado por Luqen",
+    "viewDashboardReport": "Ver en el panel de Luqen",
+    "wordingStandardLabel": "Texto VPAT estándar",
+    "wordingCustomLabel": "Texto personalizado",
+    "verdictConforms": "{{site}} cumple con {{standard}} en {{pages}} página(s).",
+    "verdictPartial": "{{site}} cumple parcialmente con {{standard}} en {{pages}} página(s).",
+    "verdictMeta": "Evaluado el {{date}} · {{supports}} de {{total}} criterios compatibles · {{doesNotSupport}} no compatibles · {{notEvaluated}} pendientes de evaluación manual"
   }
 }
