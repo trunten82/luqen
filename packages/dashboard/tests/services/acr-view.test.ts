@@ -147,7 +147,7 @@ describe('buildAcrView', () => {
     expect(v.hasLinks).toBe(false);
   });
 
-  it('carries a stale-revision notice when supplied (Time Machine non-latest)', () => {
+  it('carries a stale-revision notice when supplied (Snapshot non-latest)', () => {
     const v = buildAcrView(baseVpat(), scanMeta, {
       ...en,
       staleNotice: { message: 'A newer version of this report is available.', linkLabel: 'View the latest report', latestUrl: '/reports/live/abc' },

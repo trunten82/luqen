@@ -15,7 +15,7 @@ import type { AcrHtmlChrome } from '../services/acr-render.js';
 import { t, type Locale } from '../i18n/index.js';
 
 /**
- * The stable, per-site "Time Machine" report page.
+ * The stable, per-site "Snapshot" report page.
  *
  * A site's public live badge (`site_badges`) doubles as the durable handle for
  * its Accessibility Conformance Report. `/reports/live/:badgeId` always shows

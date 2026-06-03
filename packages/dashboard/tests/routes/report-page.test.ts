@@ -9,7 +9,7 @@ import { reportPageRoutes } from '../../src/routes/report-page.js';
 import { loadTranslations } from '../../src/i18n/index.js';
 
 /**
- * The per-site "Time Machine" report page: stable badge-handle URL → latest ACR
+ * The per-site "Snapshot" report page: stable badge-handle URL → latest ACR
  * + a revisions timeline, with a stale-version disclaimer on older revisions.
  */
 
@@ -43,7 +43,7 @@ beforeAll(async () => {
 
 afterAll(() => ctx.cleanup());
 
-describe('GET /reports/live/:badgeId (Time Machine)', () => {
+describe('GET /reports/live/:badgeId (Snapshot)', () => {
   it('404s for an unknown badge', async () => {
     const res = await ctx.server.inject({ method: 'GET', url: `/reports/live/${randomUUID()}` });
     expect(res.statusCode).toBe(404);

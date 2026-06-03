@@ -37,7 +37,7 @@ export interface AcrLinks {
 
 /**
  * A "this is not the current version" banner shown when an OLDER revision of a
- * report is viewed via the per-site Time Machine page. Localized by the caller.
+ * report is viewed via the per-site Snapshot page. Localized by the caller.
  */
 export interface AcrStaleNotice {
   readonly message: string;
@@ -114,7 +114,7 @@ export interface AcrView {
   }>;
   readonly links: AcrLinks;
   readonly hasLinks: boolean;
-  /** Present only on a non-latest revision viewed via the Time Machine page. */
+  /** Present only on a non-latest revision viewed via the Snapshot page. */
   readonly staleNotice?: AcrStaleNotice;
 }
 
