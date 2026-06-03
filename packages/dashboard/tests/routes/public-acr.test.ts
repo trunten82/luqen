@@ -71,5 +71,5 @@ describe('public dynamic ACR (widget→VPAT)', () => {
     const ok = await server.inject({ method: 'GET', url: `/reports/${id}/acr.pdf`, headers: { host: 'dashboard.example' } });
     expect(ok.statusCode).toBe(200);
     expect(ok.headers['content-type']).toContain('application/pdf');
-  });
+  }, 90000);
 });

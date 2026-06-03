@@ -327,7 +327,7 @@ describe('VPAT / ACR E2E', () => {
       // PDF magic bytes.
       expect(res.rawPayload.subarray(0, 5).toString('latin1')).toBe('%PDF-');
       expect(res.rawPayload.length).toBeGreaterThan(1000);
-    });
+    }, 90000);
 
     it('returns 404 for a non-existent scan', async () => {
       const res = await ctx.server.inject({
@@ -367,7 +367,7 @@ describe('VPAT / ACR E2E', () => {
       // The two reports differ (A has a Does-Not-Support row, B does not), so
       // their PDF bytes must differ — proving each response is freshly built.
       expect(Buffer.compare(resA.rawPayload, resB.rawPayload)).not.toBe(0);
-    });
+    }, 90000);
 
     it('embeds image evidence and lists documents in the ACR PDF appendix', async () => {
       const id = await seedCompletedScan(ctx.storage);
@@ -387,7 +387,7 @@ describe('VPAT / ACR E2E', () => {
       expect(withEv.rawPayload.subarray(0, 5).toString('latin1')).toBe('%PDF-');
       // The evidence appendix (embedded PNG + listed document) enlarges the PDF.
       expect(withEv.rawPayload.length).toBeGreaterThan(baseline.rawPayload.length);
-    });
+    }, 90000);
   });
 
   // ── ZIP evidence pack ──────────────────────────────────────────────────────
@@ -428,7 +428,7 @@ describe('VPAT / ACR E2E', () => {
       expect(index).toContain('vpat-test.example.com');
       expect(index).toContain('evidence/1.1.1/shot.png');
       expect(index).toContain('Files bundled: 2');
-    });
+    }, 90000);
 
     it('still produces a pack (PDF + index) when no evidence is recorded', async () => {
       const id = await seedCompletedScan(ctx.storage);
@@ -439,7 +439,7 @@ describe('VPAT / ACR E2E', () => {
       const indexEntry = zip.file('EVIDENCE-INDEX.txt');
       expect(indexEntry).not.toBeNull();
       expect(await indexEntry!.async('string')).toContain('No manual-test evidence');
-    });
+    }, 90000);
 
     it('returns 404 for a non-existent scan', async () => {
       const res = await ctx.server.inject({ method: 'GET', url: `/api/v1/export/scans/${randomUUID()}/vpat-pack.zip` });

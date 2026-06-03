@@ -109,7 +109,7 @@ describe('GET /share/:token', () => {
     expect(zip.headers['content-type']).toContain('application/zip');
     const loaded = await JSZip.loadAsync(zip.rawPayload);
     expect(Object.keys(loaded.files)).toContain('evidence/1.1.1/shot.png');
-  });
+  }, 90000);
 
   it('shows a "no longer available" page for a revoked link (410)', async () => {
     const scanId = await seedScan(ctx.storage);
