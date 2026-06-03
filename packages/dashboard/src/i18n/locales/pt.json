@@ -1524,5 +1524,25 @@
       "save": "Save report identity",
       "title": "Identidade do relatório"
     }
+  },
+  "acr": {
+    "fpcIntro": "As tabelas WCAG acima constituem a evidência ao nível dos critérios de sucesso. As necessidades funcionais a seguir descrevem resultados de ponta a ponta e são relatadas de forma conservadora: uma falha WCAG relacionada marca uma necessidade como «Não compatível», enquanto uma análise sem problemas a deixa como «Não avaliada» a aguardar testes manuais com tecnologia assistiva.",
+    "remColActor": "Por",
+    "auditHeading": "Histórico de auditoria",
+    "auditIntro": "Um registo datado de cada alteração de veredicto dos testes manuais, com o motivo registado e quem a efetuou — evidência de um processo de avaliação contínuo e fundamentado.",
+    "auditColCriterion": "Critério",
+    "auditColChange": "Alteração de veredicto",
+    "auditColReason": "Motivo",
+    "auditColActor": "Por",
+    "auditColDate": "Data",
+    "evidenceDownload": "Transferir",
+    "viewLiveReport": "Ver o relatório em direto",
+    "verifiedBadge": "Verificado pela Luqen",
+    "viewDashboardReport": "Ver no painel da Luqen",
+    "wordingStandardLabel": "Texto VPAT padrão",
+    "wordingCustomLabel": "Texto personalizado",
+    "verdictConforms": "{{site}} está em conformidade com {{standard}} em {{pages}} página(s).",
+    "verdictPartial": "{{site}} está parcialmente em conformidade com {{standard}} em {{pages}} página(s).",
+    "verdictMeta": "Avaliado em {{date}} · {{supports}} de {{total}} critérios compatíveis · {{doesNotSupport}} não compatíveis · {{notEvaluated}} a aguardar avaliação manual"
   }
 }

@@ -42,6 +42,7 @@ import {
   SqliteAccessibilityStatementRepository,
   SqliteRemediationEventRepository,
   SqliteReportIdentityRepository,
+  SqliteAcrWordingRepository,
   SqliteEntitlementRepository,
 } from './repositories/index.js';
 import type Database from 'better-sqlite3';
@@ -90,6 +91,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
   readonly accessibilityStatements: SqliteAccessibilityStatementRepository;
   readonly remediationEvents: SqliteRemediationEventRepository;
   readonly reportIdentities: SqliteReportIdentityRepository;
+  readonly acrWording: SqliteAcrWordingRepository;
   readonly entitlements: SqliteEntitlementRepository;
 
   constructor(dbPath: string) {
@@ -134,6 +136,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
     this.accessibilityStatements = new SqliteAccessibilityStatementRepository(this.db);
     this.remediationEvents = new SqliteRemediationEventRepository(this.db);
     this.reportIdentities = new SqliteReportIdentityRepository(this.db);
+    this.acrWording = new SqliteAcrWordingRepository(this.db);
     this.entitlements = new SqliteEntitlementRepository(this.db);
   }
 

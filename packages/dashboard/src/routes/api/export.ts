@@ -14,6 +14,7 @@ import { buildVpatEvidenceGroups } from '../../services/vpat-evidence.js';
 import { buildAcrView, type AcrEvidenceGroup } from '../../services/acr-view.js';
 import { generateAcrPdf } from '../../services/acr-render.js';
 import { pdfWithFallback } from '../../services/pdf-fallback.js';
+import { t, SUPPORTED_LOCALES } from '../../i18n/index.js';
 import { join } from 'node:path';
 import { buildRemediationRecord } from '../../services/remediation-service.js';
 import { buildFleetReportBundle } from '../../services/fleet-report-service.js';
@@ -597,6 +598,19 @@ export async function exportRoutes(
           ((await storage.manualTestEvidence?.countByCriterion(scan.id)) ?? []).map((c) => [c.criterionId, c.count]),
         );
         const reasonedChangeCount = (await storage.manualTestAudit?.countReasonedChanges(scan.id)) ?? 0;
+        // Verdict-change audit trail (the "proving actions" history). Only rows
+        // carrying a recorded reason are surfaced — that is the defensible
+        // evidence of a reasoned manual-evaluation process.
+        const auditRows = (await storage.manualTestAudit?.listAudit(scan.id)) ?? [];
+        const auditHistory = auditRows
+          .filter((a) => (a.comment ?? '').trim() !== '')
+          .map((a) => ({
+            criterion: a.criterionId,
+            change: `${a.fromStatus ?? 'untested'} → ${a.toStatus}`,
+            reason: a.comment ?? '',
+            actor: a.actor ?? '—',
+            date: a.createdAt.slice(0, 10),
+          }));
         // Dated good-faith remediation record (keyed by scan.orgId to match how
         // events are recorded). Empty input → empty record (section hidden).
         const remOrgId = scan.orgId ?? 'system';
@@ -664,7 +678,20 @@ export async function exportRoutes(
           })),
         );
         const logoUrl = vpat.identity?.logoPath ? await toDataUri(vpat.identity.logoPath) : '';
+        // Locale: ?lang= override (validated) → session UI locale → 'en'.
+        const sess = request.session as { get?(key: string): unknown } | undefined;
+        const langQuery = (request.query as { lang?: string }).lang;
+        const sessionLocale =
+          typeof sess?.get === 'function' ? (sess.get('locale') as string | undefined) : undefined;
+        const candidate = langQuery ?? sessionLocale ?? 'en';
+        const locale = (SUPPORTED_LOCALES as readonly string[]).includes(candidate) ? candidate : 'en';
+        const wordingOverrides = (await storage.acrWording?.listForOrg(orgId, locale)) ?? [];
         const acrView = buildAcrView(vpat, scanMeta, {
+          locale,
+          t: t as unknown as Parameters<typeof buildAcrView>[2]['t'],
+          wordingOverrides,
+          auditHistory,
+          links: { packUrl: evidenceGroups.length > 0 ? `/api/v1/export/scans/${id}/vpat-pack.zip` : undefined },
           ...(logoUrl ? { logoUrl } : {}),
           evidence: acrEvidence,
         });

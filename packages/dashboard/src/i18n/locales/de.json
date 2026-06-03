@@ -1524,5 +1524,25 @@
       "save": "Save report identity",
       "title": "Berichtsidentität"
     }
+  },
+  "acr": {
+    "fpcIntro": "Die WCAG-Tabellen oben bilden den Nachweis auf Ebene der Erfolgskriterien. Die folgenden funktionalen Anforderungen beschreiben Ergebnisse aus Endnutzersicht und werden konservativ bewertet: Ein zugehöriger WCAG-Fehler markiert eine Anforderung als „Unterstützt nicht“, während ein sauberer Scan sie als „Nicht bewertet“ belässt, bis ein manueller Test mit assistiver Technologie erfolgt.",
+    "remColActor": "Von",
+    "auditHeading": "Änderungsverlauf (Audit)",
+    "auditIntro": "Ein datierter Verlauf jeder Änderung eines manuellen Testurteils, mit erfasster Begründung und der ausführenden Person – Nachweis eines fortlaufenden, begründeten Bewertungsprozesses.",
+    "auditColCriterion": "Kriterium",
+    "auditColChange": "Urteilsänderung",
+    "auditColReason": "Begründung",
+    "auditColActor": "Von",
+    "auditColDate": "Datum",
+    "evidenceDownload": "Herunterladen",
+    "viewLiveReport": "Live-Bericht ansehen",
+    "verifiedBadge": "Verifiziert von Luqen",
+    "viewDashboardReport": "Im Luqen-Dashboard ansehen",
+    "wordingStandardLabel": "Standard-VPAT-Wortlaut",
+    "wordingCustomLabel": "Angepasster Wortlaut",
+    "verdictConforms": "{{site}} entspricht {{standard}} über {{pages}} Seite(n).",
+    "verdictPartial": "{{site}} entspricht {{standard}} teilweise über {{pages}} Seite(n).",
+    "verdictMeta": "Bewertet am {{date}} · {{supports}} von {{total}} Kriterien unterstützt · {{doesNotSupport}} nicht unterstützt · {{notEvaluated}} ausstehende manuelle Bewertung"
   }
 }

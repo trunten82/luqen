@@ -1533,5 +1533,25 @@
       "save": "Save report identity",
       "title": "Identità del report"
     }
+  },
+  "acr": {
+    "fpcIntro": "Le tabelle WCAG sopra costituiscono la prova a livello di criteri di successo. Le esigenze funzionali seguenti descrivono risultati end-to-end e sono riportate in modo prudente: un errore WCAG correlato segna un’esigenza come «Non supporta», mentre una scansione senza problemi la lascia «Non valutata» in attesa di test manuali con tecnologia assistiva.",
+    "remColActor": "Da",
+    "auditHeading": "Cronologia di audit",
+    "auditIntro": "Un registro datato di ogni modifica del verdetto dei test manuali, con la motivazione registrata e chi l’ha effettuata: prova di un processo di valutazione continuo e motivato.",
+    "auditColCriterion": "Criterio",
+    "auditColChange": "Modifica del verdetto",
+    "auditColReason": "Motivo",
+    "auditColActor": "Da",
+    "auditColDate": "Data",
+    "evidenceDownload": "Scarica",
+    "viewLiveReport": "Visualizza il report in tempo reale",
+    "verifiedBadge": "Verificato da Luqen",
+    "viewDashboardReport": "Visualizza nella dashboard Luqen",
+    "wordingStandardLabel": "Testo VPAT standard",
+    "wordingCustomLabel": "Testo personalizzato",
+    "verdictConforms": "{{site}} è conforme a {{standard}} su {{pages}} pagina/e.",
+    "verdictPartial": "{{site}} è parzialmente conforme a {{standard}} su {{pages}} pagina/e.",
+    "verdictMeta": "Valutato il {{date}} · {{supports}} di {{total}} criteri supportati · {{doesNotSupport}} non supportati · {{notEvaluated}} in attesa di valutazione manuale"
   }
 }

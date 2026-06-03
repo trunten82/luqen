@@ -22,6 +22,7 @@ import type { ConversationRepository } from './interfaces/conversation-repositor
 import type { ShareLinkRepository } from './interfaces/share-link-repository.js';
 import type { AccessibilityStatementRepository } from './interfaces/accessibility-statement-repository.js';
 import type { ReportIdentityRepository } from './interfaces/report-identity-repository.js';
+import type { AcrWordingRepository } from './interfaces/acr-wording-repository.js';
 import type { EntitlementRepository } from './interfaces/entitlement-repository.js';
 import type { AgentAuditRepository } from './interfaces/agent-audit-repository.js';
 import type { OauthClientRepository } from './interfaces/oauth-client-repository.js';
@@ -102,6 +103,12 @@ export interface StorageAdapter {
    * and degrade to "no identity" (report renders as before) when absent.
    */
   readonly reportIdentities?: ReportIdentityRepository;
+  /**
+   * Per-org ACR wording overrides. OPTIONAL, same rationale as
+   * `reportIdentities`: consumers guard with `storage.acrWording?.` and degrade
+   * to the standard localized wording when absent.
+   */
+  readonly acrWording?: AcrWordingRepository;
   /**
    * Per-org commercial plan (the Phase 80 entitlement foundation). OPTIONAL on
    * purpose, same rationale as `reportIdentities`: out-of-repo Postgres/Mongo

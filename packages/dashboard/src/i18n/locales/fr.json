@@ -1524,5 +1524,25 @@
       "save": "Save report identity",
       "title": "Identité du rapport"
     }
+  },
+  "acr": {
+    "fpcIntro": "Les tableaux WCAG ci-dessus constituent la preuve au niveau des critères de succès. Les besoins fonctionnels ci-dessous décrivent des résultats de bout en bout et sont rapportés de manière prudente : un échec WCAG associé marque un besoin comme « Non pris en charge », tandis qu’un scan sans anomalie le laisse « Non évalué » dans l’attente de tests manuels avec une technologie d’assistance.",
+    "remColActor": "Par",
+    "auditHeading": "Historique d’audit",
+    "auditIntro": "Un journal daté de chaque modification de verdict de test manuel, avec le motif enregistré et son auteur — preuve d’un processus d’évaluation continu et motivé.",
+    "auditColCriterion": "Critère",
+    "auditColChange": "Changement de verdict",
+    "auditColReason": "Motif",
+    "auditColActor": "Par",
+    "auditColDate": "Date",
+    "evidenceDownload": "Télécharger",
+    "viewLiveReport": "Voir le rapport en direct",
+    "verifiedBadge": "Vérifié par Luqen",
+    "viewDashboardReport": "Voir dans le tableau de bord Luqen",
+    "wordingStandardLabel": "Formulation VPAT standard",
+    "wordingCustomLabel": "Formulation personnalisée",
+    "verdictConforms": "{{site}} est conforme à {{standard}} sur {{pages}} page(s).",
+    "verdictPartial": "{{site}} est partiellement conforme à {{standard}} sur {{pages}} page(s).",
+    "verdictMeta": "Évalué le {{date}} · {{supports}} critères pris en charge sur {{total}} · {{doesNotSupport}} non pris en charge · {{notEvaluated}} en attente d’évaluation manuelle"
   }
 }

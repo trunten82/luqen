@@ -2189,4 +2189,31 @@ ALTER TABLE org_entitlements ADD COLUMN max_client_sites INTEGER;
 ALTER TABLE agent_messages ADD COLUMN images TEXT;
     `,
   },
+  {
+    id: '086',
+    name: 'create-acr-wording',
+    sql: `
+-- Per-org ACR wording overrides. The ACR's prose has a localized STANDARD
+-- default (app i18n); an org may override any string per locale with custom or
+-- officially-translated wording. Sparse: one row per overridden string.
+-- 'source' records provenance (vpat-standard | translated-from-english |
+-- custom); 'reviewed' marks human/legal sign-off; translated_by/at + notes
+-- track who translated it and when (the actual revision date).
+CREATE TABLE IF NOT EXISTS acr_wording (
+  org_id        TEXT NOT NULL,
+  string_key    TEXT NOT NULL,
+  locale        TEXT NOT NULL,
+  text          TEXT NOT NULL,
+  source        TEXT NOT NULL DEFAULT 'custom',
+  reviewed      INTEGER NOT NULL DEFAULT 0,
+  translated_by TEXT,
+  translated_at TEXT,
+  notes         TEXT,
+  updated_at    TEXT NOT NULL,
+  updated_by    TEXT,
+  PRIMARY KEY (org_id, string_key, locale)
+);
+CREATE INDEX IF NOT EXISTS idx_acr_wording_org_locale ON acr_wording(org_id, locale);
+    `,
+  },
 ];

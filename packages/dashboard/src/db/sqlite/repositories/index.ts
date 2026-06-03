@@ -38,4 +38,5 @@ export { SqliteNotificationUnsubscribeRepository } from './notification-unsubscr
 export { SqliteAccessibilityStatementRepository } from './accessibility-statement-repository.js';
 export { SqliteRemediationEventRepository } from './remediation-event-repository.js';
 export { SqliteReportIdentityRepository } from './report-identity-repository.js';
+export { SqliteAcrWordingRepository } from './acr-wording-repository.js';
 export { SqliteEntitlementRepository } from './entitlement-repository.js';
