@@ -17,6 +17,7 @@ import { scanRoutes } from './routes/scan.js';
 import { reportRoutes } from './routes/reports.js';
 import { accessibilityStatementRoutes } from './routes/accessibility-statement.js';
 import { reportIdentityRoutes } from './routes/report-identity.js';
+import { acrWordingRoutes } from './routes/acr-wording.js';
 import { agencyRoutes } from './routes/admin/agency.js';
 import { plansRoutes } from './routes/admin/plans.js';
 import { compareRoutes } from './routes/compare.js';
@@ -1067,6 +1068,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await reportRoutes(server, storage, getLLMClient, { selfScanId: config.selfScanId });
   await accessibilityStatementRoutes(server, storage);
   await reportIdentityRoutes(server, storage);
+  await acrWordingRoutes(server, storage);
   await agencyRoutes(server, storage);
   await plansRoutes(server);
   await manualTestRoutes(
