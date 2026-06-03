@@ -284,6 +284,25 @@
 .acr__link--badge { border-color: var(--acr-border-strong); }
 .acr__badge { height: 18px; width: auto; }
 
+/* ── Stale-revision banner (Time Machine, non-latest revision) ────────────── */
+
+.acr__stale {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--acr-space-2) var(--acr-space-3);
+	margin-top: var(--acr-space-4);
+	padding: var(--acr-space-3) var(--acr-space-4);
+	font-size: 9pt;
+	color: var(--acr-text-primary);
+	background: oklch(0.96 0.06 70);
+	border: 1px solid var(--acr-warning);
+	border-left-width: 4px;
+	border-radius: 4px;
+}
+.acr__stale span { font-weight: 600; color: var(--acr-warning); }
+.acr__stale a { color: var(--acr-id-accent); font-weight: 600; text-decoration: underline; }
+
 /* ── Remediation summary stats (typographic, not cards-with-shadows) ──────── */
 
 .acr__stats {

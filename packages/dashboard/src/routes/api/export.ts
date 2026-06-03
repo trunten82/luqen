@@ -5,22 +5,18 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import type { StorageAdapter } from '../../db/index.js';
 import { extractCriterion, getWcagDescription } from '../wcag-enrichment.js';
-import { generatePdfFromData, generateVpatPdf } from '../../pdf/generator.js';
+import { generatePdfFromData } from '../../pdf/generator.js';
 import type { PdfReportData, PdfScanMeta } from '../../pdf/generator.js';
-import { normalizeReportData, inferComponent } from '../../services/report-service.js';
-import { buildVpat } from '../../services/vpat-service.js';
-import { resolveRegulationDetails } from '../../services/regulation-catalog.js';
-import { buildVpatEvidenceGroups } from '../../services/vpat-evidence.js';
-import { buildAcrView, type AcrEvidenceGroup } from '../../services/acr-view.js';
-import { generateAcrPdf } from '../../services/acr-render.js';
-import { pdfWithFallback } from '../../services/pdf-fallback.js';
-import { t, SUPPORTED_LOCALES } from '../../i18n/index.js';
-import { join } from 'node:path';
-import { buildRemediationRecord } from '../../services/remediation-service.js';
+import { normalizeReportData } from '../../services/report-service.js';
 import { buildFleetReportBundle } from '../../services/fleet-report-service.js';
 import type { JsonReportFile } from '../../services/report-service.js';
 import ExcelJS from 'exceljs';
-import { buildEvidencePackZip, resolveScanIdentity } from '../../services/vpat-share-service.js';
+import {
+  buildEvidencePackZip,
+  loadVpatForScan,
+  renderScanAcrPdf,
+  resolveLocale,
+} from '../../services/vpat-share-service.js';
 import { ErrorEnvelope } from '../../api/schemas/envelope.js';
 
 // Export endpoints stream binary buffers — schemas declare a string body and
@@ -578,131 +574,30 @@ export async function exportRoutes(
       }
 
       try {
-        let reportJson: JsonReportFile | null = null;
-        const dbReport = await storage.scans.getReport(scan.id);
-        if (dbReport !== null) {
-          reportJson = dbReport as JsonReportFile;
-        } else if (scan.jsonReportPath && existsSync(scan.jsonReportPath)) {
-          reportJson = JSON.parse(await readFile(scan.jsonReportPath, 'utf-8')) as JsonReportFile;
-        }
-
-        if (reportJson === null) {
+        // Single-source assembly: load → shared-template ACR PDF (Chromium) with
+        // the PDFKit VPAT as the no-browser fallback. Identical pipeline to every
+        // other ACR surface (web, public, token-share, evidence pack).
+        const loaded = await loadVpatForScan(storage, scan);
+        if (loaded === null) {
           return reply.code(404).send({ error: 'Report data not available' });
         }
-
-        const reportData = normalizeReportData(reportJson, scan);
-        const manualResults = storage.manualTests
-          ? await storage.manualTests.getManualTests(scan.id)
-          : [];
-        const evidenceCounts = new Map(
-          ((await storage.manualTestEvidence?.countByCriterion(scan.id)) ?? []).map((c) => [c.criterionId, c.count]),
-        );
-        const reasonedChangeCount = (await storage.manualTestAudit?.countReasonedChanges(scan.id)) ?? 0;
-        // Verdict-change audit trail (the "proving actions" history). Only rows
-        // carrying a recorded reason are surfaced — that is the defensible
-        // evidence of a reasoned manual-evaluation process.
-        const auditRows = (await storage.manualTestAudit?.listAudit(scan.id)) ?? [];
-        const auditHistory = auditRows
-          .filter((a) => (a.comment ?? '').trim() !== '')
-          .map((a) => ({
-            criterion: a.criterionId,
-            change: `${a.fromStatus ?? 'untested'} → ${a.toStatus}`,
-            reason: a.comment ?? '',
-            actor: a.actor ?? '—',
-            date: a.createdAt.slice(0, 10),
-          }));
-        // Dated good-faith remediation record (keyed by scan.orgId to match how
-        // events are recorded). Empty input → empty record (section hidden).
-        const remOrgId = scan.orgId ?? 'system';
-        const [remediationEvents, siteScans] = await Promise.all([
-          storage.remediationEvents.listForSite(remOrgId, scan.siteUrl),
-          storage.scans.getScansForSite(remOrgId, scan.siteUrl),
-        ]);
-        const remediation = buildRemediationRecord(remediationEvents, siteScans);
-        const identity = await resolveScanIdentity(storage, scan);
-        const regulationDetails = await resolveRegulationDetails(scan.regulations ?? [], scan.orgId);
-        const vpat = buildVpat(
-          reportData,
-          scan,
-          manualResults,
-          {
-            evidenceCounts,
-            reasonedChangeCount,
-            behaviorallyEvaluatedCriteria: new Set(reportData.behaviorallyEvaluatedCriteria ?? []),
-            regulationDetails,
-            ...(identity ? { identity } : {}),
-          },
-          remediation,
-        );
-        // Manual-test evidence ARTIFACTS — embed screenshots + list documents
-        // per criterion in the ACR appendix. Resolved on disk from uploadsRoot.
-        const evidenceGroups = buildVpatEvidenceGroups(
-          (await storage.manualTestEvidence?.listEvidence(scan.id)) ?? [],
-          vpat,
-        );
-
-        const scanMeta: PdfScanMeta = {
-          siteUrl: scan.siteUrl,
-          standard: scan.standard,
-          jurisdictions: scan.jurisdictions.join(', '),
-          regulations: (scan.regulations ?? []).join(', '),
-          createdAtDisplay: new Date(scan.createdAt).toLocaleString(),
-        };
-
-        // Resolve evidence images + the org logo to data URIs so the shared
-        // ACR template renders self-contained (HTML→PDF has no base URL). Only
-        // PNG/JPEG are embedded; other documents are listed by filename.
-        const toDataUri = async (publicPath: string): Promise<string> => {
-          const m = /\.(png|jpe?g)$/i.exec(publicPath);
-          if (!m) return '';
-          const abs = join(uploadsRoot, publicPath.replace(/^\/uploads\//, ''));
-          if (!existsSync(abs)) return '';
-          try {
-            const mime = /\.png$/i.test(abs) ? 'image/png' : 'image/jpeg';
-            return `data:${mime};base64,${(await readFile(abs)).toString('base64')}`;
-          } catch {
-            return '';
-          }
-        };
-        const acrEvidence: AcrEvidenceGroup[] = await Promise.all(
-          evidenceGroups.map(async (g) => ({
-            criterion: g.criterion,
-            title: g.title,
-            items: await Promise.all(
-              g.items.map(async (it) => ({
-                fileName: it.fileName,
-                isImage: it.isImage,
-                src: it.isImage ? await toDataUri(it.filePath) : '',
-              })),
-            ),
-          })),
-        );
-        const logoUrl = vpat.identity?.logoPath ? await toDataUri(vpat.identity.logoPath) : '';
         // Locale: ?lang= override (validated) → session UI locale → 'en'.
         const sess = request.session as { get?(key: string): unknown } | undefined;
         const langQuery = (request.query as { lang?: string }).lang;
         const sessionLocale =
           typeof sess?.get === 'function' ? (sess.get('locale') as string | undefined) : undefined;
-        const candidate = langQuery ?? sessionLocale ?? 'en';
-        const locale = (SUPPORTED_LOCALES as readonly string[]).includes(candidate) ? candidate : 'en';
-        const wordingOverrides = (await storage.acrWording?.listForOrg(orgId, locale)) ?? [];
-        const acrView = buildAcrView(vpat, scanMeta, {
-          locale,
-          t: t as unknown as Parameters<typeof buildAcrView>[2]['t'],
-          wordingOverrides,
-          auditHistory,
-          links: { packUrl: evidenceGroups.length > 0 ? `/api/v1/export/scans/${id}/vpat-pack.zip` : undefined },
-          ...(logoUrl ? { logoUrl } : {}),
-          evidence: acrEvidence,
-        });
-        // Canonical path: render the shared ACR template via headless Chromium
-        // (matches the WordPress plugin). If no browser can launch (CI, or a
-        // host without Chromium), degrade to the dependency-free PDFKit VPAT
-        // renderer so a valid PDF is always served — logged so a silent
-        // regression off the single-source template is observable.
-        const pdfBuffer = await pdfWithFallback(
-          () => generateAcrPdf(acrView),
-          () => generateVpatPdf(scanMeta, vpat, { groups: evidenceGroups, uploadsRoot }),
+        const locale = resolveLocale(langQuery ?? sessionLocale ?? undefined);
+        const pdfBuffer = await renderScanAcrPdf(
+          storage,
+          scan,
+          loaded,
+          {
+            locale,
+            uploadsRoot,
+            links: loaded.evidenceGroups.length > 0
+              ? { packUrl: `/api/v1/export/scans/${id}/vpat-pack.zip` }
+              : {},
+          },
           (err) =>
             request.log.warn(
               err,
@@ -769,7 +664,16 @@ export async function exportRoutes(
       }
 
       try {
-        const zipBuffer = await buildEvidencePackZip(storage, scan, uploadsRoot);
+        const sess = request.session as { get?(key: string): unknown } | undefined;
+        const langQuery = (request.query as { lang?: string }).lang;
+        const sessionLocale =
+          typeof sess?.get === 'function' ? (sess.get('locale') as string | undefined) : undefined;
+        const zipBuffer = await buildEvidencePackZip(
+          storage,
+          scan,
+          uploadsRoot,
+          resolveLocale(langQuery ?? sessionLocale ?? undefined),
+        );
         if (zipBuffer === null) {
           return reply.code(404).send({ error: 'Report data not available' });
         }

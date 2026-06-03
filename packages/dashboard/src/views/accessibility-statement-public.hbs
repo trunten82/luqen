@@ -89,6 +89,10 @@
       <li>{{t "a11yStatement.public.measureRemediation"}}</li>
     </ul>
 
+    {{#if statement.acrUrl}}
+    <p class="acr-link"><a href="{{statement.acrUrl}}" target="_blank" rel="noopener">{{t "a11yStatement.public.viewAcr"}}</a></p>
+    {{/if}}
+
     <h2>{{t "a11yStatement.public.feedbackHeading"}}</h2>
     <div class="contact">
       <p>{{t "a11yStatement.public.feedbackIntro" entity=statement.entityName}}</p>

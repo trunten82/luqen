@@ -47,6 +47,7 @@ import { generateApiKey, storeApiKey } from './auth/api-key.js';
 import { exportRoutes } from './routes/api/export.js';
 import { shareRoutes } from './routes/share.js';
 import { publicAcrRoutes } from './routes/public-acr.js';
+import { reportPageRoutes } from './routes/report-page.js';
 import { dataApiRoutes } from './routes/api/data.js';
 import { brandingApiRoutes } from './routes/api/branding.js';
 import { wpNetworkApiRoutes } from './routes/api/wp-network.js';
@@ -181,9 +182,13 @@ function isPublicPath(path: string): boolean {
   if (path.startsWith('/api/v1/badge/')) return true;
   // Phase 58 R5: public self-scan report (only the dashboard's own host).
   if (/^\/reports\/[^/]+\/public$/.test(path)) return true;
-  // widget→VPAT: public, dynamic Accessibility Conformance Report (gated by the
-  // per-scan publicShareEnabled opt-in inside the handler, same as the badge).
-  if (/^\/reports\/[^/]+\/acr(\.pdf)?$/.test(path)) return true;
+  // widget→VPAT: public, dynamic Accessibility Conformance Report + its public
+  // evidence pack (gated by the per-scan publicShareEnabled opt-in inside the
+  // handler, same as the badge).
+  if (/^\/reports\/[^/]+\/acr(\.pdf|-pack\.zip)?$/.test(path)) return true;
+  // Per-site "Time Machine" report page + its revisions/downloads (gated by the
+  // site badge being enabled, inside the handler — the badge id IS the handle).
+  if (/^\/reports\/live\/[^/]+(\/r\/[^/]+(\/acr\.pdf|\/acr-pack\.zip)?)?$/.test(path)) return true;
   // Secure external report shares — anonymous, token-authorised (the token in
   // the path IS the authorisation; covers /share/:token and its downloads).
   if (path.startsWith('/share/')) return true;
@@ -1065,7 +1070,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // LLM client is owned by serviceClientRegistry (constructed above).
   // Routes receive getLLMClient and resolve the current live instance per
   // request so a runtime reload is picked up without a restart.
-  await reportRoutes(server, storage, getLLMClient, { selfScanId: config.selfScanId });
+  await reportRoutes(server, storage, getLLMClient, { selfScanId: config.selfScanId, uploadsRoot });
   await accessibilityStatementRoutes(server, storage);
   await reportIdentityRoutes(server, storage);
   await acrWordingRoutes(server, storage);
@@ -1157,6 +1162,13 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     server,
     storage,
     config.selfScanId,
+    resolve(config.dbPath ? join(config.dbPath, '..', 'uploads') : './uploads'),
+  );
+
+  // ── Per-site "Time Machine" report page — gated by the site badge handle ──
+  await reportPageRoutes(
+    server,
+    storage,
     resolve(config.dbPath ? join(config.dbPath, '..', 'uploads') : './uploads'),
   );
 

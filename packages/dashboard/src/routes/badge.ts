@@ -323,6 +323,8 @@ export async function badgeRoutes(
             status:     Type.String(),
             verifiedAt: Type.Union([Type.String(), Type.Null()]),
             standard:   Type.String(),
+            // Stable per-site "Time Machine" report page (latest ACR + revisions).
+            reportUrl:  Type.String(),
           }),
           404: Type.Object({ error: Type.String() }),
         },
@@ -355,6 +357,7 @@ export async function badgeRoutes(
         status: label,
         verifiedAt: completed ? new Date(completed).toISOString() : null,
         standard: scan.standard,
+        reportUrl: `/reports/live/${badgeId}`,
       });
     },
   );

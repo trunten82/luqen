@@ -19,7 +19,12 @@ import Mustache from 'mustache';
 import type { AcrView } from './acr-view.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ACR_DIR = resolve(HERE, '..', 'acr'); // dist/acr (copied from shared/acr at build)
+// Built layout: dist/services/acr-render.js + dist/acr/* (copied from shared/acr
+// at build). In dev/test we run from src/services, where src/acr does not exist,
+// so fall back to the repo's canonical shared/acr (single source of truth).
+const BUILT_ACR_DIR = resolve(HERE, '..', 'acr');
+const SHARED_ACR_DIR = resolve(HERE, '..', '..', '..', '..', 'shared', 'acr');
+const ACR_DIR = existsSync(resolve(BUILT_ACR_DIR, 'acr.template.html')) ? BUILT_ACR_DIR : SHARED_ACR_DIR;
 const FONTS_DIR = resolve(HERE, '..', 'pdf', 'fonts');
 
 interface FontFace {
@@ -77,16 +82,38 @@ async function loadFontCss(): Promise<string> {
 }
 
 /**
+ * Optional document chrome wrapped around the canonical ACR body. The shared
+ * template is a pure legal document; the authenticated dashboard view wraps it
+ * with interactive chrome (download buttons, the share-link manager) and the
+ * public surfaces add nothing. Injection keeps the document itself byte-for-byte
+ * the same Mustache render on every surface.
+ */
+export interface AcrHtmlChrome {
+  /** Document language (drives <html lang> + improves a11y/print). Default 'en'. */
+  readonly locale?: string;
+  /** Extra <head> markup (meta tags, extra <style>). */
+  readonly headExtra?: string;
+  /** Markup injected immediately after <body> (toolbars, panels). */
+  readonly bodyPrefix?: string;
+  /** Markup injected immediately before </body> (scripts). */
+  readonly bodySuffix?: string;
+}
+
+/**
  * Render the shared ACR template to a self-contained HTML document (fonts + CSS
  * inlined). Identical structure to the WordPress plugin's render of the same
- * template.
+ * template. Optional `chrome` adds dashboard-only interactive elements around
+ * the otherwise-identical document body.
  */
-export async function renderAcrHtml(view: AcrView): Promise<string> {
+export async function renderAcrHtml(view: AcrView, chrome: AcrHtmlChrome = {}): Promise<string> {
   const [template, css, fontCss] = await Promise.all([loadTemplate(), loadCss(), loadFontCss()]);
   const body = Mustache.render(template, view);
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8">`
+  const lang = (chrome.locale ?? 'en').replace(/[^a-zA-Z-]/g, '') || 'en';
+  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">`
+    + `<meta name="viewport" content="width=device-width, initial-scale=1">`
     + `<title>Accessibility Conformance Report</title>`
-    + `<style>${fontCss}\n${css}</style></head><body>${body}</body></html>`;
+    + `<style>${fontCss}\n${css}</style>${chrome.headExtra ?? ''}</head>`
+    + `<body>${chrome.bodyPrefix ?? ''}${body}${chrome.bodySuffix ?? ''}</body></html>`;
 }
 
 /** Resolve a chromium executable, mirroring the scanner's proven resolution. */

@@ -23,6 +23,8 @@ export interface AccessibilityStatementRecord {
   readonly contactUrl?: string;
   /** Custom remediation-commitment prose (falls back to a default). */
   readonly commitment?: string;
+  /** Public link to the org's full ACR/VPAT (mirrors the WP `acr_url`). */
+  readonly acrUrl?: string;
   readonly updatedAt: string;
   readonly updatedBy?: string;
 }
@@ -37,6 +39,7 @@ export interface AccessibilityStatementInput {
   readonly contactEmail?: string;
   readonly contactUrl?: string;
   readonly commitment?: string;
+  readonly acrUrl?: string;
 }
 
 /** A statement joined with its org's public identity (for the public route). */

@@ -1459,7 +1459,9 @@
       "previewAssessed": "Com base numa análise de",
       "previewLimitations": "Limitações conhecidas:",
       "previewPending": "Revisão manual pendente:",
-      "previewNoScan": "Ainda não foi encontrada nenhuma análise concluída para o site configurado — defina um URL do site e execute uma análise para preencher as limitações conhecidas."
+      "previewNoScan": "Ainda não foi encontrada nenhuma análise concluída para o site configurado — defina um URL do site e execute uma análise para preencher as limitações conhecidas.",
+      "acrUrl": "Ligação para o Relatório de Conformidade de Acessibilidade (ACR)",
+      "acrUrlHelp": "Opcional. Uma ligação pública para o seu ACR/VPAT completo, mostrada na declaração como «Ver o nosso Relatório de Conformidade de Acessibilidade»."
     },
     "public": {
       "pageTitle": "Declaração de acessibilidade — {{entity}}",
@@ -1484,7 +1486,8 @@
       "feedbackForm": "Formulário de contacto:",
       "feedbackNoChannel": "Ainda não foi configurado um canal de feedback. Contacte o operador do site para comunicar uma barreira de acessibilidade.",
       "lastAssessed": "Última avaliação em",
-      "disclaimer": "Esta declaração reflete os testes automatizados e comportamentais, juntamente com qualquer revisão manual registada. É um registo de boa-fé dos nossos esforços em matéria de acessibilidade e não constitui uma certificação legal de conformidade nem aconselhamento jurídico."
+      "disclaimer": "Esta declaração reflete os testes automatizados e comportamentais, juntamente com qualquer revisão manual registada. É um registo de boa-fé dos nossos esforços em matéria de acessibilidade e não constitui uma certificação legal de conformidade nem aconselhamento jurídico.",
+      "viewAcr": "Ver o nosso Relatório de Conformidade de Acessibilidade"
     }
   },
   "fleet": {
@@ -1543,6 +1546,15 @@
     "wordingCustomLabel": "Texto personalizado",
     "verdictConforms": "{{site}} está em conformidade com {{standard}} em {{pages}} página(s).",
     "verdictPartial": "{{site}} está parcialmente em conformidade com {{standard}} em {{pages}} página(s).",
-    "verdictMeta": "Avaliado em {{date}} · {{supports}} de {{total}} critérios compatíveis · {{doesNotSupport}} não compatíveis · {{notEvaluated}} a aguardar avaliação manual"
+    "verdictMeta": "Avaliado em {{date}} · {{supports}} de {{total}} critérios compatíveis · {{doesNotSupport}} não compatíveis · {{notEvaluated}} a aguardar avaliação manual",
+    "staleNotice": "Está disponível uma versão mais recente deste relatório.",
+    "staleNoticeLink": "Ver o relatório mais recente"
+  },
+  "reportPage": {
+    "revisionsHeading": "Histórico do relatório",
+    "revisionsIntro": "Cada análise concluída é mantida como uma revisão datada deste relatório.",
+    "current": "Atual",
+    "view": "Ver",
+    "latest": "Mais recente"
   }
 }

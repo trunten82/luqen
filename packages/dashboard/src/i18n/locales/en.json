@@ -1944,7 +1944,9 @@
       "previewAssessed": "Based on a scan from",
       "previewLimitations": "Known limitations:",
       "previewPending": "Pending manual review:",
-      "previewNoScan": "No completed scan found for the configured site yet — set a site URL and run a scan to populate known limitations."
+      "previewNoScan": "No completed scan found for the configured site yet — set a site URL and run a scan to populate known limitations.",
+      "acrUrl": "Accessibility Conformance Report (ACR) link",
+      "acrUrlHelp": "Optional. A public link to your full ACR/VPAT — shown on the statement as “View our Accessibility Conformance Report”."
     },
     "public": {
       "pageTitle": "Accessibility Statement — {{entity}}",
@@ -1969,7 +1971,8 @@
       "feedbackForm": "Contact form:",
       "feedbackNoChannel": "A feedback channel has not yet been configured. Please contact the site operator to report an accessibility barrier.",
       "lastAssessed": "Last assessed on",
-      "disclaimer": "This statement reflects automated and behavioural testing together with any recorded manual review. It is a good-faith record of our accessibility efforts and is not a legal certification of compliance, nor legal advice."
+      "disclaimer": "This statement reflects automated and behavioural testing together with any recorded manual review. It is a good-faith record of our accessibility efforts and is not a legal certification of compliance, nor legal advice.",
+      "viewAcr": "View our Accessibility Conformance Report"
     }
   },
   "fleet": {
@@ -2015,7 +2018,9 @@
     "wordingCustomLabel": "Custom wording",
     "verdictConforms": "{{site}} conforms to {{standard}} across {{pages}} page(s).",
     "verdictPartial": "{{site}} partially conforms to {{standard}} across {{pages}} page(s).",
-    "verdictMeta": "Evaluated {{date}} · {{supports}} of {{total}} criteria supported · {{doesNotSupport}} not supported · {{notEvaluated}} pending manual evaluation"
+    "verdictMeta": "Evaluated {{date}} · {{supports}} of {{total}} criteria supported · {{doesNotSupport}} not supported · {{notEvaluated}} pending manual evaluation",
+    "staleNotice": "A newer version of this report is available.",
+    "staleNoticeLink": "View the latest report"
   },
   "acrWording": {
     "admin": {
@@ -2042,5 +2047,12 @@
       "imported": "Imported {{n}} string(s).",
       "importError": "Could not parse the JSON. Please check the format."
     }
+  },
+  "reportPage": {
+    "revisionsHeading": "Report history",
+    "revisionsIntro": "Each completed scan is retained as a dated revision of this report.",
+    "current": "Current",
+    "view": "View",
+    "latest": "Latest"
   }
 }

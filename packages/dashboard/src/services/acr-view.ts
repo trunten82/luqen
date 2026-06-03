@@ -29,9 +29,20 @@ export interface AcrAuditRow {
 /** External links surfaced in/around the report. Each optional. */
 export interface AcrLinks {
   readonly packUrl?: string;
+  readonly pdfUrl?: string;
   readonly liveReportUrl?: string;
   readonly badgeUrl?: string;
   readonly dashboardReportUrl?: string;
+}
+
+/**
+ * A "this is not the current version" banner shown when an OLDER revision of a
+ * report is viewed via the per-site Time Machine page. Localized by the caller.
+ */
+export interface AcrStaleNotice {
+  readonly message: string;
+  readonly linkLabel: string;
+  readonly latestUrl: string;
 }
 
 /** The single view shape consumed by the shared ACR template. */
@@ -103,6 +114,8 @@ export interface AcrView {
   }>;
   readonly links: AcrLinks;
   readonly hasLinks: boolean;
+  /** Present only on a non-latest revision viewed via the Time Machine page. */
+  readonly staleNotice?: AcrStaleNotice;
 }
 
 /** Pre-resolved evidence (image files already turned into data URIs by the caller). */
@@ -159,6 +172,7 @@ export interface BuildAcrViewOptions {
   readonly links?: AcrLinks;
   readonly logoUrl?: string;
   readonly evidence?: ReadonlyArray<AcrEvidenceGroup>;
+  readonly staleNotice?: AcrStaleNotice;
 }
 
 /**
@@ -276,7 +290,7 @@ export function buildAcrView(
 
   const links: AcrLinks = opts.links ?? {};
   const hasLinks = Boolean(
-    links.packUrl || links.liveReportUrl || links.badgeUrl || links.dashboardReportUrl,
+    links.packUrl || links.pdfUrl || links.liveReportUrl || links.badgeUrl || links.dashboardReportUrl,
   );
 
   const view: AcrView = {
@@ -324,6 +338,7 @@ export function buildAcrView(
     evidence,
     links,
     hasLinks,
+    ...(opts.staleNotice ? { staleNotice: opts.staleNotice } : {}),
   };
   return view;
 }

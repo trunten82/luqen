@@ -130,6 +130,9 @@ export async function adminBadgeRoutes(
           createdAt: b.createdAt,
           createdBy: b.createdBy ?? null,
           badgeUrl: `https://${host}/api/v1/badge/live/${b.id}.svg`,
+          // The live-badge handle is also the stable per-site "Time Machine"
+          // report-page URL — the badge links here (latest ACR + revisions).
+          reportUrl: `https://${host}/reports/live/${b.id}`,
         })),
       });
     },

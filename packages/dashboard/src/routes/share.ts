@@ -3,9 +3,19 @@ import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../db/index.js';
 import type { ScanRecord, ReportShareRecord } from '../db/types.js';
 import { HtmlPageSchema } from '../api/schemas/envelope.js';
-import { loadVpatForScan, buildEvidencePackZip, renderVpatHtml } from '../services/vpat-share-service.js';
-import { generateVpatPdf } from '../pdf/generator.js';
+import {
+  loadVpatForScan,
+  buildEvidencePackZip,
+  renderScanAcrHtml,
+  renderScanAcrPdf,
+  resolveLocale,
+} from '../services/vpat-share-service.js';
 import { t } from '../i18n/index.js';
+
+/** Locale for a token surface: ?lang= (validated) → 'en' (no session). */
+function shareLocale(request: FastifyRequest): string {
+  return resolveLocale((request.query as { lang?: string }).lang);
+}
 
 const ShareTokenParams = Type.Object({ token: Type.String() }, { additionalProperties: true });
 
@@ -71,12 +81,17 @@ export async function shareRoutes(
       if (loaded === null) return notAvailablePage(reply, 410);
 
       // External viewer: download links point at the token routes (the internal
-      // export routes are RBAC-gated and would 403), and the app-only "close
-      // window" control is hidden.
-      const html = await renderVpatHtml(scan, loaded, {
-        pdfUrl: `/share/${encodeURIComponent(token)}/vpat.pdf`,
-        packUrl: loaded.evidenceGroups.length > 0 ? `/share/${encodeURIComponent(token)}/evidence-pack.zip` : null,
-        isShared: true,
+      // export routes are RBAC-gated and would 403). Renders the single-source
+      // shared ACR template, same as every other surface.
+      const html = await renderScanAcrHtml(storage, scan, loaded, {
+        locale: shareLocale(request),
+        uploadsRoot,
+        links: {
+          pdfUrl: `/share/${encodeURIComponent(token)}/vpat.pdf`,
+          ...(loaded.evidenceGroups.length > 0
+            ? { packUrl: `/share/${encodeURIComponent(token)}/evidence-pack.zip` }
+            : {}),
+        },
       });
       return reply.type('text/html').send(html);
     },
@@ -101,7 +116,13 @@ export async function shareRoutes(
       }
       const loaded = await loadVpatForScan(storage, resolved.scan);
       if (loaded === null) return reply.code(410).send({ error: 'Share not available' });
-      const pdf = await generateVpatPdf(loaded.scanMeta, loaded.vpat, { groups: loaded.evidenceGroups, uploadsRoot });
+      const pdf = await renderScanAcrPdf(
+        storage,
+        resolved.scan,
+        loaded,
+        { locale: shareLocale(request), uploadsRoot },
+        (err) => request.log.warn(err, 'token-share ACR HTML→PDF failed; served PDFKit fallback'),
+      );
       let hostname: string;
       try { hostname = new URL(resolved.scan.siteUrl).hostname; } catch { hostname = 'report'; }
       return reply
@@ -128,7 +149,7 @@ export async function shareRoutes(
       if ('reason' in resolved) {
         return reply.code(resolved.reason === 'notfound' ? 404 : 410).send({ error: 'Share not available' });
       }
-      const zip = await buildEvidencePackZip(storage, resolved.scan, uploadsRoot);
+      const zip = await buildEvidencePackZip(storage, resolved.scan, uploadsRoot, shareLocale(request));
       if (zip === null) return reply.code(410).send({ error: 'Share not available' });
       let hostname: string;
       try { hostname = new URL(resolved.scan.siteUrl).hostname; } catch { hostname = 'report'; }

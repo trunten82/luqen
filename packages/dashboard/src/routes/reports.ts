@@ -14,13 +14,14 @@ import type { JsonReportFile } from '../services/report-service.js';
 import { getFixSuggestion } from '../fix-suggestions.js';
 import type { LLMClient } from '../llm-client.js';
 import { resolveOrgLLMClient } from '../llm-client.js';
-import { t } from '../i18n/index.js';
+import { t, type Locale } from '../i18n/index.js';
 import { filterDrilldownIssues, isValidDimension } from '../services/brand-drilldown.js';
-import { buildVpat } from '../services/vpat-service.js';
-import { resolveRegulationDetails } from '../services/regulation-catalog.js';
-import { resolveScanIdentity } from '../services/vpat-share-service.js';
-import { buildVpatEvidenceGroups } from '../services/vpat-evidence.js';
-import { buildRemediationRecord } from '../services/remediation-service.js';
+import {
+  loadVpatForScan,
+  renderScanAcrHtml,
+  resolveLocale,
+} from '../services/vpat-share-service.js';
+import type { AcrHtmlChrome } from '../services/acr-render.js';
 import { HtmlPageSchema } from '../api/schemas/envelope.js';
 
 const ReportIdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
@@ -32,6 +33,132 @@ function aiDisclaimer(): string {
 }
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
+
+/** HTML-escape for text/attribute contexts in the VPAT web chrome. */
+function escChrome(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] ?? c));
+}
+
+// Interactive chrome styling for the authenticated VPAT web view. Distinct
+// class names (vpat-*/share-*) never clash with the shared document's acr__*
+// classes, and the whole chrome is hidden on print.
+const VPAT_CHROME_CSS =
+  `.vpat-chrome{margin:0 0 1rem;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif}` +
+  `.vpat-bar{display:flex;flex-wrap:wrap;gap:.6rem;justify-content:flex-end;padding:.5rem 0;border-bottom:1px solid #e3dcd9}` +
+  `.vpat-btn{display:inline-block;padding:.45rem 1.1rem;background:#5a2a26;color:#fff;border:none;border-radius:4px;font-size:.85rem;cursor:pointer;text-decoration:none}` +
+  `.vpat-btn:hover{background:#401d1a}.vpat-btn--ghost{background:#6b6b6b}` +
+  `.share-panel{border:1px solid #cdebd9;border-top:4px solid #206a44;border-radius:6px;padding:.8rem 1rem;margin:1rem 0;background:#f6faf7;max-width:60rem}` +
+  `.share-panel__head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.6rem}` +
+  `.share-panel__head strong{color:#206a44;font-size:.95rem}` +
+  `.share-panel__hint{font-size:.78rem;color:#4a4a4a;margin:.4rem 0 .6rem}` +
+  `.share-panel__list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:.4rem}` +
+  `.share-link{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center}` +
+  `.share-link__url{flex:1 1 16rem;min-width:0;font-size:.76rem;padding:.35rem .5rem;border:1px solid #d0d4de;border-radius:4px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}` +
+  `.share-link__btn{padding:.35rem .7rem;border:1px solid #206a44;background:#206a44;color:#fff;border-radius:4px;font-size:.76rem;cursor:pointer}` +
+  `.share-link__btn--revoke{background:#fff;color:#a52822;border-color:#a52822}` +
+  `.share-panel__empty{font-size:.78rem;color:#6b6b6b}` +
+  `@media print{.vpat-chrome{display:none!important}}`;
+
+// Secure-share manager behaviour (copied verbatim from the retired vpat.hbs).
+// Delegated click handling for create / copy / revoke; the print + close
+// buttons are handled by /static/app.js (data-action="printPage"/"closeWindow").
+const VPAT_SHARE_SCRIPT = `(function () {
+  var panel = document.getElementById('share-panel');
+  if (!panel) return;
+  function csrf() { var m = document.querySelector('meta[name="csrf-token"]'); return m ? m.getAttribute('content') : ''; }
+  function shareUrl(token) { return window.location.origin + '/share/' + token; }
+  function paintAbsolute(scope) {
+    (scope || document).querySelectorAll('.share-link__url').forEach(function (i) { i.value = shareUrl(i.getAttribute('data-token')); });
+  }
+  paintAbsolute(document);
+  function addRow(scanId, token, shareId) {
+    var list = document.getElementById('share-list');
+    var empty = list.querySelector('.share-panel__empty');
+    if (empty) empty.remove();
+    var li = document.createElement('li'); li.className = 'share-link'; li.id = 'share-' + shareId;
+    var input = document.createElement('input'); input.className = 'share-link__url'; input.type = 'text'; input.readOnly = true; input.value = shareUrl(token);
+    var copyBtn = document.createElement('button'); copyBtn.className = 'share-link__btn'; copyBtn.type = 'button'; copyBtn.setAttribute('data-action', 'shareCopy'); copyBtn.setAttribute('data-token', token); copyBtn.textContent = panel.getAttribute('data-copy-label') || 'Copy';
+    var revokeBtn = document.createElement('button'); revokeBtn.className = 'share-link__btn share-link__btn--revoke'; revokeBtn.type = 'button'; revokeBtn.setAttribute('data-action', 'shareRevoke'); revokeBtn.setAttribute('data-scan-id', scanId); revokeBtn.setAttribute('data-share-id', shareId); revokeBtn.textContent = panel.getAttribute('data-revoke-label') || 'Revoke';
+    li.appendChild(input); li.appendChild(copyBtn); li.appendChild(revokeBtn); list.appendChild(li);
+  }
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-action]');
+    if (!el || !panel.contains(el)) return;
+    var action = el.getAttribute('data-action');
+    if (action === 'shareCreate') {
+      el.disabled = true;
+      fetch('/api/v1/reports/' + el.getAttribute('data-scan-id') + '/shares', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf() }, body: '{}' })
+        .then(function (r) { if (!r.ok) throw new Error('create failed'); return r.json(); })
+        .then(function (d) { addRow(el.getAttribute('data-scan-id'), d.token, d.shareId); })
+        .catch(function () { window.alert(panel.getAttribute('data-error')); })
+        .then(function () { el.disabled = false; });
+    }
+    if (action === 'shareCopy') {
+      var url = shareUrl(el.getAttribute('data-token'));
+      var done = function () { var t = el.textContent; el.textContent = panel.getAttribute('data-copied'); setTimeout(function () { el.textContent = t; }, 1500); };
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(url).then(done, function () { window.prompt('', url); }); } else { window.prompt('', url); }
+    }
+    if (action === 'shareRevoke') {
+      if (!window.confirm(panel.getAttribute('data-confirm-revoke'))) return;
+      var shareId = el.getAttribute('data-share-id');
+      fetch('/api/v1/reports/' + el.getAttribute('data-scan-id') + '/shares/' + shareId + '/revoke', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf() }, body: '{}' })
+        .then(function (r) { if (!r.ok) throw new Error('revoke failed'); return r.json(); })
+        .then(function () { var row = document.getElementById('share-' + shareId); if (row) row.remove(); })
+        .catch(function () { window.alert(panel.getAttribute('data-error')); });
+    }
+  });
+})();`;
+
+interface VpatChromeOpts {
+  readonly scanId: string;
+  readonly canShare: boolean;
+  readonly shareLinks: ReadonlyArray<{ id: string; token: string }>;
+  readonly csrfToken: string;
+}
+
+/**
+ * Build the authenticated VPAT web view's interactive chrome (print/close
+ * toolbar + secure-share manager) wrapped around the single-source ACR
+ * document. The document body is rendered identically to every other surface;
+ * only this dashboard-only chrome differs.
+ */
+function vpatWebChrome(locale: string, opts: VpatChromeOpts): AcrHtmlChrome {
+  const tt = (k: string): string => t(k, locale as Locale);
+  const headExtra =
+    (opts.csrfToken ? `<meta name="csrf-token" content="${escChrome(opts.csrfToken)}">` : '') +
+    `<style>${VPAT_CHROME_CSS}</style>`;
+
+  const printBar =
+    `<div class="vpat-bar">` +
+      `<button class="vpat-btn" data-action="printPage">${escChrome(tt('vpat.print'))}</button>` +
+      `<button class="vpat-btn vpat-btn--ghost" data-action="closeWindow">${escChrome(tt('vpat.close'))}</button>` +
+    `</div>`;
+
+  let sharePanel = '';
+  if (opts.canShare) {
+    const rows = opts.shareLinks.length > 0
+      ? opts.shareLinks.map((s) =>
+          `<li class="share-link" id="share-${escChrome(s.id)}">` +
+            `<input class="share-link__url" type="text" readonly value="/share/${escChrome(s.token)}" data-token="${escChrome(s.token)}">` +
+            `<button class="share-link__btn" type="button" data-action="shareCopy" data-token="${escChrome(s.token)}">${escChrome(tt('share.copy'))}</button>` +
+            `<button class="share-link__btn share-link__btn--revoke" type="button" data-action="shareRevoke" data-scan-id="${escChrome(opts.scanId)}" data-share-id="${escChrome(s.id)}">${escChrome(tt('share.revoke'))}</button>` +
+          `</li>`).join('')
+      : `<li class="share-panel__empty">${escChrome(tt('share.none'))}</li>`;
+    sharePanel =
+      `<div class="share-panel" id="share-panel" data-confirm-revoke="${escChrome(tt('share.revokeConfirm'))}" data-copied="${escChrome(tt('share.copied'))}" data-error="${escChrome(tt('share.createError'))}" data-copy-label="${escChrome(tt('share.copy'))}" data-revoke-label="${escChrome(tt('share.revoke'))}">` +
+        `<div class="share-panel__head"><strong>${escChrome(tt('share.panelHeading'))}</strong>` +
+        `<button class="vpat-btn" type="button" data-action="shareCreate" data-scan-id="${escChrome(opts.scanId)}">${escChrome(tt('share.create'))}</button></div>` +
+        `<p class="share-panel__hint">${escChrome(tt('share.panelHint'))}</p>` +
+        `<ul class="share-panel__list" id="share-list" data-empty-label="${escChrome(tt('share.none'))}">${rows}</ul>` +
+      `</div>`;
+  }
+
+  return {
+    headExtra,
+    bodyPrefix: `<div class="vpat-chrome">${printBar}${sharePanel}</div>`,
+    bodySuffix: `<script src="/static/app.js"></script><script>${VPAT_SHARE_SCRIPT}</script>`,
+  };
+}
 
 interface ReportsQuery {
   q?: string;
@@ -53,11 +180,13 @@ export async function reportRoutes(
    */
   getLLMClient: () => LLMClient | null = () => null,
   /**
-   * Dashboard config (currently only selfScanId is read here, to back-compat
-   * the dogfood login badge through the public-share gate).
+   * Dashboard config. `selfScanId` back-compats the dogfood login badge through
+   * the public-share gate; `uploadsRoot` resolves manual-test evidence images to
+   * data URIs for the shared-template ACR render.
    */
-  config: { selfScanId?: string } = {},
+  config: { selfScanId?: string; uploadsRoot?: string } = {},
 ): Promise<void> {
+  const uploadsRoot = config.uploadsRoot ?? './uploads';
   // GET /reports — list with pagination and search
   server.get(
     '/reports',
@@ -508,96 +637,17 @@ export async function reportRoutes(
         return reply.code(404).send({ error: 'Report data not available' });
       }
 
-      let reportData: ReturnType<typeof normalizeReportData> | null = null;
-      try {
-        const dbReport = await storage.scans.getReport(id);
-        if (dbReport !== null) {
-          reportData = normalizeReportData(dbReport as JsonReportFile, scan);
-        } else if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
-          const raw = JSON.parse(
-            await readFile(scan.jsonReportPath, 'utf-8'),
-          ) as JsonReportFile;
-          reportData = normalizeReportData(raw, scan);
-        }
-      } catch {
-        return reply.code(500).send({ error: 'Failed to read report data' });
-      }
-
-      if (reportData === null) {
+      const loaded = await loadVpatForScan(storage, scan);
+      if (loaded === null) {
         return reply.code(404).send({ error: 'Report data not available' });
       }
 
-      const manualResults = storage.manualTests
-        ? await storage.manualTests.getManualTests(id)
-        : [];
-      const evidenceCounts = new Map(
-        ((await storage.manualTestEvidence?.countByCriterion(id)) ?? []).map((c) => [c.criterionId, c.count]),
-      );
-      const reasonedChangeCount = (await storage.manualTestAudit?.countReasonedChanges(id)) ?? 0;
-      // Assemble the dated good-faith remediation record (events + completed-scan
-      // trend). Keyed by scan.orgId to match how events are recorded. Empty
-      // input → empty record, so the section stays hidden.
-      const remOrgId = scan.orgId ?? 'system';
-      const [remediationEvents, siteScans] = await Promise.all([
-        storage.remediationEvents.listForSite(remOrgId, scan.siteUrl),
-        storage.scans.getScansForSite(remOrgId, scan.siteUrl),
-      ]);
-      const remediation = buildRemediationRecord(remediationEvents, siteScans);
-      const identity = await resolveScanIdentity(storage, scan);
-      const regulationDetails = await resolveRegulationDetails(scan.regulations ?? [], scan.orgId ?? orgId);
-      const vpat = buildVpat(
-        reportData,
-        scan,
-        manualResults,
-        {
-          evidenceCounts,
-          reasonedChangeCount,
-          behaviorallyEvaluatedCriteria: new Set(reportData.behaviorallyEvaluatedCriteria ?? []),
-          regulationDetails,
-          ...(identity ? { identity } : {}),
-        },
-        remediation,
-      );
-      // Manual-test evidence ARTIFACTS (screenshots / documents) per criterion —
-      // surfaced as an appendix in the report (the COUNT already lands in the
-      // remarks via evidenceCounts). The browser fetches files via filePath
-      // (/uploads/...); no on-disk resolution needed here.
-      const evidenceGroups = buildVpatEvidenceGroups(
-        (await storage.manualTestEvidence?.listEvidence(id)) ?? [],
-        vpat,
-      );
-
-      // Compile the VPAT template directly with the shared Handlebars singleton
-      // (same approach as /reports/:id/print). The global `t` and `formatStandard`
-      // helpers are registered in server.ts; we only add the VPAT-specific
-      // `conformanceBadge` helper (idempotent — safe to re-register per request).
-      const handlebars = (await import('handlebars')).default;
-      const viewsDir = resolve(join(__dirname, '..', 'views'));
-
-      handlebars.registerHelper('conformanceBadge', (conformance: string) => {
-        const cls =
-          conformance === 'Supports' ? 'badge--success' :
-          conformance === 'Partially Supports' ? 'badge--warning' :
-          conformance === 'Does Not Support' ? 'badge--error' : 'badge--neutral';
-        const escaped = handlebars.escapeExpression(conformance);
-        return new handlebars.SafeString(`<span class="badge ${cls}">${escaped}</span>`);
-      });
-
-      const scanMeta = {
-        ...scan,
-        createdAtDisplay: new Date(scan.createdAt).toLocaleString(),
-      };
-      // Locale plumbing mirrors the global preHandler in server.ts: the UI
-      // language is stored in the secure session and the global `t` helper reads
-      // it from the render root, falling back to 'en'.
+      // Locale: secure-session UI language (validated) → 'en'.
       const session = request.session as { get?(key: string): unknown } | undefined;
-      const locale =
-        (typeof session?.get === 'function'
-          ? (session.get('locale') as string | undefined)
-          : undefined) ?? 'en';
-      const template = handlebars.compile(
-        await readFile(join(viewsDir, 'vpat.hbs'), 'utf-8'),
+      const locale = resolveLocale(
+        typeof session?.get === 'function' ? (session.get('locale') as string | undefined) : undefined,
       );
+
       // Secure-share management surface: only users who can export may create
       // share links; expose the existing ACTIVE links for the panel.
       const perms = (request as unknown as { permissions?: Set<string> }).permissions;
@@ -606,25 +656,29 @@ export async function reportRoutes(
       const shareLinks = canShare && storage.reportShares
         ? (await storage.reportShares.listForScan(id))
             .filter((s) => s.revokedAt === null && (s.expiresAt === null || Date.parse(s.expiresAt) > now))
-            .map((s) => ({ id: s.id, token: s.token, expiresAt: s.expiresAt }))
+            .map((s) => ({ id: s.id, token: s.token }))
         : [];
       // generateCsrf is decorated by @fastify/csrf-protection in production;
       // guard so the VPAT route still renders in test servers that omit it.
       const csrfToken = typeof reply.generateCsrf === 'function' ? reply.generateCsrf() : '';
-      const html = template(
+
+      // Render the SINGLE-SOURCE shared ACR document, wrapped with the
+      // authenticated dashboard chrome (print/close toolbar + share manager).
+      const html = await renderScanAcrHtml(
+        storage,
+        scan,
+        loaded,
         {
-          scan: scanMeta,
-          vpat,
-          evidenceGroups,
-          user: request.user,
-          pdfUrl: `/api/v1/export/scans/${id}/vpat.pdf`,
-          packUrl: evidenceGroups.length > 0 ? `/api/v1/export/scans/${id}/vpat-pack.zip` : null,
-          isShared: false,
-          canShare,
-          shareLinks,
-          csrfToken,
+          locale,
+          uploadsRoot,
+          links: {
+            pdfUrl: `/api/v1/export/scans/${id}/vpat.pdf`,
+            ...(loaded.evidenceGroups.length > 0
+              ? { packUrl: `/api/v1/export/scans/${id}/vpat-pack.zip` }
+              : {}),
+          },
         },
-        { data: { root: { locale } } },
+        vpatWebChrome(locale, { scanId: id, canShare, shareLinks, csrfToken }),
       );
       return reply.type('text/html').send(html);
     },
