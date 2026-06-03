@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Single product, no gates.** Luqen has no paid tiers — every capability is available to every install. The `generate-fix` **credit paywall is removed**: it no longer returns `402` when an org's AI-fix balance is exhausted (the fix always runs; the credit ledger stays as pure usage accounting, never a gate). Mirrors the WordPress plugin's de-gating. The `/admin/plans` matrix and `/admin/agency` console are now display-only and slated for removal — they enforce nothing.
+
 ### Added
 
 - **ACR program — single-source, localizable, content-complete, Snapshot-aware (M1–M2).** The Accessibility Conformance Report is now one localizable, wording-managed document rendered by every dashboard surface from the single `shared/acr/` template:

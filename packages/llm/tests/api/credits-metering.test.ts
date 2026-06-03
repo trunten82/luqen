@@ -70,14 +70,15 @@ describe('generate-fix credit metering (Phase 80)', () => {
     expect((await db.getCreditBalance('org-fail')).balance).toBe(5);
   });
 
-  it('gates with 402 when credits are exhausted and never calls the LLM', async () => {
+  it('NEVER gates on an exhausted balance — single product, no gates (no 402)', async () => {
     mockGenerateFix.mockResolvedValue(okFix);
     await db.setCreditAllocation('org-empty', 0, 'admin');
     const res = await post('org-empty');
-    expect(res.statusCode).toBe(402);
-    expect(res.json().creditsExhausted).toBe(true);
+    // No paywall: the fix runs even at a zero balance. There is no 402 and no
+    // creditsExhausted; the ledger simply stays at 0 (accounting only).
+    expect(res.statusCode).toBe(200);
+    expect(mockGenerateFix).toHaveBeenCalled();
     expect(res.headers['x-luqen-credits-remaining']).toBe('0');
-    expect(mockGenerateFix).not.toHaveBeenCalled();
   });
 
   it('leaves system/unscoped calls unmetered', async () => {
