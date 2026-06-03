@@ -10,7 +10,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
-- **Single product, no gates.** Luqen has no paid tiers — every capability is available to every install. The `generate-fix` **credit paywall is removed**: it no longer returns `402` when an org's AI-fix balance is exhausted (the fix always runs; the credit ledger stays as pure usage accounting, never a gate). Mirrors the WordPress plugin's de-gating. The `/admin/plans` matrix and `/admin/agency` console are now display-only and slated for removal — they enforce nothing.
+- **Single product, no gates.** Luqen has no paid tiers — every capability is available to every install. The `generate-fix` **credit paywall is removed**: it no longer returns `402` when an org's AI-fix balance is exhausted (the fix always runs; the credit ledger stays as pure usage accounting, never a gate). Mirrors the WordPress plugin's de-gating.
+
+### Removed
+
+- **Plan matrix + Agency console.** The Free/Pro/Agency `/admin/plans` page, the `/admin/agency` console, the `plan-matrix.ts` source and their sidebar nav are gone — Luqen is a single product, so the tier UI enforced and represented nothing.
 
 ### Added
 

@@ -18,8 +18,6 @@ import { reportRoutes } from './routes/reports.js';
 import { accessibilityStatementRoutes } from './routes/accessibility-statement.js';
 import { reportIdentityRoutes } from './routes/report-identity.js';
 import { acrWordingRoutes } from './routes/acr-wording.js';
-import { agencyRoutes } from './routes/admin/agency.js';
-import { plansRoutes } from './routes/admin/plans.js';
 import { compareRoutes } from './routes/compare.js';
 import { trendRoutes } from './routes/trends.js';
 import { scheduleRoutes } from './routes/schedules.js';
@@ -1074,8 +1072,6 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await accessibilityStatementRoutes(server, storage);
   await reportIdentityRoutes(server, storage);
   await acrWordingRoutes(server, storage);
-  await agencyRoutes(server, storage);
-  await plansRoutes(server);
   await manualTestRoutes(
     server,
     storage,
