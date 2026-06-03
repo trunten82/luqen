@@ -323,7 +323,7 @@ export async function badgeRoutes(
             status:     Type.String(),
             verifiedAt: Type.Union([Type.String(), Type.Null()]),
             standard:   Type.String(),
-            // Stable per-site "Time Machine" report page (latest ACR + revisions).
+            // Stable per-site "Snapshot" report page (latest ACR + revisions).
             reportUrl:  Type.String(),
           }),
           404: Type.Object({ error: Type.String() }),

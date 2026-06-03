@@ -186,7 +186,7 @@ function isPublicPath(path: string): boolean {
   // evidence pack (gated by the per-scan publicShareEnabled opt-in inside the
   // handler, same as the badge).
   if (/^\/reports\/[^/]+\/acr(\.pdf|-pack\.zip)?$/.test(path)) return true;
-  // Per-site "Time Machine" report page + its revisions/downloads (gated by the
+  // Per-site "Snapshot" report page + its revisions/downloads (gated by the
   // site badge being enabled, inside the handler — the badge id IS the handle).
   if (/^\/reports\/live\/[^/]+(\/r\/[^/]+(\/acr\.pdf|\/acr-pack\.zip)?)?$/.test(path)) return true;
   // Secure external report shares — anonymous, token-authorised (the token in
@@ -1165,7 +1165,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     resolve(config.dbPath ? join(config.dbPath, '..', 'uploads') : './uploads'),
   );
 
-  // ── Per-site "Time Machine" report page — gated by the site badge handle ──
+  // ── Per-site "Snapshot" report page — gated by the site badge handle ──
   await reportPageRoutes(
     server,
     storage,

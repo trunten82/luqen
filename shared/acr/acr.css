@@ -284,7 +284,7 @@
 .acr__link--badge { border-color: var(--acr-border-strong); }
 .acr__badge { height: 18px; width: auto; }
 
-/* ── Stale-revision banner (Time Machine, non-latest revision) ────────────── */
+/* ── Stale-revision banner (Snapshot, non-latest revision) ────────────── */
 
 .acr__stale {
 	display: flex;

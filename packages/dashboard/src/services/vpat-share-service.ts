@@ -153,7 +153,7 @@ export interface ScanAcrViewOptions {
   readonly uploadsRoot: string;
   /** Surface-specific links (pdf/pack/live-report/badge/dashboard). */
   readonly links?: AcrLinks;
-  /** Stale-revision banner (only on a non-latest Time Machine revision). */
+  /** Stale-revision banner (only on a non-latest Snapshot revision). */
   readonly staleNotice?: AcrStaleNotice;
 }
 
