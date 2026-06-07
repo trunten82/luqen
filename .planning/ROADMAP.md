@@ -5,24 +5,21 @@
 - ✅ **v2.7.0 – v3.0.0** — Phases 01-33 (shipped) — see `milestones/` archives
 - ✅ **v3.1.0 Agent Companion v2 + Tech Debt & Docs** — Phases 34-42 (shipped)
 - ✅ **v3.2.0 – v3.4.0 WP Plugin, UI Revision, LLM Cost Telemetry** — Phases 43-77 (shipped directly to master)
-- ✅ **v3.5.0 Commercial positioning & agency monetization** — Phases 78-82 (shipped). NOTE: product is **single-tier** ([[project_single_tier_decision]]); the Free/Pro/Agency surfaces ship but are **dormant** — do not build on them.
-- 🚧 **v3.6.0 Agent surface + semantic depth** — Phases 83-84 (next): MCP servers + Agent Companion; LLM-vision behavioral checks. Plus carry-over already done this run: DB-plugin tolerance fix + widget→VPAT public ACR.
+- 🚧 **v3.5.0 Anti-overlay wedge — dev + exec first wave** — Phase 78 (Anti-overlay positioning) shipped; Phases 79-82 (CI gate, MCP fix tools, legal-exposure scoring, exec digest) below.
 
-> Note: `.planning` artifacts lagged behind a sustained direct-to-master run (phases 43–77 — WordPress plugin, UI revision, and the LLM cost-telemetry stack 71–77). Git reality is v3.4.0. This milestone resumes formal roadmapping at **Phase 78**. Earlier milestone detail lives in `milestones/` archives.
+> **Milestone redefined.** The original v3.5.0 "Commercial positioning & agency monetization" (Pro/Agency gates, credit-metered fixes) was **reversed by the single-product decision** ([[project_single_tier_decision]]). Only its Phase 78 (anti-overlay positioning) survives. The dead monetization phases that were numbered 79-82 (GATE/CREDIT/AGENCY/PRICE) are **retired** — their concepts must NOT be reused. v3.5.0 is now the **Anti-overlay wedge**: convert the verified 2026-06 market-positioning brief into product. Phase numbering continues from 78 (no reset).
 
 ---
 
-## Current Milestone: v3.5.0 Commercial positioning & agency monetization
+## Current Milestone: v3.5.0 Anti-overlay wedge — dev + exec first wave
 
-**Goal:** Turn verified market research into product — position Luqen explicitly as genuine source-level remediation against the collapsing overlay category, and build the freemium→Pro→Agency monetization spine (Pro feature gates, credit-metered AI fixes, an agency multi-client/white-label tier) that the WP-shelf competitors prove converts. Monetization stays admin-controlled per Core Value; Stripe/Freemius billing is out of scope.
+**Goal:** Convert the verified 2026-06 market-positioning brief (`.planning/MARKET-POSITIONING-2026-06.md`) into product. Give developers real source-level remediation inside their workflow (CI gate + agent-native fix tools), and give executives a conservative, jurisdiction-grounded, proactive risk picture (legal-exposure scoring + scheduled digest). WordPress-leaned throughout — the SMB segment that was mis-sold overlays and is getting sued is the beachhead. Position Luqen as "the anti-overlay, legal-defensibility platform for developers and executives."
 
-**Granularity:** coarse · **Phases:** 5 · **Requirements:** 22/22 mapped ✓
+**Granularity:** coarse · **Phases:** 5 (78 shipped + 79-82 new) · **Requirements:** 20/20 mapped ✓
 
-**Two execution tracks (separate repos, separate CI — parallelizable):**
-- **Platform track** (`luqen` monorepo: dashboard + llm) → Phases 80, 81, 82, and the platform half of 78
-- **WordPress track** (`luqen-wordpress` repo) → Phase 79, and the `readme.txt` half of 78
+**Hard constraint threaded through every phase:** ALL user-facing reporting stays **legally conservative** — never emit "compliant" / "100%" / "lawsuit-proof". Exposure-indication + good-faith remediation + transparency framing only ("not legal advice").
 
-Ship pattern per phase: wip branch → build → test → merge to master → deploy to lxc-luqen → CI green.
+**Cross-repo:** most phases touch BOTH `/root/luqen` (dashboard + core) and `/root/luqen-wordpress` (the WP plugin, v0.32.0). Ship pattern per phase: wip branch → build → test → merge to master → deploy to lxc-luqen → CI green; WP plugin has its own repo + CI (test via wp-test lxc + Playwright).
 
 ## Phases
 
@@ -30,121 +27,111 @@ Ship pattern per phase: wip branch → build → test → merge to master → de
 - Integer phases (78, 79, 80…): Planned milestone work
 - Decimal phases (e.g. 80.1): Urgent insertions (marked INSERTED)
 
-- [x] **Phase 78: Anti-overlay positioning** — DONE 2026-06-01. WP readme anti-overlay + public-report positioning line + docs/why-not-an-overlay.md comparison surface shipped during 43–77; the dashboard-landing positioning gap (SC2) closed in f40b43e (CI green, deployed). Evidence re-verified (FTC $1M; NFB 2021/2025; UsableNet/EcomBack overlay-lawsuit rate).
-- [x] **Phase 79: Pro feature-gate bundle (WP plugin)** — DONE 2026-06-01 (luqen-wordpress `ad736f7`, v0.24.0, WP CI green, 12/12 Playwright UAT). `Luqen_Entitlement` model + *Luqen → Plan* admin screen; gated full-site/bulk scan, scan history, Excel export, CPT/WooCommerce, multisite network bulk fixes, VPAT/ACR+evidence+sharing behind free-vs-Pro. Defence-in-depth (UI paywall + handler/REST re-check). Admin-controlled (no billing); enterprise path wired via filter seam, HTTP fetch lands in Phase 80.
-- [x] **Phase 80: Credit-metered AI fixes** — DONE 2026-06-01. `generate-fix` decrements a per-org AI-fix credit balance (append-only `credit_ledger` + `org_credits` in the LLM DB); exhausted → `402` so consumers degrade to the deterministic fix path; system calls unmetered; default free allocation env-configurable (seed 50). Credits API on @luqen/llm; admin credits+plan panel on `/admin/llm-usage`; `org_entitlements` table (migration 083) + `EntitlementRepository` = the thin plan foundation; inbound `GET /api/v1/entitlement` feeds the WP Pro gate. Admin-controlled (no billing). LLM 416 + dashboard 3935 tests green; docs:rbac/openapi regenerated.
-- [x] **Phase 81: Agency tier** — DONE 2026-06-01. Agency console (`/admin/agency`) = multi-client overview (each client org's plan + managed WP-site count) + partner-seat entitlement. AGENCY-04 partner/resale seat modelled as `max_client_sites` on `org_entitlements` (migration 084), admin-controlled (system-admin only), over-limit warning. AGENCY-02 white-label + AGENCY-03 per-client VPAT/ACR delivered by the existing per-org Report Identity (entity+logo) threaded through the VPAT/ACR pipeline; console links to it. Sidebar link + i18n (6 locales). Dashboard 3937 tests green; docs regenerated.
-- [x] **Phase 82: Pricing & packaging** — DONE 2026-06-01. Free/Pro/Agency codified as an explicit feature matrix in `plan-matrix.ts` (single platform source of truth, aligned with the WP plugin's `Luqen_Entitlement::FEATURES`); `/admin/plans` reference page + `docs/reference/plans.md`. Pro/Agency price anchors left as `null` placeholders with explicit TODO (HARD-GATED on the user's in-flight enterprise-pricing research — competitor-comparable ranges only, no invented prices). Plan keyed on `org_entitlements.plan` (Phase 80).
+- [x] **Phase 78: Anti-overlay positioning** — DONE 2026-06-01. WP readme anti-overlay + public-report positioning line + docs/why-not-an-overlay.md comparison surface; dashboard-landing positioning gap (SC2) closed in f40b43e (CI green, deployed). Evidence re-verified (FTC $1M; NFB 2021/2025; UsableNet/EcomBack overlay-lawsuit rate).
+- [x] **Phase 79: CI regression gate** — `luqen scan --fail-on=new` baseline diff + GitHub Action PR comment + WP scan-on-publish warn/block gate, conservative output. (completed 2026-06-07)
+- [ ] **Phase 80: MCP fix tools for coding agents** — scan + generate-fix exposed as MCP tools (WCAG criterion + 58-jurisdiction legal context + WP-block-aware), human-supervised, never auto-applies.
+- [ ] **Phase 81: Jurisdiction legal-exposure scoring (FLAGSHIP)** — conservative per-site exposure indicator fusing scan + jurisdiction framing + lawsuit/deadline data, surfaced in dashboard, fleet/portfolio view, and the WP plugin.
+- [ ] **Phase 82: Scheduled executive digest** — recurring "what changed / what's at risk" digest over notify (email/Slack/Teams) + board-ready PDF + per-site WP digest, reporting the exposure trend.
 
 ## Phase Details
 
 ### Phase 78: Anti-overlay positioning
 **Goal**: A prospective and existing user understands Luqen as genuine source-level remediation — not an overlay widget — across the WordPress plugin listing, the dashboard, and scan reports, backed by verified evidence.
 **Track**: Cross-repo — `luqen-wordpress` (`readme.txt`) + `luqen` platform (dashboard/report copy + comparison surface)
-**Depends on**: Nothing (independent; cheapest, highest-impact — ship first). Lightly gated: the jurisdiction-uniqueness comparison claim awaits in-flight research; ship the other claims first and backfill that one line if research lands late.
-**Requirements**: POS-01, POS-02, POS-03
+**Depends on**: Nothing (independent; shipped first)
+**Requirements**: POS-01, POS-02, POS-03 (superseded milestone — see milestones/ archive)
 **Success Criteria** (what must be TRUE):
-  1. A user reading the WP plugin `readme.txt` sees Luqen framed as genuine source-level remediation, with an explicit anti-overlay section naming the risk (overlays don't deliver compliance or prevent lawsuits)
+  1. A user reading the WP plugin `readme.txt` sees Luqen framed as genuine source-level remediation, with an explicit anti-overlay section
   2. A user viewing a scan report and the dashboard landing sees genuine-remediation positioning (real fixes in your source, not a widget)
-  3. A user can open a "why not an overlay" comparison surface that cites the verified evidence (FTC $1M settlement, NFB revocation, lawsuits-despite-widget rate)
+  3. A user can open a "why not an overlay" comparison surface citing verified evidence (FTC $1M, NFB revocation, lawsuits-despite-widget rate)
+**Plans**: 1 plan (DONE)
+**UI hint**: yes
+
+### Phase 79: CI regression gate
+**Goal**: A developer can stop accessibility regressions at the source — running a Luqen scan in fail-on-regression mode in CI, getting a PR comment that diffs new vs fixed findings against a stored baseline, and (in WordPress) being warned before publishing a post that introduces new violations. Built on the existing `@luqen/core` CLI + multi-engine scan.
+**Track**: Cross-repo — `luqen` core (CLI flag + baseline diff + GitHub Action) + `luqen-wordpress` (scan-on-publish gate)
+**Depends on**: Phase 78 (sequenced after; functionally independent — first developer track). Independent of Phases 80/81/82.
+**Requirements**: CIGATE-01, CIGATE-02, CIGATE-03, CIGATE-04, CIGATE-05
+**Success Criteria** (what must be TRUE):
+  1. A developer runs the CLI in fail-on-regression mode (e.g. `luqen scan --fail-on=new`) and the process exits non-zero only when the scan introduces findings absent from a stored baseline
+  2. A developer can create and update a baseline of accepted findings for a target, and tune the gate's failure threshold (severity / new-only)
+  3. A developer using the provided GitHub Action receives a PR comment summarizing new vs fixed findings, each with its WCAG criterion + jurisdiction context
+  4. A WordPress author is warned (and optionally blocked) when publishing/updating a post that introduces new accessibility violations versus the last scan
+  5. The gate's output stays conservative — it reports new/fixed findings and exposure, and NEVER asserts "compliant" even on a clean (zero-new) run
+**Plans**: 3 plans (2 waves)
+- [x] 79-01-PLAN.md — Core CLI gate: baseline store + new/fixed diff + conservative gate reporter + scan flags (--fail-on/--min-severity/--baseline/--update-baseline)
+- [x] 79-02-PLAN.md — Composite GitHub Action + sticky PR-comment upsert (new vs fixed, WCAG + jurisdiction context)
+- [x] 79-03-PLAN.md — WordPress scan-on-publish gate (per-post baseline, warn/block, Gutenberg pre-publish panel)
+**UI hint**: yes
+
+### Phase 80: MCP fix tools for coding agents
+**Goal**: A coding agent (Cursor, Claude Code) connected to the Luqen MCP server can, inline in the developer's editor, scan a page and request a source-level fix for a finding — receiving a proposed diff, an explanation, the WCAG criterion, and the applicable 58-jurisdiction legal framing, including WordPress-block-aware fixes. The tools never apply changes themselves — they return drafts a human reviews and merges (anti-overlay, human-supervised). Built on the existing `@luqen/core` MCP server + the `generate-fix` LLM capability + the jurisdiction legal-framings service.
+**Track**: Cross-repo — `luqen` core (MCP tool catalogue) + llm (`generate-fix` wiring) + `luqen-wordpress` (WP-block-aware fix path surfaced through the same tools)
+**Depends on**: Phase 78 (sequenced after; functionally independent — second developer track, parallelizable with Phase 79). Independent of Phases 81/82.
+**Requirements**: MCPFIX-01, MCPFIX-02, MCPFIX-03, MCPFIX-04, MCPFIX-05
+**Success Criteria** (what must be TRUE):
+  1. An agent/IDE connected to the Luqen MCP server invokes a tool to scan a URL/page/HTML and receives structured accessibility findings
+  2. An agent invokes a tool to generate a source-level fix for a finding and receives the proposed diff/snippet, an explanation, and the WCAG criterion
+  3. A fix-tool response carries the applicable 58-jurisdiction legal context/framing for the finding, and can return WordPress-block-aware (Gutenberg) fixes through the same path
+  4. The MCP fix tools enforce existing auth (OAuth2 JWT) + RBAC + org scoping (`mcp.use`) and NEVER apply changes themselves — they return drafts a human/agent reviews and merges
+  5. Fix-tool output stays conservative — it frames suggestions as good-faith remediation drafts, never claiming the fix makes the site "compliant"
+**Plans**: 3 plans (3 waves)
+- [ ] 80-01-PLAN.md — Extend llm generate-fix capability: echo wcagCriterion, emit diff, WP-Gutenberg prompt variant, surface on /api/v1/generate-fix
+- [ ] 80-02-PLAN.md — Dashboard MCP tool modules: dashboard_scan_page (SSRF-safe findings) + dashboard_generate_fix (diff + legalContext + conservative disclaimer)
+- [ ] 80-03-PLAN.md — Wire both tools into the dashboard MCP server under OAuth2/RBAC/mcp.use; end-to-end auth + never-apply tests; drift test green
+
+### Phase 81: Jurisdiction legal-exposure scoring (FLAGSHIP)
+**Goal**: An executive viewing a site, a scan, or a whole portfolio sees a single conservative legal-exposure indicator that fuses scan findings with the site's jurisdiction framing and real lawsuit/deadline data — EU/EAA applicability, high-filing US states (NY/FL/IL), and ADA Title II 2027/2028 deadline countdowns. It is explicitly an EXPOSURE indicator (never "compliant", never an assertion of fault), surfaced per-site in both the dashboard and the WordPress plugin, with a documented, disclaimed model. Built on existing scan results + per-scan legal framing + lawsuit/deadline data.
+**Track**: Cross-repo — `luqen` platform (exposure model + dashboard per-site + portfolio/fleet view) + `luqen-wordpress` (per-site exposure indicator in the plugin dashboard)
+**Depends on**: Phase 78. The flagship; sequenced before Phase 82 because the digest reports the exposure trend this phase produces. Independent of the developer tracks (79, 80).
+**Requirements**: EXPO-01, EXPO-02, EXPO-03, EXPO-04, EXPO-05
+**Success Criteria** (what must be TRUE):
+  1. A user viewing a site/scan sees a conservative legal-exposure indicator derived from scan findings + the site's selected jurisdiction framing, explicitly framed as exposure — never "compliant" and never asserting fault
+  2. The indicator reflects jurisdiction-specific drivers — EU/EAA applicability, high-filing US states (NY/FL/IL), and ADA Title II 2027/2028 deadline countdowns where applicable
+  3. A user can open a portfolio/fleet view that ranks sites by their exposure indicator
+  4. A WordPress admin sees the per-site exposure indicator in the plugin dashboard
+  5. The exposure model and its disclaimers are documented and conservative (transparency + good-faith framing, explicit "not legal advice")
 **Plans**: TBD
 **UI hint**: yes
 
-### Phase 79: Pro feature-gate bundle (WP plugin)
-**Goal**: A free-tier WordPress user can run basic scans, while a Pro-entitled user unlocks the conversion bundle (full-site/bulk scan, audit history, Excel export, CPT/WooCommerce scanning, multisite), with entitlement enforced by the plugin.
-**Track**: `luqen-wordpress` repo (own CI) — independent track, parallelizable with platform work
-**Depends on**: Phase 80 (entitlement foundation) for GATE-06's enterprise-mode path, which reads the connected Luqen org plan. The standalone license-key path is stubbed (no dependency), so the gating UI and free/Pro feature splits can be built in parallel and wired to the foundation at GATE-06.
-**Requirements**: GATE-01, GATE-02, GATE-03, GATE-04, GATE-05, GATE-06
+### Phase 82: Scheduled executive digest
+**Goal**: An admin can schedule a recurring (weekly/monthly) executive digest for an org or site that summarizes "what changed / what's at risk" since the last period — new vs fixed findings, the exposure trend (from Phase 81), and deadline countdowns — delivered over the existing notify channels (email/Slack/Teams) with a board-ready PDF, and a per-site WordPress digest reusing WP company-info. All in conservative framing. Built on existing notify plugins + report/fleet PDF pipelines + WP company-info.
+**Track**: Cross-repo — `luqen` platform (scheduler + digest builder + notify delivery + board PDF) + `luqen-wordpress` (per-site digest reusing WP company-info / per-site master data)
+**Depends on**: Phase 81 — the digest reports the legal-exposure trend that Phase 81 produces, so it sequences LAST. Builds on the existing notify (email/Slack/Teams) + report/fleet PDF pipelines.
+**Requirements**: DIGEST-01, DIGEST-02, DIGEST-03, DIGEST-04, DIGEST-05
 **Success Criteria** (what must be TRUE):
-  1. A free-tier WP user is limited on full-site/bulk scanning; a Pro-entitled user can run full-site/bulk scans
-  2. A Pro user can view retained audit history for a post/page across scans, scan custom post types / WooCommerce products, and run the plugin across a multisite network
-  3. A Pro user can export findings to Excel (xlsx — no CSV per project rule)
-  4. The plugin enforces free-vs-Pro entitlement: in enterprise mode it derives from the connected Luqen org plan; a standalone license-key path is stubbed for future use
-**Plans**: TBD
-**UI hint**: yes
-
-### Phase 80: Credit-metered AI fixes
-**Goal**: Each org has a credit balance that `generate-fix` decrements on top of the existing `llm_usage` ledger; admins can allocate/top-up credits; when exhausted the flow degrades gracefully to the deterministic fix fallback; balance is visible in the dashboard and WP plugin. This phase also establishes the thin per-org entitlement foundation (plan + allocation persistence) that GATE-06, AGENCY-04, and PRICE-03 build on.
-**Track**: `luqen` platform (llm + dashboard) + a WP consumer surface (`luqen-wordpress`). Builds directly on the `llm_usage` telemetry + pricing registry + retention shipped in Phases 72–77.
-**Depends on**: Phase 78 (sequenced after for ship cadence; functionally independent). Establishes the entitlement foundation other phases consume — so it precedes 79's enterprise path, 81's partner entitlement, and 82's plan model.
-**Requirements**: CREDIT-01, CREDIT-02, CREDIT-03, CREDIT-04, CREDIT-05
-**Success Criteria** (what must be TRUE):
-  1. Each `generate-fix` call decrements the org's credit balance, recorded on top of the existing `llm_usage` ledger (balance + consumption ledger maintained)
-  2. An admin can set or top-up a per-org credit allocation from the dashboard
-  3. When an org's credits are exhausted, `generate-fix` is gated and degrades gracefully to the deterministic fix fallback — never hard-erroring the user flow
-  4. A dashboard user sees remaining credit balance and consumption against allocation on `/admin/llm-usage`
-  5. A WP plugin user sees remaining credits / a paywall prompt when AI fixes are metered out
-**Plans**: TBD
-**UI hint**: yes
-
-### Phase 81: Agency tier
-**Goal**: An agency user manages multiple client orgs/sites from one console, produces white-label rebrandable reports and themed client-facing surfaces, generates VPAT/ACR conformance reports, and is governed by a partner/resale entitlement covering N client sites.
-**Track**: `luqen` platform (dashboard)
-**Depends on**: Phase 80 — AGENCY-04 (partner/resale entitlement) extends the thin entitlement foundation established in Phase 80.
-**Requirements**: AGENCY-01, AGENCY-02, AGENCY-03, AGENCY-04, AGENCY-05
-**Success Criteria** (what must be TRUE):
-  1. An agency user manages multiple client orgs/sites from a single multi-client console
-  2. An agency can generate white-label / rebrandable client reports (agency logo + name, not Luqen branding) and apply white-label theming (logo, colors) to client-facing dashboard/report surfaces
-  3. An agency can generate a VPAT / ACR (Accessibility Conformance Report) for a client site
-  4. The platform models a partner/resale entitlement (agency plan covering N client sites)
-**Plans**: TBD
-**UI hint**: yes
-
-### Phase 82: Pricing & packaging
-**Goal**: Free/Pro/Agency tiers are codified as an explicit feature matrix, driven by a per-org plan/entitlement model that is the single source of truth consumed by dashboard, LLM, and WP, with documented pricing anchors.
-**Track**: `luqen` platform — cross-cutting (consumed by all surfaces)
-**Depends on**: Phases 79, 80, 81 — formalizes and unifies the entitlement slices those phases introduced (credit allocation from 80, partner entitlement from 81, WP entitlement from 79) into one plan model. HARD-GATED on the in-flight enterprise-pricing research, so it sequences LAST.
-**Requirements**: PRICE-01, PRICE-02, PRICE-03
-**Success Criteria** (what must be TRUE):
-  1. Free/Pro/Agency tiers are codified as an explicit feature matrix showing which capabilities each tier unlocks
-  2. A per-org plan/entitlement model drives feature availability platform-wide as a single source of truth consumed by dashboard, LLM, and WP
-  3. Pricing anchors are documented (informed by the in-flight enterprise-pricing research; WP anchors free→~$190/yr Pro→~$2,250/yr/25-site Agency already validated)
+  1. An admin can schedule a recurring (weekly/monthly) executive digest for an org or site
+  2. The digest summarizes "what changed / what's at risk" since the last period — new vs fixed findings, exposure trend, and deadline countdowns — in the conservative framing (never "compliant")
+  3. The digest is delivered via the existing notify channels (email / Slack / Teams)
+  4. An admin can download or attach a board-ready PDF export of the digest
+  5. A WordPress site produces a per-site digest reusing WP company-info / per-site master data
 **Plans**: TBD
 **UI hint**: yes
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 78 → 79 → 80 → 81 → 82
+Phases execute in numeric order: 78 (done) → 79 → 80 → 81 → 82
 
-Two parallelizable tracks: the WordPress track (78 `readme.txt`, 79) and the platform track (78 dashboard, 80, 81, 82) run concurrently, synchronizing where 79's enterprise path consumes the Phase 80 entitlement foundation.
+**Dependency / parallelism notes:**
+- **Two independent developer tracks** — Phase 79 (CI gate) and Phase 80 (MCP fix tools) share no dependency and can run concurrently after Phase 78.
+- **Executive tracks are sequenced** — Phase 81 (flagship exposure scoring) MUST precede Phase 82 (digest), because the digest reports the exposure trend Phase 81 produces.
+- Every phase is cross-repo (`luqen` + `luqen-wordpress`), with the WordPress-leaned SMB surface called out in each phase's scope and success criteria.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 78. Anti-overlay positioning | v3.5.0 | 1/1 | ✅ Done | 2026-06-01 |
-| 79. Pro feature-gate bundle (WP plugin) | v3.5.0 | 1/1 | ✅ Done | 2026-06-01 |
-| 80. Credit-metered AI fixes | v3.5.0 | 1/1 | ✅ Done | 2026-06-01 |
-| 81. Agency tier | v3.5.0 | 1/1 | ✅ Done | 2026-06-01 |
-| 82. Pricing & packaging | v3.5.0 | 1/1 | ✅ Done | 2026-06-01 |
+| 79. CI regression gate | v3.5.0 | 3/3 | Complete   | 2026-06-07 |
+| 80. MCP fix tools for coding agents | v3.5.0 | 0/TBD | Not started | - |
+| 81. Jurisdiction legal-exposure scoring | v3.5.0 | 0/TBD | Not started | - |
+| 82. Scheduled executive digest | v3.5.0 | 0/TBD | Not started | - |
 
 ---
 
 ## Next Milestone: v3.6.0 Agent surface + semantic depth
 
-**Goal:** Two large, mostly-independent efforts that deepen the product where it's genuinely thin — an org-aware agent surface, and the semantic (vision) accessibility checks that no static scanner can do. Both are milestone-sized; run each as a proper GSD phase.
+**Goal:** Two large, mostly-independent efforts that deepen the product where it's genuinely thin — an org-aware agent surface, and the semantic (vision) accessibility checks that no static scanner can do.
 
-**Status:** IN PROGRESS (started 2026-06-02). Single-tier confirmed — do NOT build on or extend the dormant Free/Pro/Agency surfaces.
+**Status:** IN PROGRESS (started 2026-06-02; vision adapter + TTS + WP vision mirror shipped). Single-tier confirmed — do NOT build on or extend the dormant Free/Pro/Agency surfaces. Full detail of remaining items lives in `.planning/NEXT-SESSION-PROMPT.md`.
 
-**KEY DISCOVERY (2026-06-02):** Phase 83 was ~90% already shipped by prior milestones (v3.0.0 Phases 28–33 MCP + v3.1.0 Phases 34–42 Agent Companion v2). MCP servers exist across ALL services (llm/compliance/branding/dashboard/monitor — tools, resources, prompts, RBAC, org-scoped). The dashboard already has a working org-aware **text** companion + **speech-to-text** (Web Speech API, `agent-speech.js`). The ONLY gaps were **text-to-speech (voice output)** and **multimodal image input** — and the image-input gap IS the Phase 84 vision adapter. **User decision:** scope = "Vision adapter + TTS" (converge the two phases on one vision adapter, plus browser TTS for the companion).
-
-**SHIPPED THIS SESSION (all on master, CI green, deployed):**
-- `85be72a` **vision adapter** — `ImageInput` + optional `images[]` on `CompletionOptions`/`ChatMessage`; OpenAI/Anthropic/Ollama all attach images on `complete()` + `completeStream()`. (packages/llm/src/providers/)
-- `85be72a` **analyse-visual capability** + `POST /api/v1/analyse-visual` — heading-semantics (1.3.1) + alt-text (1.1.1) checks, structured verdict, graceful degrade. (packages/llm/src/capabilities/analyse-visual.ts)
-- `941c956` **core `captureVisualContext()`** — browser-side screenshot + heading outline + image inventory; LLM-agnostic. (packages/core/src/behavioral/visual.ts)
-- `3343063` **Phase 84 vision integration (DONE)** — core `BehavioralOptions.onVisualContext` callback (capture + inject, reuses open browser, keeps core LLM-free); dashboard `LLMClient.analyseVisual()`, `scanner/vision-pass.ts` (heading-semantics mapping → `Issue` runner='vision', degrade to [] on 503), orchestrator `resolveVisionAnalyzer` + server.ts wiring. Vision findings flow into reports + VPAT (move 1.3.1 off "Not Evaluated"). Runs as part of the deep behavioral scan; no new UI toggle.
-- `9a018de` **Phase 83 TTS (DONE)** — browser `speechSynthesis` voice-output toggle in the agent drawer (`static/agent-tts.js`), spoken on the SSE 'done' frame; i18n in all 6 locales.
-
-**REMAINING (next session — full detail in `.planning/NEXT-SESSION-PROMPT.md`):**
-- [x] **A. Phase 83 companion multimodal — DONE 2026-06-02.** Image upload + clipboard paste in the agent drawer (`agent-images.js`, staging tray, ≤4 images / ≤5 MB / png·jpeg·webp·gif). Base64 threaded through `POST /agent/message` (new `images` array for JSON callers + `imagesJson` string for the urlencoded form, both validated through one schema; per-route `bodyLimit` raised; image-only turns allowed) → persisted via migration 085 (`agent_messages.images`) → `windowToChatMessages` carries `images` on the user `AgentChatMessage` → LLM `agent-conversation` spreads them into `completeStream` (provider adapters already render). Thumbnails render in the optimistic bubble + on history rehydrate (`agent-message.hbs`). i18n ×6, CSS, openapi regenerated. **HUMAN UAT still pending** (UI; needs a vision model assigned to the `agent-conversation` capability).
-- [ ] **B. WordPress vision mirror** (luqen-wordpress, PRIVATE): enterprise mode inherits dashboard vision automatically (confirm + surface in WP findings UI); standalone mode = capture screenshot + heading outline client-side in `scan-runner.js` → POST to the connected Luqen's `analyse-visual` (gate on a configured connection; degrade silently). Single-tier (no Pro/Agency gate). Test via wp-test lxc + Playwright; bump version/CHANGELOG/readme/.pot.
-- [x] **C. dashboard polish — DONE 2026-06-02.** C#3 `analyse-visual` LLM MCP tool (`0afbc49`); C#4 verified (in `CAPABILITY_NAMES`); C#1 per-image alt-text vision check (`62b6973` — core `captureVisualContext` opt-in per-image bytes + dashboard capped alt-text analyzer → 1.1.1 Issues); C#2 positive-pass VPAT (`bb3c2e5` — `deriveRow` elevates a clean LLM-vision-evaluated criterion off "Not Evaluated" via opt-in `BuildVpatOptions.behaviorallyEvaluatedCriteria`, **producer wiring deferred** — scan must record vision-evaluated criteria; legal review recommended before enabling).
-- [x] **B. WordPress vision mirror — DONE 2026-06-02.** Enterprise slice (luqen `446beda` exposes `runner`; WP v0.27.0 `e5516fe` "AI vision" badge + sanitizer allows `'vision'`). Standalone slice (WP v0.28.0 `548f4bf`, WP CI green): client-side html2canvas screenshot + heading outline → authenticated WP `/wp-json/luqen/v1/vision` proxy → connected Luqen `analyse-visual` (heading-semantics) → `runner='vision'` findings; gated on connection, silent degrade. Verified on wp-test lxc (PHPCS 0, PHPUnit 88, smoke 62). Per-image alt-text standalone = future.
-- [x] **Gemini vision provider — BUILT + WIRED LIVE 2026-06-02.** `@luqen/llm` `gemini.ts` adapter (`fbe84c2`, vision via inline_data, proven against live Gemini API). Wired on live luqen-llm: gemini-2.5-flash as **fallback (p10)** across all capabilities + **primary (p0) for analyse-visual** (gemini-2.5-pro p10 backup). Live round-trip verified (verdict=issue). Key at /root/.gemini on lxc-kg, never committed.
-- [x] **Deploy pipeline fix (`a254768`)** — deploy.yml now builds + restarts ALL services (was core+dashboard only; llm/compliance/branding dist had gone stale since 2026-05-29).
-- [x] **ACR explicit-coverage section — DONE 2026-06-02 (`ec1cb5a`, CI green, deployed, verified live).** User feedback on the first delivered ACR: be explicit about what coverage the report includes; ADA must be named, not folded into "US". VPAT/ACR now renders a "Standards & laws evaluated against" section enumerating each selected regulation by full name from `scan.regulations` (legal-framings `deriveEvaluatedStandards` + built-in id→name catalog, live-override extension point; catalog-only so HTML/PDF/share are identical). i18n ×6. Verified live on Aperol scan `ff28d0a5`: "Americans with Disabilities Act (US-ADA), Equality Act 2010 (UK-EA)".
-- [x] **ACR programmatic per-regulation notes — DONE 2026-06-02 (luqen `b2fb086`, luqen-wordpress `f86852c` v0.29.0).** Follow-up to the explicit-coverage section: user direction was the notes must be programmatic and cover ALL regulations (not the curated keyword catalog). Both surfaces now render one note per selected regulation (full name + legal citation + in-force date + description + one section-level disclaimer), sourced from the compliance regulation records. Dashboard: module-level cached resolver `regulation-catalog.ts` wired once in server.ts → every render path (web/PDF/share/public-acr/fleet); curated per-law framing paragraphs retired. WP: `Luqen_Vpat::map_evaluated_standards` + `evaluated_standards` from bundled `wp_luqen_regulations`, scoped to active jurisdictions. Decision: note text composed in CONSUMERS, compliance stays the data source. Verified live (dashboard Aperol ACR) + on wp-test lxc (PHPUnit 90, PHPCS 0 errors, render harness). See [[Luqen ACR regulatory notes are programmatic from compliance data]].
-- [ ] HUMAN UAT: image upload + TTS are UI — need real-browser cross-persona UAT ([[feedback_ui_phase_uat]]). Requires a vision model assigned to the `agent-conversation` capability on /admin/llm.
-
-### Already shipped this run (carry-overs, not part of 83/84)
-- DB-plugin breaking-change tolerance fix (`55445c5`): Slice C/D repos optional + guarded.
-- widget→VPAT public ACR: dashboard `/reports/:id/acr` (`bc21e3a`) + WP a11y-statement ACR link (`a52d053`, v0.26.0).
+**Named follow-on milestones (out of scope this wave):** native mobile app testing; managed/guided expert-audit service; moats A2 (deepen PR fixes), A5 (fleet fix-once-apply-everywhere), B3 (remediation-velocity KPIs).
