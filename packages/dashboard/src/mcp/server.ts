@@ -23,6 +23,7 @@ import type { ToolMetadata } from '@luqen/core/mcp';
 import type { StorageAdapter } from '../db/index.js';
 import type { ScanService } from '../services/scan-service.js';
 import type { ServiceConnectionsRepository } from '../db/service-connections-repository.js';
+import type { DirectScanner } from '@luqen/core';
 import { VERSION } from '../version.js';
 import { DASHBOARD_TOOL_METADATA } from './metadata.js';
 import {
@@ -36,12 +37,22 @@ import {
   COMPLIANCE_TOOL_NAMES,
 } from './tools/compliance.js';
 import { registerFleetTools, FLEET_TOOL_NAMES } from './tools/fleet.js';
+import {
+  registerScanTools,
+  SCAN_TOOL_NAMES,
+} from './tools/scan.js';
+import {
+  registerFixTools,
+  FIX_TOOL_NAMES,
+  type LlmAccess,
+} from './tools/fix.js';
 import { registerResources } from './resources.js';
 import { registerPrompts } from './prompts.js';
 
 export { DASHBOARD_TOOL_METADATA } from './metadata.js';
 export { DASHBOARD_RESOURCE_METADATA } from './resources.js';
 export type { ComplianceAccess } from './tools/data.js';
+export type { LlmAccess } from './tools/fix.js';
 
 export interface DashboardMcpServerOptions {
   readonly storage: StorageAdapter;
@@ -55,6 +66,21 @@ export interface DashboardMcpServerOptions {
    * up in registerMcpRoutes from ServiceClientRegistry.getComplianceTokenManager().
    */
   readonly complianceAccess?: ComplianceAccess;
+  /**
+   * Resolves the live LLM service URL + bearer token per call. When omitted
+   * (or returns null at runtime) dashboard_generate_fix returns an error.
+   * Wired up in registerMcpRoutes from ServiceClientRegistry.getLLMClient().
+   * Secret rotation is picked up per call — no cached secret.
+   */
+  readonly llmAccess?: LlmAccess;
+  /**
+   * DirectScanner instance for dashboard_scan_page. Required when
+   * llmAccess is provided (scan tool registered unconditionally so it is
+   * always available to agents with scans.create). Wired up in
+   * registerMcpRoutes as a DirectScanner constructed from the ScanService
+   * orchestrator or injected directly.
+   */
+  readonly scanner?: DirectScanner;
 }
 
 export async function createDashboardMcpServer(
@@ -64,7 +90,7 @@ export async function createDashboardMcpServer(
   readonly toolNames: readonly string[];
   readonly metadata: readonly ToolMetadata[];
 }> {
-  const { storage, scanService, serviceConnections, complianceAccess } = options;
+  const { storage, scanService, serviceConnections, complianceAccess, llmAccess, scanner } = options;
 
   const server = new McpServer(
     { name: 'luqen-dashboard', version: VERSION },
@@ -84,18 +110,38 @@ export async function createDashboardMcpServer(
   if (complianceAccess !== undefined) {
     registerComplianceTools(server, { complianceAccess });
   }
+  // Agent scan tool: registered unconditionally (scanner injected per
+  // registerMcpRoutes). When scanner is undefined at runtime (should not
+  // happen — routes/api/mcp.ts always provides one), the tool returns an
+  // error from the scanner.scan call path rather than silently missing.
+  if (scanner !== undefined) {
+    registerScanTools(server, { scanner });
+  }
+  // Agent fix tool: registered only when llmAccess is provided (mirrors
+  // registerComplianceTools guard — without llmAccess the tool would only
+  // return errors, so skip registration entirely; RBAC filtering naturally
+  // hides it since it is not in toolNames).
+  if (llmAccess !== undefined) {
+    registerFixTools(server, {
+      llmAccess,
+      ...(complianceAccess !== undefined ? { complianceAccess } : {}),
+    });
+  }
   registerResources(server, { storage });
   registerPrompts(server);
 
-  const toolNames =
-    complianceAccess !== undefined
-      ? [
-          ...DATA_TOOL_NAMES,
-          ...COMPLIANCE_TOOL_NAMES,
-          ...ADMIN_TOOL_NAMES,
-          ...FLEET_TOOL_NAMES,
-        ]
-      : [...DATA_TOOL_NAMES, ...ADMIN_TOOL_NAMES, ...FLEET_TOOL_NAMES];
+  // toolNames drives the RBAC filter for tools/list and the drift test count
+  // parity. Scan tool is counted when scanner is provided; fix tool counted
+  // when llmAccess is provided. Conditional to stay parity-consistent with
+  // what is actually registered above — any mismatch trips the drift test.
+  const toolNames = [
+    ...DATA_TOOL_NAMES,
+    ...(complianceAccess !== undefined ? COMPLIANCE_TOOL_NAMES : []),
+    ...ADMIN_TOOL_NAMES,
+    ...FLEET_TOOL_NAMES,
+    ...(scanner !== undefined ? SCAN_TOOL_NAMES : []),
+    ...(llmAccess !== undefined ? FIX_TOOL_NAMES : []),
+  ];
 
   return {
     server,
