@@ -186,7 +186,88 @@ describe('executeGenerateFix', () => {
     expect(capturedPrompt).toContain('<img src="photo.jpg">');
     expect(capturedPrompt).toContain('img { display: block; }');
   });
-});
+
+  it('echoes wcagCriterion on result.data and emits a non-empty diff for a successful fix', async () => {
+    const wcagOrg = 'gen-fix-wcag-echo-org';
+    await db.assignCapability({ capability: 'generate-fix', modelId, priority: 1, orgId: wcagOrg });
+
+    const adapter = makeAdapter([{ text: VALID_RESPONSE }]);
+    const factory = vi.fn().mockReturnValue(adapter);
+
+    const result = await executeGenerateFix(
+      db,
+      factory,
+      {
+        wcagCriterion: '1.1.1',
+        issueMessage: 'Missing alt text',
+        htmlContext: '<img src="photo.jpg">',
+        orgId: wcagOrg,
+      },
+      { maxRetries: 0, retryDelayMs: 0 },
+    );
+
+    expect(result.data.wcagCriterion).toBe('1.1.1');
+    expect(typeof result.data.diff).toBe('string');
+    expect((result.data.diff as string).length).toBeGreaterThan(0);
+    // diff must reference both the original and fixed HTML
+    expect(result.data.diff).toContain('<img src="photo.jpg">');
+    expect(result.data.diff).toContain('<img src="photo.jpg" alt="Team photo">');
+  });
+
+  it('still echoes wcagCriterion and provides diff when fixedHtml is empty (degraded parse)', async () => {
+    const degradedOrg = 'gen-fix-degraded-org';
+    await db.assignCapability({ capability: 'generate-fix', modelId, priority: 1, orgId: degradedOrg });
+
+    const adapter = makeAdapter([{ text: 'not valid json {{{' }]);
+    const factory = vi.fn().mockReturnValue(adapter);
+
+    const result = await executeGenerateFix(
+      db,
+      factory,
+      {
+        wcagCriterion: '2.4.4',
+        issueMessage: 'Link purpose unclear',
+        htmlContext: '<a href="#">click here</a>',
+        orgId: degradedOrg,
+      },
+      { maxRetries: 0, retryDelayMs: 0 },
+    );
+
+    // Must not throw; wcagCriterion must still be echoed
+    expect(result.data.wcagCriterion).toBe('2.4.4');
+    // diff is defined (string) even if empty
+    expect(typeof result.data.diff).toBe('string');
+    // fixedHtml is empty on degraded parse
+    expect(result.data.fixedHtml).toBe('');
+    // existing fields unchanged
+    expect(result.data.effort).toBe('medium');
+  });
+
+  it('existing result.data fields (fixedHtml, explanation, effort) are still present and unaffected', async () => {
+    const existingFieldsOrg = 'gen-fix-existing-fields-org';
+    await db.assignCapability({ capability: 'generate-fix', modelId, priority: 1, orgId: existingFieldsOrg });
+
+    const adapter = makeAdapter([{ text: VALID_RESPONSE }]);
+    const factory = vi.fn().mockReturnValue(adapter);
+
+    const result = await executeGenerateFix(
+      db,
+      factory,
+      {
+        wcagCriterion: '1.1.1',
+        issueMessage: 'Missing alt text',
+        htmlContext: '<img src="photo.jpg">',
+        orgId: existingFieldsOrg,
+      },
+      { maxRetries: 0, retryDelayMs: 0 },
+    );
+
+    // Original fields must still exist and be correct
+    expect(result.data.fixedHtml).toBe('<img src="photo.jpg" alt="Team photo">');
+    expect(result.data.explanation).toBe('Add descriptive alt text to convey the image purpose.');
+    expect(result.data.effort).toBe('low');
+  });
+}); // end executeGenerateFix
 
 describe('parseGenerateFixResponse', () => {
   it('returns { fixedHtml: "", explanation: "", effort: "medium" } for malformed JSON (graceful fallback)', () => {
