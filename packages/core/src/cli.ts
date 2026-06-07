@@ -15,14 +15,110 @@ import { mapIssuesToSource } from './source-mapper/source-mapper.js';
 import { proposeFixesFromReport } from './fixer/fix-proposer.js';
 import { applyFix, generateDiffPreview } from './fixer/fix-applier.js';
 import { fetchComplianceEnrichment } from './compliance-client.js';
+import { writeFile, mkdir } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import type { ScanReport, FixProposal, ComplianceEnrichment } from './types.js';
 import { VERSION } from './version.js';
+import {
+  readBaseline,
+  writeBaseline,
+  fingerprint,
+  normalizePath,
+  type BaselineFinding,
+} from './baseline/baseline.js';
+import { diffBaseline, computeGateExitCode, type BaselineDiff } from './baseline/diff.js';
+import { formatGateSummary } from './reporter/gate-reporter.js';
 
 // Exit codes
 // 0 = clean (no issues found)
-// 1 = issues found
-// 2 = partial failure (page-level errors)
+// 1 = issues found (or gate: new findings present)
+// 2 = partial failure (page-level errors) / gate infra error
 // 3 = fatal (only from catch block)
+
+// ---------------------------------------------------------------------------
+// runGateAction — exported helper for testing the gate logic without a real scan
+// ---------------------------------------------------------------------------
+
+export interface GateActionOptions {
+  readonly updateBaseline: boolean;
+  readonly baselinePath: string;
+  readonly currentFindings: readonly BaselineFinding[];
+  readonly targetUrl: string;
+  readonly failOn?: string;
+  readonly minSeverity?: string;
+  readonly gateOutputPath?: string;
+}
+
+export interface GateActionResult {
+  readonly exitCode: number;
+  readonly summary: string;
+}
+
+export async function runGateAction(opts: GateActionOptions): Promise<GateActionResult> {
+  const failOn = opts.failOn ?? 'new';
+  const minSeverity = (opts.minSeverity ?? 'error') as 'error' | 'warning';
+
+  if (opts.updateBaseline) {
+    // Write current findings as the new baseline and exit 0
+    const file = {
+      meta: {
+        schemaVersion: 1 as const,
+        generatedAt: new Date().toISOString(),
+        generatedBy: 'luqen scan --update-baseline' as const,
+        target: opts.targetUrl,
+      },
+      findings: [...opts.currentFindings],
+    };
+    await writeBaseline(opts.baselinePath, file);
+    const count = opts.currentFindings.length;
+    const copy = count === 0
+      ? `Baseline updated: 0 findings (clean baseline) written to ${opts.baselinePath}`
+      : `Baseline updated: ${count} findings written to ${opts.baselinePath}`;
+    return { exitCode: 0, summary: copy };
+  }
+
+  // Gate run: read baseline (read-only)
+  const baseline = await readBaseline(opts.baselinePath);
+
+  if (baseline === null) {
+    // Infra error — baseline unreadable or path-traversal rejection (D-10, T-79-04)
+    const copy = `Luqen gate: baseline file unreadable at ${opts.baselinePath}. Scan result not assessed. Resolve the baseline or run with --fail-on=none to report-only.`;
+
+    // Write infra-error gate output if requested (Plan 02 contract)
+    if (opts.gateOutputPath) {
+      const infraOutput = {
+        newFindings: [] as BaselineFinding[],
+        fixedFindings: [] as BaselineFinding[],
+        unchanged: [] as BaselineFinding[],
+        infraError: true,
+      };
+      await mkdir(dirname(opts.gateOutputPath), { recursive: true });
+      await writeFile(opts.gateOutputPath, JSON.stringify(infraOutput, null, 2), 'utf-8');
+    }
+
+    return { exitCode: 2, summary: copy };
+  }
+
+  // Compute diff
+  const diff: BaselineDiff = diffBaseline(baseline.findings, opts.currentFindings);
+  const gateExitCode = computeGateExitCode(
+    failOn,
+    diff,
+    opts.currentFindings,
+    false,
+    minSeverity,
+  );
+
+  const summary = formatGateSummary(diff, opts.baselinePath);
+
+  // Write machine-readable gate output if requested (Plan 02 contract)
+  if (opts.gateOutputPath) {
+    await mkdir(dirname(opts.gateOutputPath), { recursive: true });
+    await writeFile(opts.gateOutputPath, JSON.stringify(diff, null, 2), 'utf-8');
+  }
+
+  return { exitCode: gateExitCode, summary };
+}
 
 export const program = new Command();
 
@@ -50,6 +146,11 @@ program
   .option('--jurisdictions <list>', 'Comma-separated jurisdiction IDs (e.g. EU,US)', 'EU,US')
   .option('--compliance-client-id <id>', 'OAuth client ID for the compliance service')
   .option('--compliance-client-secret <secret>', 'OAuth client secret for the compliance service')
+  .option('--fail-on <mode>', 'Gate failure mode: new (default), none, all', 'new')
+  .option('--min-severity <level>', 'Minimum severity to count: error (default) or warning', 'error')
+  .option('--baseline <path>', 'Path to baseline file', '.luqen/baseline.json')
+  .option('--update-baseline', 'Write current findings to baseline and exit 0')
+  .option('--gate-output <path>', 'Write the BaselineDiff JSON for the gate run to this path (consumed by the GitHub Action)')
   .action(async (url: string, opts: {
     standard?: string;
     concurrency?: number;
@@ -63,6 +164,11 @@ program
     jurisdictions?: string;
     complianceClientId?: string;
     complianceClientSecret?: string;
+    failOn?: string;
+    minSeverity?: string;
+    baseline?: string;
+    updateBaseline?: boolean;
+    gateOutput?: string;
   }) => {
     try {
       const config = await loadConfig({
@@ -217,7 +323,44 @@ program
         console.log(`HTML report written to: ${htmlPath}`);
       }
 
-      // Determine exit code
+      // ---------------------------------------------------------------------------
+      // Gate logic: --update-baseline / --fail-on / --gate-output
+      // ---------------------------------------------------------------------------
+
+      // Build current findings from scan results (fingerprinted + path-normalized)
+      const currentFindings: BaselineFinding[] = mappedPages.flatMap((p) =>
+        p.issues.map((issue) => {
+          const normalizedP = normalizePath(p.url);
+          return {
+            fingerprint: fingerprint(normalizedP, issue.code, issue.selector),
+            normalizedPath: normalizedP,
+            code: issue.code,
+            type: issue.type as 'error' | 'warning' | 'notice',
+            selector: issue.selector,
+            message: issue.message,
+          };
+        }),
+      );
+
+      const baselinePath = opts.baseline ?? '.luqen/baseline.json';
+
+      if (opts.updateBaseline || opts.failOn !== undefined || opts.gateOutput !== undefined) {
+        // Gate mode is active (explicit flags were passed or gate output requested)
+        const gateResult = await runGateAction({
+          updateBaseline: opts.updateBaseline === true,
+          baselinePath,
+          currentFindings,
+          targetUrl: url,
+          failOn: opts.failOn,
+          minSeverity: opts.minSeverity,
+          gateOutputPath: opts.gateOutput,
+        });
+
+        console.log(gateResult.summary);
+        process.exit(gateResult.exitCode);
+      }
+
+      // Standard (non-gate) exit code logic
       if (errors.length > 0 && pages.length > 0) {
         process.exit(2);
       } else if (errors.length > 0 && pages.length === 0) {
