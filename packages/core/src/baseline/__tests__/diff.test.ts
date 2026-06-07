@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { diffBaseline, computeGateExitCode, type BaselineDiff } from './diff.js';
-import { type BaselineFinding } from './baseline.js';
+import { diffBaseline, computeGateExitCode, type BaselineDiff } from '../diff.js';
+import { type BaselineFinding } from '../baseline.js';
 
 // ---------------------------------------------------------------------------
 // Helpers

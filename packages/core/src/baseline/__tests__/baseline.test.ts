@@ -9,7 +9,7 @@ import {
   writeBaseline,
   type BaselineFile,
   type BaselineFinding,
-} from './baseline.js';
+} from '../baseline.js';
 
 // Canonical cross-tool parity vector (D-04, Plan 03 PHP test reuses this exact value)
 const CANONICAL_PATH = '/about';
