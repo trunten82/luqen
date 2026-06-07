@@ -1,0 +1,88 @@
+name: 'Luqen Accessibility Gate'
+description: >
+  Runs the Luqen accessibility scan against a URL, diffs the results against a
+  committed baseline, and posts a single sticky PR comment summarising new vs
+  fixed findings (each new finding annotated with its WCAG criterion and
+  jurisdiction context). The PR check status mirrors the --fail-on semantics of
+  the CLI.
+
+  Requires pull-requests: write permission to post/update the PR comment.
+  Fork PRs get a read-only token — the comment post is skipped gracefully when
+  the token cannot write (see post-comment.sh fork-PR handling).
+
+inputs:
+  url:
+    description: 'URL of the site to scan'
+    required: true
+  baseline-path:
+    description: 'Path to the committed baseline JSON file'
+    required: false
+    default: '.luqen/baseline.json'
+  fail-on:
+    description: 'Gate failure mode: new (default), none, all'
+    required: false
+    default: 'new'
+  min-severity:
+    description: 'Minimum finding severity that counts toward the gate: error (default) or warning'
+    required: false
+    default: 'error'
+  compliance-url:
+    description: 'URL of the Luqen compliance service (optional; enables jurisdiction context in the PR comment)'
+    required: false
+    default: ''
+  github-token:
+    description: 'GitHub token with pull-requests: write scope, used to post/update the PR comment'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'npm'
+
+    - name: Install dependencies
+      shell: bash
+      run: npm ci
+
+    - name: Build @luqen/core
+      shell: bash
+      run: npm run build -w packages/core
+
+    - name: Run accessibility gate
+      id: gate
+      shell: bash
+      run: |
+        GATE_EXIT=0
+        node packages/core/dist/cli.js scan "${{ inputs.url }}" \
+          --fail-on="${{ inputs.fail-on }}" \
+          --min-severity="${{ inputs.min-severity }}" \
+          --baseline="${{ inputs.baseline-path }}" \
+          --gate-output="$RUNNER_TEMP/luqen-gate-diff.json" \
+          --compliance-url="${{ inputs.compliance-url }}" \
+          || GATE_EXIT=$?
+        echo "exit_code=$GATE_EXIT" >> "$GITHUB_OUTPUT"
+        if [ "$GATE_EXIT" -eq 1 ]; then
+          echo "::error::Luqen gate: new accessibility findings vs baseline. See PR comment for details."
+        elif [ "$GATE_EXIT" -eq 2 ]; then
+          echo "::error::Luqen gate: infrastructure error — scan engine or baseline unavailable. Gate could not complete."
+        fi
+
+    - name: Post sticky PR comment
+      if: github.event_name == 'pull_request'
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        DIFF_JSON_PATH: ${{ runner.temp }}/luqen-gate-diff.json
+      run: bash .github/actions/accessibility-gate/post-comment.sh
+
+    - name: Exit with gate status
+      shell: bash
+      run: exit ${{ steps.gate.outputs.exit_code }}
