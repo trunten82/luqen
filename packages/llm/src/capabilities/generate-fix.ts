@@ -1,6 +1,6 @@
 import type { DbAdapter } from '../db/adapter.js';
 import type { LLMProviderAdapter } from '../providers/types.js';
-import { buildGenerateFixPrompt } from '../prompts/generate-fix.js';
+import { buildGenerateFixPrompt, buildGutenbergFixPrompt } from '../prompts/generate-fix.js';
 import { CapabilityExhaustedError, CapabilityNotConfiguredError, type CapabilityResult } from './types.js';
 import { recordCompletion } from './record-usage.js';
 
@@ -106,7 +106,9 @@ export async function executeGenerateFix(
 
         const prompt = promptOverride != null
           ? applyPromptTemplate(promptOverride.template, input)
-          : buildGenerateFixPrompt(input);
+          : input.platform === 'wordpress-gutenberg'
+            ? buildGutenbergFixPrompt(input)
+            : buildGenerateFixPrompt(input);
 
         const result = await recordCompletion(
           db,

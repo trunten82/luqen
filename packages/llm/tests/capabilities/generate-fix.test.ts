@@ -298,8 +298,8 @@ describe('executeGenerateFix', () => {
       { maxRetries: 0, retryDelayMs: 0 },
     );
 
-    // Gutenberg-specific markers must appear in the prompt
-    expect(capturedPrompt).toContain('gutenberg');
+    // Gutenberg-specific markers must appear in the prompt (case-insensitive)
+    expect(capturedPrompt.toLowerCase()).toContain('gutenberg');
     // Still contains the issue variables
     expect(capturedPrompt).toContain('1.3.1');
     expect(capturedPrompt).toContain('Block missing aria label');
