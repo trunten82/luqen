@@ -24,6 +24,30 @@ import type { ToolMetadata } from '@luqen/core/mcp';
 import { DASHBOARD_ADMIN_TOOL_METADATA } from './tools/admin.js';
 import { DASHBOARD_FLEET_TOOL_METADATA } from './tools/fleet.js';
 
+/**
+ * DASHBOARD_AGENT_TOOL_METADATA — per-tool RBAC annotations for the Phase 80
+ * agent tools (dashboard_scan_page, dashboard_generate_fix).
+ *
+ * Both tools are non-destructive (D-09 never-apply): no destructive flag,
+ * no write path, no apply path. Output is a draft for human review only (D-10).
+ *
+ * Permission ids reuse existing entries from permissions.ts:
+ *   scans.create — gates the scan page tool (read-only inline scan)
+ *   issues.fix   — gates the fix generation tool (draft output only)
+ * Neither id is new — permissions.ts is NOT edited (80-PATTERNS.md lines 312-318).
+ */
+export const DASHBOARD_AGENT_TOOL_METADATA: readonly ToolMetadata[] = [
+  // Non-destructive: does NOT create a scan record (annotated readOnlyHint:true
+  // in scan.ts). Gated by scans.create so it is visible only to agents that
+  // already have permission to initiate scans in the org.
+  { name: 'dashboard_scan_page',    requiredPermission: 'scans.create' },
+  // Non-destructive: returns a draft fix for human review only; never applies
+  // changes (annotated readOnlyHint:true in fix.ts, DRAFT_DISCLAIMER on every
+  // response). Gated by issues.fix so it is visible only to agents that can
+  // act on issues in the org.
+  { name: 'dashboard_generate_fix', requiredPermission: 'issues.fix' },
+];
+
 export const DASHBOARD_COMPLIANCE_TOOL_METADATA: readonly ToolMetadata[] = [
   // Discovery proxies for the compliance reference-data endpoints. All four
   // are read-only and gated by compliance.view (the same permission that
@@ -71,4 +95,5 @@ export const DASHBOARD_TOOL_METADATA: readonly ToolMetadata[] = [
   ...DASHBOARD_COMPLIANCE_TOOL_METADATA,
   ...DASHBOARD_ADMIN_TOOL_METADATA,
   ...DASHBOARD_FLEET_TOOL_METADATA,
+  ...DASHBOARD_AGENT_TOOL_METADATA,
 ];

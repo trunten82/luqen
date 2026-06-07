@@ -66,6 +66,7 @@ import { PluginManager } from './plugins/manager.js';
 import { loadRegistry } from './plugins/registry.js';
 import { ScanOrchestrator } from './scanner/orchestrator.js';
 import { ScanService } from './services/scan-service.js';
+import { DirectScanner } from '@luqen/core';
 import { createRedisClient, RedisScanQueue, SsePublisher } from './cache/redis.js';
 import { dashboardUserRoutes } from './routes/admin/dashboard-users.js';
 import { apiKeyRoutes } from './routes/admin/api-keys.js';
@@ -1252,12 +1253,30 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     if (token === '') return null;
     return { baseUrl: config.complianceUrl, token };
   };
+  // Phase 80: LLM access for dashboard_generate_fix. Resolve per call via the
+  // registry so admin secret rotations propagate without a restart; null when
+  // the LLM connection is not configured.
+  const mcpLlmAccess = async (): Promise<{
+    readonly baseUrl: string;
+    readonly token: string;
+  } | null> => {
+    const llmClient = getLLMClient();
+    if (llmClient === null) return null;
+    const token = await llmClient.getToken();
+    if (token === null || token === '') return null;
+    return { baseUrl: llmClient.baseUrl, token };
+  };
+  // Phase 80: DirectScanner for dashboard_scan_page (non-destructive inline
+  // WCAG scan). One shared instance per server lifecycle — pa11y is stateless.
+  const mcpDirectScanner = new DirectScanner();
   await registerMcpRoutes(server, {
     verifyToken: mcpVerifier,
     storage,
     scanService: mcpScanService,
     serviceConnections: serviceConnectionsRepo,
     complianceAccess: mcpComplianceAccess,
+    llmAccess: mcpLlmAccess,
+    scanner: mcpDirectScanner,
     resourceMetadataUrl: `${dashboardPublicUrl}/.well-known/oauth-protected-resource`,
   });
 
