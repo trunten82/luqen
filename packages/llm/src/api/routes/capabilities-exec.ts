@@ -36,6 +36,10 @@ const GenerateFixBody = Type.Object(
     htmlContext: Type.Optional(Type.String()),
     cssContext: Type.Optional(Type.String()),
     orgId: Type.Optional(Type.String()),
+    /** Platform context for fix generation. Unknown values are rejected 400 at the route boundary (T-80-01). */
+    platform: Type.Optional(
+      Type.Union([Type.Literal('html'), Type.Literal('wordpress-gutenberg')]),
+    ),
   },
   { additionalProperties: true },
 );
@@ -175,6 +179,10 @@ const GenerateFixData = Type.Object(
     model: Type.Optional(Type.String()),
     provider: Type.Optional(Type.String()),
     attempts: Type.Optional(Type.Number()),
+    /** Echoed from request wcagCriterion — enables MCP tool consumers to correlate results. */
+    wcagCriterion: Type.Optional(Type.String()),
+    /** Labelled before/after diff between htmlContext and fixedHtml. */
+    diff: Type.Optional(Type.String()),
   },
   { additionalProperties: true },
 );
@@ -367,6 +375,12 @@ export async function registerCapabilityExecRoutes(
     }
     const htmlContext = typeof body.htmlContext === 'string' ? body.htmlContext : '';
 
+    // Validate platform strictly (T-80-01): only known enum values accepted.
+    if (body.platform !== undefined && body.platform !== 'html' && body.platform !== 'wordpress-gutenberg') {
+      await reply.status(400).send({ error: 'platform must be "html" or "wordpress-gutenberg"', statusCode: 400 });
+      return;
+    }
+
     const reqOrgId = (request as unknown as { orgId: string }).orgId;
     const orgId = typeof body.orgId === 'string' && body.orgId.length > 0
       ? body.orgId
@@ -378,6 +392,8 @@ export async function registerCapabilityExecRoutes(
     const metered = typeof orgId === 'string' && orgId.length > 0 && orgId !== 'system';
 
     try {
+      const platform = body.platform === 'wordpress-gutenberg' ? 'wordpress-gutenberg' as const : 'html' as const;
+
       const capResult = await executeGenerateFix(
         db,
         (type: string) => createAdapter(type as import('../../types.js').ProviderType),
@@ -387,6 +403,7 @@ export async function registerCapabilityExecRoutes(
           htmlContext,
           ...(typeof body.cssContext === 'string' ? { cssContext: body.cssContext } : {}),
           orgId,
+          platform,
         },
       );
 
@@ -401,6 +418,8 @@ export async function registerCapabilityExecRoutes(
         model: capResult.model,
         provider: capResult.provider,
         attempts: capResult.attempts,
+        wcagCriterion: capResult.data.wcagCriterion,
+        diff: capResult.data.diff,
       });
     } catch (err) {
       if (err instanceof CapabilityNotConfiguredError) {
