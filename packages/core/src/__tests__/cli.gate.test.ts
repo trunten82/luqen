@@ -11,9 +11,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { fingerprint, normalizePath, writeBaseline, type BaselineFinding, type BaselineFile } from './baseline/baseline.js';
-import { diffBaseline, computeGateExitCode } from './baseline/diff.js';
-import { runGateAction, type GateActionOptions } from './cli.js';
+import { fingerprint, normalizePath, writeBaseline, type BaselineFinding, type BaselineFile } from '../baseline/baseline.js';
+import { diffBaseline, computeGateExitCode } from '../baseline/diff.js';
+import { runGateAction, type GateActionOptions } from '../cli.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -258,7 +258,7 @@ describe('gate: --gate-output writes BaselineDiff JSON', () => {
 
 describe('CLI program: scan command has gate options', () => {
   it('scan command includes --fail-on option', async () => {
-    const { program } = await import('./cli.js');
+    const { program } = await import('../cli.js');
     const scan = program.commands.find((c) => c.name() === 'scan');
     expect(scan).toBeDefined();
     const optionNames = scan!.options.map((o) => o.long);
@@ -266,28 +266,28 @@ describe('CLI program: scan command has gate options', () => {
   });
 
   it('scan command includes --min-severity option', async () => {
-    const { program } = await import('./cli.js');
+    const { program } = await import('../cli.js');
     const scan = program.commands.find((c) => c.name() === 'scan');
     const optionNames = scan!.options.map((o) => o.long);
     expect(optionNames).toContain('--min-severity');
   });
 
   it('scan command includes --baseline option', async () => {
-    const { program } = await import('./cli.js');
+    const { program } = await import('../cli.js');
     const scan = program.commands.find((c) => c.name() === 'scan');
     const optionNames = scan!.options.map((o) => o.long);
     expect(optionNames).toContain('--baseline');
   });
 
   it('scan command includes --update-baseline option', async () => {
-    const { program } = await import('./cli.js');
+    const { program } = await import('../cli.js');
     const scan = program.commands.find((c) => c.name() === 'scan');
     const optionNames = scan!.options.map((o) => o.long);
     expect(optionNames).toContain('--update-baseline');
   });
 
   it('scan command includes --gate-output option', async () => {
-    const { program } = await import('./cli.js');
+    const { program } = await import('../cli.js');
     const scan = program.commands.find((c) => c.name() === 'scan');
     const optionNames = scan!.options.map((o) => o.long);
     expect(optionNames).toContain('--gate-output');

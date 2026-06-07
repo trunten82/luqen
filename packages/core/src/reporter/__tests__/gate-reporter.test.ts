@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { formatGateSummary } from './gate-reporter.js';
-import type { BaselineDiff } from '../baseline/diff.js';
-import type { BaselineFinding } from '../baseline/baseline.js';
+import { formatGateSummary } from '../gate-reporter.js';
+import type { BaselineDiff } from '../../baseline/diff.js';
+import type { BaselineFinding } from '../../baseline/baseline.js';
 
 function makeErrorFinding(overrides: Partial<BaselineFinding> = {}): BaselineFinding {
   return {
@@ -156,7 +156,7 @@ describe('gate-reporter.ts source D-17 static check', () => {
     const { fileURLToPath } = await import('node:url');
     const { dirname, join } = await import('node:path');
     const dir = dirname(fileURLToPath(import.meta.url));
-    const source = await readFile(join(dir, 'gate-reporter.ts'), 'utf-8');
+    const source = await readFile(join(dir, '..', 'gate-reporter.ts'), 'utf-8');
     expect(source).not.toMatch(/compliant|100%|lawsuit-proof|fully accessible/i);
     // 'passes' allowed only as a verb in comments; check it's not used as a conformance label in strings
     // We look specifically for it as a quoted output string
