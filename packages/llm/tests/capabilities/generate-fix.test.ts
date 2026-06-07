@@ -267,6 +267,120 @@ describe('executeGenerateFix', () => {
     expect(result.data.explanation).toBe('Add descriptive alt text to convey the image purpose.');
     expect(result.data.effort).toBe('low');
   });
+
+  it('routes through Gutenberg-block-aware prompt when platform is wordpress-gutenberg', async () => {
+    const gutenbergOrg = 'gen-fix-gutenberg-org';
+    await db.assignCapability({ capability: 'generate-fix', modelId, priority: 1, orgId: gutenbergOrg });
+
+    let capturedPrompt = '';
+    const factory = vi.fn().mockReturnValue({
+      type: 'mock',
+      connect: vi.fn().mockResolvedValue(undefined),
+      disconnect: vi.fn().mockResolvedValue(undefined),
+      healthCheck: vi.fn().mockResolvedValue(true),
+      listModels: vi.fn().mockResolvedValue([]),
+      complete: vi.fn(async (prompt: string) => {
+        capturedPrompt = prompt;
+        return { text: VALID_RESPONSE, usage: { inputTokens: 10, outputTokens: 50 } };
+      }),
+    });
+
+    await executeGenerateFix(
+      db,
+      factory,
+      {
+        wcagCriterion: '1.3.1',
+        issueMessage: 'Block missing aria label',
+        htmlContext: '<!-- wp:paragraph --><p>Hello</p><!-- /wp:paragraph -->',
+        platform: 'wordpress-gutenberg',
+        orgId: gutenbergOrg,
+      },
+      { maxRetries: 0, retryDelayMs: 0 },
+    );
+
+    // Gutenberg-specific markers must appear in the prompt
+    expect(capturedPrompt).toContain('gutenberg');
+    // Still contains the issue variables
+    expect(capturedPrompt).toContain('1.3.1');
+    expect(capturedPrompt).toContain('Block missing aria label');
+    // JSON output format must still request fixedHtml, explanation, effort
+    expect(capturedPrompt).toContain('"fixedHtml"');
+    expect(capturedPrompt).toContain('"explanation"');
+    expect(capturedPrompt).toContain('"effort"');
+  });
+
+  it('uses default html prompt (no Gutenberg markers) when platform is omitted', async () => {
+    const htmlOrg = 'gen-fix-html-platform-org';
+    await db.assignCapability({ capability: 'generate-fix', modelId, priority: 1, orgId: htmlOrg });
+
+    let capturedPrompt = '';
+    const factory = vi.fn().mockReturnValue({
+      type: 'mock',
+      connect: vi.fn().mockResolvedValue(undefined),
+      disconnect: vi.fn().mockResolvedValue(undefined),
+      healthCheck: vi.fn().mockResolvedValue(true),
+      listModels: vi.fn().mockResolvedValue([]),
+      complete: vi.fn(async (prompt: string) => {
+        capturedPrompt = prompt;
+        return { text: VALID_RESPONSE, usage: { inputTokens: 10, outputTokens: 50 } };
+      }),
+    });
+
+    await executeGenerateFix(
+      db,
+      factory,
+      {
+        wcagCriterion: '1.1.1',
+        issueMessage: 'Missing alt text',
+        htmlContext: '<img src="photo.jpg">',
+        orgId: htmlOrg,
+      },
+      { maxRetries: 0, retryDelayMs: 0 },
+    );
+
+    // No gutenberg-specific marker when platform not set
+    expect(capturedPrompt.toLowerCase()).not.toContain('gutenberg');
+  });
+
+  it('promptOverride wins over gutenberg platform selector', async () => {
+    const overrideGutenbergOrg = 'gen-fix-override-gutenberg-org';
+    await db.assignCapability({ capability: 'generate-fix', modelId, priority: 1, orgId: overrideGutenbergOrg });
+    await db.setPromptOverride(
+      'generate-fix',
+      'CUSTOM-OVERRIDE: {{wcagCriterion}} | {{issueMessage}} | {{htmlContext}}',
+      overrideGutenbergOrg,
+    );
+
+    let capturedPrompt = '';
+    const factory = vi.fn().mockReturnValue({
+      type: 'mock',
+      connect: vi.fn().mockResolvedValue(undefined),
+      disconnect: vi.fn().mockResolvedValue(undefined),
+      healthCheck: vi.fn().mockResolvedValue(true),
+      listModels: vi.fn().mockResolvedValue([]),
+      complete: vi.fn(async (prompt: string) => {
+        capturedPrompt = prompt;
+        return { text: VALID_RESPONSE, usage: { inputTokens: 10, outputTokens: 50 } };
+      }),
+    });
+
+    await executeGenerateFix(
+      db,
+      factory,
+      {
+        wcagCriterion: '1.1.1',
+        issueMessage: 'Missing alt',
+        htmlContext: '<img>',
+        platform: 'wordpress-gutenberg',
+        orgId: overrideGutenbergOrg,
+      },
+      { maxRetries: 0, retryDelayMs: 0 },
+    );
+
+    // Org override takes precedence over platform selector
+    expect(capturedPrompt).toContain('CUSTOM-OVERRIDE:');
+    expect(capturedPrompt.toLowerCase()).not.toContain('gutenberg');
+  });
 }); // end executeGenerateFix
 
 describe('parseGenerateFixResponse', () => {
