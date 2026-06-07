@@ -50,7 +50,8 @@ import {
 import type { StorageAdapter } from '../../db/index.js';
 import type { ScanService } from '../../services/scan-service.js';
 import type { ServiceConnectionsRepository } from '../../db/service-connections-repository.js';
-import type { ComplianceAccess } from '../../mcp/server.js';
+import type { ComplianceAccess, LlmAccess } from '../../mcp/server.js';
+import type { DirectScanner } from '@luqen/core';
 
 export interface McpRouteOptions {
   readonly verifyToken: McpTokenVerifier;
@@ -63,6 +64,19 @@ export interface McpRouteOptions {
    * Optional — when omitted, those tools are skipped during registration.
    */
   readonly complianceAccess?: ComplianceAccess;
+  /**
+   * Resolves the LLM service URL + service token per call. Used by
+   * dashboard_generate_fix. Resolved from ServiceClientRegistry.getLLMClient()
+   * per call so secret rotations propagate without a restart. Optional —
+   * when omitted, dashboard_generate_fix is not registered.
+   */
+  readonly llmAccess?: LlmAccess;
+  /**
+   * DirectScanner instance for dashboard_scan_page. When provided (always,
+   * in production), the scan tool is registered. When omitted (tests that
+   * don't need the tool), the scan tool is skipped.
+   */
+  readonly scanner?: DirectScanner;
   /**
    * Absolute URL of this RS's `/.well-known/oauth-protected-resource`.
    * Surfaced in the `WWW-Authenticate` header on 401 so MCP clients can
@@ -120,6 +134,12 @@ export async function registerMcpRoutes(
     serviceConnections: opts.serviceConnections,
     ...(opts.complianceAccess !== undefined
       ? { complianceAccess: opts.complianceAccess }
+      : {}),
+    ...(opts.llmAccess !== undefined
+      ? { llmAccess: opts.llmAccess }
+      : {}),
+    ...(opts.scanner !== undefined
+      ? { scanner: opts.scanner }
       : {}),
   });
 
