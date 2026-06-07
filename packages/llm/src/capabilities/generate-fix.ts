@@ -10,12 +10,18 @@ export interface GenerateFixInput {
   readonly htmlContext: string;
   readonly cssContext?: string;
   readonly orgId?: string;
+  /** Platform context for prompt selection. Defaults to 'html'. */
+  readonly platform?: 'html' | 'wordpress-gutenberg';
 }
 
 export interface GenerateFixResult {
   readonly fixedHtml: string;
   readonly explanation: string;
   readonly effort: 'low' | 'medium' | 'high';
+  /** Echoed from input.wcagCriterion for MCP tool consumers. */
+  readonly wcagCriterion?: string;
+  /** Labelled before/after diff between htmlContext and fixedHtml. */
+  readonly diff?: string;
 }
 
 export function parseGenerateFixResponse(text: string): GenerateFixResult {
@@ -43,6 +49,16 @@ function applyPromptTemplate(template: string, input: GenerateFixInput): string 
     .replace(/\{\{issueMessage\}\}/g, input.issueMessage)
     .replace(/\{\{htmlContext\}\}/g, input.htmlContext)
     .replace(/\{\{cssContext\}\}/g, input.cssContext ?? '');
+}
+
+/**
+ * Build a deterministic labelled before/after diff string.
+ * No external dependency — a compact labelled snippet is sufficient per D-04/D-05.
+ * When fixedHtml is empty (degraded parse), returns an empty string.
+ */
+function buildDiff(htmlContext: string, fixedHtml: string): string {
+  if (!fixedHtml) return '';
+  return `--- before\n${htmlContext}\n+++ after\n${fixedHtml}`;
 }
 
 async function sleep(ms: number): Promise<void> {
@@ -107,7 +123,12 @@ export async function executeGenerateFix(
           }),
         );
 
-        const data = parseGenerateFixResponse(result.text);
+        const parsed = parseGenerateFixResponse(result.text);
+        const data: GenerateFixResult = {
+          ...parsed,
+          wcagCriterion: input.wcagCriterion,
+          diff: buildDiff(input.htmlContext, parsed.fixedHtml),
+        };
 
         return {
           data,
