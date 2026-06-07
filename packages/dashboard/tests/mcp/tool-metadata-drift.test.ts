@@ -25,6 +25,7 @@ import { createDashboardMcpServer } from '../../src/mcp/server.js';
 import type { StorageAdapter } from '../../src/db/index.js';
 import type { ScanService } from '../../src/services/scan-service.js';
 import type { ServiceConnectionsRepository } from '../../src/db/service-connections-repository.js';
+import type { DirectScanner } from '@luqen/core';
 
 // ---------------------------------------------------------------------------
 // Minimal stubs — enough for createDashboardMcpServer to run tool registration.
@@ -122,6 +123,13 @@ describe('dashboard MCP tool metadata — drift prevention (Phase 31.2 D-09)', (
   });
 
   it('metadata list matches the actually-registered tool count', async () => {
+    // Stub DirectScanner — satisfies the scanner option so dashboard_scan_page
+    // registers and is counted in toolNames (keeping parity with
+    // DASHBOARD_AGENT_TOOL_METADATA entry for dashboard_scan_page).
+    const stubScanner: DirectScanner = {
+      scan: async () => ({ url: 'http://stub', issues: [] }),
+    } as unknown as DirectScanner;
+
     const { server } = await createDashboardMcpServer({
       storage: makeStubStorage(),
       scanService: makeStubScanService(),
@@ -130,6 +138,11 @@ describe('dashboard MCP tool metadata — drift prevention (Phase 31.2 D-09)', (
       // provided; we hand a stub so the registered surface includes the
       // four compliance tools and matches DASHBOARD_TOOL_METADATA.
       complianceAccess: async () => ({ baseUrl: 'http://stub', token: 'stub' }),
+      // Phase 80: agent scan tool (dashboard_scan_page) requires scanner;
+      // agent fix tool (dashboard_generate_fix) requires llmAccess. Both stubs
+      // ensure the registered tool count matches DASHBOARD_TOOL_METADATA.
+      scanner: stubScanner,
+      llmAccess: async () => ({ baseUrl: 'http://llm-stub', token: 'llm-stub' }),
     });
     const registered =
       (
