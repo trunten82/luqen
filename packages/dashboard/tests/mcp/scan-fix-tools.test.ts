@@ -182,6 +182,42 @@ describe('dashboard_scan_page', () => {
     expect(scanSpy).not.toHaveBeenCalled();
   });
 
+  it('returns isError:true for the cloud-metadata IP (SSRF blocked)', async () => {
+    const scanner = makeStubScanner();
+    const scanSpy = vi.spyOn(scanner, 'scan');
+
+    ({ client, closeAll } = await makeServerAndClient((server) => {
+      registerScanTools(server, { scanner });
+    }));
+
+    const result = await client.callTool({
+      name: 'dashboard_scan_page',
+      arguments: { url: 'http://169.254.169.254/latest/meta-data/' },
+    });
+
+    expect(result.isError).toBe(true);
+    expect(scanSpy).not.toHaveBeenCalled();
+  });
+
+  it('returns isError:true for non-http(s) schemes — protocol allowlist (SSRF/LFI blocked)', async () => {
+    const scanner = makeStubScanner();
+    const scanSpy = vi.spyOn(scanner, 'scan');
+
+    ({ client, closeAll } = await makeServerAndClient((server) => {
+      registerScanTools(server, { scanner });
+    }));
+
+    for (const badUrl of ['file:///etc/passwd', 'gopher://internal/_', 'ftp://10.0.0.1/']) {
+      const result = await client.callTool({
+        name: 'dashboard_scan_page',
+        arguments: { url: badUrl },
+      });
+      expect(result.isError, `expected ${badUrl} to be rejected`).toBe(true);
+    }
+    // The scanner must never be invoked for any disallowed scheme.
+    expect(scanSpy).not.toHaveBeenCalled();
+  });
+
   it('returns isError:true when neither url nor html is supplied', async () => {
     const scanner = makeStubScanner();
 
