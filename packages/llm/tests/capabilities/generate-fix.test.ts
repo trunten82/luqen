@@ -186,7 +186,202 @@ describe('executeGenerateFix', () => {
     expect(capturedPrompt).toContain('<img src="photo.jpg">');
     expect(capturedPrompt).toContain('img { display: block; }');
   });
-});
+
+  it('echoes wcagCriterion on result.data and emits a non-empty diff for a successful fix', async () => {
+    const wcagOrg = 'gen-fix-wcag-echo-org';
+    await db.assignCapability({ capability: 'generate-fix', modelId, priority: 1, orgId: wcagOrg });
+
+    const adapter = makeAdapter([{ text: VALID_RESPONSE }]);
+    const factory = vi.fn().mockReturnValue(adapter);
+
+    const result = await executeGenerateFix(
+      db,
+      factory,
+      {
+        wcagCriterion: '1.1.1',
+        issueMessage: 'Missing alt text',
+        htmlContext: '<img src="photo.jpg">',
+        orgId: wcagOrg,
+      },
+      { maxRetries: 0, retryDelayMs: 0 },
+    );
+
+    expect(result.data.wcagCriterion).toBe('1.1.1');
+    expect(typeof result.data.diff).toBe('string');
+    expect((result.data.diff as string).length).toBeGreaterThan(0);
+    // diff must reference both the original and fixed HTML
+    expect(result.data.diff).toContain('<img src="photo.jpg">');
+    expect(result.data.diff).toContain('<img src="photo.jpg" alt="Team photo">');
+  });
+
+  it('still echoes wcagCriterion and provides diff when fixedHtml is empty (degraded parse)', async () => {
+    const degradedOrg = 'gen-fix-degraded-org';
+    await db.assignCapability({ capability: 'generate-fix', modelId, priority: 1, orgId: degradedOrg });
+
+    const adapter = makeAdapter([{ text: 'not valid json {{{' }]);
+    const factory = vi.fn().mockReturnValue(adapter);
+
+    const result = await executeGenerateFix(
+      db,
+      factory,
+      {
+        wcagCriterion: '2.4.4',
+        issueMessage: 'Link purpose unclear',
+        htmlContext: '<a href="#">click here</a>',
+        orgId: degradedOrg,
+      },
+      { maxRetries: 0, retryDelayMs: 0 },
+    );
+
+    // Must not throw; wcagCriterion must still be echoed
+    expect(result.data.wcagCriterion).toBe('2.4.4');
+    // diff is defined (string) even if empty
+    expect(typeof result.data.diff).toBe('string');
+    // fixedHtml is empty on degraded parse
+    expect(result.data.fixedHtml).toBe('');
+    // existing fields unchanged
+    expect(result.data.effort).toBe('medium');
+  });
+
+  it('existing result.data fields (fixedHtml, explanation, effort) are still present and unaffected', async () => {
+    const existingFieldsOrg = 'gen-fix-existing-fields-org';
+    await db.assignCapability({ capability: 'generate-fix', modelId, priority: 1, orgId: existingFieldsOrg });
+
+    const adapter = makeAdapter([{ text: VALID_RESPONSE }]);
+    const factory = vi.fn().mockReturnValue(adapter);
+
+    const result = await executeGenerateFix(
+      db,
+      factory,
+      {
+        wcagCriterion: '1.1.1',
+        issueMessage: 'Missing alt text',
+        htmlContext: '<img src="photo.jpg">',
+        orgId: existingFieldsOrg,
+      },
+      { maxRetries: 0, retryDelayMs: 0 },
+    );
+
+    // Original fields must still exist and be correct
+    expect(result.data.fixedHtml).toBe('<img src="photo.jpg" alt="Team photo">');
+    expect(result.data.explanation).toBe('Add descriptive alt text to convey the image purpose.');
+    expect(result.data.effort).toBe('low');
+  });
+
+  it('routes through Gutenberg-block-aware prompt when platform is wordpress-gutenberg', async () => {
+    const gutenbergOrg = 'gen-fix-gutenberg-org';
+    await db.assignCapability({ capability: 'generate-fix', modelId, priority: 1, orgId: gutenbergOrg });
+
+    let capturedPrompt = '';
+    const factory = vi.fn().mockReturnValue({
+      type: 'mock',
+      connect: vi.fn().mockResolvedValue(undefined),
+      disconnect: vi.fn().mockResolvedValue(undefined),
+      healthCheck: vi.fn().mockResolvedValue(true),
+      listModels: vi.fn().mockResolvedValue([]),
+      complete: vi.fn(async (prompt: string) => {
+        capturedPrompt = prompt;
+        return { text: VALID_RESPONSE, usage: { inputTokens: 10, outputTokens: 50 } };
+      }),
+    });
+
+    await executeGenerateFix(
+      db,
+      factory,
+      {
+        wcagCriterion: '1.3.1',
+        issueMessage: 'Block missing aria label',
+        htmlContext: '<!-- wp:paragraph --><p>Hello</p><!-- /wp:paragraph -->',
+        platform: 'wordpress-gutenberg',
+        orgId: gutenbergOrg,
+      },
+      { maxRetries: 0, retryDelayMs: 0 },
+    );
+
+    // Gutenberg-specific markers must appear in the prompt (case-insensitive)
+    expect(capturedPrompt.toLowerCase()).toContain('gutenberg');
+    // Still contains the issue variables
+    expect(capturedPrompt).toContain('1.3.1');
+    expect(capturedPrompt).toContain('Block missing aria label');
+    // JSON output format must still request fixedHtml, explanation, effort
+    expect(capturedPrompt).toContain('"fixedHtml"');
+    expect(capturedPrompt).toContain('"explanation"');
+    expect(capturedPrompt).toContain('"effort"');
+  });
+
+  it('uses default html prompt (no Gutenberg markers) when platform is omitted', async () => {
+    const htmlOrg = 'gen-fix-html-platform-org';
+    await db.assignCapability({ capability: 'generate-fix', modelId, priority: 1, orgId: htmlOrg });
+
+    let capturedPrompt = '';
+    const factory = vi.fn().mockReturnValue({
+      type: 'mock',
+      connect: vi.fn().mockResolvedValue(undefined),
+      disconnect: vi.fn().mockResolvedValue(undefined),
+      healthCheck: vi.fn().mockResolvedValue(true),
+      listModels: vi.fn().mockResolvedValue([]),
+      complete: vi.fn(async (prompt: string) => {
+        capturedPrompt = prompt;
+        return { text: VALID_RESPONSE, usage: { inputTokens: 10, outputTokens: 50 } };
+      }),
+    });
+
+    await executeGenerateFix(
+      db,
+      factory,
+      {
+        wcagCriterion: '1.1.1',
+        issueMessage: 'Missing alt text',
+        htmlContext: '<img src="photo.jpg">',
+        orgId: htmlOrg,
+      },
+      { maxRetries: 0, retryDelayMs: 0 },
+    );
+
+    // No gutenberg-specific marker when platform not set
+    expect(capturedPrompt.toLowerCase()).not.toContain('gutenberg');
+  });
+
+  it('promptOverride wins over gutenberg platform selector', async () => {
+    const overrideGutenbergOrg = 'gen-fix-override-gutenberg-org';
+    await db.assignCapability({ capability: 'generate-fix', modelId, priority: 1, orgId: overrideGutenbergOrg });
+    await db.setPromptOverride(
+      'generate-fix',
+      'CUSTOM-OVERRIDE: {{wcagCriterion}} | {{issueMessage}} | {{htmlContext}}',
+      overrideGutenbergOrg,
+    );
+
+    let capturedPrompt = '';
+    const factory = vi.fn().mockReturnValue({
+      type: 'mock',
+      connect: vi.fn().mockResolvedValue(undefined),
+      disconnect: vi.fn().mockResolvedValue(undefined),
+      healthCheck: vi.fn().mockResolvedValue(true),
+      listModels: vi.fn().mockResolvedValue([]),
+      complete: vi.fn(async (prompt: string) => {
+        capturedPrompt = prompt;
+        return { text: VALID_RESPONSE, usage: { inputTokens: 10, outputTokens: 50 } };
+      }),
+    });
+
+    await executeGenerateFix(
+      db,
+      factory,
+      {
+        wcagCriterion: '1.1.1',
+        issueMessage: 'Missing alt',
+        htmlContext: '<img>',
+        platform: 'wordpress-gutenberg',
+        orgId: overrideGutenbergOrg,
+      },
+      { maxRetries: 0, retryDelayMs: 0 },
+    );
+
+    // Org override takes precedence over platform selector
+    expect(capturedPrompt).toContain('CUSTOM-OVERRIDE:');
+    expect(capturedPrompt.toLowerCase()).not.toContain('gutenberg');
+  });
+}); // end executeGenerateFix
 
 describe('parseGenerateFixResponse', () => {
   it('returns { fixedHtml: "", explanation: "", effort: "medium" } for malformed JSON (graceful fallback)', () => {
