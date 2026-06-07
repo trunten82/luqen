@@ -73,8 +73,8 @@ export async function runCli(diffJsonPath?: string, enrichmentJsonPath?: string)
     }
   }
 
-  const baselinePath = (diff as Record<string, unknown>)['meta']
-    ? ((diff as Record<string, unknown>)['meta'] as Record<string, unknown>)['baselinePath'] as string | undefined ?? '.luqen/baseline.json'
+  const baselinePath = (diff as unknown as Record<string, unknown>)['meta']
+    ? ((diff as unknown as Record<string, unknown>)['meta'] as Record<string, unknown>)['baselinePath'] as string | undefined ?? '.luqen/baseline.json'
     : '.luqen/baseline.json';
 
   const body = formatPrComment(diff, enrichmentByCode as EnrichmentByCode, baselinePath);

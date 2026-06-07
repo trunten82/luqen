@@ -10,8 +10,15 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+
+// Resolve paths from this test file's own location so the suite is independent
+// of the working directory (it previously hardcoded an executor worktree path).
+const TEST_DIR = dirname(fileURLToPath(import.meta.url));
+const PACKAGE_ROOT = join(TEST_DIR, '..', '..'); // src/__tests__ -> packages/core
+const CLI_SOURCE = join(PACKAGE_ROOT, 'src', 'comment-reporter-cli.ts');
 
 // ---------------------------------------------------------------------------
 // Sample diff fixtures
@@ -92,7 +99,7 @@ async function runCliModule(diffJsonPath: string, enrichmentPath?: string): Prom
     };
 
     // Import with cache-busting query to allow re-imports in the same process
-    const mod = await import(`../../comment-reporter-cli.js?t=${Date.now()}`);
+    const mod = await import(`../comment-reporter-cli.js?t=${Date.now()}`);
     if (mod && typeof mod.runCli === 'function') {
       await mod.runCli(diffJsonPath, enrichmentPath);
     }
@@ -117,13 +124,13 @@ function runCliViaTsx(diffJsonPath: string, enrichmentPath?: string): {
   status: number | null;
 } {
   const args = [
-    'packages/core/src/comment-reporter-cli.ts',
+    CLI_SOURCE,
     diffJsonPath,
     ...(enrichmentPath ? [enrichmentPath] : []),
   ];
 
   const result = spawnSync('npx', ['tsx', ...args], {
-    cwd: '/root/luqen/.claude/worktrees/agent-adba7cae886b9b2bd',
+    cwd: PACKAGE_ROOT,
     encoding: 'utf-8',
     timeout: 30_000,
   });
