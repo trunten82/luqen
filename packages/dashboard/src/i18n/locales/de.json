@@ -1492,7 +1492,44 @@
   },
   "fleet": {
     "downloadReports": "Alle Berichte herunterladen",
-    "downloadReportsHint": "Lädt ein .tar.gz-Bündel mit dem VPAT/ACR für jede Website mit abgeschlossenem Scan herunter"
+    "downloadReportsHint": "Lädt ein .tar.gz-Bündel mit dem VPAT/ACR für jede Website mit abgeschlossenem Scan herunter",
+    "exposureBand": "Exposition",
+    "exposureBandLabel": "{{band}} rechtliche Exposition",
+    "highestExposure": "Höchste Exposition"
+  },
+  "exposure": {
+    "cardTitle": "Rechtlicher Expositionsindikator",
+    "band": {
+      "lower": "Niedrig",
+      "moderate": "Mäßig",
+      "elevated": "Erhöht",
+      "high": "Hoch"
+    },
+    "bandAriaLabel": {
+      "lower": "Niedrige rechtliche Exposition",
+      "moderate": "Mäßige rechtliche Exposition",
+      "elevated": "Erhöhte rechtliche Exposition",
+      "high": "Hohe rechtliche Exposition"
+    },
+    "driver": {
+      "eaaInEffect": "EU-Barrierefreiheitsgesetz in Kraft (seit {{date}})",
+      "highFilingState": "Bundesstaat mit hohem Klageaufkommen: {{name}}",
+      "elevatedFilingState": "Erhöhte Klageaktivität: {{name}}",
+      "adaTitleIiCountdown": "ADA Titel-II-Frist: {{date}} ({{days}} Tage)",
+      "adaTitleIiPassed": "ADA Titel-II-Frist: {{date}} (Frist abgelaufen)",
+      "adaTitleIiDeadlineExpired": "ADA Titel-II-Frist: {{date}} (Frist abgelaufen)"
+    },
+    "driversListLabel": "Expositionstreiber",
+    "asOf": "Daten vom: {{date}}",
+    "methodologyLink": "Methodik ansehen",
+    "methodologyLinkSr": "(öffnet in neuem Tab)",
+    "disclaimer": "Dies ist ein rechtlicher Expositionsindikator, keine Rechtsberatung. Er spiegelt öffentlich bekannte regulatorische Fristen und Klagemuster wider. Bei rechtlichen Fragen wenden Sie sich bitte an einen qualifizierten Rechtsanwalt.",
+    "noPendingScan": "Der Expositionsindikator wird nach dem ersten abgeschlossenen Scan angezeigt.",
+    "noJurisdictions": "Wählen Sie Rechtsgebiete für diese Website aus, um den Expositionsindikator zu aktivieren.",
+    "unavailable": "Expositionsindikator nicht verfügbar.",
+    "methodologyTitle": "Rechtlicher Expositionsindikator — Methodik",
+    "methodologyDisclaimerHeading": "Wichtig: Dies ist keine Rechtsberatung",
+    "methodologyDisclaimer": "Der rechtliche Expositionsindikator ist ein Transparenzwerkzeug, das öffentlich bekannte regulatorische Fristen und Klagemuster mit Scan-Ergebnissen verknüpft. Er stellt keine Rechtsberatung dar, macht keine WCAG- oder regulatorischen Aussagen zu einer Website, und sagt keine rechtlichen Maßnahmen vorher. Bei rechtlichen Fragen wenden Sie sich bitte an einen qualifizierten Rechtsanwalt."
   },
   "share": {
     "unavailableTitle": "Dieser Freigabelink ist nicht mehr verfügbar",
