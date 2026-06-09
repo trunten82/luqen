@@ -51,7 +51,7 @@ describe('deriveExposure', () => {
       findings: { ...ZERO_FINDINGS },
     });
     const countdownDriver = result.drivers.find(
-      (d) => d.key === 'adaTitleIiCountdown' || d.key === 'adaTitleIiPassed',
+      (d) => d.key === 'adaTitleIiCountdown' || d.key === 'adaTitleIiDeadlineExpired',
     );
     expect(countdownDriver).toBeDefined();
     expect(countdownDriver?.params.date).toBeTruthy();
