@@ -15,6 +15,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type, type Static } from '@sinclair/typebox';
 import type { StorageAdapter } from '../../db/index.js';
+import { deriveExposure } from '../../services/legal-exposure.js';
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -48,6 +49,23 @@ const LinkUserBodySchema = Type.Object(
 
 const ErrorResponse = Type.Object({ error: Type.String() });
 
+/**
+ * Per-site exposure descriptor returned in the fleet API (D-01: no numeric field).
+ * Drivers are descriptor keys + i18n params — not pre-translated (WP plugin localises them).
+ * The disclaimer is omitted from the API response (WP renders its own localised disclaimer).
+ */
+const ExposureSchema = Type.Union([
+  Type.Null(),
+  Type.Object({
+    band:    Type.String(),
+    drivers: Type.Array(Type.Object({
+      key:    Type.String(),
+      params: Type.Record(Type.String(), Type.String()),
+    })),
+    asOf:    Type.String(),
+  }),
+]);
+
 const FleetSiteSchema = Type.Object({
   id:             Type.String(),
   url:            Type.String(),
@@ -55,6 +73,7 @@ const FleetSiteSchema = Type.Object({
   plugin_version: Type.Union([Type.String(), Type.Null()]),
   status:         Type.String(),
   last_seen:      Type.String(),
+  exposure:       ExposureSchema,
 });
 
 const FleetListResponse  = Type.Object({ sites: Type.Array(FleetSiteSchema) });
@@ -157,16 +176,42 @@ export async function wpNetworkApiRoutes(
         orgId: ctx.orgId,
         status: request.query.status ?? 'active',
       });
-      return reply.send({
-        sites: sites.map((s) => ({
-          id: s.id,
-          url: s.url,
-          wp_version: s.wpVersion,
-          plugin_version: s.pluginVersion,
-          status: s.status,
-          last_seen: s.lastSeenAt,
-        })),
-      });
+      const sitesWithExposure = await Promise.all(
+        sites.map(async (s) => {
+          const latestScan = await storage.scans.getLatestCompletedForSite(ctx.orgId, s.url);
+          const exposure =
+            latestScan !== null
+              ? (() => {
+                  const result = deriveExposure({
+                    jurisdictions: latestScan.jurisdictions ?? [],
+                    regulations: latestScan.regulations ?? [],
+                    findings: {
+                      errors: latestScan.errors ?? 0,
+                      warnings: latestScan.warnings ?? 0,
+                      notices: latestScan.notices ?? 0,
+                      confirmedViolations: latestScan.confirmedViolations ?? 0,
+                    },
+                  });
+                  // Omit disclaimer from API response (WP renders its own localised disclaimer)
+                  return {
+                    band: result.band,
+                    drivers: result.drivers.map((d) => ({ key: d.key, params: d.params })),
+                    asOf: result.asOf,
+                  };
+                })()
+              : null;
+          return {
+            id: s.id,
+            url: s.url,
+            wp_version: s.wpVersion,
+            plugin_version: s.pluginVersion,
+            status: s.status,
+            last_seen: s.lastSeenAt,
+            exposure,
+          };
+        }),
+      );
+      return reply.send({ sites: sitesWithExposure });
     },
   );
 
@@ -194,6 +239,27 @@ export async function wpNetworkApiRoutes(
       if (site === null || site.orgId !== ctx.orgId) {
         return reply.code(404).send({ error: 'site not found' });
       }
+      const latestScan = await storage.scans.getLatestCompletedForSite(ctx.orgId, site.url);
+      const exposure =
+        latestScan !== null
+          ? (() => {
+              const result = deriveExposure({
+                jurisdictions: latestScan.jurisdictions ?? [],
+                regulations: latestScan.regulations ?? [],
+                findings: {
+                  errors: latestScan.errors ?? 0,
+                  warnings: latestScan.warnings ?? 0,
+                  notices: latestScan.notices ?? 0,
+                  confirmedViolations: latestScan.confirmedViolations ?? 0,
+                },
+              });
+              return {
+                band: result.band,
+                drivers: result.drivers.map((d) => ({ key: d.key, params: d.params })),
+                asOf: result.asOf,
+              };
+            })()
+          : null;
       return reply.send({
         site: {
           id: site.id,
@@ -202,6 +268,7 @@ export async function wpNetworkApiRoutes(
           plugin_version: site.pluginVersion,
           status: site.status,
           last_seen: site.lastSeenAt,
+          exposure,
         },
       });
     },
