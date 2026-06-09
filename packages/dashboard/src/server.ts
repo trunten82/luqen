@@ -172,7 +172,7 @@ function wantsHtml(request: FastifyRequest): boolean {
 // Routes that bypass auth guard
 const PUBLIC_PATHS = new Set(['/login', '/health', '/api/v1/setup', '/robots.txt']);
 
-function isPublicPath(path: string): boolean {
+export function isPublicPath(path: string): boolean {
   if (PUBLIC_PATHS.has(path)) return true;
   if (path.startsWith('/static/')) return true;
   if (path.startsWith('/auth/callback/')) return true;
@@ -180,6 +180,11 @@ function isPublicPath(path: string): boolean {
   // Phase 58 R5: glossary + verdict badge are public, anonymous, cacheable.
   if (path === '/api/v1/glossary') return true;
   if (path.startsWith('/api/v1/badge/')) return true;
+  // Phase 81 (EXPO-05/D-06): legal-exposure methodology documentation is public
+  // and anonymous — it is linked from every exposure indicator (dashboard, fleet,
+  // and the WordPress plugin) and renders only static model documentation, never
+  // per-org/site/scan data (T-81-07).
+  if (path === '/methodology/legal-exposure' || path.startsWith('/methodology/')) return true;
   // Phase 58 R5: public self-scan report (only the dashboard's own host).
   if (/^\/reports\/[^/]+\/public$/.test(path)) return true;
   // widget→VPAT: public, dynamic Accessibility Conformance Report + its public
