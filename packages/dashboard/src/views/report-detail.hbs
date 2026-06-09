@@ -77,6 +77,11 @@
 
 {{> share-panel scan=scan liveBadgeId=liveBadgeId t=t}}
 
+{{! ── Legal Exposure Indicator (Phase 81) ─────────────────────────────── }}
+{{#if exposure}}
+{{> rpt-exposure-card exposure=exposure t=t}}
+{{/if}}
+
 {{#if reportData}}
 
 {{! ── Verdict line (Phase 57 R2) — replaces traffic-light banner ────────── }}

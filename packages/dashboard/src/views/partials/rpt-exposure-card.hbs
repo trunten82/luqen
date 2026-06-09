@@ -1,0 +1,75 @@
+{{!-- rpt-exposure-card.hbs — Phase 81: Legal Exposure Indicator card partial.
+     Usage: {{> rpt-exposure-card exposure=exposure t=t}}
+     The route must pass an `exposure` object (computed via deriveExposure) or
+     one of the state flags: exposure.noPendingScan / exposure.noJurisdictions /
+     exposure.unavailable.
+--}}
+{{#if exposure.band}}
+<div class="card card--muted rpt-exposure-card rpt-exposure-card--{{exposure.band}}"
+     aria-labelledby="exposure-card-heading">
+  <div class="card__header rpt-exposure-card__header">
+    <h3 class="card__title" id="exposure-card-heading">{{t "exposure.cardTitle"}}</h3>
+    <span class="rpt-badge rpt-badge--{{exposure.badgeModifier}} rpt-exposure-band{{#if (eq exposure.band "high")}} rpt-exposure-band--high{{/if}}"
+          aria-label="{{t (concat "exposure.bandAriaLabel." exposure.band)}}">
+      <span aria-hidden="true">{{exposure.bandIcon}}</span>
+      {{t (concat "exposure.band." exposure.band)}}
+    </span>
+  </div>
+  <div class="card__body">
+    {{#if exposure.drivers.length}}
+    <ul class="rpt-exposure-card__drivers" aria-label="{{t "exposure.driversListLabel"}}">
+      {{#each exposure.drivers}}
+      <li>
+        <span class="rpt-reg-tag">{{t (concat "exposure.driver." this.key) this.params}}</span>
+      </li>
+      {{/each}}
+    </ul>
+    {{/if}}
+    <p class="text-muted" style="font-size: var(--font-size-sm)">
+      {{t "exposure.asOf" date=exposure.asOf}}
+      &nbsp;&middot;&nbsp;
+      <a class="rpt-exposure-card__methodology-link"
+         href="/methodology/legal-exposure"
+         target="_blank"
+         rel="noopener noreferrer"
+         aria-label="{{t "exposure.methodologyLink"}} {{t "exposure.methodologyLinkSr"}}"
+         style="min-height: 44px; padding-block: 10px; display: inline-flex; align-items: center;">
+        {{t "exposure.methodologyLink"}}
+      </a>
+    </p>
+    <div class="alert alert--info rpt-exposure-card__disclaimer" role="note">
+      <p>{{t "exposure.disclaimer"}}</p>
+    </div>
+  </div>
+</div>
+{{else if exposure.noPendingScan}}
+<div class="card card--muted rpt-exposure-card rpt-exposure-card--pending"
+     aria-labelledby="exposure-card-heading-pending">
+  <div class="card__header rpt-exposure-card__header">
+    <h3 class="card__title" id="exposure-card-heading-pending">{{t "exposure.cardTitle"}}</h3>
+  </div>
+  <div class="card__body">
+    <p class="text-muted">{{t "exposure.noPendingScan"}}</p>
+  </div>
+</div>
+{{else if exposure.noJurisdictions}}
+<div class="card card--muted rpt-exposure-card"
+     aria-labelledby="exposure-card-heading-nojuris">
+  <div class="card__header rpt-exposure-card__header">
+    <h3 class="card__title" id="exposure-card-heading-nojuris">{{t "exposure.cardTitle"}}</h3>
+  </div>
+  <div class="card__body">
+    <p class="text-muted">{{t "exposure.noJurisdictions"}}</p>
+  </div>
+</div>
+{{else if exposure.unavailable}}
+<div class="card card--muted rpt-exposure-card"
+     aria-labelledby="exposure-card-heading-unavail">
+  <div class="card__header rpt-exposure-card__header">
+    <h3 class="card__title" id="exposure-card-heading-unavail">{{t "exposure.cardTitle"}}</h3>
+  </div>
+  <div class="card__body">
+    <p class="text-muted">{{t "exposure.unavailable"}}</p>
+  </div>
+</div>
+{{/if}}

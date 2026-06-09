@@ -23,8 +23,18 @@ import {
 } from '../services/vpat-share-service.js';
 import type { AcrHtmlChrome } from '../services/acr-render.js';
 import { HtmlPageSchema } from '../api/schemas/envelope.js';
+import { deriveExposure } from '../services/legal-exposure.js';
+import type { ExposureBand } from '../services/legal-exposure.js';
 
 const ReportIdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
+
+/** View-ready badge modifier + icon for each exposure band (D-01 / WCAG 1.4.1). */
+const BAND_VIEW_PROPS: Record<ExposureBand, { badgeModifier: string; bandIcon: string }> = {
+  lower:    { badgeModifier: 'notice-light',  bandIcon: '●' },
+  moderate: { badgeModifier: 'warning-light', bandIcon: '▲' },
+  elevated: { badgeModifier: 'error-light',   bandIcon: '▲▲' },
+  high:     { badgeModifier: 'error-light',   bandIcon: '⬛' },
+};
 export { normalizeReportData, inferComponent };
 export type { JsonReportFile };
 
@@ -336,6 +346,7 @@ export async function reportRoutes(
           pdfAvailable: true,
           llmEnabled: llmClient !== null,
           brandScore: null,
+          exposure: { noPendingScan: true },
         });
       }
 
@@ -356,6 +367,23 @@ export async function reportRoutes(
       }
 
       if (reportData === null) {
+        // Compute exposure even without report data if jurisdictions are known
+        let exposureForView: Record<string, unknown> = { unavailable: true };
+        if (scan.jurisdictions.length === 0) {
+          exposureForView = { noJurisdictions: true };
+        } else {
+          try {
+            const result = deriveExposure({
+              jurisdictions: scan.jurisdictions,
+              regulations: scan.regulations ?? [],
+              findings: { errors: 0, warnings: 0, notices: 0, confirmedViolations: 0 },
+            });
+            const viewProps = BAND_VIEW_PROPS[result.band];
+            exposureForView = { ...result, ...viewProps };
+          } catch {
+            exposureForView = { unavailable: true };
+          }
+        }
         return reply.view('report-detail.hbs', {
           pageTitle: `Report — ${scan.siteUrl}`,
           currentPath: `/reports/${id}`,
@@ -366,6 +394,7 @@ export async function reportRoutes(
           pdfAvailable: true,
           llmEnabled: llmClient !== null,
           brandScore: null,
+          exposure: exposureForView,
         });
       }
 
@@ -510,6 +539,29 @@ export async function reportRoutes(
         scan.jurisdictions && scan.jurisdictions.length > 0 ? scan.jurisdictions.join(' · ') : null,
       ].filter(Boolean).join(' · ');
 
+      // ── Legal exposure indicator (Phase 81) ─────────────────────────────
+      let exposureForView: Record<string, unknown>;
+      if (!scan.jurisdictions || scan.jurisdictions.length === 0) {
+        exposureForView = { noJurisdictions: true };
+      } else {
+        try {
+          const exposureResult = deriveExposure({
+            jurisdictions: scan.jurisdictions,
+            regulations: scan.regulations ?? [],
+            findings: {
+              errors: reportData?.summary?.byLevel?.error ?? 0,
+              warnings: reportData?.summary?.byLevel?.warning ?? 0,
+              notices: reportData?.summary?.byLevel?.notice ?? 0,
+              confirmedViolations: scan.confirmedViolations ?? 0,
+            },
+          });
+          const viewProps = BAND_VIEW_PROPS[exposureResult.band];
+          exposureForView = { ...exposureResult, ...viewProps };
+        } catch {
+          exposureForView = { unavailable: true };
+        }
+      }
+
       return reply.view('report-detail.hbs', {
         pageTitle: `Report — ${scan.siteUrl}`,
         currentPath: `/reports/${id}`,
@@ -539,6 +591,7 @@ export async function reportRoutes(
         brandIsFirstScore,
         brandRelatedCount,
         totalIssues,
+        exposure: exposureForView,
       });
     },
   );

@@ -1501,7 +1501,44 @@
   },
   "fleet": {
     "downloadReports": "Scarica tutti i report",
-    "downloadReportsHint": "Scarica un archivio .tar.gz con il VPAT/ACR di ogni sito con una scansione completata"
+    "downloadReportsHint": "Scarica un archivio .tar.gz con il VPAT/ACR di ogni sito con una scansione completata",
+    "exposureBand": "Esposizione",
+    "exposureBandLabel": "{{band}} esposizione legale",
+    "highestExposure": "Massima esposizione"
+  },
+  "exposure": {
+    "cardTitle": "Indicatore di esposizione legale",
+    "band": {
+      "lower": "Bassa",
+      "moderate": "Moderata",
+      "elevated": "Elevata",
+      "high": "Alta"
+    },
+    "bandAriaLabel": {
+      "lower": "Bassa esposizione legale",
+      "moderate": "Moderata esposizione legale",
+      "elevated": "Elevata esposizione legale",
+      "high": "Alta esposizione legale"
+    },
+    "driver": {
+      "eaaInEffect": "Legge europea sull'accessibilità in vigore (dal {{date}})",
+      "highFilingState": "Giurisdizione con alto numero di cause: {{name}}",
+      "elevatedFilingState": "Attività contenziosa rilevante: {{name}}",
+      "adaTitleIiCountdown": "Scadenza ADA Titolo II: {{date}} ({{days}} giorni)",
+      "adaTitleIiPassed": "Scadenza ADA Titolo II: {{date}} (scadenza superata)",
+      "adaTitleIiDeadlineExpired": "Scadenza ADA Titolo II: {{date}} (scadenza superata)"
+    },
+    "driversListLabel": "Fattori di esposizione",
+    "asOf": "Dati aggiornati al: {{date}}",
+    "methodologyLink": "Vedi metodologia",
+    "methodologyLinkSr": "(si apre in una nuova scheda)",
+    "disclaimer": "Questo è un indicatore di esposizione legale, non una consulenza legale. Riflette scadenze normative pubblicamente note e tendenze nel contenzioso. Per domande legali, consultare un avvocato qualificato.",
+    "noPendingScan": "L'indicatore di esposizione apparirà dopo la prima scansione completata.",
+    "noJurisdictions": "Seleziona le giurisdizioni per questo sito per attivare l'indicatore di esposizione.",
+    "unavailable": "Indicatore di esposizione non disponibile.",
+    "methodologyTitle": "Indicatore di esposizione legale — Metodologia",
+    "methodologyDisclaimerHeading": "Importante: Questa non è una consulenza legale",
+    "methodologyDisclaimer": "L'indicatore di esposizione legale è uno strumento di trasparenza che combina scadenze normative pubblicamente note e tendenze nel contenzioso con i risultati delle scansioni. Non costituisce una consulenza legale, non emette alcun verdetto WCAG o normativo su nessun sito, e non prevede né afferma che un'organizzazione affronterà azioni legali. Per qualsiasi domanda legale, consultare un avvocato qualificato."
   },
   "share": {
     "unavailableTitle": "Questo link di condivisione non è più disponibile",

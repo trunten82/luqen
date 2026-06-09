@@ -1492,7 +1492,44 @@
   },
   "fleet": {
     "downloadReports": "Télécharger tous les rapports",
-    "downloadReportsHint": "Télécharge une archive .tar.gz du VPAT/ACR pour chaque site ayant une analyse terminée"
+    "downloadReportsHint": "Télécharge une archive .tar.gz du VPAT/ACR pour chaque site ayant une analyse terminée",
+    "exposureBand": "Exposition",
+    "exposureBandLabel": "{{band}} exposition juridique",
+    "highestExposure": "Exposition la plus élevée"
+  },
+  "exposure": {
+    "cardTitle": "Indicateur d'exposition juridique",
+    "band": {
+      "lower": "Faible",
+      "moderate": "Modérée",
+      "elevated": "Élevée",
+      "high": "Haute"
+    },
+    "bandAriaLabel": {
+      "lower": "Faible exposition juridique",
+      "moderate": "Modérée exposition juridique",
+      "elevated": "Élevée exposition juridique",
+      "high": "Haute exposition juridique"
+    },
+    "driver": {
+      "eaaInEffect": "Loi européenne sur l'accessibilité en vigueur (depuis {{date}})",
+      "highFilingState": "Juridiction à forte activité contentieuse : {{name}}",
+      "elevatedFilingState": "Activité contentieuse notable : {{name}}",
+      "adaTitleIiCountdown": "Échéance du Titre II de l'ADA : {{date}} ({{days}} jours)",
+      "adaTitleIiPassed": "Échéance du Titre II de l'ADA : {{date}} (délai dépassé)",
+      "adaTitleIiDeadlineExpired": "Échéance du Titre II de l'ADA : {{date}} (délai dépassé)"
+    },
+    "driversListLabel": "Facteurs d'exposition",
+    "asOf": "Données au : {{date}}",
+    "methodologyLink": "Voir la méthodologie",
+    "methodologyLinkSr": "(s'ouvre dans un nouvel onglet)",
+    "disclaimer": "Ceci est un indicateur d'exposition juridique, pas un conseil juridique. Il reflète les échéances réglementaires publiquement connues et les tendances en matière de contentieux. Pour toute question juridique, consultez un avocat qualifié.",
+    "noPendingScan": "L'indicateur d'exposition apparaîtra après la première analyse terminée.",
+    "noJurisdictions": "Sélectionnez des juridictions pour ce site afin d'activer l'indicateur d'exposition.",
+    "unavailable": "Indicateur d'exposition non disponible.",
+    "methodologyTitle": "Indicateur d'exposition juridique — Méthodologie",
+    "methodologyDisclaimerHeading": "Important : Ceci n'est pas un conseil juridique",
+    "methodologyDisclaimer": "L'indicateur d'exposition juridique est un outil de transparence qui combine des échéances réglementaires publiquement connues et des tendances contentieuses avec les résultats des analyses. Il ne constitue pas un conseil juridique, n'émet aucun verdict WCAG ou réglementaire sur un site, et ne prédit ni n'affirme qu'une organisation fera face à des actions en justice. Pour toute question juridique, consultez un avocat qualifié."
   },
   "share": {
     "unavailableTitle": "Ce lien de partage n’est plus disponible",

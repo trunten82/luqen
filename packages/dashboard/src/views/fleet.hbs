@@ -26,6 +26,16 @@
     <dt>Stale</dt>
     <dd>{{staleCount}}</dd>
   </div>
+  <div class="stat">
+    <dt>{{t "fleet.highestExposure"}}</dt>
+    <dd>
+      {{#if fleetExposureSummary.highBandCount}}
+        <span class="rpt-badge rpt-badge--error-light">{{fleetExposureSummary.highBandCount}} {{t "exposure.band.high"}}</span>
+      {{else}}
+        <span class="text-muted">—</span>
+      {{/if}}
+    </dd>
+  </div>
 </dl>
 
 {{#if sites.length}}
@@ -38,6 +48,11 @@
       <th scope="col">Status</th>
       <th scope="col">Last seen</th>
       <th scope="col">Last scan</th>
+      <th scope="col">
+        <button class="table-sort-btn" aria-sort="descending" data-sort="exposure">
+          {{t "fleet.exposureBand"}}
+        </button>
+      </th>
       <th scope="col">Actions</th>
     </tr>
   </thead>
@@ -66,6 +81,17 @@
           {{#if latestScan.totalIssues}}<br><span class="text-muted">{{latestScan.totalIssues}} issues</span>{{/if}}
         {{else}}
           <span class="text-muted">no scan yet</span>
+        {{/if}}
+      </td>
+      <td data-label="{{t 'fleet.exposureBand'}}">
+        {{#if this.exposure}}
+          <span class="rpt-badge rpt-badge--{{this.exposure.badgeModifier}} rpt-exposure-band{{#if (eq this.exposure.band "high")}} rpt-exposure-band--high{{/if}}"
+                aria-label="{{t "fleet.exposureBandLabel" band=this.exposure.band}}">
+            <span aria-hidden="true">{{this.exposure.bandIcon}}</span>
+            {{t (concat "exposure.band." this.exposure.band)}}
+          </span>
+        {{else}}
+          <span class="text-muted">—</span>
         {{/if}}
       </td>
       <td>

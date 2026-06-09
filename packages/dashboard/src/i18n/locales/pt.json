@@ -1492,7 +1492,44 @@
   },
   "fleet": {
     "downloadReports": "Transferir todos os relatórios",
-    "downloadReportsHint": "Transfere um pacote .tar.gz com o VPAT/ACR de cada site com uma análise concluída"
+    "downloadReportsHint": "Transfere um pacote .tar.gz com o VPAT/ACR de cada site com uma análise concluída",
+    "exposureBand": "Exposição",
+    "exposureBandLabel": "{{band}} exposição legal",
+    "highestExposure": "Maior exposição"
+  },
+  "exposure": {
+    "cardTitle": "Indicador de exposição legal",
+    "band": {
+      "lower": "Baixa",
+      "moderate": "Moderada",
+      "elevated": "Elevada",
+      "high": "Alta"
+    },
+    "bandAriaLabel": {
+      "lower": "Baixa exposição legal",
+      "moderate": "Moderada exposição legal",
+      "elevated": "Elevada exposição legal",
+      "high": "Alta exposição legal"
+    },
+    "driver": {
+      "eaaInEffect": "Lei de acessibilidade da UE em vigor (desde {{date}})",
+      "highFilingState": "Jurisdição com muitos processos: {{name}}",
+      "elevatedFilingState": "Atividade processual notável: {{name}}",
+      "adaTitleIiCountdown": "Prazo do Título II da ADA: {{date}} ({{days}} dias)",
+      "adaTitleIiPassed": "Prazo do Título II da ADA: {{date}} (prazo expirado)",
+      "adaTitleIiDeadlineExpired": "Prazo do Título II da ADA: {{date}} (prazo expirado)"
+    },
+    "driversListLabel": "Fatores de exposição",
+    "asOf": "Dados de: {{date}}",
+    "methodologyLink": "Ver metodologia",
+    "methodologyLinkSr": "(abre em nova aba)",
+    "disclaimer": "Este é um indicador de exposição legal, não aconselhamento jurídico. Reflete prazos regulatórios publicamente conhecidos e padrões de processos. Para questões legais, consulte um advogado qualificado.",
+    "noPendingScan": "O indicador de exposição aparecerá após a primeira análise concluída.",
+    "noJurisdictions": "Selecione jurisdições para este site para ativar o indicador de exposição.",
+    "unavailable": "Indicador de exposição indisponível.",
+    "methodologyTitle": "Indicador de exposição legal — Metodologia",
+    "methodologyDisclaimerHeading": "Importante: Isto não é aconselhamento jurídico",
+    "methodologyDisclaimer": "O indicador de exposição legal é uma ferramenta de transparência que combina prazos regulatórios publicamente conhecidos e padrões de processos com os resultados das análises. Não constitui aconselhamento jurídico, não emite nenhum veredicto WCAG ou regulatório sobre qualquer site, e não prevê nem afirma que qualquer organização enfrentará ações legais. Para quaisquer questões legais, consulte um advogado qualificado."
   },
   "share": {
     "unavailableTitle": "Esta ligação de partilha já não está disponível",
