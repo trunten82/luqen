@@ -1977,7 +1977,44 @@
   },
   "fleet": {
     "downloadReports": "Download all reports",
-    "downloadReportsHint": "Download a .tar.gz bundle of the VPAT/ACR for every site with a completed scan"
+    "downloadReportsHint": "Download a .tar.gz bundle of the VPAT/ACR for every site with a completed scan",
+    "exposureBand": "Exposure",
+    "exposureBandLabel": "{{band}} legal exposure",
+    "highestExposure": "Highest exposure"
+  },
+  "exposure": {
+    "cardTitle": "Legal Exposure Indicator",
+    "band": {
+      "lower": "Lower",
+      "moderate": "Moderate",
+      "elevated": "Elevated",
+      "high": "High"
+    },
+    "bandAriaLabel": {
+      "lower": "Lower legal exposure",
+      "moderate": "Moderate legal exposure",
+      "elevated": "Elevated legal exposure",
+      "high": "High legal exposure"
+    },
+    "driver": {
+      "eaaInEffect": "EU Accessibility Act in effect (since {{date}})",
+      "highFilingState": "High-filing jurisdiction: {{name}}",
+      "elevatedFilingState": "Notable filing activity: {{name}}",
+      "adaTitleIiCountdown": "ADA Title II deadline: {{date}} ({{days}} days)",
+      "adaTitleIiPassed": "ADA Title II deadline: {{date}} (deadline expired)",
+      "adaTitleIiDeadlineExpired": "ADA Title II deadline: {{date}} (deadline expired)"
+    },
+    "driversListLabel": "Exposure drivers",
+    "asOf": "Data as of: {{date}}",
+    "methodologyLink": "View methodology",
+    "methodologyLinkSr": "(opens in new tab)",
+    "disclaimer": "This is a legal exposure indicator, not legal advice. It reflects publicly known regulatory timelines and filing patterns. For legal questions, consult a qualified attorney.",
+    "noPendingScan": "Exposure indicator will appear after the first completed scan.",
+    "noJurisdictions": "Select jurisdictions for this site to enable the exposure indicator.",
+    "unavailable": "Exposure indicator unavailable.",
+    "methodologyTitle": "Legal Exposure Indicator — Methodology",
+    "methodologyDisclaimerHeading": "Important: This is not legal advice",
+    "methodologyDisclaimer": "The legal exposure indicator is a transparency tool that fuses publicly known regulatory timelines and filing patterns with scan findings. It does not constitute legal advice, does not assert any WCAG or regulatory verdict for any site, and does not predict or assert that any organisation will face legal action. For any legal questions, consult a qualified attorney."
   },
   "reportIdentity": {
     "admin": {
