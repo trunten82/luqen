@@ -56,6 +56,7 @@ import { coordinatedPrRoutes } from './routes/api/coordinated-prs.js';
 import { bulkFixRoutes } from './routes/api/bulk-fixes.js';
 import { orgRoutes } from './routes/orgs.js';
 import { toolRoutes } from './routes/tools.js';
+import { methodologyRoutes } from './routes/methodology.js';
 import { repoRoutes } from './routes/repos.js';
 import { gitCredentialRoutes } from './routes/git-credentials.js';
 import { fixPrRoutes } from './routes/fix-pr.js';
@@ -1081,6 +1082,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await assignmentRoutes(server, storage);
   await orgRoutes(server, storage);
   await toolRoutes(server);
+  await methodologyRoutes(server);
   await repoRoutes(server, storage, config);
   await gitCredentialRoutes(server, storage, config);
   await fixPrRoutes(server, storage, config);
