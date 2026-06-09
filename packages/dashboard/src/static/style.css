@@ -6590,3 +6590,11 @@ details[open] > .mt-examples-toggle::before {
 }
 .text--positive { color: var(--status-success-fg, oklch(0.5 0.15 145)); }
 .text--negative { color: var(--status-error-fg,   oklch(0.5 0.18 25)); }
+
+/* rpt-exposure-* — Phase 81: exposure card left-border accent by band.
+   No new colours; reuses existing status tokens. */
+.rpt-exposure-card { border-left: 4px solid var(--border-subtle); }
+.rpt-exposure-card--lower    { border-left-color: var(--status-info); }
+.rpt-exposure-card--moderate { border-left-color: var(--status-warning); }
+.rpt-exposure-card--elevated { border-left-color: var(--status-error); }
+.rpt-exposure-card--high     { border-left-color: var(--status-error); filter: brightness(0.85); }
