@@ -34931,7 +34931,8 @@
                           "wp_version",
                           "plugin_version",
                           "status",
-                          "last_seen"
+                          "last_seen",
+                          "exposure"
                         ],
                         "properties": {
                           "id": {
@@ -34965,6 +34966,50 @@
                           },
                           "last_seen": {
                             "type": "string"
+                          },
+                          "exposure": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "object",
+                                "required": [
+                                  "band",
+                                  "drivers",
+                                  "asOf"
+                                ],
+                                "properties": {
+                                  "band": {
+                                    "type": "string"
+                                  },
+                                  "drivers": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "required": [
+                                        "key",
+                                        "params"
+                                      ],
+                                      "properties": {
+                                        "key": {
+                                          "type": "string"
+                                        },
+                                        "params": {
+                                          "type": "object",
+                                          "additionalProperties": {
+                                            "type": "string"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "asOf": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            ]
                           }
                         }
                       }
@@ -35101,7 +35146,8 @@
                         "wp_version",
                         "plugin_version",
                         "status",
-                        "last_seen"
+                        "last_seen",
+                        "exposure"
                       ],
                       "properties": {
                         "id": {
@@ -35135,6 +35181,50 @@
                         },
                         "last_seen": {
                           "type": "string"
+                        },
+                        "exposure": {
+                          "anyOf": [
+                            {
+                              "type": "null"
+                            },
+                            {
+                              "type": "object",
+                              "required": [
+                                "band",
+                                "drivers",
+                                "asOf"
+                              ],
+                              "properties": {
+                                "band": {
+                                  "type": "string"
+                                },
+                                "drivers": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "required": [
+                                      "key",
+                                      "params"
+                                    ],
+                                    "properties": {
+                                      "key": {
+                                        "type": "string"
+                                      },
+                                      "params": {
+                                        "type": "object",
+                                        "additionalProperties": {
+                                          "type": "string"
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "asOf": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          ]
                         }
                       }
                     }
@@ -39381,6 +39471,25 @@
       "post": {
         "tags": [
           "auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/methodology/legal-exposure": {
+      "get": {
+        "tags": [
+          "methodology"
         ],
         "responses": {
           "200": {

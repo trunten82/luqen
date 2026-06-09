@@ -2088,6 +2088,22 @@
                   },
                   "orgId": {
                     "type": "string"
+                  },
+                  "platform": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "html"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "wordpress-gutenberg"
+                        ]
+                      }
+                    ]
                   }
                 }
               }
@@ -2166,6 +2182,12 @@
                     },
                     "attempts": {
                       "type": "number"
+                    },
+                    "wcagCriterion": {
+                      "type": "string"
+                    },
+                    "diff": {
+                      "type": "string"
                     }
                   }
                 }

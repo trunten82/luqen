@@ -416,6 +416,97 @@
         }
       }
     },
+    "/api/v1/mcp/tools/dashboard_generate_fix": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_generate_fix",
+        "summary": "dashboard_generate_fix",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "Generate an AI-powered remediation draft for a WCAG accessibility issue. Returns the fixed HTML snippet, a unified diff, WCAG criterion, effort estimate, legal context (EU/US by default), and a conservative draft disclaimer. Output is a DRAFT for human review — never auto-applied. Non-destructive: no file writes, no code commits. The caller must review, test, and merge manually.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "wcagCriterion": {
+                    "type": "string",
+                    "description": "WCAG success criterion (e.g. \"1.1.1 Non-text Content\")"
+                  },
+                  "issueMessage": {
+                    "type": "string",
+                    "description": "Accessibility issue description from the scanner"
+                  },
+                  "htmlContext": {
+                    "type": "string",
+                    "description": "HTML snippet containing the problematic element"
+                  },
+                  "cssContext": {
+                    "description": "Optional: relevant CSS for the element",
+                    "type": "string"
+                  },
+                  "jurisdictions": {
+                    "description": "Jurisdiction ids for legal context (default [\"EU\",\"US\"])",
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "platform": {
+                    "description": "Target platform (default: html)",
+                    "type": "string",
+                    "enum": [
+                      "html",
+                      "wordpress-gutenberg"
+                    ]
+                  }
+                },
+                "required": [
+                  "wcagCriterion",
+                  "issueMessage",
+                  "htmlContext"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/mcp/tools/dashboard_get_brand_score": {
       "post": {
         "operationId": "mcp.tool.dashboard_get_brand_score",
@@ -1679,6 +1770,82 @@
                 "required": [
                   "criterion"
                 ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_scan_page": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_scan_page",
+        "summary": "dashboard_scan_page",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "Analyse a URL or raw HTML snippet for WCAG accessibility issues. Accepts either `url` (fetches and scans the live page) or `html` (scans the raw markup without a network request). Returns a `findings` array with the same shape as the dashboard scan report: code, type, message, selector, context, runner. Non-destructive — does NOT create a scan record or trigger any background scan job. SSRF protection: private/internal/loopback URLs (127.x, 10.x, 192.168.x, localhost, .local) are rejected.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "description": "URL of the page to scan (must be a public http/https URL).",
+                    "type": "string"
+                  },
+                  "html": {
+                    "description": "Raw HTML markup to scan (used when the page is not publicly accessible).",
+                    "type": "string"
+                  },
+                  "standard": {
+                    "description": "WCAG conformance level (default: WCAG2AA).",
+                    "type": "string",
+                    "enum": [
+                      "WCAG2A",
+                      "WCAG2AA",
+                      "WCAG2AAA"
+                    ]
+                  },
+                  "deep": {
+                    "description": "Run multi-engine deep scan (htmlcs + axe). Default: false (htmlcs only).",
+                    "type": "boolean"
+                  }
+                },
                 "additionalProperties": true
               }
             }
