@@ -251,6 +251,29 @@ describe('processDigest', () => {
   });
 });
 
+  it('WR-03: advances nextSendAt from schedule.nextSendAt when it is recently past', async () => {
+    // schedule.nextSendAt is 1 hour ago (recent past, within one period)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const schedule = makeSchedule({ channels: ['email'], frequency: 'weekly', nextSendAt: oneHourAgo });
+    const { storage, updateDigestSchedule } = makeStorageStub(schedule);
+
+    const notificationServiceModule = await import('../../src/services/notification-service.js');
+    const sendNotificationSpy = vi.spyOn(notificationServiceModule, 'sendNotification')
+      .mockResolvedValue(undefined);
+
+    await processDigest(storage, schedule);
+    sendNotificationSpy.mockRestore();
+
+    expect(updateDigestSchedule).toHaveBeenCalledTimes(1);
+    const [, data] = updateDigestSchedule.mock.calls[0] as [string, { lastSentAt: string; nextSendAt: string }];
+    // The next send should be ~7 days from the scheduled time (not from now)
+    const scheduledMs = new Date(oneHourAgo).getTime();
+    const nextMs = new Date(data.nextSendAt).getTime();
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    // Should be within 1 minute of scheduled + 7 days (not now + 7 days)
+    expect(Math.abs(nextMs - (scheduledMs + sevenDaysMs))).toBeLessThan(60_000);
+  });
+
 // ---------------------------------------------------------------------------
 // startDigestScheduler
 // ---------------------------------------------------------------------------
