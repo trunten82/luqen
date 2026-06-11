@@ -115,19 +115,25 @@ describe('GET /api/v1/digest — authenticated', () => {
 
   it('site exposure has band string and no disclaimer field when scan exists', async () => {
     // Insert a completed scan for the org + site
+    const scanId = randomUUID();
     await storage.scans.createScan({
-      id: randomUUID(),
+      id: scanId,
       orgId: ORG_A,
       siteUrl: SITE_URL,
+      standard: 'WCAG2AA',
+      jurisdictions: ['EU-EAA'],
+      regulations: [],
+      createdBy: 'test',
+      createdAt: new Date().toISOString(),
+    });
+    await storage.scans.updateScan(scanId, {
       status: 'completed',
+      completedAt: new Date().toISOString(),
       errors: 5,
       warnings: 3,
       notices: 1,
-      jurisdictions: ['us'],
-      regulations: ['ada'],
       confirmedViolations: 2,
-      createdAt: new Date().toISOString(),
-      completedAt: new Date().toISOString(),
+      jsonReport: '{}',
     });
 
     const server = await buildServerWithUser({ id: 'u1', currentOrgId: ORG_A });
@@ -155,19 +161,25 @@ describe('GET /api/v1/digest — authenticated', () => {
   });
 
   it('band value is one of the ordinal labels when exposure is present', async () => {
+    const scanId2 = randomUUID();
     await storage.scans.createScan({
-      id: randomUUID(),
+      id: scanId2,
       orgId: ORG_A,
       siteUrl: SITE_URL,
+      standard: 'WCAG2AA',
+      jurisdictions: ['EU-EAA'],
+      regulations: [],
+      createdBy: 'test',
+      createdAt: new Date().toISOString(),
+    });
+    await storage.scans.updateScan(scanId2, {
       status: 'completed',
+      completedAt: new Date().toISOString(),
       errors: 10,
       warnings: 5,
       notices: 2,
-      jurisdictions: ['us'],
-      regulations: ['ada'],
       confirmedViolations: 3,
-      createdAt: new Date().toISOString(),
-      completedAt: new Date().toISOString(),
+      jsonReport: '{}',
     });
 
     const server = await buildServerWithUser({ id: 'u1', currentOrgId: ORG_A });
@@ -235,19 +247,25 @@ describe('GET /api/v1/digest — forbidden words (D-12)', () => {
   ];
 
   it('serialised payload contains no forbidden words', async () => {
+    const scanId3 = randomUUID();
     await storage.scans.createScan({
-      id: randomUUID(),
+      id: scanId3,
       orgId: ORG_A,
       siteUrl: SITE_URL,
+      standard: 'WCAG2AA',
+      jurisdictions: ['EU-EAA'],
+      regulations: [],
+      createdBy: 'test',
+      createdAt: new Date().toISOString(),
+    });
+    await storage.scans.updateScan(scanId3, {
       status: 'completed',
+      completedAt: new Date().toISOString(),
       errors: 2,
       warnings: 1,
       notices: 0,
-      jurisdictions: ['eu'],
-      regulations: ['en301549'],
       confirmedViolations: 0,
-      createdAt: new Date().toISOString(),
-      completedAt: new Date().toISOString(),
+      jsonReport: '{}',
     });
 
     const server = await buildServerWithUser({ id: 'u1', currentOrgId: ORG_A });
