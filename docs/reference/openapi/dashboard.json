@@ -9618,6 +9618,7 @@
           },
           {
             "schema": {
+              "pattern": "^[0-9A-Za-z._-]{1,32}$",
               "type": "string"
             },
             "in": "path",
