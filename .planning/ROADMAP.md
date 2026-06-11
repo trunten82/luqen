@@ -109,12 +109,13 @@
   3. The digest is delivered via the existing notify channels (email / Slack / Teams)
   4. An admin can download or attach a board-ready PDF export of the digest
   5. A WordPress site produces a per-site digest reusing WP company-info / per-site master data
-**Plans**: 5 plans (5 waves)
+**Plans**: 6 plans (6 waves)
 - [ ] 82-01-PLAN.md — DB foundation: digest_schedules migration 088 + repository + digest.manage permission + adapter wiring
 - [ ] 82-02-PLAN.md — Digest builder: buildDigest period-diff (new/fixed per-criterion) + exposure trend (band+direction) + explicit no-scan state
 - [ ] 82-03-PLAN.md — Delivery: board-ready PDF + inline email body + digest sweep scheduler with isolated per-channel fan-out (email/Slack/Teams)
-- [ ] 82-04-PLAN.md — Dashboard admin UX: /admin/digest-schedules CRUD + digest view + rpt-digest partials + 6-locale i18n + GET /api/v1/digest + scheduler wiring + openapi/rbac regen
-- [ ] 82-05-PLAN.md — WordPress per-site digest (separate repo): Luqen_Digest_Page + fetch_digest + company-info header + blocking wp-test LXC Playwright UAT
+- [ ] 82-04-PLAN.md — Dashboard admin UX: /admin/digest-schedules CRUD + digest view + PDF download + rpt-digest partials + sidebar + 6-locale i18n
+- [ ] 82-05-PLAN.md — API + wiring: GET /api/v1/digest endpoint + server.ts route registration + digest sweep startup + openapi/rbac drift regen
+- [ ] 82-06-PLAN.md — WordPress per-site digest (separate repo): Luqen_Digest_Page + fetch_digest + company-info header + blocking wp-test LXC Playwright UAT
 **UI hint**: yes
 
 ## Progress
