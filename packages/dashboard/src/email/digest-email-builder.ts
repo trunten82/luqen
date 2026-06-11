@@ -80,7 +80,11 @@ function formatPeriodRange(start: string, end: string): string {
 function bandBadgeHtml(band: ExposureBand): string {
   const icon = escapeHtml(BAND_ICON[band]);
   const label = escapeHtml(BAND_LABEL[band]);
-  return `<span style="${BAND_BADGE_STYLE[band]}">${icon}${label}</span>`;
+  // WR-06: BAND_BADGE_STYLE values are static compile-time constants and contain
+  // no user-controlled input, so escapeHtml here is defensive hygiene only.
+  // It ensures any future maintainer who adds a CSS value with a " character
+  // cannot accidentally break the style attribute delimiter.
+  return `<span style="${escapeHtml(BAND_BADGE_STYLE[band])}">${icon}${label}</span>`;
 }
 
 function deltaHtml(value: number): string {
