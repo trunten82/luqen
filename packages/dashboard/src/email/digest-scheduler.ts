@@ -278,14 +278,32 @@ export async function processDigest(
   // ── Advance nextSendAt/lastSentAt regardless of partial delivery (D-09) ───
   // This MUST run after the channel loop, even when channels failed.
   // A failing channel CANNOT wedge the schedule into a resend loop.
+  //
+  // WR-03: advance from schedule.nextSendAt (not wall-clock now) when the
+  // scheduled time is in the past but within one period window — prevents
+  // drift accumulating over long-running digest builds.  If nextSendAt is
+  // already in the future (shouldn't happen in normal flow) or is more than
+  // one period behind now (indicating a catch-up scenario), advance from now
+  // instead to avoid a tight-loop storm.
   const now = new Date();
-  const nextSendAt = computeNextDigestSendAt(schedule.frequency, now);
-  if (storage.digest !== undefined) {
-    await storage.digest.updateDigestSchedule(schedule.id, {
-      lastSentAt: now.toISOString(),
-      nextSendAt,
-    });
-  }
+  const periodMs = schedule.frequency === 'monthly'
+    ? 30 * 24 * 60 * 60 * 1000
+    : 7 * 24 * 60 * 60 * 1000;
+  const scheduledTime = new Date(schedule.nextSendAt);
+  const useFrom =
+    scheduledTime <= now && now.getTime() - scheduledTime.getTime() <= periodMs
+      ? scheduledTime
+      : now;
+  const nextSendAt = computeNextDigestSendAt(schedule.frequency, useFrom);
+
+  // WR-05: remove the `storage.digest !== undefined` guard — if storage.digest
+  // were undefined, getDueDigestSchedules() could not have returned this
+  // schedule in the first place.  The guard created a dangerous failure mode
+  // where the schedule would never advance and be retried every 60s.
+  await storage.digest!.updateDigestSchedule(schedule.id, {
+    lastSentAt: now.toISOString(),
+    nextSendAt,
+  });
 }
 
 // ---------------------------------------------------------------------------
