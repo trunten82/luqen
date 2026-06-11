@@ -343,7 +343,13 @@ export async function digestScheduleRoutes(
     '/admin/digest-schedules/:id/pdf/:period',
     {
       preHandler: requirePermission('admin.system'),
-      schema: { params: DigestPdfParams },
+      schema: {
+        params: DigestPdfParams,
+        // 404 is the HTML toast partial (same convention as the other admin
+        // digest routes), not a JSON error envelope.
+        response: { 200: Type.String(), 404: Type.String() },
+        produces: ['application/pdf'],
+      },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id, period } = request.params as { id: string; period: string };
