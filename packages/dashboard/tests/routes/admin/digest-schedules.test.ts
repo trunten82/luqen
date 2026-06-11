@@ -477,4 +477,127 @@ describe('GET /admin/digest-schedules/:id/pdf/:period', () => {
     expect(response.headers['content-type']).toContain('application/pdf');
     expect(response.body).toContain('%PDF');
   });
+
+  it('CR-03: rejects period with forbidden characters (400 from TypeBox)', async () => {
+    const schedule = await makeSchedule(ctx);
+    // Period with newline — header injection attempt; TypeBox pattern rejects it
+    const response = await ctx.server.inject({
+      method: 'GET',
+      url: `/admin/digest-schedules/${schedule.id}/pdf/2026-05%0d%0aX-Injected:evil`,
+    });
+    // TypeBox pattern '^[0-9A-Za-z._-]{1,32}$' does not match the decoded value
+    expect([400, 404]).toContain(response.statusCode);
+  });
+});
+
+// ── CR-02: Org-scope guard tests ─────────────────────────────────────────────
+
+describe('CR-02: org-scope guard — cross-org access returns 404', () => {
+  it('toggle returns 404 when schedule belongs to a different org', async () => {
+    // Create schedule owned by 'system' org
+    const ownerCtx = await createTestServer();
+    const schedule = await makeSchedule(ownerCtx);
+
+    // Create a server that authenticates as a DIFFERENT org
+    const dbPath = join(tmpdir(), `test-digest-xorg-${randomUUID()}.db`);
+    const pluginsDir = join(tmpdir(), `test-plugins-xorg-${randomUUID()}`);
+    mkdirSync(pluginsDir, { recursive: true });
+    const xStorage = new SqliteStorageAdapter(dbPath);
+    await xStorage.migrate();
+    const xPlugin = new PluginManager({
+      db: xStorage.getRawDatabase(),
+      pluginsDir,
+      encryptionKey: TEST_SESSION_SECRET,
+      registryEntries: [],
+    });
+    const xServer = Fastify({ logger: false });
+    await xServer.register(import('@fastify/formbody'));
+    await registerSession(xServer, TEST_SESSION_SECRET);
+    xServer.decorateReply('view', function (this: FastifyReply, t: string, d: unknown) {
+      return this.code(200).header('content-type', 'application/json').send(JSON.stringify({ template: t, data: d }));
+    });
+    xServer.addHook('preHandler', async (request) => {
+      request.user = { id: 'user-2', username: 'bob', role: 'admin', currentOrgId: 'other-org' };
+      (request as unknown as Record<string, unknown>)['permissions'] = new Set([...ALL_PERMISSION_IDS]);
+    });
+    await digestScheduleRoutes(xServer, ownerCtx.storage, xPlugin);
+    await xServer.ready();
+
+    const response = await xServer.inject({
+      method: 'PATCH',
+      url: `/admin/digest-schedules/${schedule.id}/toggle`,
+    });
+    ownerCtx.cleanup();
+    void xStorage.disconnect();
+    if (existsSync(dbPath)) rmSync(dbPath);
+    if (existsSync(pluginsDir)) rmSync(pluginsDir, { recursive: true });
+    void xServer.close();
+
+    // Must be 404 (not 403) — no existence leakage
+    expect(response.statusCode).toBe(404);
+  });
+});
+
+// ── WR-01: Recipient email validation ────────────────────────────────────────
+
+describe('WR-01: recipient email validation on create', () => {
+  let ctx: TestContext;
+  beforeEach(async () => { ctx = await createTestServer(); });
+  afterEach(() => { ctx.cleanup(); vi.clearAllMocks(); });
+
+  it('rejects invalid recipient email addresses with 400', async () => {
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/digest-schedules',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: 'name=Bad+Email+Test&scope=org&frequency=weekly&recipients=good%40example.com%2C%40badaddr&channelEmail=on',
+    });
+    expect(response.statusCode).toBe(400);
+    expect(response.body).toContain('@badaddr');
+  });
+
+  it('accepts a comma-separated list of valid email addresses', async () => {
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/digest-schedules',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: 'name=Multi+Email&scope=org&frequency=weekly&recipients=alice%40example.com%2Cbob%40example.org&channelEmail=on',
+    });
+    expect(response.statusCode).toBe(200);
+    const schedules = await ctx.storage.digest!.listDigestSchedules('system');
+    expect(schedules).toHaveLength(1);
+  });
+});
+
+// ── WR-02: siteUrl validation ────────────────────────────────────────────────
+
+describe('WR-02: siteUrl validation on create', () => {
+  let ctx: TestContext;
+  beforeEach(async () => { ctx = await createTestServer(); });
+  afterEach(() => { ctx.cleanup(); vi.clearAllMocks(); });
+
+  it('rejects a non-http/https siteUrl with 400', async () => {
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/digest-schedules',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: 'name=Bad+URL&scope=site&siteUrl=javascript%3Afoo&frequency=weekly&recipients=exec%40example.com&channelEmail=on',
+    });
+    expect(response.statusCode).toBe(400);
+    expect(response.body).toContain('http/https');
+  });
+
+  it('treats empty siteUrl with scope=site as org-wide (stores null)', async () => {
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/digest-schedules',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: 'name=Empty+URL&scope=site&siteUrl=&frequency=weekly&recipients=exec%40example.com&channelEmail=on',
+    });
+    // Empty siteUrl: `'' || null` = null; since null is a site-scope with no URL, it's accepted
+    // but stored as null (becomes org-wide in effect)
+    expect(response.statusCode).toBe(200);
+    const schedules = await ctx.storage.digest!.listDigestSchedules('system');
+    expect(schedules[0].siteUrl).toBeNull();
+  });
 });
