@@ -193,6 +193,37 @@ export interface CreateEmailReportInput {
 }
 
 // ---------------------------------------------------------------------------
+// Digest schedule types (Phase 82 — DIGEST-01)
+// ---------------------------------------------------------------------------
+
+export interface DigestSchedule {
+  readonly id: string;
+  readonly orgId: string;
+  readonly name: string;
+  readonly siteUrl: string | null;          // null = org-wide schedule
+  readonly frequency: string;
+  readonly recipients: string;              // comma-separated email list
+  readonly channels: readonly string[];     // ['email', 'slack', 'teams'] subsets
+  readonly enabled: boolean;
+  readonly nextSendAt: string;
+  readonly lastSentAt: string | null;
+  readonly createdBy: string;
+  readonly createdAt: string;
+}
+
+export interface CreateDigestScheduleInput {
+  readonly id: string;
+  readonly orgId: string;
+  readonly name: string;
+  readonly siteUrl: string | null;
+  readonly frequency: string;
+  readonly recipients: string;
+  readonly channels: string;               // JSON string of string[]
+  readonly nextSendAt: string;
+  readonly createdBy: string;
+}
+
+// ---------------------------------------------------------------------------
 // Connected repo types
 // ---------------------------------------------------------------------------
 
