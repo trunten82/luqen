@@ -274,7 +274,7 @@ function computeFindingPressureBand(findings: ExposureInput['findings']): Exposu
 // Ordinal band helpers
 // ---------------------------------------------------------------------------
 
-const BAND_ORDINAL: Record<ExposureBand, number> = {
+export const BAND_ORDINAL: Record<ExposureBand, number> = {
   lower: 0,
   moderate: 1,
   elevated: 2,
