@@ -78,8 +78,11 @@ import { ALL_PERMISSION_IDS, resolveEffectivePermissions } from './permissions.j
 import { roleRoutes } from './routes/admin/roles.js';
 import { teamRoutes } from './routes/admin/teams.js';
 import { emailReportRoutes } from './routes/admin/email-reports.js';
+import { digestScheduleRoutes } from './routes/admin/digest-schedules.js';
+import { digestApiRoutes } from './routes/api/digest.js';
 import { setupRoutes } from './routes/api/setup.js';
 import { startEmailScheduler } from './email/scheduler.js';
+import { startDigestScheduler } from './email/digest-scheduler.js';
 import { startSourceMonitorScheduler } from './source-monitor-scheduler.js';
 import { ComplianceService } from './services/compliance-service.js';
 import { initRegulationCatalog } from './services/regulation-catalog.js';
@@ -1124,6 +1127,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await roleRoutes(server, storage);
   await teamRoutes(server, storage);
   await emailReportRoutes(server, storage, pluginManager);
+  // ── Phase 82: Digest schedule admin routes ──────────────────────────────
+  await digestScheduleRoutes(server, storage, pluginManager);
 
   await auditRoutes(server, storage);
   await adminBadgeRoutes(server, storage, config.selfScanId);
@@ -1184,6 +1189,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── WordPress network/fleet API (Phase 61) ──────────────────────────────
   await wpNetworkApiRoutes(server, storage);
+
+  // ── Phase 82: Digest API for the WP plugin ──────────────────────────────
+  await digestApiRoutes(server, storage);
 
   // ── Entitlement API (Phase 80) — plan + AI-fix credits for the WP plugin ──
   await entitlementApiRoutes(server, storage, getLLMClient);
@@ -1409,12 +1417,15 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   server.addHook('onReady', async () => {
     const timer = startScheduler(storage, orchestrator, config);
     const emailTimer = startEmailScheduler(storage, pluginManager);
+    // Phase 82: digest sweep — runs every 60 s, picks up due digest schedules.
+    const digestTimer = startDigestScheduler(storage, pluginManager);
     const sourceMonitorTimer = startSourceMonitorScheduler(config, getComplianceTokenManager);
     // Phase 31.1 Plan 04 Task 1: nightly OAuth key housekeeping + auto-rotation.
     const keyHousekeepingTimer = startKeyHousekeeping(storage, config.sessionSecret);
     server.addHook('onClose', () => {
       clearInterval(timer);
       clearInterval(emailTimer);
+      clearInterval(digestTimer);
       clearInterval(sourceMonitorTimer);
       clearInterval(keyHousekeepingTimer);
     });
