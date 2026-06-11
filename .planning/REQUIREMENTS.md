@@ -1,83 +1,90 @@
-# Requirements — Milestone v3.5.0: Commercial positioning & agency monetization
+# Requirements — Milestone v3.5.0: Anti-overlay wedge — dev + exec first wave
 
-Derived from the deep-research findings (2026-05-29). Genuine-remediation positioning + the freemium→Pro→Agency monetization spine the WP-shelf competitors prove converts.
+Derived from the verified 2026-06 market-positioning brief (`.planning/MARKET-POSITIONING-2026-06.md`).
+First wave = A1 (CI regression gate) + A3 (MCP fix tools) + B1 (jurisdiction legal-exposure scoring,
+flagship) + B5 (scheduled exec digest). WordPress-leaned. All reporting stays conservative — never
+"compliant"; exposure-indication + good-faith framing only.
 
-**Research provenance:** overlay collapse (FTC $1M / NFB revocation / sued-despite-widget) verified 3-0; Equalize Digital freemium gate (full-site scan, audit history, Excel export, CPT, multisite) verified 3-0; Elementor Ally credit-metered AI fixes verified 3-0. Enterprise pricing + market-size + jurisdiction-uniqueness + agency-demand specifics from a follow-up run (in flight) feed PRICE-* and refine AGENCY-*.
+**Supersedes** the reversed v3.5.0 "Commercial positioning & agency monetization" requirements
+(POS-* shipped in Phase 78; GATE/CREDIT/AGENCY/PRICE-* are reversed — see Out of Scope).
 
 ---
 
 ## Active Requirements
 
-### POS — Positioning (anti-overlay)
-- [ ] **POS-01**: A prospective user reading the WP plugin `readme.txt` sees Luqen framed as genuine source-level remediation, with an explicit anti-overlay section naming the risk (overlays don't deliver compliance or prevent lawsuits).
-- [ ] **POS-02**: A user viewing a scan report / the dashboard landing sees genuine-remediation positioning (real fixes in your source, not a widget).
-- [ ] **POS-03**: A user can read a "why not an overlay" comparison surface citing the verified evidence (FTC settlement, NFB revocation, lawsuits-despite-widget rate).
+### CIGATE — CI regression gate (developer; A1)
+- [ ] **CIGATE-01**: A developer can run a CLI scan in fail-on-regression mode (e.g. `luqen scan --fail-on=new`) that exits non-zero when the scan introduces accessibility findings not present in a stored baseline.
+- [ ] **CIGATE-02**: A developer can create and update a baseline of accepted findings for a target.
+- [ ] **CIGATE-03**: A developer using the provided GitHub Action receives a PR comment summarizing new vs fixed findings (with WCAG criterion + jurisdiction context) on each pull request.
+- [ ] **CIGATE-04**: A developer can configure the gate's failure threshold (severity / new-only) and the gate degrades gracefully with conservative output (never asserts "compliant").
+- [ ] **CIGATE-05**: A WordPress author publishing/updating a post is warned (optionally blocked) when the edit introduces new accessibility violations versus the last scan.
 
-### GATE — Pro feature gating (WP plugin)
-- [ ] **GATE-01**: A free-tier WP user is limited on full-site/bulk scanning; a Pro-entitled user can run full-site/bulk scans.
-- [ ] **GATE-02**: A Pro user can view retained audit history for a post/page across scans.
-- [ ] **GATE-03**: A Pro user can export findings to Excel (xlsx; no CSV per project rule).
-- [ ] **GATE-04**: A Pro user can scan custom post types / WooCommerce products.
-- [ ] **GATE-05**: A Pro/agency user can run the plugin across a multisite network.
-- [ ] **GATE-06**: The plugin enforces free-vs-Pro entitlement (in enterprise mode entitlement derives from the connected Luqen instance's org plan; a standalone license-key path is stubbed for future).
+### MCPFIX — MCP fix tools for coding agents (developer / agent-native; A3)
+- [ ] **MCPFIX-01**: An agent/IDE (Cursor, Claude Code) connected to the Luqen MCP server can invoke a tool to scan a URL/page/HTML and receive structured accessibility findings.
+- [ ] **MCPFIX-02**: An agent can invoke a tool to generate a source-level fix for a given finding, returning the proposed diff/snippet, an explanation, and the WCAG criterion.
+- [ ] **MCPFIX-03**: A fix-tool response includes the applicable 58-jurisdiction legal context/framing for the finding.
+- [ ] **MCPFIX-04**: The MCP fix tools can return WordPress-block-aware (Gutenberg) fixes through the same path.
+- [ ] **MCPFIX-05**: The MCP fix tools enforce existing auth (OAuth2 JWT) + RBAC + org scoping (`mcp.use`) and never apply changes themselves — they return drafts a human/agent reviews and merges (human-supervised, anti-overlay).
 
-### CREDIT — Credit-metered AI fixes
-- [ ] **CREDIT-01**: Each `generate-fix` call decrements an org credit balance, recorded on top of the existing `llm_usage` ledger.
-- [ ] **CREDIT-02**: An admin can set/top-up a per-org credit allocation; the system maintains a balance + consumption ledger.
-- [ ] **CREDIT-03**: When an org's credits are exhausted, `generate-fix` is gated and degrades gracefully to the deterministic fix fallback (never hard-errors the user flow).
-- [ ] **CREDIT-04**: A dashboard user sees remaining credit balance and consumption against allocation on `/admin/llm-usage`.
-- [ ] **CREDIT-05**: A WP plugin user sees remaining credits / a paywall prompt when AI fixes are metered out.
+### EXPO — Jurisdiction legal-exposure scoring (executive, flagship; B1)
+- [ ] **EXPO-01**: A user viewing a site/scan sees a conservative legal-exposure indicator derived from scan findings + the site's selected jurisdiction framing, explicitly framed as exposure (never "compliant" or an assertion of fault).
+- [ ] **EXPO-02**: The exposure indicator reflects jurisdiction-specific drivers — EU/EAA applicability, high-filing US states (NY/FL/IL), and ADA Title II 2027/2028 deadline countdowns where applicable.
+- [ ] **EXPO-03**: A user can see a portfolio/fleet view that ranks sites by their exposure indicator.
+- [ ] **EXPO-04**: A WordPress admin sees the per-site exposure indicator in the plugin dashboard.
+- [ ] **EXPO-05**: The exposure model and its disclaimers are documented and conservative (transparency + good-faith framing, "not legal advice").
 
-### AGENCY — Agency tier
-- [ ] **AGENCY-01**: An agency user manages multiple client orgs/sites from a single multi-client console.
-- [ ] **AGENCY-02**: An agency can generate white-label / rebrandable client reports (agency logo + name, not Luqen branding).
-- [ ] **AGENCY-03**: An agency can generate a VPAT / ACR (Accessibility Conformance Report) for a client site.
-- [ ] **AGENCY-04**: The platform models a partner/resale entitlement (agency plan covering N client sites).
-- [ ] **AGENCY-05**: An agency can apply white-label theming (logo, colors) to client-facing dashboard/report surfaces.
-
-### PRICE — Pricing & packaging
-- [ ] **PRICE-01**: Free/Pro/Agency tiers are codified as an explicit feature matrix (which capabilities each tier unlocks).
-- [ ] **PRICE-02**: Pricing anchors are documented (informed by the in-flight enterprise-pricing research; WP anchors free→~$190/yr Pro→~$2,250/yr/25-site Agency already validated).
-- [ ] **PRICE-03**: A per-org plan/entitlement model drives feature availability platform-wide (single source of truth consumed by dashboard + LLM + WP).
+### DIGEST — Scheduled executive digest (executive; B5)
+- [x] **DIGEST-01**: An admin can schedule a recurring (weekly/monthly) executive digest for an org or site.
+- [x] **DIGEST-02**: The digest summarizes "what changed / what's at risk" since the last period — new vs fixed findings, exposure trend, and deadline countdowns — using the conservative framing.
+- [x] **DIGEST-03**: The digest is delivered via the existing notify channels (email / Slack / Teams).
+- [x] **DIGEST-04**: An admin can download or attach a board-ready PDF export of the digest.
+- [x] **DIGEST-05**: A WordPress site can produce a per-site digest reusing WP company-info / per-site master data.
 
 ---
 
-## Future Requirements (deferred)
-- External billing integration (Stripe/Freemius) + self-serve checkout — this milestone keeps plan/credit allocation admin-controlled.
-- Standalone WP.org license-key issuance + a hosted licensing service (only the entitlement hook is stubbed in GATE-06).
-- Usage-based overage billing / auto-top-up.
-- Per-end-user (vs per-org) credit attribution.
+## Future Requirements (deferred — named follow-on milestones)
 
-## Out of Scope (explicit)
-- Payment processing / PCI handling — deliberately excluded; Core Value keeps admins in control via the dashboard, not a billing pipeline.
-- Reviving the removed LLM provider plugins (superseded by @luqen/llm).
-- Overlay/widget functionality of any kind — Luqen is the genuine-remediation antithesis of overlays; building one would undercut POS-*.
+- Native mobile app accessibility testing (closes the Evinced / Level Access gap).
+- Managed / guided expert-audit service (closes the Deque / Siteimprove / Allyant gap).
+- A2 — deepen the PR-native fix workflow (batch criteria per PR, diff+explain review UX, idempotent re-runs).
+- A5 — fleet "fix-once-apply-everywhere" (cross-site defect clustering → one source fix applied fleet-wide).
+- B3 — remediation-velocity KPIs (time-to-fix, % criteria Not Evaluated→Supports, PR-merge cadence).
+- A4 — framework-aware codemods; A6 — IDE extension; B2 — live portfolio dashboard; B4 — regression/trend alerting; B6 — board export polish.
+
+---
+
+## Out of Scope
+
+- **Freemium / Pro / Agency feature gates, credit-metered fixes, white-label tiers, pricing/plan model** — reversed by the single-product decision ([[project_single_tier_decision]]); the platform ships as one product with no gates. (Was GATE/CREDIT/AGENCY/PRICE-* in the dead v3.5.0.)
+- **External billing (Stripe / Freemius)** — not a product direction.
+- **Design-stage / Figma tooling** — Stark owns that space; do not compete there now.
+- **Any claim of "compliant" / "100%" / "lawsuit-proof"** — structurally excluded; conservative framing only.
+
+---
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| POS-01 | Phase 78 | Pending |
-| POS-02 | Phase 78 | Pending |
-| POS-03 | Phase 78 | Pending |
-| GATE-01 | Phase 79 | Pending |
-| GATE-02 | Phase 79 | Pending |
-| GATE-03 | Phase 79 | Pending |
-| GATE-04 | Phase 79 | Pending |
-| GATE-05 | Phase 79 | Pending |
-| GATE-06 | Phase 79 | Pending |
-| CREDIT-01 | Phase 80 | Pending |
-| CREDIT-02 | Phase 80 | Pending |
-| CREDIT-03 | Phase 80 | Pending |
-| CREDIT-04 | Phase 80 | Pending |
-| CREDIT-05 | Phase 80 | Pending |
-| AGENCY-01 | Phase 81 | Pending |
-| AGENCY-02 | Phase 81 | Pending |
-| AGENCY-03 | Phase 81 | Pending |
-| AGENCY-04 | Phase 81 | Pending |
-| AGENCY-05 | Phase 81 | Pending |
-| PRICE-01 | Phase 82 | Pending |
-| PRICE-02 | Phase 82 | Pending |
-| PRICE-03 | Phase 82 | Pending |
+| CIGATE-01 | Phase 79 | Pending |
+| CIGATE-02 | Phase 79 | Pending |
+| CIGATE-03 | Phase 79 | Pending |
+| CIGATE-04 | Phase 79 | Pending |
+| CIGATE-05 | Phase 79 | Pending |
+| MCPFIX-01 | Phase 80 | Pending |
+| MCPFIX-02 | Phase 80 | Pending |
+| MCPFIX-03 | Phase 80 | Pending |
+| MCPFIX-04 | Phase 80 | Pending |
+| MCPFIX-05 | Phase 80 | Pending |
+| EXPO-01 | Phase 81 | Pending |
+| EXPO-02 | Phase 81 | Pending |
+| EXPO-03 | Phase 81 | Pending |
+| EXPO-04 | Phase 81 | Pending |
+| EXPO-05 | Phase 81 | Pending |
+| DIGEST-01 | Phase 82 | Complete |
+| DIGEST-02 | Phase 82 | Complete |
+| DIGEST-03 | Phase 82 | Complete |
+| DIGEST-04 | Phase 82 | Complete |
+| DIGEST-05 | Phase 82 | Complete |
 
-**Coverage: 22/22 requirements mapped — no orphans, no duplicates.**
+**Coverage:** 20/20 requirements mapped to exactly one phase. No orphans, no duplicates.
