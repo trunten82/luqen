@@ -1,0 +1,111 @@
+{{!-- rpt-digest-changed.hbs — "What changed" digest card partial
+     Consumes: digest (DigestData), period ({start, end})
+     Conservative framing (D-12): no forbidden words. --}}
+
+<div class="card rpt-digest-card rpt-digest-card--changed mb-lg">
+  <div class="card__header">
+    <h3 class="card__title">{{t "digest.view.whatChanged"}}</h3>
+    <p class="text-muted text-sm">
+      {{t "digest.view.periodWeekly" start=period.start end=period.end}}
+    </p>
+  </div>
+  <div class="card__body">
+
+    {{!-- Totals delta table --}}
+    <table class="table mb-md" aria-label="{{t "digest.view.whatChanged"}}">
+      <thead>
+        <tr>
+          <th scope="col">{{t "digest.view.errors"}}</th>
+          <th scope="col">{{t "digest.view.warnings"}}</th>
+          <th scope="col">{{t "digest.view.notices"}}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#if digest.sites.length}}
+        <tr>
+          {{!-- Aggregate totals across all sites --}}
+          <td data-label="Errors">
+            {{#with (lookup digest.sites 0)}}
+            {{#if (gt errors 0)}}
+              <span class="trend-delta text--error" aria-label="{{errors}} errors">{{errors}}</span>
+            {{else}}
+              <span class="trend-delta text--muted" aria-label="no errors">0</span>
+            {{/if}}
+            {{/with}}
+          </td>
+          <td data-label="Warnings">
+            {{#with (lookup digest.sites 0)}}
+            {{#if (gt warnings 0)}}
+              <span class="trend-delta text--error" aria-label="{{warnings}} warnings">{{warnings}}</span>
+            {{else}}
+              <span class="trend-delta text--muted" aria-label="no warnings">0</span>
+            {{/if}}
+            {{/with}}
+          </td>
+          <td data-label="Notices">
+            {{#with (lookup digest.sites 0)}}
+            {{#if (gt notices 0)}}
+              <span class="trend-delta text--muted" aria-label="{{notices}} notices">{{notices}}</span>
+            {{else}}
+              <span class="trend-delta text--muted" aria-label="no notices">0</span>
+            {{/if}}
+            {{/with}}
+          </td>
+        </tr>
+        {{else}}
+        <tr>
+          <td colspan="3" class="table__empty text-muted">—</td>
+        </tr>
+        {{/if}}
+      </tbody>
+    </table>
+
+    {{!-- Per-criterion changes table (top 10, only sites with changes) --}}
+    {{#each digest.sites}}
+      {{#if this.criteriaChanges.length}}
+      <table class="table mb-md" aria-label="{{t "digest.view.criterion"}}">
+        <thead>
+          <tr>
+            <th scope="col">{{t "digest.view.criterion"}}</th>
+            <th scope="col">{{t "digest.view.newFindings"}}</th>
+            <th scope="col">{{t "digest.view.fixedFindings"}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each (limit this.criteriaChanges 10)}}
+          <tr>
+            <td data-label="Criterion">{{this.criterion}}</td>
+            <td data-label="New">
+              {{#if (gt this.newFindings 0)}}
+                <span class="trend-delta text--error" aria-label="increased by {{this.newFindings}}">+{{this.newFindings}}</span>
+              {{else}}
+                <span class="trend-delta text--muted" aria-label="unchanged">0</span>
+              {{/if}}
+            </td>
+            <td data-label="Fixed">
+              {{#if (gt this.fixedFindings 0)}}
+                <span class="trend-delta text--success" aria-label="decreased by {{this.fixedFindings}}">–{{this.fixedFindings}}</span>
+              {{else}}
+                <span class="trend-delta text--muted" aria-label="unchanged">0</span>
+              {{/if}}
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+      {{/if}}
+
+      {{!-- No-scan notice for sites without a new scan this period --}}
+      {{#unless this.hasNewScan}}
+      <div class="alert alert--warning rpt-digest-card__no-scan" role="note">
+        <p>{{t "digest.view.noScan" siteUrl=this.siteUrl}}</p>
+      </div>
+      {{/unless}}
+    {{/each}}
+
+    {{#unless digest.sites.length}}
+    <p class="text-muted">{{t "digest.view.noneYet"}}</p>
+    {{/unless}}
+
+  </div>
+</div>
