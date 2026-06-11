@@ -109,7 +109,12 @@
   3. The digest is delivered via the existing notify channels (email / Slack / Teams)
   4. An admin can download or attach a board-ready PDF export of the digest
   5. A WordPress site produces a per-site digest reusing WP company-info / per-site master data
-**Plans**: TBD
+**Plans**: 5 plans (5 waves)
+- [ ] 82-01-PLAN.md — DB foundation: digest_schedules migration 088 + repository + digest.manage permission + adapter wiring
+- [ ] 82-02-PLAN.md — Digest builder: buildDigest period-diff (new/fixed per-criterion) + exposure trend (band+direction) + explicit no-scan state
+- [ ] 82-03-PLAN.md — Delivery: board-ready PDF + inline email body + digest sweep scheduler with isolated per-channel fan-out (email/Slack/Teams)
+- [ ] 82-04-PLAN.md — Dashboard admin UX: /admin/digest-schedules CRUD + digest view + rpt-digest partials + 6-locale i18n + GET /api/v1/digest + scheduler wiring + openapi/rbac regen
+- [ ] 82-05-PLAN.md — WordPress per-site digest (separate repo): Luqen_Digest_Page + fetch_digest + company-info header + blocking wp-test LXC Playwright UAT
 **UI hint**: yes
 
 ## Progress
@@ -128,7 +133,7 @@ Phases execute in numeric order: 78 (done) → 79 → 80 → 81 → 82
 | 79. CI regression gate | v3.5.0 | 3/3 | Complete   | 2026-06-07 |
 | 80. MCP fix tools for coding agents | v3.5.0 | 3/3 | Complete   | 2026-06-07 |
 | 81. Jurisdiction legal-exposure scoring | v3.5.0 | 0/4 | Planned | - |
-| 82. Scheduled executive digest | v3.5.0 | 0/TBD | Not started | - |
+| 82. Scheduled executive digest | v3.5.0 | 0/5 | Planned | - |
 
 ---
 
