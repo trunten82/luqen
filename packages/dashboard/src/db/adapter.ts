@@ -39,6 +39,7 @@ import type { BulkFixRepository } from './interfaces/bulk-fix-repository.js';
 import type { OrgAggregatorWebhookRepository } from './interfaces/org-aggregator-webhook-repository.js';
 import type { NotificationUnsubscribeRepository } from './interfaces/notification-unsubscribe-repository.js';
 import type { RemediationEventRepository } from './interfaces/remediation-event-repository.js';
+import type { DigestRepository } from './interfaces/digest-repository.js';
 
 export interface StorageAdapter {
   connect(): Promise<void>;
@@ -116,4 +117,12 @@ export interface StorageAdapter {
    * guard with `storage.entitlements?.` and degrade to the 'free' plan.
    */
   readonly entitlements?: EntitlementRepository;
+  /**
+   * Scheduled executive digest persistence (Phase 82 — DIGEST-01).
+   * A dedicated entity for recurring digest schedules; never an email_reports
+   * overload (D-01). Required on the SQLite adapter; OPTIONAL here so that
+   * out-of-repo Postgres/Mongo StorageAdapter plugins do not break.
+   * Consumers should guard with `storage.digest?.`.
+   */
+  readonly digest?: DigestRepository;
 }

@@ -44,6 +44,7 @@ import {
   SqliteReportIdentityRepository,
   SqliteAcrWordingRepository,
   SqliteEntitlementRepository,
+  SqliteDigestRepository,
 } from './repositories/index.js';
 import type Database from 'better-sqlite3';
 
@@ -93,6 +94,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
   readonly reportIdentities: SqliteReportIdentityRepository;
   readonly acrWording: SqliteAcrWordingRepository;
   readonly entitlements: SqliteEntitlementRepository;
+  readonly digest: SqliteDigestRepository;
 
   constructor(dbPath: string) {
     this.db = createSqliteConnection({ dbPath });
@@ -138,6 +140,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
     this.reportIdentities = new SqliteReportIdentityRepository(this.db);
     this.acrWording = new SqliteAcrWordingRepository(this.db);
     this.entitlements = new SqliteEntitlementRepository(this.db);
+    this.digest = new SqliteDigestRepository(this.db);
   }
 
   async connect(): Promise<void> {
