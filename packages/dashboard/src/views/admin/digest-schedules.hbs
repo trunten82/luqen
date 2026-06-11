@@ -1,0 +1,145 @@
+<section aria-label="{{t "digest.admin.title"}}">
+  <h2>{{t "digest.admin.title"}}</h2>
+  <p class="text-muted text-sm mb-md">{{t "digest.admin.description"}}</p>
+
+  {{!-- Create Digest Schedule --}}
+  <div class="mb-lg">
+    <h3>{{t "digest.admin.createHeading"}}</h3>
+
+    <form hx-post="/admin/digest-schedules"
+          hx-target="#digest-schedules-table-body"
+          hx-swap="beforeend"
+          class="form-grid">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+
+      <div class="form-group">
+        <label for="digest-name">{{t "digest.admin.nameLabel"}}</label>
+        <input type="text" id="digest-name" name="name" class="input"
+               placeholder="{{t "digest.admin.namePlaceholder"}}" required
+               aria-required="true">
+      </div>
+
+      <div class="form-group">
+        <label for="digest-scope">{{t "digest.admin.scopeLabel"}}</label>
+        <select id="digest-scope" name="scope" class="select"
+                onchange="(function(sel){var wrap=document.getElementById('digest-site-url-wrap');if(wrap){wrap.hidden=sel.value!=='site';var inp=wrap.querySelector('input');if(inp){inp.tabIndex=sel.value==='site'?0:-1;}}})(this)">
+          <option value="org">{{t "digest.admin.scopeOrg"}}</option>
+          <option value="site">{{t "digest.admin.scopeSite"}}</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="digest-site-url-wrap" hidden>
+        <label for="digest-site-url">{{t "digest.admin.siteUrlLabel"}}</label>
+        <input type="url" id="digest-site-url" name="siteUrl" class="input"
+               placeholder="https://example.com" tabindex="-1">
+      </div>
+
+      <div class="form-group">
+        <label for="digest-frequency">{{t "digest.admin.frequencyLabel"}}</label>
+        <select id="digest-frequency" name="frequency" class="select">
+          <option value="weekly" selected>{{t "digest.admin.weekly"}}</option>
+          <option value="monthly">{{t "digest.admin.monthly"}}</option>
+        </select>
+      </div>
+
+      <div class="form-group form-group--full">
+        <label for="digest-recipients">{{t "digest.admin.recipientsLabel"}}</label>
+        <input type="text" id="digest-recipients" name="recipients" class="input"
+               placeholder="{{t "digest.admin.recipientsPlaceholder"}}" required
+               aria-required="true">
+      </div>
+
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="digest-channel-email" name="channelEmail" checked>
+          {{t "digest.admin.channelEmail"}}
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="digest-channel-slack" name="channelSlack">
+          {{t "digest.admin.channelSlack"}}
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="digest-channel-teams" name="channelTeams">
+          {{t "digest.admin.channelTeams"}}
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary">{{t "digest.admin.createBtn"}}</button>
+      </div>
+    </form>
+  </div>
+
+  {{!-- Digest Schedules Table --}}
+  <div class="card">
+    <h3>{{t "digest.admin.tableLabel"}}</h3>
+    <div class="table-wrapper" aria-live="polite" aria-atomic="false">
+      <table class="table" aria-label="{{t "digest.admin.tableLabel"}}">
+        <thead>
+          <tr>
+            <th scope="col">{{t "common.name"}}</th>
+            <th scope="col">{{t "digest.admin.colScope"}}</th>
+            <th scope="col">{{t "digest.admin.colFrequency"}}</th>
+            <th scope="col">{{t "digest.admin.colChannels"}}</th>
+            <th scope="col">{{t "digest.admin.colNextSend"}}</th>
+            <th scope="col">{{t "digest.admin.colLastSent"}}</th>
+            <th scope="col">{{t "common.status"}}</th>
+            <th scope="col">{{t "common.actions"}}</th>
+          </tr>
+        </thead>
+        <tbody id="digest-schedules-table-body">
+          {{#each schedules}}
+          <tr id="digest-row-{{id}}">
+            <td data-label="Name">{{name}}</td>
+            <td data-label="Scope">{{scopeDisplay}}</td>
+            <td data-label="Frequency">{{frequency}}</td>
+            <td data-label="Channels">{{{channelChips}}}</td>
+            <td data-label="Next send">{{nextSendAtDisplay}}</td>
+            <td data-label="Last sent">{{lastSentAtDisplay}}</td>
+            <td data-label="Status">
+              <span class="badge {{enabledClass}}">{{enabledLabel}}</span>
+            </td>
+            <td>
+              <button hx-patch="/admin/digest-schedules/{{id}}/toggle"
+                      hx-target="#digest-row-{{id}}"
+                      hx-swap="outerHTML"
+                      hx-include="[name='_csrf']"
+                      class="btn btn--sm btn--secondary">
+                {{#if enabled}}{{t "digest.admin.disable"}}{{else}}{{t "digest.admin.enable"}}{{/if}}
+              </button>
+              <button hx-post="/admin/digest-schedules/{{id}}/send-now"
+                      hx-target="#toast-container"
+                      hx-swap="innerHTML"
+                      hx-include="[name='_csrf']"
+                      hx-disabled-elt="this"
+                      class="btn btn--sm btn--secondary"
+                      aria-label="{{t "digest.admin.sendNowAria" name=name}}">
+                {{t "digest.admin.sendNow"}}
+              </button>
+              <button hx-delete="/admin/digest-schedules/{{id}}"
+                      hx-confirm="{{t "digest.admin.deleteConfirm"}}"
+                      hx-target="closest tr"
+                      hx-swap="outerHTML swap:500ms"
+                      hx-include="[name='_csrf']"
+                      class="btn btn--sm btn--danger"
+                      aria-label="{{t "digest.admin.deleteAria" name=name}}">
+                {{t "digest.admin.delete"}}
+              </button>
+            </td>
+          </tr>
+          {{else}}
+          <tr>
+            <td colspan="8" class="table__empty">{{t "digest.admin.noSchedules"}}</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

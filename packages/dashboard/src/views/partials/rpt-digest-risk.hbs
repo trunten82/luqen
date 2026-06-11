@@ -1,0 +1,75 @@
+{{!-- rpt-digest-risk.hbs — "What's at risk" digest card partial
+     Consumes: sites (SiteDelta[]) — exposure-ranked, most at risk first
+     Reuses Phase 81 rpt-badge / rpt-badge--{band} / rpt-exposure-band classes verbatim.
+     Conservative framing (D-12): band label + icon, never a number. --}}
+
+<div class="card rpt-digest-card rpt-digest-card--risk mb-lg">
+  <div class="card__header">
+    <h3 class="card__title">{{t "digest.view.whatsAtRisk"}}</h3>
+  </div>
+  <div class="card__body">
+    {{#if sites.length}}
+    <div class="table-wrapper">
+      <table class="data-table table" aria-label="{{t "digest.view.whatsAtRisk"}}">
+        <thead>
+          <tr>
+            <th scope="col">{{t "common.site"}}</th>
+            <th scope="col">{{t "exposure.band"}}</th>
+            <th scope="col">{{t "exposure.direction"}}</th>
+            <th scope="col">{{t "exposure.deadlines"}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each sites}}
+          <tr>
+            <td data-label="Site">
+              <span class="text-sm">{{this.siteUrl}}</span>
+            </td>
+            <td data-label="Exposure">
+              {{#if this.currentExposure}}
+              <span class="rpt-badge rpt-badge--{{this.currentExposure.band}} rpt-exposure-band"
+                    aria-label="{{this.currentExposure.band}} legal exposure">
+                {{this.currentExposure.band}}
+              </span>
+              {{else}}
+              <span class="text--muted">—</span>
+              {{/if}}
+            </td>
+            <td data-label="Direction">
+              {{#if (eq this.direction "worsened")}}
+              <span class="trend-delta text--error" aria-label="{{t "digest.view.worsened"}}">
+                <span aria-hidden="true">▲</span> {{t "digest.view.worsened"}}
+              </span>
+              {{else if (eq this.direction "improved")}}
+              <span class="trend-delta text--success" aria-label="{{t "digest.view.improved"}}">
+                <span aria-hidden="true">▼</span> {{t "digest.view.improved"}}
+              </span>
+              {{else}}
+              <span class="trend-delta text--muted" aria-label="{{t "digest.view.unchanged"}}">
+                <span aria-hidden="true">—</span> {{t "digest.view.unchanged"}}
+              </span>
+              {{/if}}
+            </td>
+            <td data-label="Deadlines">
+              {{#if this.currentExposure.drivers.length}}
+                {{#with (lookup this.currentExposure.drivers 0)}}
+                  {{#if (lt this.daysUntil 90)}}
+                  <span class="badge badge--warning">{{this.name}}: {{this.daysUntil}} {{t "digest.view.deadlineImminent" name=this.name n=this.daysUntil}}</span>
+                  {{else}}
+                  <span class="text-muted text-sm">{{this.name}}</span>
+                  {{/if}}
+                {{/with}}
+              {{else}}
+              <span class="text--muted">—</span>
+              {{/if}}
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+    {{else}}
+    <p class="text-muted">{{t "digest.view.noneYet"}}</p>
+    {{/if}}
+  </div>
+</div>

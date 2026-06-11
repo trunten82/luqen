@@ -1,0 +1,36 @@
+{{> page-header title=(t "digest.view.title")}}
+
+<div class="mb-md">
+  <p class="text-muted text-sm">
+    {{t "digest.view.scopeOrg"}}{{#if schedule.siteUrl}} &mdash; {{t "digest.view.scopeSite" url=schedule.siteUrl}}{{/if}}
+  </p>
+</div>
+
+{{!-- What changed partial --}}
+{{> rpt-digest-changed digest=digest period=period}}
+
+{{!-- What's at risk partial --}}
+{{> rpt-digest-risk sites=sites}}
+
+{{!-- Disclaimer + Methodology + PDF download --}}
+<div class="card rpt-digest-card rpt-digest-card--footer">
+  <div class="card__body">
+    <div class="alert alert--info rpt-digest-card__disclaimer" role="note">
+      <p>{{t "digest.disclaimer"}}</p>
+    </div>
+    <p class="text-muted" style="font-size: var(--font-size-sm)">
+      {{t "digest.methodologyNote"}}
+      <a href="/methodology/legal-exposure" target="_blank" rel="noopener noreferrer"
+         aria-label="{{t "exposure.methodologyLink"}} (opens in new tab)"
+         style="min-height: 44px; padding-block: 10px; display: inline-flex; align-items: center;">
+        {{t "exposure.methodologyLink"}}
+      </a>
+    </p>
+    <a href="/admin/digest-schedules/{{scheduleId}}/pdf/{{period.start}}"
+       class="btn btn--secondary"
+       download
+       style="min-height: 44px;">
+      {{t "digest.downloadPdf"}}
+    </a>
+  </div>
+</div>

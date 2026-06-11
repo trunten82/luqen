@@ -6598,3 +6598,15 @@ details[open] > .mt-examples-toggle::before {
 .rpt-exposure-card--moderate { border-left-color: var(--status-warning); }
 .rpt-exposure-card--elevated { border-left-color: var(--status-error); }
 .rpt-exposure-card--high     { border-left-color: var(--status-error); filter: brightness(0.85); }
+
+/* rpt-digest-* — Phase 82: digest view cards. */
+.rpt-digest-card {
+  margin-bottom: var(--space-lg);
+}
+.rpt-digest-card--changed .card__header { border-left: 4px solid var(--status-info); }
+.rpt-digest-card--risk .card__header    { border-left: 4px solid var(--status-warning); }
+.rpt-digest-card--footer                { background: var(--bg-surface); }
+
+/* Delta text utilities (complement existing .text--success at line 4239) */
+.text--error  { color: var(--status-error); }
+.text--muted  { color: var(--text-muted); }
