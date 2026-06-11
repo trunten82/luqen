@@ -139,7 +139,7 @@ export async function digestApiRoutes(
 
       const { site } = request.query;
 
-      // Latest period: last 30 days → now (reasonable default for first call)
+      // Latest period: last 30 days → now (baseline window for first call)
       const periodEnd = new Date();
       const periodStart = new Date(periodEnd.getTime() - 30 * 24 * 60 * 60 * 1000);
 
