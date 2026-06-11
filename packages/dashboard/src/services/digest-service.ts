@@ -345,8 +345,11 @@ export async function buildDigest(
   if (siteUrl !== null) {
     siteUrls = [siteUrl];
   } else {
-    // Enumerate all distinct completed-scan sites for this org
-    const allCompleted = await storage.scans.listScans({ orgId, status: 'completed' });
+    // Enumerate all distinct completed-scan sites for this org.
+    // CR-05: cap to 1000 rows to prevent OOM on large orgs.
+    // TODO: replace with a dedicated `listDistinctSitesForOrg(orgId)` repo
+    // method that issues a SELECT DISTINCT siteUrl query instead.
+    const allCompleted = await storage.scans.listScans({ orgId, status: 'completed', limit: 1000 });
     const distinctSites = new Set(allCompleted.map((s) => s.siteUrl));
     siteUrls = [...distinctSites];
   }
