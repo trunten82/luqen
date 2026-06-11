@@ -2226,4 +2226,39 @@ CREATE INDEX IF NOT EXISTS idx_acr_wording_org_locale ON acr_wording(org_id, loc
 ALTER TABLE accessibility_statements ADD COLUMN acr_url TEXT;
     `,
   },
+  {
+    id: '088',
+    name: 'create-digest-schedules',
+    sql: `
+-- Phase 82 — Scheduled Executive Digest persistence (DIGEST-01).
+-- A DEDICATED entity for recurring accessibility digest schedules; NOT an
+-- overload of email_reports (D-01). The scheduler polls getDueDigestSchedules()
+-- (next_send_at <= now AND enabled = 1) and advances next_send_at after each run.
+CREATE TABLE IF NOT EXISTS digest_schedules (
+  id           TEXT PRIMARY KEY,
+  org_id       TEXT NOT NULL DEFAULT 'system',
+  name         TEXT NOT NULL,
+  site_url     TEXT,                              -- NULL = org-wide schedule
+  frequency    TEXT NOT NULL DEFAULT 'weekly',
+  recipients   TEXT NOT NULL DEFAULT '',
+  channels     TEXT NOT NULL DEFAULT '["email"]', -- JSON array of channel names
+  enabled      INTEGER NOT NULL DEFAULT 1,
+  next_send_at TEXT NOT NULL,
+  last_sent_at TEXT,
+  created_by   TEXT NOT NULL,
+  created_at   TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_digest_schedules_next
+  ON digest_schedules(next_send_at, enabled);
+
+-- Seed digest.manage permission for global admin role.
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+VALUES ('admin', 'digest.manage');
+
+-- Seed digest.manage for existing non-system Owner and Admin org roles.
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+SELECT id, 'digest.manage' FROM roles
+WHERE org_id != 'system' AND name IN ('Owner', 'Admin');
+    `,
+  },
 ];
