@@ -53,8 +53,13 @@ const DigestIdParams = Type.Object(
   { additionalProperties: true },
 );
 
+// CR-03/CR-04: period must be alphanumeric+dash only — prevents header injection.
+// Pattern whitelists a YYYY-MM style value plus reasonable variant chars.
 const DigestPdfParams = Type.Object(
-  { id: Type.String(), period: Type.String() },
+  {
+    id: Type.String(),
+    period: Type.String({ pattern: '^[0-9A-Za-z._-]{1,32}$' }),
+  },
   { additionalProperties: true },
 );
 
@@ -72,6 +77,22 @@ const HtmlPartialResponse = {
 } as const;
 
 const VALID_FREQUENCIES = ['weekly', 'monthly'];
+
+// Basic email address regex — rejects clearly invalid addresses at create time (WR-01).
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// ---------------------------------------------------------------------------
+// Org-scope guard helper (CR-02)
+// Returns a 404 reply (same body as not-found) when schedule belongs to another
+// org, avoiding existence leakage via 403.
+// ---------------------------------------------------------------------------
+
+function replyOrgMismatch(reply: FastifyReply): ReturnType<FastifyReply['send']> {
+  return reply
+    .code(404)
+    .header('content-type', 'text/html')
+    .send(toastHtml('Schedule not found.', 'error'));
+}
 
 // ---------------------------------------------------------------------------
 // Route module
@@ -161,9 +182,34 @@ export async function digestScheduleRoutes(
       if (body.channelTeams === 'on') channels.push('teams');
       if (channels.length === 0) channels.push('email'); // baseline channel
 
+      // WR-01: Validate each recipient is a syntactically valid email address.
+      const recipientsRaw = body.recipients?.trim() ?? '';
+      if (recipientsRaw !== '') {
+        const entries = recipientsRaw.split(',').map((e) => e.trim()).filter(Boolean);
+        const invalid = entries.filter((e) => !EMAIL_RE.test(e));
+        if (invalid.length > 0) {
+          return reply
+            .code(400)
+            .header('content-type', 'text/html')
+            .send(toastHtml(`Invalid email address(es): ${invalid.join(', ')}`, 'error'));
+        }
+      }
+
+      // WR-02: Treat empty/whitespace siteUrl as null; require http/https scheme.
       const scope = body.scope ?? 'org';
-      const siteUrl =
-        scope === 'site' ? (body.siteUrl?.trim() ?? null) : null;
+      const siteUrl = scope === 'site' ? (body.siteUrl?.trim() || null) : null;
+
+      if (scope === 'site' && siteUrl !== null) {
+        try {
+          const u = new URL(siteUrl);
+          if (!['http:', 'https:'].includes(u.protocol)) throw new Error('bad protocol');
+        } catch {
+          return reply
+            .code(400)
+            .header('content-type', 'text/html')
+            .send(toastHtml('Site URL must be a valid http/https URL.', 'error'));
+        }
+      }
 
       const id = randomUUID();
       const orgId = request.user?.currentOrgId ?? 'system';
@@ -175,7 +221,7 @@ export async function digestScheduleRoutes(
         name,
         siteUrl,
         frequency,
-        recipients: body.recipients?.trim() ?? '',
+        recipients: recipientsRaw,
         channels: JSON.stringify(channels),
         nextSendAt,
         createdBy: request.user?.username ?? 'unknown',
@@ -206,6 +252,12 @@ export async function digestScheduleRoutes(
           .code(404)
           .header('content-type', 'text/html')
           .send(toastHtml('Schedule not found.', 'error'));
+      }
+
+      // CR-02: Reject cross-org access — return 404 to avoid existence leakage.
+      const requestingOrgId = request.user?.currentOrgId ?? 'system';
+      if (schedule.orgId !== requestingOrgId) {
+        return replyOrgMismatch(reply);
       }
 
       const newEnabled = !schedule.enabled;
@@ -246,6 +298,12 @@ export async function digestScheduleRoutes(
           .send(toastHtml('Schedule not found.', 'error'));
       }
 
+      // CR-02: Reject cross-org access — return 404 to avoid existence leakage.
+      const requestingOrgId = request.user?.currentOrgId ?? 'system';
+      if (schedule.orgId !== requestingOrgId) {
+        return replyOrgMismatch(reply);
+      }
+
       try {
         await processDigest(storage, schedule, pluginManager);
         return reply
@@ -282,6 +340,12 @@ export async function digestScheduleRoutes(
           .send(toastHtml('Schedule not found.', 'error'));
       }
 
+      // CR-02: Reject cross-org access — return 404 to avoid existence leakage.
+      const requestingOrgId = request.user?.currentOrgId ?? 'system';
+      if (schedule.orgId !== requestingOrgId) {
+        return replyOrgMismatch(reply);
+      }
+
       await storage.digest!.deleteDigestSchedule(id);
       return reply
         .code(200)
@@ -307,6 +371,12 @@ export async function digestScheduleRoutes(
           .code(404)
           .header('content-type', 'text/html')
           .send(toastHtml('Schedule not found.', 'error'));
+      }
+
+      // CR-02: Reject cross-org access — return 404 to avoid existence leakage.
+      const requestingOrgId = request.user?.currentOrgId ?? 'system';
+      if (schedule.orgId !== requestingOrgId) {
+        return replyOrgMismatch(reply);
       }
 
       const periodEnd = new Date();
@@ -362,6 +432,12 @@ export async function digestScheduleRoutes(
           .send(toastHtml('Schedule not found.', 'error'));
       }
 
+      // CR-02: Reject cross-org access — return 404 to avoid existence leakage.
+      const requestingOrgId = request.user?.currentOrgId ?? 'system';
+      if (schedule.orgId !== requestingOrgId) {
+        return replyOrgMismatch(reply);
+      }
+
       // Resolve period window: period param is a hint (YYYY-MM or ISO range)
       // For the PDF download we use the schedule's last-sent window, or now
       const periodEnd = new Date();
@@ -381,8 +457,13 @@ export async function digestScheduleRoutes(
         name: orgName,
       });
 
+      // CR-03/CR-04: strip everything except [0-9A-Za-z._-] from period before
+      // putting it in the Content-Disposition filename.  The TypeBox pattern above
+      // already rejects the request if period contains any other character, so this
+      // sanitise is a defence-in-depth backstop.
+      const safePeriod = period.replace(/[^0-9A-Za-z._-]/g, '');
       const safeId = schedule.orgId.replace(/[^a-z0-9]/gi, '-');
-      const filename = `accessibility-digest-${safeId}-${escapeHtml(period)}.pdf`;
+      const filename = `accessibility-digest-${safeId}-${safePeriod}.pdf`;
 
       return reply
         .code(200)
@@ -399,6 +480,9 @@ export async function digestScheduleRoutes(
 // ---------------------------------------------------------------------------
 
 function buildDigestScheduleRow(schedule: DigestSchedule): string {
+  // WR-04: Use encodeURIComponent for the URL and a data-attribute for the
+  // HTMX target so the UUID never reaches a CSS selector (UUIDs are always
+  // alphanumeric+dash but this is a defence-in-depth measure).
   const eid = escapeHtml(schedule.id);
   const nextDisplay = new Date(schedule.nextSendAt).toLocaleString();
   const lastDisplay = schedule.lastSentAt
@@ -415,7 +499,7 @@ function buildDigestScheduleRow(schedule: DigestSchedule): string {
 
   const scopeDisplay = escapeHtml(schedule.siteUrl ?? 'Org-wide');
 
-  return `<tr id="digest-row-${eid}">
+  return `<tr id="digest-row-${eid}" data-digest-id="${eid}">
   <td data-label="Name">${escapeHtml(schedule.name)}</td>
   <td data-label="Scope">${scopeDisplay}</td>
   <td data-label="Frequency">${escapeHtml(schedule.frequency)}</td>
