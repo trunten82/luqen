@@ -1,5 +1,30 @@
 # Milestones
 
+## v3.5.0 Anti-overlay wedge — dev + exec first wave (Shipped: 2026-06-15)
+
+**Phases completed:** 4 phases, 16 plans, 27 tasks
+
+**Key accomplishments:**
+
+- One-liner:
+- Commits:
+- One-liner:
+- One-liner:
+- 1. [Rule 1 - Fix] Dashboard compliance-client uses `checkCompliance()` not `fetchComplianceCheck()`
+- Task 1 — metadata.ts + server.ts registration (commit b1bd72ec)
+- Pure deterministic `deriveExposure()` with EU/EAA=high, NY/FL/IL=high, ADA Title II countdown drivers, severity-weighted finding pressure, and D-07 forbidden-words enforcement — the foundational model Waves 2-4 build against.
+- 6-locale i18n (en/de/es/fr/it/pt):
+- Public methodology page documenting the legal-exposure model (bands, thresholds, dated sources, disclaimers) plus GET /api/v1/fleet extended with per-site exposure {band, drivers, asOf} derived org-scoped from each site's latest completed scan.
+- One-liner:
+- One-liner:
+- One-liner:
+- One-liner:
+- One-liner:
+- One-liner:
+- WordPress Luqen_Digest_Page delivering DIGEST-05 — per-site accessibility digest fetched from /api/v1/digest via OAuth2, rendered with company-info header + band pill + direction + methodology link, silently degrading when disconnected, verified green on the real wp-test LXC with 23-check Playwright spec
+
+---
+
 ## v3.0.0 MCP Servers & Agent Companion (Shipped: 2026-04-24)
 
 **Phases completed:** 10 phases (28-33 including inserted 30.1, 31.1, 31.2, 32.1), 36 plans
@@ -34,7 +59,6 @@
 - Phase 32.1 (Agent Chat Fixes) — inserted 2026-04-23/24 for in-session fixes: global-admin org-agnostic handling, MCP bridge hardening, markdown/table rendering, mobile layout, multimodal output (Mermaid + DOMPurify-sanitized SVG)
 
 ---
-
 
 ## v2.12.0 Brand Intelligence Polish (Shipped: 2026-04-14)
 

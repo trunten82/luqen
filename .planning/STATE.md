@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.5.0
 milestone_name: Anti-overlay wedge — dev + exec first wave
-status: milestone_complete
-stopped_at: Milestone complete (Phase 82 was final phase)
-last_updated: 2026-06-11T20:18:16.430Z
-last_activity: 2026-06-11 -- Phase 82 execution started
+status: Awaiting next milestone
+stopped_at: Phase 82 UI-SPEC approved
+last_updated: "2026-06-15T17:06:11.464Z"
+last_activity: 2026-06-15 — Milestone v3.5.0 completed and archived
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 16
-  completed_plans: 79
-  percent: 60
+  completed_plans: 16
+  percent: 80
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-07 — v3.5.0 redefined: Anti-overlay
 
 ## Current Position
 
-Phase: 82
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-06-11
+Phase: Milestone v3.5.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-06-15 — Milestone v3.5.0 completed and archived
 
 ## Phase Map (v3.5.0 — Anti-overlay wedge)
 
@@ -93,3 +93,7 @@ Last session: 2026-06-11T17:24:42.183Z
 Stopped at: Phase 82 UI-SPEC approved
 Resume file: .planning/phases/82-scheduled-executive-digest/82-UI-SPEC.md
 Next action: `/gsd:plan-phase 79` (CI regression gate) — or plan 79 and 80 in parallel (independent developer tracks)
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
