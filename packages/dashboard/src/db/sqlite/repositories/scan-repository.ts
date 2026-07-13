@@ -70,7 +70,7 @@ function rowToRecord(row: ScanRow): ScanRecord {
     ...(row.notices !== null ? { notices: row.notices } : {}),
     ...(row.confirmed_violations !== null ? { confirmedViolations: row.confirmed_violations } : {}),
     ...(row.json_report_path !== null ? { jsonReportPath: row.json_report_path } : {}),
-    ...(row.json_report !== null ? { jsonReport: row.json_report } : {}),
+    ...(row.json_report != null ? { jsonReport: row.json_report } : {}),
     ...(row.error !== null ? { error: row.error } : {}),
     ...(row.branding_guideline_id !== null ? { brandingGuidelineId: row.branding_guideline_id } : {}),
     ...(row.branding_guideline_version !== null ? { brandingGuidelineVersion: row.branding_guideline_version } : {}),
@@ -117,6 +117,17 @@ function buildFilterQuery(filters: ScanFilters): { where: string; params: Record
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
   return { where, params };
 }
+
+// Explicit column list for LIST/pagination reads. Deliberately OMITS the
+// `json_report` blob (multi-MB per row) — `SELECT *` here OOM-aborts the
+// process once a page carries several large reports. Detail reads use
+// getScan/getReport, which fetch the blob on demand for a single id.
+const LIST_COLUMNS =
+  'id, site_url, status, standard, jurisdictions, regulations, created_by, ' +
+  'created_at, completed_at, pages_scanned, total_issues, errors, warnings, ' +
+  'notices, confirmed_violations, json_report_path, error, org_id, ' +
+  'branding_guideline_id, branding_guideline_version, brand_related_count, ' +
+  'public_share_enabled, public_share_enabled_at, public_share_enabled_by';
 
 // ---------------------------------------------------------------------------
 // SqliteScanRepository
@@ -167,12 +178,12 @@ export class SqliteScanRepository implements ScanRepository {
     const rows = (opts.cursor !== undefined
       ? (this.db
           .prepare(
-            'SELECT * FROM scan_records WHERE org_id = ? AND created_at < ? ORDER BY created_at DESC LIMIT ?',
+            `SELECT ${LIST_COLUMNS} FROM scan_records WHERE org_id = ? AND created_at < ? ORDER BY created_at DESC LIMIT ?`,
           )
           .all(orgId, opts.cursor, fetchN) as ScanRow[])
       : (this.db
           .prepare(
-            'SELECT * FROM scan_records WHERE org_id = ? ORDER BY created_at DESC LIMIT ?',
+            `SELECT ${LIST_COLUMNS} FROM scan_records WHERE org_id = ? ORDER BY created_at DESC LIMIT ?`,
           )
           .all(orgId, fetchN) as ScanRow[]));
     const hasMore = rows.length > limit;
@@ -186,7 +197,9 @@ export class SqliteScanRepository implements ScanRepository {
     const limit = filters.limit !== undefined ? `LIMIT ${filters.limit}` : '';
     const offset = filters.offset !== undefined ? `OFFSET ${filters.offset}` : '';
 
-    const sql = `SELECT * FROM scan_records ${where} ORDER BY created_at DESC ${limit} ${offset}`.trim();
+    // Omit the heavy json_report blob unless a batch caller opts in.
+    const cols = filters.includeReport === true ? '*' : LIST_COLUMNS;
+    const sql = `SELECT ${cols} FROM scan_records ${where} ORDER BY created_at DESC ${limit} ${offset}`.trim();
     const stmt = this.db.prepare(sql);
     const rows = stmt.all(params) as ScanRow[];
     return rows.map(rowToRecord);

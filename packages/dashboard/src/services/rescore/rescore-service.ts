@@ -80,7 +80,7 @@ export class RescoreService {
     }
 
     // Query all completed scans for this org
-    const completedScans = await this.scanRepo.listScans({ orgId, status: 'completed' });
+    const completedScans = await this.scanRepo.listScans({ orgId, status: 'completed', includeReport: true });
 
     // Count candidates: scans without an existing brand_scores row
     let candidateCount = 0;
@@ -136,7 +136,7 @@ export class RescoreService {
 
     try {
       // Get all completed scans for the org, ordered by creation
-      const completedScans = await this.scanRepo.listScans({ orgId, status: 'completed' });
+      const completedScans = await this.scanRepo.listScans({ orgId, status: 'completed', includeReport: true });
 
       // Skip past already-processed scans (resume point)
       const startIndex = lastProcessedScanId

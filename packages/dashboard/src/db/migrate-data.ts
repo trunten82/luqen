@@ -152,7 +152,7 @@ async function migrateScans(
   target: StorageAdapter,
   dryRun: boolean,
 ): Promise<number> {
-  const scans = await source.scans.listScans();
+  const scans = await source.scans.listScans({ includeReport: true }); // copies scan.jsonReport below
   if (dryRun) return scans.length;
 
   let count = 0;
