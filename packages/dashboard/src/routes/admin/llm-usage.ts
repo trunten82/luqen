@@ -394,7 +394,10 @@ export async function llmUsageRoutes(
   server.get(
     '/admin/llm-usage',
     {
-      preHandler: requirePermission('admin.system', 'admin.org'),
+      // llm.view keeps this aligned with GET /admin/llm and the sidebar link:
+      // org Admins have llm.view but not admin.org (Owner-only), and the
+      // handler already scopes non-system-admins to their own org.
+      preHandler: requirePermission('admin.system', 'admin.org', 'llm.view'),
       schema: {
         ...HtmlPageSchema,
         querystring: UsageQuery,
@@ -579,7 +582,9 @@ export async function llmUsageRoutes(
   server.get(
     '/admin/llm-usage/export.xlsx',
     {
-      preHandler: requirePermission('admin.system', 'admin.org'),
+      // Same guard as the usage page above; non-system-admins export only
+      // their own org (filterOrgId is forced to callerOrg in the handler).
+      preHandler: requirePermission('admin.system', 'admin.org', 'llm.view'),
       schema: {
         querystring: UsageQuery,
         tags: ['html-page'],
