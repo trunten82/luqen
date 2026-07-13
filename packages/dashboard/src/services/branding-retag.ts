@@ -66,6 +66,7 @@ export async function retagScansForSite(
     siteUrl,
     orgId,
     status: 'completed',
+    includeReport: true, // reads scan.jsonReport below
   });
 
   let retagged = 0;

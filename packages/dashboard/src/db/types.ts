@@ -96,6 +96,14 @@ export interface ScanFilters {
   readonly offset?: number;
   readonly from?: string;
   readonly to?: string;
+  /**
+   * Include the heavy inline `json_report` blob in each result row. Off by
+   * default: list/pagination views only need metadata, and the blob is multi-MB
+   * per row (66 MB max on live) — pulling it for every listed row OOM-aborts the
+   * process. Only batch consumers that parse the report (branding-retag,
+   * rescore, migrate-data) set this true.
+   */
+  readonly includeReport?: boolean;
 }
 
 export type ScanUpdateData = Partial<Omit<ScanRecord, 'id' | 'createdBy' | 'createdAt'>>;
