@@ -52,7 +52,19 @@ function makeMockScanRepo(): ScanRepository {
     updateScan: vi.fn(),
     deleteScan: vi.fn(),
     deleteOrgScans: vi.fn(),
-    getReport: vi.fn(),
+    // Default: same parsed report shape makeScan() embeds — the service
+    // fetches reports per-scan via getReport (memory contract), not from
+    // listScans rows.
+    getReport: vi.fn().mockResolvedValue({
+      pages: [
+        {
+          url: 'https://a.com',
+          issues: [
+            { code: 'color-contrast', selector: 'p', context: '<p>text</p>', type: 'error' },
+          ],
+        },
+      ],
+    }),
     getTrendData: vi.fn(),
   };
 }
@@ -446,5 +458,48 @@ describe('RescoreService', () => {
     const count = await service.getCandidateCount(orgId);
 
     expect(count).toBe(2);
+  });
+
+  // ── Memory contract (reports-list OOM follow-up) ──────────────────────
+  // json_report blobs are multi-MB per row; loading every completed scan's
+  // blob in one listScans call OOMs large orgs. The service must list
+  // metadata only and fetch each report per-scan via getReport(id).
+
+  it('Test 14: startRescore lists scans WITHOUT report blobs', async () => {
+    const orgId = randomUUID();
+    vi.mocked(scanRepo.listScans).mockResolvedValue([makeScan('s1', 'https://a.com', orgId)]);
+
+    await service.startRescore(orgId);
+
+    expect(scanRepo.listScans).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(scanRepo.listScans).mock.calls[0][0]).not.toMatchObject({ includeReport: true });
+  });
+
+  it('Test 15: processNextBatch lists scans WITHOUT report blobs and fetches each report via getReport', async () => {
+    const orgId = randomUUID();
+    const progress: RescoreProgress = {
+      id: randomUUID(),
+      orgId,
+      status: 'running',
+      totalScans: 1,
+      processedScans: 0,
+      scoredCount: 0,
+      skippedCount: 0,
+      warningCount: 0,
+      lastProcessedScanId: null,
+      error: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    vi.mocked(progressRepo.getByOrgId).mockResolvedValue(progress);
+    vi.mocked(scanRepo.listScans).mockResolvedValue([makeScan('s1', 'https://a.com', orgId)]);
+    vi.mocked(brandScoreRepo.getLatestForScan).mockResolvedValue(null);
+    vi.mocked(brandingRepo.getGuidelineForSite).mockResolvedValue(makeGuideline(orgId));
+
+    const result = await service.processNextBatch(orgId);
+
+    expect(vi.mocked(scanRepo.listScans).mock.calls[0][0]).not.toMatchObject({ includeReport: true });
+    expect(scanRepo.getReport).toHaveBeenCalledWith('s1');
+    expect(result!.scoredCount).toBe(1); // scoring works from the per-scan report
   });
 });

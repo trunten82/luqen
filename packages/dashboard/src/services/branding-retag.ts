@@ -61,22 +61,25 @@ export async function retagScansForSite(
     })),
   };
 
-  // 3. Enumerate completed scans for this site+org.
+  // 3. Enumerate completed scans for this site+org (metadata only — each
+  //    scan's multi-MB report is fetched individually below so at most one
+  //    blob is in memory at a time; loading them all at once OOMs large orgs).
   const scans = await storage.scans.listScans({
     siteUrl,
     orgId,
     status: 'completed',
-    includeReport: true, // reads scan.jsonReport below
   });
 
   let retagged = 0;
 
   for (const scan of scans) {
-    if (!scan.jsonReport) continue;
-
     try {
-      const reportData = JSON.parse(scan.jsonReport);
-      if (!reportData.pages) continue;
+      // getReport returns the parsed report, or null for missing/malformed JSON.
+      const reportData = await storage.scans.getReport(scan.id) as {
+        pages?: Array<{ issues: Array<Record<string, unknown>> }>;
+        branding?: Record<string, unknown>;
+      } | null;
+      if (!reportData?.pages) continue;
 
       // Collect all issues across pages for matching.
       const allIssues: Array<Record<string, unknown>> = [];

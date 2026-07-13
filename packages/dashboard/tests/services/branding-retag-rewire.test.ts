@@ -122,6 +122,12 @@ function makeMockStorage(
     scans: {
       listScans: vi.fn().mockResolvedValue(scans),
       updateScan: vi.fn().mockResolvedValue(undefined),
+      // Memory contract: retag fetches each report per-scan via getReport
+      // (parsed), never from listScans rows.
+      getReport: vi.fn().mockImplementation(async (id: string) => {
+        const scan = scans.find((s) => s.id === id);
+        return scan?.jsonReport ? JSON.parse(scan.jsonReport) : null;
+      }),
     },
     branding: {
       getGuidelineForSite: vi.fn().mockResolvedValue(guideline),
@@ -411,5 +417,28 @@ describe('Phase 18 retag rewire — BSTORE-03 append-only invariant', () => {
     expect(brandingOrchestrator.matchAndScore).toHaveBeenCalledTimes(3);
     expect(brandScoreRepository.insert).toHaveBeenCalledTimes(3);
     expect(r.retagged).toBeGreaterThanOrEqual(2);
+  });
+
+  it('Test 6 (memory contract): lists scans WITHOUT report blobs and fetches each report via getReport', async () => {
+    const scans = [makeMockScan('scan-1'), makeMockScan('scan-2')];
+    const mockStorage = makeMockStorage(FIXTURE_GUIDELINE, scans);
+    const brandingOrchestrator = makeMockBrandingOrchestrator(() => matchedResult());
+    const brandScoreRepository = makeMockBrandScoreRepository(async () => undefined);
+
+    const r = await retagScansForSite(
+      mockStorage,
+      'https://test.example.com/',
+      'org-test',
+      brandingOrchestrator,
+      brandScoreRepository,
+    );
+
+    // listScans must NOT request the multi-MB json_report blob column…
+    const listArgs = vi.mocked(mockStorage.scans.listScans).mock.calls[0][0];
+    expect(listArgs).not.toMatchObject({ includeReport: true });
+    // …each report is fetched per-scan instead, and retag still works.
+    expect(mockStorage.scans.getReport).toHaveBeenCalledWith('scan-1');
+    expect(mockStorage.scans.getReport).toHaveBeenCalledWith('scan-2');
+    expect(r.retagged).toBe(2);
   });
 });
