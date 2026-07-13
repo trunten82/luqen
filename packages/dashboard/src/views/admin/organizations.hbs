@@ -35,6 +35,9 @@
             <a href="/admin/organizations/{{this.id}}/members"
                class="btn btn--sm btn--ghost"
                aria-label="Manage members for {{this.name}}">{{t "admin.organizations.members"}}</a>
+            <a href="/admin/organizations/{{this.id}}/branding-mode"
+               class="btn btn--sm btn--ghost"
+               aria-label="Branding mode for {{this.name}}">{{t "admin.organizations.brandingMode"}}</a>
             <button hx-post="/admin/organizations/{{this.id}}/delete"
                     hx-confirm="Delete organization {{this.name}}? This cannot be undone."
                     hx-target="closest tr"

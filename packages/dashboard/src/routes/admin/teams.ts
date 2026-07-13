@@ -78,16 +78,22 @@ interface AddMemberBody {
   userId?: string;
 }
 
-function teamRowHtml(team: { id: string; name: string; description: string; memberCount?: number; createdAt: string }): string {
+function teamRowHtml(team: { id: string; name: string; description: string; memberCount?: number; createdAt: string; organizationName?: string | null }): string {
   const escapedName = escapeHtml(team.name);
   const escapedDesc = escapeHtml(team.description);
   const count = team.memberCount ?? 0;
+  // Column set/order MUST mirror views/admin/teams.hbs (6 cells) — a missing
+  // cell shifts the whole row until the next full-page render.
+  const orgCell = team.organizationName
+    ? `<span class="badge badge--neutral">${escapeHtml(team.organizationName)}</span>`
+    : '<span class="text-muted">--</span>';
 
   return `<tr id="team-row-${team.id}">
   <td data-label="Name"><a href="/admin/teams/${encodeURIComponent(team.id)}">${escapedName}</a></td>
   <td data-label="Description">${escapedDesc}</td>
+  <td data-label="Organization">${orgCell}</td>
   <td data-label="Members"><span class="badge badge--neutral">${count}</span></td>
-  <td data-label="Created">${new Date(team.createdAt).toLocaleDateString()}</td>
+  <td data-label="Created">${team.createdAt}</td>
   <td>
     <button hx-delete="/admin/teams/${encodeURIComponent(team.id)}"
             hx-confirm="Delete team ${escapedName}? This cannot be undone."
@@ -214,9 +220,10 @@ export async function teamRoutes(
         ...(roleId !== '' ? { roleId } : {}),
       });
 
-      // HTMX — return new table row
+      // HTMX — return new table row (with org name, mirroring the full-page render)
       if (request.headers['hx-request'] === 'true') {
-        return reply.type('text/html').send(teamRowHtml(team));
+        const teamOrg = orgId !== 'system' ? await storage.organizations.getOrg(orgId) : null;
+        return reply.type('text/html').send(teamRowHtml({ ...team, organizationName: teamOrg?.name ?? null }));
       }
 
       return reply.redirect('/admin/teams');
