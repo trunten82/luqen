@@ -22,7 +22,6 @@ import type { RescoreProgressRepository } from '../../db/interfaces/rescore-prog
 import type { BrandScoreRepository, BrandScoreScanContext } from '../../db/interfaces/brand-score-repository.js';
 import type { ScanRepository } from '../../db/interfaces/scan-repository.js';
 import type { BrandingRepository } from '../../db/interfaces/branding-repository.js';
-import type { ScanRecord } from '../../db/types.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -79,8 +78,10 @@ export class RescoreService {
       await this.progressRepo.deleteByOrgId(orgId);
     }
 
-    // Query all completed scans for this org
-    const completedScans = await this.scanRepo.listScans({ orgId, status: 'completed', includeReport: true });
+    // Query all completed scans for this org (metadata only — reports are
+    // fetched per-scan in processNextBatch; loading every blob here OOMs
+    // large orgs).
+    const completedScans = await this.scanRepo.listScans({ orgId, status: 'completed' });
 
     // Count candidates: scans without an existing brand_scores row
     let candidateCount = 0;
@@ -135,8 +136,10 @@ export class RescoreService {
     let error: string | null = null;
 
     try {
-      // Get all completed scans for the org, ordered by creation
-      const completedScans = await this.scanRepo.listScans({ orgId, status: 'completed', includeReport: true });
+      // Get all completed scans for the org, ordered by creation.
+      // Metadata only — each scan's report is fetched individually below,
+      // so at most one multi-MB blob is in memory at a time.
+      const completedScans = await this.scanRepo.listScans({ orgId, status: 'completed' });
 
       // Skip past already-processed scans (resume point)
       const startIndex = lastProcessedScanId
@@ -193,8 +196,10 @@ export class RescoreService {
           })),
         };
 
-        // Extract issues from jsonReport and match against guideline
-        const brandedIssues = this.extractAndMatchIssues(scan, projectedGuideline);
+        // Fetch this scan's report (parsed, per-scan — memory contract) and
+        // match its issues against the guideline
+        const reportData = await this.scanRepo.getReport(scan.id);
+        const brandedIssues = this.extractAndMatchIssues(reportData, projectedGuideline);
 
         // BRESCORE-05: embedded-only scoring via calculateBrandScore (never orchestrator)
         const scoreResult = calculateBrandScore(brandedIssues, projectedGuideline);
@@ -269,27 +274,27 @@ export class RescoreService {
   // ── Private helpers ─────────────────────────────────────────────────────
 
   /**
-   * Extract issues from a scan's jsonReport and match them against the guideline
-   * using the embedded BrandingMatcher. For scans that already have brandMatch
-   * data on issues, those are used directly. For pre-branding scans, the matcher
-   * is run fresh.
+   * Extract issues from a scan's parsed report (fetched per-scan via
+   * getReport — never from listScans rows, whose blob column is excluded for
+   * memory safety) and match them against the guideline using the embedded
+   * BrandingMatcher. For scans that already have brandMatch data on issues,
+   * those are used directly. For pre-branding scans, the matcher is run fresh.
    *
-   * T-27-02: JSON.parse wrapped in try/catch — malformed reports return empty array.
+   * T-27-02: getReport returns null for missing/malformed JSON; unexpected
+   * report shapes are caught here — both return an empty array.
    */
-  private extractAndMatchIssues(scan: ScanRecord, guideline: BrandGuideline): readonly BrandedIssue[] {
-    if (!scan.jsonReport) {
+  private extractAndMatchIssues(
+    reportData: Record<string, unknown> | null,
+    guideline: BrandGuideline,
+  ): readonly BrandedIssue[] {
+    if (reportData === null || !reportData['pages']) {
       return [];
     }
 
     try {
-      const reportData = JSON.parse(scan.jsonReport);
-      if (!reportData.pages) {
-        return [];
-      }
-
       // Collect all issues across pages
       const allIssues: MatchableIssue[] = [];
-      for (const page of reportData.pages as Array<{ issues?: Array<Record<string, unknown>> }>) {
+      for (const page of reportData['pages'] as Array<{ issues?: Array<Record<string, unknown>> }>) {
         for (const issue of page.issues ?? []) {
           allIssues.push(issue as unknown as MatchableIssue);
         }
@@ -302,7 +307,7 @@ export class RescoreService {
       // Run the branding matcher to get BrandedIssue[] with brandMatch data
       return this.matcher.match(allIssues, guideline);
     } catch {
-      // T-27-02: malformed JSON — skip with empty result
+      // T-27-02: unexpected report shape — skip with empty result
       return [];
     }
   }
