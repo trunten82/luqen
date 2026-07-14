@@ -156,6 +156,21 @@ describe('GET /admin/digest-schedules', () => {
     expect(response.statusCode).toBe(403);
   });
 
+  // Regression (UAT 2026-07-14): the sidebar shows "Digest schedules" to
+  // admin.org / compliance.manage holders (same Integrations block as
+  // Notifications), but the routes were admin.system-only — every org Admin
+  // saw the link and got 403. Handlers are fully org-scoped, so the guard
+  // now matches the sidebar and the notifications routes.
+  it('org Admin (compliance.manage + admin.org, no admin.system) can open the page', async () => {
+    const ctx = await createTestServer(['admin.org', 'compliance.manage']);
+    const response = await ctx.server.inject({
+      method: 'GET',
+      url: '/admin/digest-schedules',
+    });
+    ctx.cleanup();
+    expect(response.statusCode).toBe(200);
+  });
+
   it('returns 200 with digest-schedules template', async () => {
     const ctx = await createTestServer();
     const response = await ctx.server.inject({

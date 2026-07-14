@@ -31,7 +31,10 @@ interface TestContext {
   cleanup: () => Promise<void>;
 }
 
-async function createTestServer(permissions: string[]): Promise<TestContext> {
+async function createTestServer(
+  permissions: string[],
+  getLLMClient: () => unknown = () => null,
+): Promise<TestContext> {
   loadTranslations();
   const dbPath = join(tmpdir(), `test-llm-usage-perms-${randomUUID()}.db`);
   const storage = new SqliteStorageAdapter(dbPath);
@@ -62,7 +65,7 @@ async function createTestServer(permissions: string[]): Promise<TestContext> {
 
   // LLM client deliberately null — the permission guard runs before the
   // handler, and the null-client branch renders the page without services.
-  await llmUsageRoutes(server, () => null, storage);
+  await llmUsageRoutes(server, getLLMClient as never, storage);
   await server.ready();
 
   const cleanup = async (): Promise<void> => {
@@ -111,6 +114,36 @@ describe('/admin/llm-usage permission guard (org-Admin 403 regression)', () => {
     ctx = await createTestServer(ORG_ADMIN_LIKE);
     const res = await ctx.server.inject({ method: 'GET', url: '/admin/llm-usage/export.xlsx' });
     expect(res.statusCode).toBe(503);
+  });
+
+  // Regression (OpenAPI sweep 2026-07-14): isSystemAdmin() read the
+  // nonexistent user.permissions and callerOrgId() read user.orgId (real field
+  // is currentOrgId) — every usage query went out with orgId '' and the LLM
+  // service replied 403 forbidden_org (page banner + 502 on the export).
+  it('org Admin queries are scoped to their own org (currentOrgId)', async () => {
+    const calls: Array<Record<string, unknown>> = [];
+    const llmClient = {
+      listUsage: async (args: Record<string, unknown>) => { calls.push(args); return { rows: [] }; },
+      summarizeUsage: async () => [],
+      getCredits: async () => null,
+    } as never;
+    ctx = await createTestServer(ORG_ADMIN_LIKE, () => llmClient);
+    const res = await ctx.server.inject({ method: 'GET', url: '/admin/llm-usage' });
+    expect(res.statusCode).toBe(200);
+    expect(calls[0]).toMatchObject({ orgId: 'org-a' });
+  });
+
+  it('system admin sees all orgs (no forced orgId filter)', async () => {
+    const calls: Array<Record<string, unknown>> = [];
+    const llmClient = {
+      listUsage: async (args: Record<string, unknown>) => { calls.push(args); return { rows: [] }; },
+      summarizeUsage: async () => [],
+      getCredits: async () => null,
+    } as never;
+    ctx = await createTestServer(['admin.system', 'llm.view'], () => llmClient);
+    const res = await ctx.server.inject({ method: 'GET', url: '/admin/llm-usage' });
+    expect(res.statusCode).toBe(200);
+    expect(calls[0]?.['orgId']).toBeUndefined();
   });
 
   it('credits POST stays system-admin-only (403 for org Admin)', async () => {

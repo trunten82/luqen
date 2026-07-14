@@ -89,6 +89,68 @@ describe('PDF Generator (PDFKit)', () => {
   });
 
   // -----------------------------------------------------------------------
+  // Layout regression — section x-reset (live PDF 2026-07-14)
+  // -----------------------------------------------------------------------
+  //
+  // PDFKit inherits doc.x from the previous draw. After the KPI cards / the
+  // actions table's right-aligned "pages" column, section headings written
+  // without an explicit x rendered as an unreadable right-edge sliver
+  // ("Quick Wins" wrapped 1-2 words per line across whole extra pages).
+
+  describe('section layout (x-reset regression)', () => {
+    it('sectionHeading anchors at the left margin with full page width', async () => {
+      const { sectionHeading } = await import('../../src/pdf/generator.js');
+      const calls: Array<{ text: string; x: number; width: number }> = [];
+      const doc = {
+        x: 500, // simulate lingering right-edge x from a previous draw
+        y: 100,
+        page: { width: 595, margins: { left: 28, right: 28, top: 42, bottom: 42 } },
+        fontSize() { return this; },
+        text(text: string, x: number, _y: number, opts: { width: number }) {
+          calls.push({ text, x, width: opts.width });
+          return this;
+        },
+      };
+      sectionHeading(doc as never, 'Quick Wins: Template Fixes');
+      expect(doc.x).toBe(28);
+      expect(calls).toEqual([
+        { text: 'Quick Wins: Template Fixes', x: 28, width: 595 - 28 - 28 },
+      ]);
+    });
+
+    it('every section heading in the generator goes through sectionHeading', async () => {
+      const { readFileSync } = await import('node:fs');
+      const { join, dirname } = await import('node:path');
+      const { fileURLToPath } = await import('node:url');
+      const src = readFileSync(
+        join(dirname(fileURLToPath(import.meta.url)), '../../src/pdf/generator.ts'),
+        'utf-8',
+      );
+      for (const title of ['Legal Compliance', 'Top Critical Actions', 'Quick Wins: Template Fixes', 'Scan Errors']) {
+        expect(src, `${title} must use sectionHeading (x-reset)`).toContain(
+          `sectionHeading(doc, '${title}')`,
+        );
+      }
+    });
+
+    it('a report with many template components stays compact (no sliver-wrap page bloat)', async () => {
+      const components = Array.from({ length: 12 }, (_, i) => ({
+        componentName: `Component ${i} with a reasonably long name`,
+        issueCount: 100 + i,
+        maxAffectedPages: 49,
+      }));
+      const result = await generatePdfFromData(
+        makeScanMeta(),
+        makeReportData({ templateComponents: components }),
+      );
+      const pages = (result.toString('latin1').match(/\/Type\s*\/Page[^s]/g) ?? []).length;
+      // With the sliver bug this wrapped into 3+ pages; anchored at the left
+      // margin the whole report fits comfortably in 2.
+      expect(pages).toBeLessThanOrEqual(2);
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // Various report data shapes
   // -----------------------------------------------------------------------
 

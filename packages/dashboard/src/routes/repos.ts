@@ -314,8 +314,9 @@ export async function repoRoutes(
         return reply.code(404).send({ error: 'Report not found' });
       }
 
+      // Admin bypass mirrors every other /reports/:id surface (UAT 2026-07-14).
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).send({ error: 'Report not found' });
       }
 

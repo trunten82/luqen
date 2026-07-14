@@ -66,8 +66,11 @@ export async function assignmentRoutes(
         return reply.code(404).send({ error: 'Report not found' });
       }
 
+      // Org-scope with admin bypass — mirrors every other /reports/:id surface
+      // (report page, exports, manual tests). UAT 2026-07-14: admins could view
+      // a cross-org report but its linked sub-pages 404'd.
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).send({ error: 'Report not found' });
       }
 
@@ -131,8 +134,11 @@ export async function assignmentRoutes(
         return reply.code(404).send({ error: 'Report not found' });
       }
 
+      // Org-scope with admin bypass — mirrors every other /reports/:id surface
+      // (report page, exports, manual tests). UAT 2026-07-14: admins could view
+      // a cross-org report but its linked sub-pages 404'd.
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).send({ error: 'Report not found' });
       }
 

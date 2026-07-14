@@ -755,7 +755,9 @@ export interface User {
 export interface CreateUserInput {
   readonly username: string;
   readonly password: string;
-  readonly role: 'viewer' | 'user' | 'admin';
+  // Compliance-service role enum (types.ts on the service side) — 'editor',
+  // not 'user'; sending 'user' fails the service's schema with a generic 400.
+  readonly role: 'viewer' | 'editor' | 'admin';
 }
 
 export async function listUsers(

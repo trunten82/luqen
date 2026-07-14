@@ -83,7 +83,8 @@ export async function userRoutes(
       return reply.view('admin/user-form.hbs', {
         isNew: true,
         formUser: { username: '', role: 'viewer', password: '' },
-        roles: ['viewer', 'user', 'admin'],
+        // Compliance-service role enum (this page manages compliance users).
+        roles: ['viewer', 'editor', 'admin'],
       });
     },
   );
@@ -110,7 +111,7 @@ export async function userRoutes(
       }
 
       const role = body.role?.trim() ?? 'viewer';
-      if (!['viewer', 'user', 'admin'].includes(role)) {
+      if (!['viewer', 'editor', 'admin'].includes(role)) {
         return reply.code(400).header('content-type', 'text/html').send(toastHtml('Invalid role.', 'error'));
       }
 
@@ -118,7 +119,7 @@ export async function userRoutes(
         const created = await createUser(baseUrl, getToken(request), {
           username: body.username.trim(),
           password: body.password.trim(),
-          role: role as 'viewer' | 'user' | 'admin',
+          role: role as 'viewer' | 'editor' | 'admin',
         }, getOrgId(request));
 
         const row = `<tr id="user-${created.id}">

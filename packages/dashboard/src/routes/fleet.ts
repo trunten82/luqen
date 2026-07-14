@@ -218,7 +218,6 @@ export async function fleetRoutes(
       site,
       latestScan,
       recentScans,
-      bulkFixHref: '/admin/bulk-fix?siteUrl=' + encodeURIComponent(site.url),
     });
   }
 

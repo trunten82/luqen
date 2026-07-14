@@ -81,6 +81,26 @@ describe('Assignment routes', () => {
       expect(response.statusCode).toBe(404);
     });
 
+    // Regression (UAT crawl 2026-07-14): the report page links "Assignments"
+    // for admins viewing another org's scan, but the route lacked the admin
+    // bypass every other /reports/:id sub-surface applies → linked 404.
+    it('admin can open assignments for another org\'s scan', async () => {
+      const ctx = await createTestServer();
+      const scanId = randomUUID();
+      await ctx.storage.scans.createScan({
+        id: scanId,
+        siteUrl: 'https://example.com',
+        standard: 'WCAG2AA',
+        jurisdictions: [],
+        createdBy: 'bob',
+        createdAt: new Date().toISOString(),
+        orgId: 'other-org',
+      });
+      const response = await ctx.server.inject({ method: 'GET', url: `/reports/${scanId}/assignments` });
+      ctx.cleanup();
+      expect(response.statusCode).toBe(200);
+    });
+
     it('returns 200 with assignments template', async () => {
       const ctx = await createTestServer();
       const scanId = await makeScan(ctx);

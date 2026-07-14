@@ -256,7 +256,8 @@ export async function fixPrRoutes(
           : reply.code(404).send({ error: 'Report not found' });
       }
 
-      if (scan.orgId !== orgId && scan.orgId !== 'system') {
+      // Admin bypass mirrors every other /reports/:id surface (UAT 2026-07-14).
+      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
         return isHtmx
           ? reply.code(404).send(toastHtml('Report not found.', 'error'))
           : reply.code(404).send({ error: 'Report not found' });

@@ -6,7 +6,9 @@
   <p class="text-muted">
     Sites running the Luqen WordPress plugin connected to <strong>{{scopeLabel}}</strong>.
     {{#if (eq scope "org")}}
-      <a href="/admin/fleet" class="text-muted">View all orgs</a>
+      {{!-- /admin/fleet is admin.system-only — hide the link from org users
+           (UAT 2026-07-14: every persona saw it and got 403). --}}
+      {{#if perm.adminSystem}}<a href="/admin/fleet" class="text-muted">View all orgs</a>{{/if}}
     {{else}}
       <a href="/fleet" class="text-muted">View my org only</a>
     {{/if}}
