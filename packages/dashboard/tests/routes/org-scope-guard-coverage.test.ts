@@ -8,7 +8,9 @@
  * WITHOUT the `request.user?.role !== 'admin'` bypass that the report page
  * itself applies — so an admin sees the link but the target 404s.
  *
- * This gate scans every route file for the guard expression and fails when
+ * This gate scans every route file for the guard expression (ANY entity —
+ * scan.orgId, schedule.orgId, …; the scan-only version missed schedules.ts,
+ * instance #12 of the class) and fails when
  * the admin bypass (or an `isAdmin` check within two lines above) is missing.
  * Service-layer scoping (e.g. scan-service.getScanForOrg, used by org-scoped
  * MCP tokens where no role bypass may apply) is intentionally out of scope.
@@ -38,10 +40,12 @@ describe('org-scope guards in routes', () => {
     for (const file of collectTsFiles(ROUTES_DIR)) {
       const lines = readFileSync(file, 'utf-8').split('\n');
       lines.forEach((line, i) => {
-        if (!line.includes("scan.orgId !== orgId && scan.orgId !== 'system'")) return;
+        if (!/\b\w+\.orgId !== orgId && \w+\.orgId !== 'system'/.test(line)) return;
         const context = lines.slice(Math.max(0, i - 2), i + 1).join('\n');
         const hasBypass =
-          context.includes("role !== 'admin'") || context.includes('isAdmin');
+          context.includes("role !== 'admin'") ||
+          context.includes('isAdmin') ||
+          context.includes('gate-exempt');
         if (!hasBypass) {
           missing.push(`${relative(ROUTES_DIR, file)}:${i + 1}`);
         }

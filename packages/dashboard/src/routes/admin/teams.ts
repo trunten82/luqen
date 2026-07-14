@@ -206,6 +206,8 @@ export async function teamRoutes(
             '<div class="toast toast--error" role="alert">Selected role does not exist</div>',
           );
         }
+        // gate-exempt: cross-entity CONSISTENCY check (the role must belong to
+        // the team's target org) — not an access guard; no admin bypass applies.
         if (role.orgId !== orgId && role.orgId !== 'system') {
           return reply.code(400).type('text/html').send(
             '<div class="toast toast--error" role="alert">Selected role does not belong to this organization</div>',
