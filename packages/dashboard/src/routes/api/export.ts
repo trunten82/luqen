@@ -248,8 +248,11 @@ export async function exportRoutes(
         return reply.code(404).send({ error: 'Report not found' });
       }
 
+      // Org-scope enforcement with admin bypass — mirrors the /reports/:id
+      // HTML route and the vpat.pdf/vpat-pack.zip exports. Without the bypass
+      // an admin could VIEW any org's report but its exports 404'd.
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).send({ error: 'Report not found' });
       }
 
@@ -483,8 +486,11 @@ export async function exportRoutes(
         return reply.code(404).send({ error: 'Report not found' });
       }
 
+      // Org-scope enforcement with admin bypass — mirrors the /reports/:id
+      // HTML route and the vpat.pdf/vpat-pack.zip exports. Without the bypass
+      // an admin could VIEW any org's report but its exports 404'd.
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).send({ error: 'Report not found' });
       }
 
