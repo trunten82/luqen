@@ -159,7 +159,8 @@ export async function scheduleRoutes(
       }
 
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (schedule.orgId !== orgId && schedule.orgId !== 'system') {
+      // Admin bypass mirrors every other org-scoped surface (UAT 2026-07-14).
+      if (request.user?.role !== 'admin' && schedule.orgId !== orgId && schedule.orgId !== 'system') {
         return reply.code(404).send(toastHtml('Schedule not found', 'error'));
       }
 
@@ -187,7 +188,8 @@ export async function scheduleRoutes(
       }
 
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (schedule.orgId !== orgId && schedule.orgId !== 'system') {
+      // Admin bypass mirrors every other org-scoped surface (UAT 2026-07-14).
+      if (request.user?.role !== 'admin' && schedule.orgId !== orgId && schedule.orgId !== 'system') {
         return reply.code(404).send(toastHtml('Schedule not found', 'error'));
       }
 

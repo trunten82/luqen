@@ -221,8 +221,9 @@ export async function assignmentRoutes(
         return reply.code(404).send({ error: 'Assignment not found' });
       }
 
+      // Admin bypass mirrors the report/assignment list surfaces (UAT 2026-07-14).
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (assignment.orgId !== orgId && assignment.orgId !== 'system') {
+      if (request.user?.role !== 'admin' && assignment.orgId !== orgId && assignment.orgId !== 'system') {
         return reply.code(404).send({ error: 'Assignment not found' });
       }
 
@@ -297,8 +298,9 @@ export async function assignmentRoutes(
         return reply.code(404).send({ error: 'Assignment not found' });
       }
 
+      // Admin bypass mirrors the report/assignment list surfaces (UAT 2026-07-14).
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (assignment.orgId !== orgId && assignment.orgId !== 'system') {
+      if (request.user?.role !== 'admin' && assignment.orgId !== orgId && assignment.orgId !== 'system') {
         return reply.code(404).send({ error: 'Assignment not found' });
       }
 
