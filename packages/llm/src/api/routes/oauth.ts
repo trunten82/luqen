@@ -194,7 +194,12 @@ export async function registerOAuthRoutes(
         sub: clientId,
         scopes: grantedScopes,
         expiresIn: tokenExpiry,
-        ...(client.orgId !== 'system' ? { orgId: client.orgId } : {}),
+        // ALWAYS embed the client's org binding — including 'system'. The org
+        // guards (resolveOrg/resolveOrgFilter, auth middleware) detect the
+        // system-admin path via tokenOrg === 'system'; omitting the claim for
+        // system clients made that path unreachable, so even the dashboard's
+        // admin client was 403'd (forbidden_org) on org-filtered queries.
+        orgId: client.orgId,
       });
 
       await reply.status(200).send({
