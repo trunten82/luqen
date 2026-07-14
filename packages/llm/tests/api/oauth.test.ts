@@ -55,6 +55,28 @@ describe('OAuth Routes', () => {
   });
 
   describe('POST /api/v1/oauth/token', () => {
+    // Regression (2026-07-14): system clients got tokens WITHOUT an orgId
+    // claim, but every org-guard (resolveOrg/resolveOrgFilter, middleware)
+    // requires tokenOrg === 'system' for the system-admin path — so the
+    // fully-privileged dashboard client was answered 403 forbidden_org on
+    // every org-filtered usage/credits call. Tokens must always carry the
+    // client's orgId, including 'system'.
+    it("embeds orgId 'system' in tokens for system clients", async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/oauth/token',
+        payload: {
+          grant_type: 'client_credentials',
+          client_id: testClientId,
+          client_secret: testClientSecret,
+        },
+      });
+      expect(res.statusCode).toBe(200);
+      const token = (res.json() as { access_token: string }).access_token;
+      const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
+      expect(payload.orgId).toBe('system');
+    });
+
     it('returns access_token with valid client_credentials grant', async () => {
       const res = await app.inject({
         method: 'POST',
