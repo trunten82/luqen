@@ -890,8 +890,18 @@ export async function createComplianceClient(
     throw new Error(`Failed to create compliance client: ${response.status}`);
   }
 
-  const data = await response.json() as { data: { id: string; secret: string } };
-  return { clientId: data.data.id, clientSecret: data.data.secret };
+  // The compliance service returns the created client FLAT ({id, secret, …}
+  // at 201 — see packages/compliance/src/api/routes/clients.ts). Accept an
+  // enveloped {data:{…}} shape too for forward compatibility, and fail loudly
+  // on anything else instead of the TypeError that silently broke per-org
+  // client provisioning until 2026-07.
+  const data = await response.json() as
+    { id?: string; secret?: string; data?: { id?: string; secret?: string } };
+  const payload = data.data ?? data;
+  if (typeof payload?.id !== 'string' || typeof payload?.secret !== 'string') {
+    throw new Error('Unexpected compliance client-create response shape (missing id/secret)');
+  }
+  return { clientId: payload.id, clientSecret: payload.secret };
 }
 
 export async function revokeClient(

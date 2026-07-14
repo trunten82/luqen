@@ -588,6 +588,15 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // Register helpers on Handlebars instance directly (required by @fastify/view v10)
   handlebars.registerHelper('eq', (a: unknown, b: unknown) => a === b);
   handlebars.registerHelper('gt', (a: unknown, b: unknown) => Number(a) > Number(b));
+  handlebars.registerHelper('lt', (a: unknown, b: unknown) => Number(a) < Number(b));
+  // `concat` joins its arguments into one string — used to build dynamic i18n
+  // keys, e.g. {{t (concat "exposure.band." exposure.band)}}. Final argument
+  // is the Handlebars options object and is dropped.
+  handlebars.registerHelper('concat', (...args: unknown[]) => args.slice(0, -1).join(''));
+  // `limit` returns the first n items of an array — used by the digest
+  // what-changed table: {{#each (limit this.criteriaChanges 10)}}.
+  handlebars.registerHelper('limit', (arr: unknown, n: unknown) =>
+    Array.isArray(arr) ? arr.slice(0, Number(n)) : []);
   // `or` helper used by the Phase 32 agent-drawer partial for a default-fallback
   // on `user.orgAgentDisplayName`. Returns the first truthy argument; final
   // argument is the Handlebars options object and is ignored.

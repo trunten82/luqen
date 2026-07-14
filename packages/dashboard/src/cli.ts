@@ -30,6 +30,12 @@ program
       const { createServer } = await import('./server.js');
       const server = await createServer(resolved);
 
+      // Keep the service alive when third-party async code (pa11y/puppeteer
+      // scan interception) leaks an unhandled rejection — log it instead of
+      // letting Node kill the whole dashboard.
+      const { registerProcessGuards } = await import('./process-guards.js');
+      registerProcessGuards(server.log);
+
       await server.listen({ port: resolved.port, host: '0.0.0.0' });
       console.log(`Luqen listening on http://0.0.0.0:${resolved.port}`);
     } catch (err) {
