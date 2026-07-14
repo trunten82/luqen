@@ -47,6 +47,8 @@ interface TestContext {
   server: FastifyInstance;
   storage: SqliteStorageAdapter;
   reportsDir: string;
+  /** Swap the authenticated user for subsequent requests (default: system admin). */
+  setUser: (user: { id: string; username: string; role: string; currentOrgId: string }) => void;
   cleanup: () => void;
 }
 
@@ -71,10 +73,11 @@ async function createTestServer(): Promise<TestContext> {
     },
   );
 
+  let currentUser = { id: 'user-1', username: 'alice', role: 'admin', currentOrgId: 'system' };
   server.addHook('preHandler', async (request) => {
-    request.user = { id: 'user-1', username: 'alice', role: 'admin', currentOrgId: 'system' };
-    // Admins hold every permission in production (resolveEffectivePermissions);
-    // mirror that so the export routes' requirePermission guards are satisfied.
+    request.user = currentUser;
+    // The harness grants every permission regardless of role; org-scope tests
+    // exercise the routes' own orgId/role checks, not requirePermission.
     (request as unknown as Record<string, unknown>)['permissions'] = new Set(ALL_PERMISSION_IDS);
   });
 
@@ -88,7 +91,13 @@ async function createTestServer(): Promise<TestContext> {
     void server.close();
   };
 
-  return { server, storage, reportsDir, cleanup };
+  return {
+    server,
+    storage,
+    reportsDir,
+    setUser: (user) => { currentUser = user; },
+    cleanup,
+  };
 }
 
 async function makeCompletedScan(
@@ -327,8 +336,9 @@ describe('Export API routes', () => {
       expect(body.error).toBe('Report not found');
     });
 
-    it('returns 404 when scan belongs to different org', async () => {
+    it('returns 404 when scan belongs to different org (non-admin caller)', async () => {
       const id = await makeCompletedScan(ctx, 'https://example.com', { orgId: 'other-org' });
+      ctx.setUser({ id: 'user-2', username: 'bob', role: 'user', currentOrgId: 'org-b' });
 
       const response = await ctx.server.inject({
         method: 'GET',
@@ -336,6 +346,26 @@ describe('Export API routes', () => {
       });
 
       expect(response.statusCode).toBe(404);
+    });
+
+    // Regression (live 2026-07-14): admins could VIEW any org's report but its
+    // exports 404'd — issues.xlsx/report.pdf lacked the admin bypass that the
+    // HTML report route and the vpat.pdf/vpat-pack.zip exports already have.
+    it('admin can export another org\'s issues.xlsx (matches report page + vpat exports)', async () => {
+      const reportPath = join(ctx.reportsDir, 'cross-org.json');
+      writeFileSync(reportPath, JSON.stringify(makeSampleReport()));
+      const id = await makeCompletedScan(ctx, 'https://example.com', {
+        orgId: 'other-org',
+        jsonReportPath: reportPath,
+      });
+
+      const response = await ctx.server.inject({
+        method: 'GET',
+        url: `/api/v1/export/scans/${id}/issues.xlsx`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['content-type']).toContain('spreadsheetml');
     });
 
     it('returns 404 when scan is not completed', async () => {
@@ -707,6 +737,42 @@ describe('Export API routes', () => {
 
       // Will be 501 (no puppeteer) or 404
       expect([404, 501]).toContain(response.statusCode);
+    });
+
+    // Regression (live 2026-07-14): report.pdf for another org's scan 404'd
+    // "Report not found" for admins who could open the same report's HTML page.
+    it('admin can export another org\'s report.pdf', async () => {
+      const reportPath = join(ctx.reportsDir, 'cross-org-pdf.json');
+      writeFileSync(reportPath, JSON.stringify(makeSampleReport()));
+      const id = await makeCompletedScan(ctx, 'https://example.com', {
+        orgId: 'other-org',
+        jsonReportPath: reportPath,
+      });
+
+      const response = await ctx.server.inject({
+        method: 'GET',
+        url: `/api/v1/export/scans/${id}/report.pdf`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['content-type']).toContain('pdf');
+    });
+
+    it('non-admin cannot export another org\'s report.pdf', async () => {
+      const reportPath = join(ctx.reportsDir, 'cross-org-pdf-2.json');
+      writeFileSync(reportPath, JSON.stringify(makeSampleReport()));
+      const id = await makeCompletedScan(ctx, 'https://example.com', {
+        orgId: 'other-org',
+        jsonReportPath: reportPath,
+      });
+      ctx.setUser({ id: 'user-2', username: 'bob', role: 'user', currentOrgId: 'org-b' });
+
+      const response = await ctx.server.inject({
+        method: 'GET',
+        url: `/api/v1/export/scans/${id}/report.pdf`,
+      });
+
+      expect(response.statusCode).toBe(404);
     });
   });
 
