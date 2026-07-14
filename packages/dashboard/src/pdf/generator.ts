@@ -134,6 +134,25 @@ function formatStandard(code: string): string {
   return map[code] ?? code;
 }
 
+/**
+ * Draw a section heading anchored at the LEFT MARGIN.
+ *
+ * PDFKit's doc.text() without an explicit x inherits doc.x from the previous
+ * draw — after a KPI card or a right-aligned table column, doc.x lingers near
+ * the right edge and the next section renders as an unreadable sliver
+ * (live report PDF, "Quick Wins" section, 2026-07-14). Every section heading
+ * MUST go through this helper so the x/width reset can't be forgotten.
+ */
+export function sectionHeading(
+  doc: PDFKit.PDFDocument,
+  title: string,
+): void {
+  doc.x = doc.page.margins.left;
+  doc.fontSize(12).text(title, doc.page.margins.left, doc.y, {
+    width: doc.page.width - doc.page.margins.left - doc.page.margins.right,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Direct PDF generation from report data
 // ---------------------------------------------------------------------------
@@ -251,8 +270,8 @@ export async function generatePdfFromData(
 
       // ── Compliance Matrix ──
       if (reportData.complianceMatrix && reportData.complianceMatrix.length > 0) {
-        doc.fontSize(12).fillColor(TEXT_PRIMARY).font('Body-Bold')
-          .text('Legal Compliance');
+        doc.fillColor(TEXT_PRIMARY).font('Body-Bold');
+        sectionHeading(doc, 'Legal Compliance');
         doc.moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.margins.left + pageWidth, doc.y)
           .lineWidth(0.5).strokeColor(BORDER_STRONG).stroke();
         doc.moveDown(0.4);
@@ -300,8 +319,8 @@ export async function generatePdfFromData(
       }
 
       // ── Top Critical Actions ──
-      doc.fontSize(12).fillColor(TEXT_PRIMARY).font('Body-Bold')
-        .text('Top Critical Actions');
+      doc.fillColor(TEXT_PRIMARY).font('Body-Bold');
+      sectionHeading(doc, 'Top Critical Actions');
       doc.moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.margins.left + pageWidth, doc.y)
         .lineWidth(0.5).strokeColor(BORDER_STRONG).stroke();
       doc.moveDown(0.2);
@@ -390,8 +409,8 @@ export async function generatePdfFromData(
 
       // ── Quick Wins ──
       if (reportData.templateComponents.length > 0) {
-        doc.fontSize(12).fillColor(TEXT_PRIMARY).font('Body-Bold')
-          .text('Quick Wins: Template Fixes');
+        doc.fillColor(TEXT_PRIMARY).font('Body-Bold');
+        sectionHeading(doc, 'Quick Wins: Template Fixes');
         doc.moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.margins.left + pageWidth, doc.y)
           .lineWidth(0.5).strokeColor(BORDER_STRONG).stroke();
         doc.moveDown(0.2);
@@ -412,8 +431,8 @@ export async function generatePdfFromData(
 
       // ── Scan Errors ──
       if (reportData.errors && reportData.errors.length > 0) {
-        doc.fontSize(12).fillColor(TEXT_PRIMARY).font('Body-Bold')
-          .text('Scan Errors');
+        doc.fillColor(TEXT_PRIMARY).font('Body-Bold');
+        sectionHeading(doc, 'Scan Errors');
         doc.moveDown(0.3);
 
         for (const err of reportData.errors) {

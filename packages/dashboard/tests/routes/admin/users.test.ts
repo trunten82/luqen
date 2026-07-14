@@ -204,7 +204,47 @@ describe('GET /admin/users/new', () => {
     expect(body.data.formUser.username).toBe('');
     expect(body.data.formUser.role).toBe('viewer');
     expect(body.data.formUser.password).toBe('');
-    expect(body.data.roles).toEqual(['viewer', 'user', 'admin']);
+    // Regression (live 2026-07-14): this page manages COMPLIANCE-service
+    // users, whose role enum is viewer|editor|admin. Offering/accepting
+    // 'user' made the form's middle option 500 (downstream schema 400).
+    expect(body.data.roles).toEqual(['viewer', 'editor', 'admin']);
+  });
+
+  it('accepts role editor and forwards it to the compliance service', async () => {
+    vi.mocked(complianceClient.createUser).mockResolvedValueOnce({
+      id: 'user-9',
+      username: 'ed',
+      role: 'editor',
+      active: true,
+      createdAt: new Date().toISOString(),
+    });
+
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/users',
+      payload: 'username=ed&password=secret123&role=editor',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(vi.mocked(complianceClient.createUser)).toHaveBeenCalledWith(
+      COMPLIANCE_URL,
+      expect.any(String),
+      expect.objectContaining({ role: 'editor' }),
+      undefined,
+    );
+  });
+
+  it('rejects role user with 400 (not a compliance role — was a live 500)', async () => {
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/users',
+      payload: 'username=u&password=secret123&role=user',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(vi.mocked(complianceClient.createUser)).not.toHaveBeenCalled();
   });
 
   it('returns 403 for non-admin user', async () => {
@@ -369,7 +409,7 @@ describe('POST /admin/users (extended)', () => {
     vi.mocked(complianceClient.createUser).mockResolvedValueOnce({
       id: 'user-5',
       username: 'dave',
-      role: 'user',
+      role: 'editor',
       active: true,
       createdAt: new Date().toISOString(),
     });
@@ -377,7 +417,7 @@ describe('POST /admin/users (extended)', () => {
     const response = await ctx.server.inject({
       method: 'POST',
       url: '/admin/users',
-      payload: 'username=dave&password=secret123&role=user',
+      payload: 'username=dave&password=secret123&role=editor',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
 

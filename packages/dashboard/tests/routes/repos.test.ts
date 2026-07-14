@@ -37,8 +37,9 @@ async function createTestServer(permissions: string[] = ['repos.manage', 'issues
     },
   );
 
+  let currentUser = { id: 'user-1', username: 'alice', role: 'admin', currentOrgId: 'system' };
   server.addHook('preHandler', async (request) => {
-    request.user = { id: 'user-1', username: 'alice', role: 'admin', currentOrgId: 'system' };
+    request.user = currentUser;
     (request as unknown as Record<string, unknown>)['permissions'] = new Set(permissions);
   });
 
@@ -52,7 +53,13 @@ async function createTestServer(permissions: string[] = ['repos.manage', 'issues
     void server.close();
   };
 
-  return { server, storage, reportsDir, cleanup };
+  return {
+    server,
+    storage,
+    reportsDir,
+    setUser: (u: { id: string; username: string; role: string; currentOrgId: string }) => { currentUser = u; },
+    cleanup,
+  };
 }
 
 async function makeRepo(ctx: TestContext, siteUrlPattern = 'https://example.com', repoUrl = 'https://github.com/org/repo') {
@@ -371,13 +378,25 @@ describe('Repo routes', () => {
       expect(body.error).toBe('Report not found');
     });
 
-    it('returns 404 when scan belongs to a different org', async () => {
+    it('returns 404 when scan belongs to a different org (non-admin caller)', async () => {
       const scanId = await makeScan(ctx, { orgId: 'other-org' });
+      ctx.setUser({ id: 'user-2', username: 'bob', role: 'user', currentOrgId: 'org-b' });
       const response = await ctx.server.inject({
         method: 'GET',
         url: `/reports/${scanId}/fixes`,
       });
       expect(response.statusCode).toBe(404);
+    });
+
+    // Regression (user-reported 2026-07-14): "Propose fixes" 404'd for admins
+    // on cross-org scans — same missing admin bypass as the exports.
+    it('admin can open fixes for another org\'s scan', async () => {
+      const scanId = await makeScan(ctx, { orgId: 'other-org' });
+      const response = await ctx.server.inject({
+        method: 'GET',
+        url: `/reports/${scanId}/fixes`,
+      });
+      expect(response.statusCode).toBe(200);
     });
 
     it('renders fixes.hbs with noReport=true when scan is not completed', async () => {

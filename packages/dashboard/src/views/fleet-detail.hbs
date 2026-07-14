@@ -86,7 +86,9 @@
   <h2 id="actions-heading">Actions</h2>
   <p>
     <a class="btn btn--primary" href="{{site.url}}" target="_blank" rel="noopener noreferrer">Open site</a>
-    <a class="btn btn--secondary" href="{{bulkFixHref}}">Queue bulk-fix</a>
+    {{!-- "Queue bulk-fix" removed (UAT 2026-07-14): it linked to /admin/bulk-fix,
+         a page that never shipped — bulk fixes are dispatched by coding agents
+         through the MCP tools (Phase 80), not a dashboard page. --}}
   </p>
   <p class="text-muted" style="font-size: 0.875em">
     The plugin self-re-registers on every 15-minute heartbeat. Sites flip to

@@ -106,6 +106,25 @@ describe('GET /api/v1/users/me/effective-roles', () => {
   });
 });
 
+// ─── GET /api/v1/teams/:teamId/members ────────────────────────────────────
+describe('GET /api/v1/teams/:teamId/members', () => {
+  // Regression (OpenAPI sweep 2026-07-14): the repo returns camelCase
+  // {userId} but the response schema requires snake_case {user_id} — the
+  // serializer threw mid-response (500 ERR_HTTP_HEADERS_SENT) for any team
+  // with at least one member. Only empty teams ever serialized.
+  it('returns snake_case member rows for a team WITH members', async () => {
+    await seedOrg('org_a');
+    const teamId = await seedTeam('alpha', 'org_a');
+    await storage.teams.setTeamMemberRole(teamId, 'u-1', 'editor');
+    server = await buildServer({ perms: ['admin.org'], orgId: orgIds.get('org_a') ?? 'org_a' });
+    const r = await server.inject({ method: 'GET', url: `/api/v1/teams/${teamId}/members` });
+    expect(r.statusCode).toBe(200);
+    const body = r.json() as { members: Array<{ user_id: string; username: string; role: string }> };
+    expect(body.members).toHaveLength(1);
+    expect(body.members[0]).toEqual({ user_id: 'u-1', username: 'u-1', role: 'editor' });
+  });
+});
+
 // ─── POST /api/v1/teams/:teamId/members ───────────────────────────────────
 describe('POST /api/v1/teams/:teamId/members', () => {
   it('admin.org of home org succeeds and writes audit', async () => {

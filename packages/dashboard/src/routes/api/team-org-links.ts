@@ -192,7 +192,11 @@ export async function teamOrgLinkRoutes(
         return reply.code(403).send({ error: 'forbidden' });
       }
       const members = await storage.teams.listTeamMembers(team.id);
-      return reply.send({ members });
+      // Repo rows are camelCase; the wire contract is snake_case. Without this
+      // mapping the serializer threw mid-response (500) for non-empty teams.
+      return reply.send({
+        members: members.map((m) => ({ user_id: m.userId, username: m.username, role: m.role })),
+      });
     },
   );
 

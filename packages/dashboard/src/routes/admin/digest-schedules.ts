@@ -10,7 +10,7 @@
  *   GET  /admin/digest-schedules/:id/view     — preview / archive digest view
  *   GET  /admin/digest-schedules/:id/pdf/:period — stream board-ready PDF
  *
- * All routes are gated by requirePermission('admin.system') (T-82-14).
+ * All routes are gated by requirePermission('admin.system', 'admin.org', 'compliance.manage') (T-82-14).
  * CSRF protection via hx-include="[name='_csrf']" on mutating HTMX buttons;
  * <form> tags are NEVER placed inside <tr>/<td> cells (feedback_htmx_forms_in_tables).
  *
@@ -109,7 +109,7 @@ export async function digestScheduleRoutes(
   server.get(
     '/admin/digest-schedules',
     {
-      preHandler: requirePermission('admin.system'),
+      preHandler: requirePermission('admin.system', 'admin.org', 'compliance.manage'),
       schema: HtmlPageSchema,
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -145,7 +145,7 @@ export async function digestScheduleRoutes(
   server.post(
     '/admin/digest-schedules',
     {
-      preHandler: requirePermission('admin.system'),
+      preHandler: requirePermission('admin.system', 'admin.org', 'compliance.manage'),
       schema: { body: DigestCreateBody, ...HtmlPartialResponse },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -240,7 +240,7 @@ export async function digestScheduleRoutes(
   server.patch(
     '/admin/digest-schedules/:id/toggle',
     {
-      preHandler: requirePermission('admin.system'),
+      preHandler: requirePermission('admin.system', 'admin.org', 'compliance.manage'),
       schema: { params: DigestIdParams, ...HtmlPartialResponse },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -284,7 +284,7 @@ export async function digestScheduleRoutes(
   server.post(
     '/admin/digest-schedules/:id/send-now',
     {
-      preHandler: requirePermission('admin.system'),
+      preHandler: requirePermission('admin.system', 'admin.org', 'compliance.manage'),
       schema: { params: DigestIdParams, ...HtmlPartialResponse },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -326,7 +326,7 @@ export async function digestScheduleRoutes(
   server.delete(
     '/admin/digest-schedules/:id',
     {
-      preHandler: requirePermission('admin.system'),
+      preHandler: requirePermission('admin.system', 'admin.org', 'compliance.manage'),
       schema: { params: DigestIdParams, ...HtmlPartialResponse },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -359,7 +359,7 @@ export async function digestScheduleRoutes(
   server.get(
     '/admin/digest-schedules/:id/view',
     {
-      preHandler: requirePermission('admin.system'),
+      preHandler: requirePermission('admin.system', 'admin.org', 'compliance.manage'),
       schema: { params: DigestIdParams, ...HtmlPageSchema },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -412,7 +412,7 @@ export async function digestScheduleRoutes(
   server.get(
     '/admin/digest-schedules/:id/pdf/:period',
     {
-      preHandler: requirePermission('admin.system'),
+      preHandler: requirePermission('admin.system', 'admin.org', 'compliance.manage'),
       schema: {
         params: DigestPdfParams,
         // 404 is the HTML toast partial (same convention as the other admin

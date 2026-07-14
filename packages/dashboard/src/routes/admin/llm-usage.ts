@@ -155,16 +155,20 @@ function usageRowsToXlsxRows(rows: ReadonlyArray<LlmUsageRow>): ReadonlyArray<Re
 }
 
 function isSystemAdmin(request: FastifyRequest): boolean {
-  const user = request.user as
-    | { permissions?: ReadonlyArray<string> }
+  // Session/API-key permissions live on request['permissions'] (a Set), NOT on
+  // request.user. Reading user.permissions returned [] for every session user,
+  // so admins were never detected — combined with callerOrgId() reading the
+  // nonexistent user.orgId, every usage query went out with orgId '' and the
+  // LLM service answered 403 forbidden_org (page banner + export 502,
+  // OpenAPI sweep 2026-07-14).
+  const perms = (request as unknown as Record<string, unknown>)['permissions'] as
+    | Set<string>
     | undefined;
-  const perms = user?.permissions ?? [];
-  return perms.includes('admin.system');
+  return perms?.has('admin.system') === true;
 }
 
 function callerOrgId(request: FastifyRequest): string | undefined {
-  const user = request.user as { orgId?: string } | undefined;
-  return user?.orgId;
+  return request.user?.currentOrgId;
 }
 
 function fmtUsd(value: number | null): string {
