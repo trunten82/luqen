@@ -201,10 +201,12 @@ const EMPTY_SIGNALS_BASE = {
 };
 
 /**
- * Detect an unambiguous bot-challenge interstitial by known vendor markers:
- * Imperva Incapsula's injected resource script, or Cloudflare's challenge
- * markers. These string matches are specific enough to check unconditionally,
- * before any signal extraction, so we can bail before wasting a model call.
+ * Known bot-protection vendor markers. NOT sufficient on their own: Cloudflare
+ * embeds a passive /cdn-cgi/challenge-platform/ script on ordinary pages of
+ * proxied sites (e.g. orderofmalta.int serves 200KB of real content with it),
+ * and Imperva injects _Incapsula_Resource into legitimate pages too. A page is
+ * only classified bot-protected when a marker is present AND signal extraction
+ * found nothing — a real page with real signals always wins.
  */
 function hasKnownBotChallengeMarkers(html: string): boolean {
   if (html.includes('_Incapsula_Resource')) return true;
@@ -241,13 +243,6 @@ async function extractBrandSignals(url: string): Promise<BrandSignals> {
         kind: 'fetch-failed',
         detail: err instanceof Error ? err.message : String(err),
       },
-    };
-  }
-
-  if (hasKnownBotChallengeMarkers(rawHtml)) {
-    return {
-      ...EMPTY_SIGNALS_BASE,
-      fetchDiagnostics: { kind: 'bot-protected' },
     };
   }
 
@@ -559,7 +554,7 @@ async function extractBrandSignals(url: string): Promise<BrandSignals> {
   const hasSignals = topColors.length > 0 || fontFamilies.size > 0 || logoCandidates.length > 0;
   const fetchDiagnostics: DiscoverBrandingDiagnostics = hasSignals
     ? { kind: 'ok' }
-    : looksLikeTinyChallengePage(rawHtml)
+    : hasKnownBotChallengeMarkers(rawHtml) || looksLikeTinyChallengePage(rawHtml)
       ? { kind: 'bot-protected' }
       : { kind: 'no-signals' };
 

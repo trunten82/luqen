@@ -274,6 +274,40 @@ describe('executeDiscoverBranding', () => {
     expect(factory).not.toHaveBeenCalled();
   });
 
+  it('does NOT flag a real page as bot-protected just because it embeds Cloudflare\'s passive challenge-platform script', async () => {
+    // Many Cloudflare-proxied sites (e.g. orderofmalta.int) serve their real
+    // content with a passive /cdn-cgi/challenge-platform/... script embedded.
+    // The marker alone must not classify the page — only a page that ALSO
+    // yields zero brand signals is an interstitial.
+    const passiveCfOrgId = 'discover-branding-passive-cf-org';
+    await db.assignCapability({ capability: 'discover-branding', modelId, priority: 1, orgId: passiveCfOrgId });
+
+    const realPageWithPassiveCf = `<!DOCTYPE html>
+<html>
+<head>
+  <title>Acme Corp</title>
+  <style>:root { --color-primary: #ff6600; } body { font-family: 'Inter', sans-serif; }</style>
+  <script src="/cdn-cgi/challenge-platform/h/b/scripts/jsd/main.js"></script>
+</head>
+<body><img src="/logo.png" alt="Acme logo"></body>
+</html>`;
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(makeFetchResponse(realPageWithPassiveCf)));
+
+    const adapter = makeAdapter([{ text: VALID_RESPONSE }]);
+    const factory = vi.fn().mockReturnValue(adapter);
+
+    const result = await executeDiscoverBranding(
+      db,
+      factory,
+      { url: 'https://example.com', orgId: passiveCfOrgId },
+      { maxRetries: 0, retryDelayMs: 0 },
+    );
+
+    expect(result.data.diagnostics?.kind).not.toBe('bot-protected');
+    expect(result.data.colors.length).toBeGreaterThan(0);
+    expect(factory).toHaveBeenCalled();
+  });
+
   it('diagnoses a genuine fetch failure as fetch-failed (not indistinguishable from an empty site)', async () => {
     const fetchFailDiagOrgId = 'discover-branding-fetch-failed-diag-org';
     await db.assignCapability({ capability: 'discover-branding', modelId, priority: 1, orgId: fetchFailDiagOrgId });
