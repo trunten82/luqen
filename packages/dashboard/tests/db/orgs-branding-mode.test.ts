@@ -81,10 +81,10 @@ describe('OrgRepository branding mode (16-P03)', () => {
     ).rejects.toThrow(/does-not-exist/);
   });
 
-  it('throws when getBrandingMode is called with an unknown org id', async () => {
+  it("falls back to 'embedded' for an unknown org id (was a throw — broke system-context scan enrichment, live 2026-07-15)", async () => {
     await expect(
       storage.organizations.getBrandingMode('does-not-exist'),
-    ).rejects.toThrow(/does-not-exist/);
+    ).resolves.toBe('embedded');
   });
 
   // -------------------------------------------------------------------------
