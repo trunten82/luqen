@@ -1779,6 +1779,46 @@
                     },
                     "attempts": {
                       "type": "number"
+                    },
+                    "diagnostics": {
+                      "additionalProperties": true,
+                      "type": "object",
+                      "required": [
+                        "kind"
+                      ],
+                      "properties": {
+                        "kind": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "ok"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "fetch-failed"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "bot-protected"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "no-signals"
+                              ]
+                            }
+                          ]
+                        },
+                        "detail": {
+                          "type": "string"
+                        }
+                      }
                     }
                   }
                 }
