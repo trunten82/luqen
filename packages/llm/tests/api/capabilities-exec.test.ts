@@ -322,6 +322,31 @@ describe('Capability Exec Routes', () => {
       expect(body.colors.some((c) => c.hex === '#ff0000')).toBe(true);
       expect(body.fonts.some((f) => f.family === 'Arial')).toBe(true);
     });
+
+    it('propagates diagnostics.kind=bot-protected through the response when the pre-model bail path fires', async () => {
+      mockDiscoverBranding.mockResolvedValueOnce({
+        data: {
+          colors: [],
+          fonts: [],
+          logoUrl: '',
+          brandName: '',
+          description: '',
+          diagnostics: { kind: 'bot-protected' },
+        },
+        model: '(no LLM — empty site)',
+        provider: 'deterministic',
+        attempts: 0,
+      });
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/discover-branding',
+        headers: { authorization: `Bearer ${readToken}` },
+        payload: { url: 'https://www.camparigroup.com' },
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json<{ diagnostics?: { kind: string } }>();
+      expect(body.diagnostics?.kind).toBe('bot-protected');
+    });
   });
 
   // ---- extract-requirements ----

@@ -1,5 +1,6 @@
 import type { DbAdapter } from '../db/adapter.js';
 import type { LLMProviderAdapter } from '../providers/types.js';
+import { isNonRetryable } from '../providers/types.js';
 import { buildGenerateFixPrompt, buildGutenbergFixPrompt } from '../prompts/generate-fix.js';
 import { CapabilityExhaustedError, CapabilityNotConfiguredError, type CapabilityResult } from './types.js';
 import { recordCompletion } from './record-usage.js';
@@ -140,6 +141,7 @@ export async function executeGenerateFix(
         };
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
+        if (isNonRetryable(lastError)) break;
       }
     }
   }

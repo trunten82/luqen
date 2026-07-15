@@ -9,6 +9,7 @@ import type {
   ToolCall,
   ToolDef,
 } from './types.js';
+import { ProviderHttpError, ProviderResponseShapeError, classifyHttpRetryable } from './types.js';
 import { anySignal, readSsePayloads } from './streaming-helpers.js';
 
 export class OpenAIAdapter implements LLMProviderAdapter {
@@ -75,13 +76,23 @@ export class OpenAIAdapter implements LLMProviderAdapter {
       signal,
     });
 
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '');
+      throw new ProviderHttpError(res.status, errBody, classifyHttpRetryable(res.status));
+    }
+
     const data = await res.json() as {
-      choices: Array<{ message: { content: string } }>;
+      choices?: Array<{ message?: { content?: string } }>;
       usage: { prompt_tokens: number; completion_tokens: number };
     };
 
+    const content = data.choices?.[0]?.message?.content;
+    if (typeof content !== 'string') {
+      throw new ProviderResponseShapeError('OpenAI response missing choices[0].message.content');
+    }
+
     return {
-      text: data.choices[0].message.content,
+      text: content,
       usage: {
         inputTokens: data.usage.prompt_tokens,
         outputTokens: data.usage.completion_tokens,

@@ -251,6 +251,74 @@ describe('executeDiscoverBranding', () => {
     expect(result.data.colors).toEqual([]);
     expect(result.data.fonts).toEqual([]);
   });
+
+  it('diagnoses bot-protected sites (Imperva Incapsula challenge) instead of treating them as an empty site', async () => {
+    const botOrgId = 'discover-branding-bot-protected-org';
+    await db.assignCapability({ capability: 'discover-branding', modelId, priority: 1, orgId: botOrgId });
+
+    const incapsulaHtml = '<html><head><script src="/_Incapsula_Resource?SWJIYLWA=1"></script></head><body></body></html>';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(makeFetchResponse(incapsulaHtml)));
+
+    const factory = vi.fn();
+
+    const result = await executeDiscoverBranding(
+      db,
+      factory,
+      { url: 'https://www.camparigroup.com', orgId: botOrgId },
+      { maxRetries: 0, retryDelayMs: 0 },
+    );
+
+    expect(result.model).toBe('(no LLM — empty site)');
+    expect(result.data.diagnostics?.kind).toBe('bot-protected');
+    // Bot-protection detection happens before any model call.
+    expect(factory).not.toHaveBeenCalled();
+  });
+
+  it('diagnoses a genuine fetch failure as fetch-failed (not indistinguishable from an empty site)', async () => {
+    const fetchFailDiagOrgId = 'discover-branding-fetch-failed-diag-org';
+    await db.assignCapability({ capability: 'discover-branding', modelId, priority: 1, orgId: fetchFailDiagOrgId });
+
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('ECONNREFUSED')));
+
+    const factory = vi.fn();
+
+    const result = await executeDiscoverBranding(
+      db,
+      factory,
+      { url: 'https://example.com', orgId: fetchFailDiagOrgId },
+      { maxRetries: 0, retryDelayMs: 0 },
+    );
+
+    expect(result.data.diagnostics?.kind).toBe('fetch-failed');
+    expect(result.data.diagnostics?.detail).toContain('ECONNREFUSED');
+  });
+
+  it('diagnoses a fetch that succeeds but yields zero signals as no-signals', async () => {
+    const noSignalsOrgId = 'discover-branding-no-signals-org';
+    await db.assignCapability({ capability: 'discover-branding', modelId, priority: 1, orgId: noSignalsOrgId });
+
+    // A real (non-challenge) page: has a stylesheet link so it isn't mistaken
+    // for a bot-challenge interstitial, but the stylesheet itself yields no
+    // color/font/logo signals.
+    const plainPage = `<html><head><link rel="stylesheet" href="/style.css"></head><body>plain text only</body></html>`;
+    vi.stubGlobal('fetch', vi.fn((url: string) => {
+      if (typeof url === 'string' && url.endsWith('/style.css')) {
+        return Promise.resolve(makeFetchResponse('body { margin: 0; }'));
+      }
+      return Promise.resolve(makeFetchResponse(plainPage));
+    }));
+
+    const factory = vi.fn();
+
+    const result = await executeDiscoverBranding(
+      db,
+      factory,
+      { url: 'https://example.com', orgId: noSignalsOrgId },
+      { maxRetries: 0, retryDelayMs: 0 },
+    );
+
+    expect(result.data.diagnostics?.kind).toBe('no-signals');
+  });
 });
 
 describe('parseDiscoverBrandingResponse', () => {

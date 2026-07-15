@@ -6,6 +6,7 @@ import { buildGenerateFixPrompt } from '../../src/prompts/generate-fix.js';
 import { parsePromptSegments } from '../../src/prompts/segments.js';
 import { CapabilityNotConfiguredError, CapabilityExhaustedError } from '../../src/capabilities/types.js';
 import type { LLMProviderAdapter } from '../../src/providers/types.js';
+import { ProviderHttpError } from '../../src/providers/types.js';
 
 const TEST_DB = '/tmp/llm-gen-fix-test.db';
 
@@ -143,6 +144,62 @@ describe('executeGenerateFix', () => {
         { maxRetries: 2, retryDelayMs: 0 },
       ),
     ).rejects.toThrow(CapabilityExhaustedError);
+  });
+
+  it('a non-retryable ProviderHttpError (410) makes exactly ONE attempt for the model — no retry sleeps', async () => {
+    // Isolated db (no other assignments) so exactly one model is in the
+    // fallback chain — isolates the "1 attempt, no retries" assertion from
+    // the shared fixture's global capability assignment.
+    const nonRetryableDb = new SqliteAdapter('/tmp/llm-gen-fix-non-retryable-test.db');
+    await nonRetryableDb.initialize();
+    const provider = await nonRetryableDb.createProvider({
+      name: 'Test Ollama Cloud',
+      type: 'ollama',
+      baseUrl: 'http://localhost:11434',
+      timeout: 30,
+    });
+    const model = await nonRetryableDb.createModel({
+      providerId: provider.id,
+      modelId: 'ministral-3:3b-cloud',
+      displayName: 'Ministral 3B Cloud',
+      capabilities: ['generate-fix'],
+    });
+    await nonRetryableDb.assignCapability({ capability: 'generate-fix', modelId: model.id, priority: 1 });
+
+    const complete = vi.fn().mockRejectedValue(
+      new ProviderHttpError(410, 'ministral-3:3b was retired', false),
+    );
+    const adapter: LLMProviderAdapter = {
+      type: 'mock',
+      connect: vi.fn().mockResolvedValue(undefined),
+      disconnect: vi.fn().mockResolvedValue(undefined),
+      healthCheck: vi.fn().mockResolvedValue(true),
+      listModels: vi.fn().mockResolvedValue([]),
+      complete,
+    };
+    const factory = vi.fn().mockReturnValue(adapter);
+
+    await expect(
+      executeGenerateFix(
+        nonRetryableDb,
+        factory,
+        {
+          wcagCriterion: '1.1.1',
+          issueMessage: 'Missing alt text',
+          htmlContext: '<img src="photo.jpg">',
+        },
+        // maxRetries: 2 would normally allow 3 attempts for this one model —
+        // the non-retryable break must short-circuit after the first.
+        { maxRetries: 2, retryDelayMs: 0 },
+      ),
+    ).rejects.toThrow(CapabilityExhaustedError);
+
+    expect(complete).toHaveBeenCalledTimes(1);
+
+    await nonRetryableDb.close();
+    if (existsSync('/tmp/llm-gen-fix-non-retryable-test.db')) {
+      unlinkSync('/tmp/llm-gen-fix-non-retryable-test.db');
+    }
   });
 
   it('uses prompt override template when org override exists', async () => {

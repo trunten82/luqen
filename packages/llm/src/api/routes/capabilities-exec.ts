@@ -268,6 +268,21 @@ const DiscoverBrandingData = Type.Object(
     model: Type.Optional(Type.String()),
     provider: Type.Optional(Type.String()),
     attempts: Type.Optional(Type.Number()),
+    /** Additive: why deterministic signal extraction found what it found (or nothing). */
+    diagnostics: Type.Optional(
+      Type.Object(
+        {
+          kind: Type.Union([
+            Type.Literal('ok'),
+            Type.Literal('fetch-failed'),
+            Type.Literal('bot-protected'),
+            Type.Literal('no-signals'),
+          ]),
+          detail: Type.Optional(Type.String()),
+        },
+        { additionalProperties: true },
+      ),
+    ),
   },
   { additionalProperties: true },
 );
@@ -338,6 +353,10 @@ export async function registerCapabilityExecRoutes(
         return;
       }
       if (err instanceof CapabilityExhaustedError) {
+        request.log.warn(
+          { capability: 'extract-requirements', lastError: err.lastError?.message },
+          'extract-requirements exhausted all models',
+        );
         await reply.status(504).send({ error: err.message, statusCode: 504 });
         return;
       }
@@ -427,6 +446,10 @@ export async function registerCapabilityExecRoutes(
         return;
       }
       if (err instanceof CapabilityExhaustedError) {
+        request.log.warn(
+          { capability: 'generate-fix', lastError: err.lastError?.message },
+          'generate-fix exhausted all models',
+        );
         await reply.status(504).send({ error: err.message, statusCode: 504 });
         return;
       }
@@ -497,6 +520,10 @@ export async function registerCapabilityExecRoutes(
         return;
       }
       if (err instanceof CapabilityExhaustedError) {
+        request.log.warn(
+          { capability: 'analyse-visual', lastError: err.lastError?.message },
+          'analyse-visual exhausted all models',
+        );
         await reply.status(504).send({ error: err.message, statusCode: 504 });
         return;
       }
@@ -569,6 +596,10 @@ export async function registerCapabilityExecRoutes(
         return;
       }
       if (err instanceof CapabilityExhaustedError) {
+        request.log.warn(
+          { capability: 'analyse-report', lastError: err.lastError?.message },
+          'analyse-report exhausted all models',
+        );
         await reply.status(504).send({ error: err.message, statusCode: 504 });
         return;
       }
@@ -616,6 +647,13 @@ export async function registerCapabilityExecRoutes(
         { url: body.url, orgId },
       );
 
+      if (capResult.model === '(no LLM — empty site)') {
+        request.log.warn(
+          { url: body.url, diagnostics: capResult.data.diagnostics },
+          'discover-branding bailed before any LLM call',
+        );
+      }
+
       await reply.send({
         ...capResult.data,
         model: capResult.model,
@@ -628,6 +666,10 @@ export async function registerCapabilityExecRoutes(
         return;
       }
       if (err instanceof CapabilityExhaustedError) {
+        request.log.warn(
+          { capability: 'discover-branding', lastError: err.lastError?.message },
+          'discover-branding exhausted all models',
+        );
         await reply.status(504).send({ error: err.message, statusCode: 504 });
         return;
       }
