@@ -378,7 +378,7 @@
             </details>
             {{/if}}
             {{#if ../../perm.issuesFix}}
-            {{{fixSuggestion wcagCriterion message @root.scan.id}}}
+            {{{fixSuggestion wcagCriterion message @root.scan.id context}}}
             {{/if}}
           </div>
           {{/each}}
@@ -410,7 +410,7 @@
           <span class="issue__brand-detail">{{this.brandMatch.matchDetail}}</span>
           {{/if}}
           {{#if ../../perm.issuesFix}}
-          {{{fixSuggestion wcagCriterion message @root.scan.id}}}
+          {{{fixSuggestion wcagCriterion message @root.scan.id context}}}
           {{/if}}
         </div>
         {{/each}}
@@ -478,7 +478,7 @@
           </details>
           {{/if}}
           {{#if ../../perm.issuesFix}}
-          {{{fixSuggestion wcagCriterion message @root.scan.id}}}
+          {{{fixSuggestion wcagCriterion message @root.scan.id context}}}
           {{/if}}
         </div>
         {{/each}}
@@ -556,7 +556,7 @@
                   </div>
                   {{/if}}
                   {{#if ../../perm.issuesFix}}
-                  {{{fixSuggestion wcagCriterion message @root.scan.id}}}
+                  {{{fixSuggestion wcagCriterion message @root.scan.id context}}}
                   {{/if}}
                 </td>
                 <td>

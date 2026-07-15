@@ -73,7 +73,7 @@ import { dashboardUserRoutes } from './routes/admin/dashboard-users.js';
 import { apiKeyRoutes } from './routes/admin/api-keys.js';
 import { organizationRoutes } from './routes/admin/organizations.js';
 import { VERSION } from './version.js';
-import { getFixSuggestion } from './fix-suggestions.js';
+import { buildFixSuggestionHint } from './fix-suggestions.js';
 import { ALL_PERMISSION_IDS, resolveEffectivePermissions } from './permissions.js';
 import { roleRoutes } from './routes/admin/roles.js';
 import { teamRoutes } from './routes/admin/teams.js';
@@ -736,39 +736,10 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     );
   });
 
-  handlebars.registerHelper('fixSuggestion', (criterion: string, message: string, scanId: string) => {
-    if (!criterion || !message || !scanId) return '';
-
-    const esc = (s: string) =>
-      s
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-
-    const params = new URLSearchParams({ criterion, message, htmlContext: '' });
-
-    const loadingHtml =
-      `<div class="rpt-fix-hint__loading" aria-busy="true" aria-label="Loading AI fix suggestion">`
-      + `<div class="skeleton" style="height:1rem;margin-bottom:var(--space-xs);"></div>`
-      + `<div class="skeleton" style="height:1rem;margin-bottom:var(--space-xs);width:80%;"></div>`
-      + `<div class="skeleton" style="height:3rem;"></div>`
-      + `</div>`;
-
-    return new handlebars.SafeString(
-      `<details class="rpt-fix-hint" `
-      + `hx-get="/reports/${esc(scanId)}/fix-suggestion?${params.toString()}" `
-      + `hx-trigger="toggle once" `
-      + `hx-target="find .rpt-fix-hint__loading-wrap" `
-      + `hx-swap="innerHTML">`
-      + `<summary class="rpt-fix-hint__toggle">`
-      + `How to fix: ${esc(criterion)} `
-      + `</summary>`
-      + `<div class="rpt-fix-hint__loading-wrap">`
-      + loadingHtml
-      + `</div>`
-      + `</details>`
-    );
+  // 4th arg is the issue's flagged-HTML snippet; handlebars appends its options
+  // object as the trailing argument, which buildFixSuggestionHint ignores.
+  handlebars.registerHelper('fixSuggestion', (criterion: string, message: string, scanId: string, context?: unknown) => {
+    return new handlebars.SafeString(buildFixSuggestionHint(criterion, message, scanId, context));
   });
 
   // Auto-discover Handlebars partials. Drop a .hbs into views/partials/ or
