@@ -220,3 +220,55 @@ export function getFixSuggestion(criterion: string, message: string): FixSuggest
   }
   return null;
 }
+
+/** Longest issue-context snippet forwarded to the AI fix endpoint via the GET URL. */
+const MAX_HINT_CONTEXT_CHARS = 1500;
+
+/**
+ * Build the lazy-loading AI fix hint markup for a report issue.
+ * The `<details>` element fetches /reports/:scanId/fix-suggestion via HTMX on
+ * first toggle. `context` is the flagged HTML snippet from the scanner issue —
+ * without it the LLM has nothing to fix and returns an empty suggestion, so
+ * callers should pass it whenever the issue carries one.
+ */
+export function buildFixSuggestionHint(
+  criterion: string,
+  message: string,
+  scanId: string,
+  context?: unknown,
+): string {
+  if (!criterion || !message || !scanId) return '';
+
+  const esc = (s: string) =>
+    s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+
+  const htmlContext =
+    typeof context === 'string' ? context.slice(0, MAX_HINT_CONTEXT_CHARS) : '';
+  const params = new URLSearchParams({ criterion, message, htmlContext });
+
+  const loadingHtml =
+    `<div class="rpt-fix-hint__loading" aria-busy="true" aria-label="Loading AI fix suggestion">`
+    + `<div class="skeleton" style="height:1rem;margin-bottom:var(--space-xs);"></div>`
+    + `<div class="skeleton" style="height:1rem;margin-bottom:var(--space-xs);width:80%;"></div>`
+    + `<div class="skeleton" style="height:3rem;"></div>`
+    + `</div>`;
+
+  return (
+    `<details class="rpt-fix-hint" `
+    + `hx-get="/reports/${esc(scanId)}/fix-suggestion?${esc(params.toString())}" `
+    + `hx-trigger="toggle once" `
+    + `hx-target="find .rpt-fix-hint__loading-wrap" `
+    + `hx-swap="innerHTML">`
+    + `<summary class="rpt-fix-hint__toggle">`
+    + `How to fix: ${esc(criterion)} `
+    + `</summary>`
+    + `<div class="rpt-fix-hint__loading-wrap">`
+    + loadingHtml
+    + `</div>`
+    + `</details>`
+  );
+}
