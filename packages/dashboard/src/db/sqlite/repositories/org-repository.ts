@@ -267,7 +267,11 @@ export class SqliteOrgRepository implements OrgRepository {
       .prepare('SELECT branding_mode FROM organizations WHERE id = ?')
       .get(orgId) as { branding_mode: string } | undefined;
     if (row === undefined) {
-      throw new Error(`organization not found: ${orgId}`);
+      // 'system' has no organizations row, and scans can outlive their org.
+      // Throwing here broke branding enrichment for every system-context scan
+      // (live 2026-07-15: "[branding] enrichment failed: organization not
+      // found: system"). Fall back to the platform default.
+      return 'embedded';
     }
     return narrowBrandingMode(row.branding_mode);
   }
