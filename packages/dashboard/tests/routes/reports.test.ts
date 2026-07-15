@@ -8,6 +8,10 @@ import { writeFile } from 'node:fs/promises';
 import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { registerSession } from '../../src/auth/session.js';
 import { reportRoutes } from '../../src/routes/reports.js';
+import type { LLMClient } from '../../src/llm-client.js';
+import { loadTranslations } from '../../src/i18n/index.js';
+
+loadTranslations();
 
 const TEST_SESSION_SECRET = 'test-session-secret-at-least-32b';
 
@@ -21,6 +25,7 @@ interface TestContext {
 async function createTestServer(
   permissions: string[] = ['reports.delete', 'scans.create', 'trends.view'],
   userOverrides: Record<string, unknown> = {},
+  getLLMClient: () => LLMClient | null = () => null,
 ): Promise<TestContext> {
   const dbPath = join(tmpdir(), `test-reports-${randomUUID()}.db`);
   const reportsDir = join(tmpdir(), `test-reports-dir-${randomUUID()}`);
@@ -56,7 +61,7 @@ async function createTestServer(
     (request as unknown as Record<string, unknown>)['permissions'] = new Set([...permissions, 'reports.view', 'llm.view']);
   });
 
-  await reportRoutes(server, storage);
+  await reportRoutes(server, storage, getLLMClient);
   await server.ready();
 
   const cleanup = (): void => {
@@ -1468,6 +1473,41 @@ describe('Report routes', () => {
       const response = await ctx.server.inject({ method: 'GET', url: `/reports/${id}` });
       const body = response.json() as { data: { reportData: { complianceMatrix: Array<{ reviewStatus: string }> } } };
       expect(body.data.reportData.complianceMatrix[0].reviewStatus).toBe('custom-status');
+    });
+  });
+
+  // ─── GET /reports/:id/fix-suggestion ──────────────────────────────────────
+
+  describe('GET /reports/:id/fix-suggestion', () => {
+    it('never sends an empty body: shows an informative partial when the LLM fails and no hardcoded pattern matches', async () => {
+      const failingLlmClient = {
+        baseUrl: 'https://llm.example.com',
+        generateFix: async () => {
+          throw new Error('upstream unavailable');
+        },
+        destroy: () => {},
+      } as unknown as LLMClient;
+
+      const localCtx = await createTestServer(
+        ['reports.delete', 'scans.create', 'trends.view'],
+        {},
+        () => failingLlmClient,
+      );
+
+      try {
+        const id = await makeScanWithReport(localCtx);
+        const res = await localCtx.server.inject({
+          method: 'GET',
+          url: `/reports/${id}/fix-suggestion?criterion=9.9.9&message=${encodeURIComponent('totally novel issue with no hardcoded pattern match')}`,
+        });
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body).not.toBe('');
+        expect(res.body.length).toBeGreaterThan(0);
+        expect(res.body).toContain('fix suggestion');
+      } finally {
+        localCtx.cleanup();
+      }
     });
   });
 

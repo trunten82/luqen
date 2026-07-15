@@ -990,6 +990,9 @@
       "createUser": "Create User"
     },
     "branding": {
+      "discoverBotProtected": "We couldn't read this site's brand signals because it's protected by bot-detection (e.g. Cloudflare or Imperva). Ask the site owner to allowlist Luqen's server, or add colors, fonts, and logo manually.",
+      "discoverFetchFailed": "Could not reach {{url}}: {{detail}}",
+      "discoverNoSignals": "No brand signals detected — try a different URL.",
       "title": "Branding Guidelines",
       "guidelineDetail": "Branding Guideline Detail",
       "guidelineSections": "Guideline sections",
@@ -1383,6 +1386,7 @@
     "fixSourcePattern": "Pattern-based suggestion",
     "fixLlmUnavailable": "AI fix suggestions are unavailable. Showing a pattern-based suggestion.",
     "fixCreditsExhausted": "AI fix credits are used up for this organisation. Showing a pattern-based suggestion — an admin can top up credits on the LLM usage page.",
+    "fixNoSuggestion": "An AI fix suggestion isn't available for this issue yet.",
     "fixLoading": "Loading AI fix suggestion",
     "fixCopyBtn": "Copy",
     "fixCopiedBtn": "Copied!",

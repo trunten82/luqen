@@ -335,6 +335,11 @@
     "org": "Org"
   },
   "admin": {
+    "branding": {
+      "discoverBotProtected": "Non è stato possibile leggere i segnali del brand di questo sito perché è protetto da un sistema anti-bot (es. Cloudflare o Imperva). Chiedi al proprietario del sito di autorizzare il server di Luqen, oppure aggiungi colori, font e logo manualmente.",
+      "discoverFetchFailed": "Impossibile raggiungere {{url}}: {{detail}}",
+      "discoverNoSignals": "Nessun segnale di brand rilevato — prova un altro URL."
+    },
     "jurisdictions": {
       "addJurisdiction": "Aggiungi Giurisdizione",
       "editJurisdiction": "Modifica Giurisdizione",
@@ -1037,6 +1042,7 @@
     "brandDrilldownClickHint": "[IT] Click to see failing elements",
     "tabsLabel": "Report sections",
     "fixCreditsExhausted": "AI fix credits are used up for this organisation. Showing a pattern-based suggestion — an admin can top up credits on the LLM usage page.",
+    "fixNoSuggestion": "An AI fix suggestion isn't available for this issue yet.",
     "vpatGenerate": "Genera VPAT / ACR"
   },
   "reportCompare": {

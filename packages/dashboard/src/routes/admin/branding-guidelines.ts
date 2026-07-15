@@ -9,6 +9,7 @@ import { promisify } from 'node:util';
 import type { StorageAdapter } from '../../db/adapter.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { toastHtml, escapeHtml } from './helpers.js';
+import { t } from '../../i18n/index.js';
 import { retagScansForSite, retagAllSitesForGuideline } from '../../services/branding-retag.js';
 import type { BrandingOrchestrator } from '../../services/branding/branding-orchestrator.js';
 import type { LLMClient } from '../../llm-client.js';
@@ -686,10 +687,22 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         const result = await effectiveLlm!.discoverBranding({ url, orgId: guideline.orgId });
 
         if (result.colors.length === 0 && result.fonts.length === 0 && !result.logoUrl) {
+          const diagKind = result.diagnostics?.kind;
+          let message: string;
+          if (diagKind === 'bot-protected') {
+            message = t('admin.branding.discoverBotProtected');
+          } else if (diagKind === 'fetch-failed') {
+            message = t('admin.branding.discoverFetchFailed', 'en', {
+              url,
+              detail: result.diagnostics?.detail ?? '',
+            });
+          } else {
+            message = t('admin.branding.discoverNoSignals');
+          }
           return reply
             .code(200)
             .header('content-type', 'text/html')
-            .send(toastHtml('No brand signals detected — try a different URL.'));
+            .send(toastHtml(message));
         }
 
         const discoveryContext = `Discovered from ${url}`;

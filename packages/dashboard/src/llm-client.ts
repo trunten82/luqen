@@ -497,6 +497,13 @@ export class LLMClient {
     logoUrl: string;
     brandName: string;
     description: string;
+    /**
+     * Why deterministic signal extraction found what it found (or nothing).
+     * Additive field from the LLM service (Quick 260715-pg9) — lets the
+     * dashboard distinguish "genuinely no brand signals" from "the site is
+     * behind bot protection" or "the fetch itself failed".
+     */
+    diagnostics?: { kind: 'ok' | 'fetch-failed' | 'bot-protected' | 'no-signals'; detail?: string };
   }> {
     return this.apiFetch<{
       colors: Array<{ name: string; hex: string; usage?: string }>;
@@ -504,6 +511,7 @@ export class LLMClient {
       logoUrl: string;
       brandName: string;
       description: string;
+      diagnostics?: { kind: 'ok' | 'fetch-failed' | 'bot-protected' | 'no-signals'; detail?: string };
     }>(`${this._baseUrl}/api/v1/discover-branding`, {
       method: 'POST',
       body: JSON.stringify(input),
