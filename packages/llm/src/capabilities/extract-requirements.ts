@@ -1,5 +1,6 @@
 import type { DbAdapter } from '../db/adapter.js';
 import type { LLMProviderAdapter } from '../providers/types.js';
+import { isNonRetryable } from '../providers/types.js';
 import type { ExtractedRequirements } from '../types.js';
 import { buildExtractionPrompt } from '../prompts/extract-requirements.js';
 import { parseExtractedRequirements } from './parse-extract-response.js';
@@ -103,6 +104,7 @@ export async function executeExtractRequirements(
         };
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
+        if (isNonRetryable(lastError)) break;
       }
     }
   }

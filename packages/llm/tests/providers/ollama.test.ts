@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OllamaAdapter } from '../../src/providers/ollama.js';
 import type { StreamFrame } from '../../src/providers/types.js';
+import { ProviderHttpError, ProviderResponseShapeError, isNonRetryable } from '../../src/providers/types.js';
 
 describe('OllamaAdapter', () => {
   let adapter: OllamaAdapter;
@@ -135,6 +136,72 @@ describe('OllamaAdapter', () => {
     const userMsg = body.messages.find((m: { role: string }) => m.role === 'user');
     expect(userMsg.content).toBe('Describe this image for alt text');
     expect(userMsg.images).toEqual(['OLLAMAB64']);
+  });
+
+  // ========================================================================
+  // Quick 260715-pg9: typed provider errors on complete() (retired-model 410)
+  // ========================================================================
+
+  it('complete() throws ProviderHttpError (not TypeError) when Ollama Cloud returns 410 for a retired model', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 410,
+      statusText: 'Gone',
+      text: async () => JSON.stringify({ error: 'ministral-3:3b was retired at 2026-07-15 00:00:00 -0700 PDT' }),
+    });
+
+    let caught: unknown;
+    try {
+      await adapter.complete('Say hello', { model: 'ministral-3:3b-cloud' });
+    } catch (err) {
+      caught = err;
+    }
+
+    expect(caught).toBeInstanceOf(ProviderHttpError);
+    expect(caught).not.toBeInstanceOf(TypeError);
+    const err = caught as ProviderHttpError;
+    expect(err.status).toBe(410);
+    expect(err.upstreamText).toContain('retired');
+    expect(err.retryable).toBe(false);
+    expect(isNonRetryable(err)).toBe(true);
+  });
+
+  it('complete() throws a retryable ProviderHttpError for a 500', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      statusText: 'Internal Server Error',
+      text: async () => 'boom',
+    });
+
+    let caught: unknown;
+    try {
+      await adapter.complete('Say hello', { model: 'llama3.2' });
+    } catch (err) {
+      caught = err;
+    }
+
+    expect(caught).toBeInstanceOf(ProviderHttpError);
+    expect((caught as ProviderHttpError).retryable).toBe(true);
+    expect(isNonRetryable(caught)).toBe(false);
+  });
+
+  it('complete() throws a typed non-retryable error (not TypeError) when a 2xx body has no message.content', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ prompt_eval_count: 1, eval_count: 1 }),
+    });
+
+    let caught: unknown;
+    try {
+      await adapter.complete('Say hello', { model: 'llama3.2' });
+    } catch (err) {
+      caught = err;
+    }
+
+    expect(caught).toBeInstanceOf(ProviderResponseShapeError);
+    expect(caught).not.toBeInstanceOf(TypeError);
+    expect(isNonRetryable(caught)).toBe(true);
   });
 
   // ========================================================================

@@ -1,5 +1,6 @@
 import type { DbAdapter } from '../db/adapter.js';
 import type { LLMProviderAdapter, ImageInput } from '../providers/types.js';
+import { isNonRetryable } from '../providers/types.js';
 import { buildAnalyseVisualPrompt, type VisualCheck } from '../prompts/analyse-visual.js';
 import { CapabilityExhaustedError, CapabilityNotConfiguredError, type CapabilityResult } from './types.js';
 import { recordCompletion } from './record-usage.js';
@@ -142,6 +143,7 @@ export async function executeAnalyseVisual(
         };
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
+        if (isNonRetryable(lastError)) break;
       }
     }
   }

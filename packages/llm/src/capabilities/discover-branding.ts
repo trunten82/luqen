@@ -1,5 +1,6 @@
 import type { DbAdapter } from '../db/adapter.js';
 import type { LLMProviderAdapter } from '../providers/types.js';
+import { isNonRetryable } from '../providers/types.js';
 import { buildDiscoverBrandingPrompt } from '../prompts/discover-branding.js';
 import { CapabilityExhaustedError, CapabilityNotConfiguredError, type CapabilityResult } from './types.js';
 import { recordCompletion } from './record-usage.js';
@@ -20,12 +21,24 @@ export interface DiscoverBrandingFont {
   readonly usage?: string;
 }
 
+/**
+ * Diagnoses why deterministic signal extraction succeeded, found nothing, or
+ * could not run at all. Propagated to the dashboard so it can show an
+ * honest, actionable message instead of a generic "try a different URL"
+ * (e.g. when a site is behind Imperva/Cloudflare bot-challenge protection).
+ */
+export interface DiscoverBrandingDiagnostics {
+  readonly kind: 'ok' | 'fetch-failed' | 'bot-protected' | 'no-signals';
+  readonly detail?: string;
+}
+
 export interface DiscoverBrandingResult {
   readonly colors: readonly DiscoverBrandingColor[];
   readonly fonts: readonly DiscoverBrandingFont[];
   readonly logoUrl: string;
   readonly brandName: string;
   readonly description: string;
+  readonly diagnostics?: DiscoverBrandingDiagnostics;
 }
 
 export function parseDiscoverBrandingResponse(text: string): DiscoverBrandingResult {
@@ -172,14 +185,70 @@ interface BrandSignals {
   readonly metaBrandName: string;
   readonly metaDescription: string;
   readonly pageTitle: string;
+  readonly fetchDiagnostics: DiscoverBrandingDiagnostics;
+}
+
+const EMPTY_SIGNALS_BASE = {
+  htmlContent: '',
+  cssContent: '',
+  topColors: [] as ReadonlyArray<{ hex: string; count: number }>,
+  fontFamilies: [] as readonly string[],
+  logoCandidates: [] as readonly string[],
+  brandHint: '',
+  metaBrandName: '',
+  metaDescription: '',
+  pageTitle: '',
+};
+
+/**
+ * Detect an unambiguous bot-challenge interstitial by known vendor markers:
+ * Imperva Incapsula's injected resource script, or Cloudflare's challenge
+ * markers. These string matches are specific enough to check unconditionally,
+ * before any signal extraction, so we can bail before wasting a model call.
+ */
+function hasKnownBotChallengeMarkers(html: string): boolean {
+  if (html.includes('_Incapsula_Resource')) return true;
+  if (
+    html.includes('cf-browser-verification') ||
+    html.includes('challenge-platform') ||
+    html.includes('cf_chl_opt')
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Secondary, lower-confidence bot-challenge signal: a suspiciously tiny
+ * `<html>` document with zero stylesheet links (typical of a JS-challenge
+ * page with no real styling). Deliberately only consulted AFTER signal
+ * extraction found nothing — a real small page that happens to inline its
+ * CSS (and therefore yields real color/font signals) must never be
+ * misclassified just because it has no `<link rel="stylesheet">`.
+ */
+function looksLikeTinyChallengePage(html: string): boolean {
+  return /<html/i.test(html) && html.length < 3000 && !/rel=["']stylesheet["']/i.test(html);
 }
 
 async function extractBrandSignals(url: string): Promise<BrandSignals> {
   let rawHtml: string;
   try {
     rawHtml = await fetchWithTimeout(url);
-  } catch {
-    return { htmlContent: '', cssContent: '', topColors: [], fontFamilies: [], logoCandidates: [], brandHint: '', metaBrandName: '', metaDescription: '', pageTitle: '' };
+  } catch (err) {
+    return {
+      ...EMPTY_SIGNALS_BASE,
+      fetchDiagnostics: {
+        kind: 'fetch-failed',
+        detail: err instanceof Error ? err.message : String(err),
+      },
+    };
+  }
+
+  if (hasKnownBotChallengeMarkers(rawHtml)) {
+    return {
+      ...EMPTY_SIGNALS_BASE,
+      fetchDiagnostics: { kind: 'bot-protected' },
+    };
   }
 
   let brandHint = '';
@@ -487,6 +556,13 @@ async function extractBrandSignals(url: string): Promise<BrandSignals> {
         Array.from(fontFamilies).slice(0, 10).map((f) => `/* ${f} */`).join('\n')
       : '');
 
+  const hasSignals = topColors.length > 0 || fontFamilies.size > 0 || logoCandidates.length > 0;
+  const fetchDiagnostics: DiscoverBrandingDiagnostics = hasSignals
+    ? { kind: 'ok' }
+    : looksLikeTinyChallengePage(rawHtml)
+      ? { kind: 'bot-protected' }
+      : { kind: 'no-signals' };
+
   return {
     htmlContent,
     cssContent,
@@ -497,6 +573,7 @@ async function extractBrandSignals(url: string): Promise<BrandSignals> {
     metaBrandName,
     metaDescription,
     pageTitle,
+    fetchDiagnostics,
   };
 }
 
@@ -639,7 +716,7 @@ export async function executeDiscoverBranding(
   // If the site gave us nothing, return empty early
   if (signals.topColors.length === 0 && signals.fontFamilies.length === 0 && signals.logoCandidates.length === 0) {
     return {
-      data: deterministic,
+      data: { ...deterministic, diagnostics: signals.fetchDiagnostics },
       model: '(no LLM — empty site)',
       provider: 'deterministic',
       attempts: 0,
@@ -691,13 +768,14 @@ export async function executeDiscoverBranding(
         const merged = mergeResults(signals, llmData, deterministic);
 
         return {
-          data: merged,
+          data: { ...merged, diagnostics: signals.fetchDiagnostics },
           model: model.displayName,
           provider: provider.name,
           attempts: totalAttempts,
         };
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
+        if (isNonRetryable(lastError)) break;
       }
     }
   }
@@ -706,7 +784,7 @@ export async function executeDiscoverBranding(
   // (degrade gracefully rather than throwing, since we DO have real data)
   if (deterministic.colors.length > 0 || deterministic.fonts.length > 0) {
     return {
-      data: deterministic,
+      data: { ...deterministic, diagnostics: signals.fetchDiagnostics },
       model: '(LLM failed — deterministic fallback)',
       provider: lastError?.message ?? 'unknown',
       attempts: totalAttempts,

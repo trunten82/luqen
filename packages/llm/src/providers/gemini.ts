@@ -9,6 +9,7 @@ import type {
   ToolCall,
   ToolDef,
 } from './types.js';
+import { ProviderHttpError, classifyHttpRetryable } from './types.js';
 import { anySignal, readSsePayloads } from './streaming-helpers.js';
 
 const DEFAULT_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
@@ -85,6 +86,11 @@ export class GeminiAdapter implements LLMProviderAdapter {
       body: JSON.stringify(body),
       signal,
     });
+
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '');
+      throw new ProviderHttpError(res.status, errBody, classifyHttpRetryable(res.status));
+    }
 
     const data = await res.json() as GenerateContentResponse;
 

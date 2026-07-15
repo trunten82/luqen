@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GeminiAdapter } from '../../src/providers/gemini.js';
 import type { StreamFrame } from '../../src/providers/types.js';
+import { ProviderHttpError } from '../../src/providers/types.js';
 
 const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 
@@ -96,6 +97,25 @@ describe('GeminiAdapter', () => {
     expect(body.systemInstruction).toEqual({ parts: [{ text: 'You are a compliance expert' }] });
     expect(body.generationConfig.maxOutputTokens).toBe(200);
     expect(body.generationConfig.temperature).toBe(0.5);
+  });
+
+  it('complete() throws ProviderHttpError (not a silently-empty result) on non-2xx', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+      statusText: 'Service Unavailable',
+      text: async () => '{"error":"overloaded"}',
+    });
+
+    let caught: unknown;
+    try {
+      await adapter.complete('Say hello', { model: 'gemini-2.5-flash' });
+    } catch (err) {
+      caught = err;
+    }
+
+    expect(caught).toBeInstanceOf(ProviderHttpError);
+    expect((caught as ProviderHttpError).retryable).toBe(true);
   });
 
   it('complete concatenates all candidate parts and tolerates missing usage', async () => {

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OpenAIAdapter } from '../../src/providers/openai.js';
 import type { StreamFrame } from '../../src/providers/types.js';
+import { ProviderHttpError, ProviderResponseShapeError } from '../../src/providers/types.js';
 
 describe('OpenAIAdapter', () => {
   let adapter: OpenAIAdapter;
@@ -115,6 +116,47 @@ describe('OpenAIAdapter', () => {
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body.messages[0]).toEqual({ role: 'system', content: 'You are a compliance expert' });
     expect(body.messages[1]).toEqual({ role: 'user', content: 'User message' });
+  });
+
+  // ========================================================================
+  // Quick 260715-pg9: typed provider errors on complete()
+  // ========================================================================
+
+  it('complete() throws ProviderHttpError (not TypeError) on non-2xx', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 429,
+      statusText: 'Too Many Requests',
+      text: async () => '{"error":"rate limited"}',
+    });
+
+    let caught: unknown;
+    try {
+      await adapter.complete('Say hello', { model: 'gpt-4o' });
+    } catch (err) {
+      caught = err;
+    }
+
+    expect(caught).toBeInstanceOf(ProviderHttpError);
+    expect(caught).not.toBeInstanceOf(TypeError);
+    expect((caught as ProviderHttpError).retryable).toBe(true);
+  });
+
+  it('complete() throws a typed non-retryable error when choices[0].message.content is missing', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ choices: [], usage: { prompt_tokens: 1, completion_tokens: 0 } }),
+    });
+
+    let caught: unknown;
+    try {
+      await adapter.complete('Say hello', { model: 'gpt-4o' });
+    } catch (err) {
+      caught = err;
+    }
+
+    expect(caught).toBeInstanceOf(ProviderResponseShapeError);
+    expect(caught).not.toBeInstanceOf(TypeError);
   });
 
   // ========================================================================

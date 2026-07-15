@@ -9,6 +9,7 @@ import type {
   ToolCall,
   ToolDef,
 } from './types.js';
+import { ProviderHttpError, ProviderResponseShapeError, classifyHttpRetryable } from './types.js';
 import { anySignal, readNdjsonLines } from './streaming-helpers.js';
 
 export class OllamaAdapter implements LLMProviderAdapter {
@@ -72,11 +73,20 @@ export class OllamaAdapter implements LLMProviderAdapter {
       signal,
     });
 
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '');
+      throw new ProviderHttpError(res.status, errBody, classifyHttpRetryable(res.status));
+    }
+
     const data = await res.json() as {
-      message: { content: string };
+      message?: { content?: string };
       prompt_eval_count: number;
       eval_count: number;
     };
+
+    if (typeof data.message?.content !== 'string') {
+      throw new ProviderResponseShapeError('Ollama response missing message.content');
+    }
 
     return {
       text: data.message.content,

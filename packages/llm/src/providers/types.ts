@@ -38,6 +38,86 @@ export interface RemoteModel {
 }
 
 // ----------------------------------------------------------------------
+// Typed provider errors + non-retryable classification (Quick 260715-pg9)
+// ----------------------------------------------------------------------
+
+/**
+ * Shared marker interface for provider errors carrying an explicit retry
+ * disposition. `isNonRetryable()` looks for this shape rather than a
+ * specific class so future error types can opt in without changing the
+ * classification helper.
+ */
+export interface RetryClassifiedError {
+  readonly retryable: boolean;
+}
+
+/**
+ * Thrown by adapter `complete()` implementations when the upstream HTTP
+ * response is non-2xx. Carries the upstream status + a truncated copy of
+ * the response body so capability retry loops and route logging can
+ * surface the real cause (e.g. "410 ... retired") instead of a bare
+ * TypeError from destructuring an error-shaped body.
+ *
+ * `retryable` classification: 429 and 5xx are transient (true); any other
+ * 4xx (including 410) is deterministic and non-retryable (false).
+ */
+export class ProviderHttpError extends Error implements RetryClassifiedError {
+  readonly retryable: boolean;
+  readonly status: number;
+  readonly upstreamText: string;
+
+  constructor(status: number, upstreamText: string, retryable: boolean) {
+    const truncated = upstreamText.slice(0, 500);
+    super(`Provider returned HTTP ${status}: ${truncated}`);
+    this.name = 'ProviderHttpError';
+    this.status = status;
+    this.upstreamText = truncated;
+    this.retryable = retryable;
+  }
+}
+
+/**
+ * Thrown by adapter `complete()` implementations when a 2xx response body
+ * does not match the expected success shape (e.g. missing `message.content`).
+ * Always non-retryable — retrying an unexpectedly-shaped 2xx response will
+ * not change the outcome.
+ */
+export class ProviderResponseShapeError extends Error implements RetryClassifiedError {
+  readonly retryable = false;
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'ProviderResponseShapeError';
+  }
+}
+
+/**
+ * Classify an HTTP status code into a retry disposition:
+ *  - 429 (rate limited) → retryable
+ *  - 5xx (upstream/server error) → retryable
+ *  - any other 4xx (incl. 410 Gone) → non-retryable (deterministic)
+ */
+export function classifyHttpRetryable(status: number): boolean {
+  if (status === 429) return true;
+  if (status >= 500) return true;
+  return false;
+}
+
+/**
+ * True when `err` is explicitly classified as non-retryable (e.g. a 410 or
+ * other deterministic 4xx `ProviderHttpError`, or a `ProviderResponseShapeError`).
+ * Errors with no retry classification (network errors, unknown throwables)
+ * default to `false` (retryable) — this preserves existing retry behaviour
+ * for anything not explicitly classified.
+ */
+export function isNonRetryable(err: unknown): boolean {
+  if (err && typeof err === 'object' && 'retryable' in err) {
+    return (err as RetryClassifiedError).retryable === false;
+  }
+  return false;
+}
+
+// ----------------------------------------------------------------------
 // Streaming contract (Phase 32-01, D-11 / D-12)
 // ----------------------------------------------------------------------
 
