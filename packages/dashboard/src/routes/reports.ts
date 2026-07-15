@@ -1165,8 +1165,11 @@ export async function reportRoutes(
         return reply.header('content-type', 'text/html').send(html);
       }
 
-      // No match — return empty
-      return reply.header('content-type', 'text/html').send('');
+      // No hardcoded pattern matched (and the LLM either failed or wasn't
+      // configured) — never swap the loading skeleton out for nothing.
+      const noSuggestionHtml =
+        `<p class="rpt-fix-hint__desc text-muted">${esc(t('reportDetail.fixNoSuggestion'))}</p>`;
+      return reply.header('content-type', 'text/html').send(noSuggestionHtml);
     },
   );
 

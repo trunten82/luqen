@@ -335,6 +335,11 @@
     "org": "Org"
   },
   "admin": {
+    "branding": {
+      "discoverBotProtected": "Die Markensignale dieser Website konnten nicht gelesen werden, da sie durch Bot-Schutz (z. B. Cloudflare oder Imperva) geschützt ist. Bitten Sie den Website-Betreiber, den Luqen-Server zuzulassen, oder fügen Sie Farben, Schriftarten und Logo manuell hinzu.",
+      "discoverFetchFailed": "{{url}} konnte nicht erreicht werden: {{detail}}",
+      "discoverNoSignals": "Keine Markensignale erkannt — versuchen Sie eine andere URL."
+    },
     "jurisdictions": {
       "addJurisdiction": "Jurisdiktion Hinzufügen",
       "editJurisdiction": "Jurisdiktion Bearbeiten",
@@ -1028,6 +1033,7 @@
     "brandScoreIntroduced": "[DE] Brand scoring was introduced in v2.11.0",
     "tabsLabel": "Report sections",
     "fixCreditsExhausted": "AI fix credits are used up for this organisation. Showing a pattern-based suggestion — an admin can top up credits on the LLM usage page.",
+    "fixNoSuggestion": "An AI fix suggestion isn't available for this issue yet.",
     "vpatGenerate": "VPAT / ACR erstellen"
   },
   "reportCompare": {
