@@ -141,6 +141,8 @@ export async function getToken(
   clientId = 'dashboard',
   clientSecret = '',
 ): Promise<TokenResponse> {
+  // Bounded so an unreachable compliance service cannot hang the login flow —
+  // the caller falls through to local password login on failure.
   const response = await fetch(`${baseUrl}/api/v1/oauth/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -151,6 +153,7 @@ export async function getToken(
       client_id: clientId,
       client_secret: clientSecret,
     }),
+    signal: AbortSignal.timeout(5000),
   });
 
   if (!response.ok) {
