@@ -168,8 +168,12 @@ export async function authRoutes(
         });
       }
 
-      // If compliance URL is configured in team mode, try OAuth first
-      if (mode === 'team' && config.complianceUrl !== '' && config.complianceUrl !== 'http://localhost:4000') {
+      // If compliance URL is configured in team mode, try OAuth first.
+      // Users created via /admin/users live in the compliance service, so this
+      // must run for ANY configured URL — including the default
+      // http://localhost:4000 — or those users can never log in. A failed
+      // attempt falls through to local password login below.
+      if (mode === 'team' && config.complianceUrl !== '') {
         try {
           const tokenResponse = await getToken(
             config.complianceUrl,
