@@ -10,32 +10,33 @@ AI-powered accessibility compliance that adapts to each organization's jurisdict
 
 ## Current State
 
-v3.4.0 line (package version 3.4.0). Since v3.1.0 the platform has shipped the WordPress plugin (standalone axe-core + enterprise mode), WP network/multi-team modes, public badges, the UI revision, and a sustained run of dashboard/LLM phases (71–77) delivered directly to master with per-phase CI + lxc-luqen deploy: NOTIF per-recipient unsubscribe (71), the LLM cost-telemetry stack — `llm_usage` schema, capability instrumentation, read API + `/admin/llm-usage` page, IDOR fix, pricing registry + cost columns, retention, and a group-by breakdown view (72–77). The notify-email/slack/teams plugins were upgraded to v1.1.0 to consume the dispatcher's rich rendered fields. Note: `.planning` artifacts lagged behind this direct-to-master run; this milestone resyncs them.
+v3.4.0 line (package version 3.4.0). Since v3.1.0 the platform shipped the WordPress plugin (standalone axe-core + enterprise mode), WP network/multi-team modes, public badges, the UI revision, dashboard/LLM phases 71–77 (NOTIF per-recipient unsubscribe; the LLM cost-telemetry stack), the single-source localizable ACR/VPAT program (M1–M4: byte-identical dashboard + WordPress render, Snapshot per-site report page with revisions + audit history, 58-jurisdiction legal framing), and the **de-gating to a single product with no paid tiers** (the Free/Pro/Agency UI and the generate-fix credit paywall were removed in commits `30cfb5d`/`e9df8cc`). Note: `.planning` artifacts lagged this direct-to-master run; this milestone resyncs them.
 
-## Current Milestone: v3.5.0 Commercial positioning & agency monetization
+**Superseded:** the previously drafted v3.5.0 "Commercial positioning & agency monetization" milestone is **dead** — its monetization spine (Pro/Agency feature gates, credit-metered fixes) was explicitly reversed by the single-product decision ([[project_single_tier_decision]]). Only its Phase 78 (anti-overlay positioning) shipped. v3.5.0 is redefined below.
 
-**Goal:** Turn verified market research into product — position Luqen explicitly as genuine source-level remediation against the collapsing overlay category, and build the freemium→Pro→Agency monetization spine (Pro feature gates, credit-metered AI fixes, an agency multi-client/white-label tier) that the WP-shelf competitors prove converts.
+## Current Milestone: v3.5.0 Anti-overlay wedge — dev + exec first wave
+
+**Goal:** Convert the verified 2026-06 market-positioning brief (`.planning/MARKET-POSITIONING-2026-06.md`) into product. Give developers real source-level remediation inside their workflow (CI gate + agent-native fix tools), and give executives a conservative, jurisdiction-grounded, proactive risk picture (legal-exposure scoring + scheduled digest). WordPress-leaned throughout — the SMB segment that was mis-sold overlays and is getting sued is the beachhead. Position Luqen as "the anti-overlay, legal-defensibility platform for developers and executives."
 
 **Target features:**
 
-*Positioning (anti-overlay)*
-- WP plugin readme + dashboard/report copy framed as real source-level fixes vs overlays (cite FTC $1M, NFB revocation, "sued despite a widget" data)
-- A "why not an overlay" comparison surface
+*A1 — CI regression gate (developer)*
+- GitHub Action / `luqen scan --fail-on=new` with baseline diff + PR comment, built on the existing core CLI + multi-engine scan
+- WP analog: scan-on-publish / warn-before-publish gate in the plugin
 
-*Pro feature gates (WP plugin — match the Equalize Digital conversion bundle)*
-- Full-site/bulk scanning, audit history, Excel export, custom-post-type/WooCommerce scanning, multisite — gated as paid conversion levers
-- Entitlement mechanism enforcing free vs Pro
+*A3 — MCP fix tools (developer / agent-native)*
+- Expose scan + generate-fix (with 58-jurisdiction legal context) as MCP tools so Cursor/Claude Code remediate inline; `@luqen/core` MCP server already exists
+- Surface WP-block-aware fixes through the same path
 
-*Credit-metered AI fixes*
-- Meter `generate-fix` by credits on top of the existing `llm_usage` telemetry + pricing registry; gate when exhausted with graceful deterministic fallback; surface balance in dashboard + WP
+*B1 — Jurisdiction legal-exposure scoring (executive, flagship)*
+- Fuse scan results + per-scan legal framing + lawsuit/deadline data into a CONSERVATIVE exposure indicator (EU-post-EAA, high-filing US states NY/FL/IL, ADA Title II 2027/2028 deadline countdowns)
+- Never claims "compliant" or asserts fault — exposure indicator only; surfaced per-site in the WP plugin dashboard
 
-*Agency tier*
-- Multi-client dashboard, white-label/rebrandable reports + theming, VPAT/ACR generation, partner/resale entitlement
+*B5 — Scheduled exec digest (executive)*
+- Weekly/monthly "what changed / what's at risk" email + board-ready PDF via existing notify (slack/teams/email) + report pipelines
+- Per-site WP digest reusing WP company-info / per-site master data
 
-*Pricing & packaging*
-- Codify Free/Pro/Agency tiers + a plan/entitlement model driving feature availability platform-wide (pricing anchors gated on in-flight enterprise-pricing research)
-
-**Key constraints:** Monetization plumbing stays admin-controlled per Core Value (per-org plan + credits set in the dashboard, not external billing); Stripe/Freemius-style billing integration is explicitly out of scope for this milestone. Excel-only exports (no CSV). Follow the proven ship pattern: wip branch → build → test → merge to master → deploy to lxc-luqen → CI green.
+**Key constraints:** ALL reporting stays legally conservative — never emit "compliant"/"100%"/"lawsuit-proof"; frame as transparency + good-faith remediation + exposure indication. Reuse existing infrastructure (core CLI + multi-engine, `@luqen/core` MCP, notify plugins, report/fleet pipelines, jurisdiction legal-framings service). Cross-repo: dashboard `/root/luqen` + plugin `/root/luqen-wordpress` (v0.32.0). Follow the proven ship pattern: wip branch → build → test → merge to master → deploy to lxc-luqen → CI green. **Out of scope / named follow-on milestones:** native mobile app testing; managed/guided expert-audit service; and the moats A2 (deepen PR fixes), A5 (fleet fix-once-apply-everywhere), B3 (remediation-velocity KPIs).
 
 ## Requirements
 
@@ -207,4 +208,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-24 — v3.1.0 milestone started*
+*Last updated: 2026-06-07 — v3.5.0 redefined (Anti-overlay wedge: dev + exec first wave); supersedes the reversed monetization milestone*
