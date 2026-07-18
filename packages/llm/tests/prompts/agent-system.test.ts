@@ -89,3 +89,29 @@ describe('agent-system prompt — Phase 46 LOCKED:honesty async-status extension
     expect(close.length).toBe(1);
   });
 });
+
+describe('agent-system prompt — LOCKED:multimodal fence (Phase 83 image input)', () => {
+  it('contains a well-formed LOCKED:multimodal fence', () => {
+    const prompt = buildAgentSystemPrompt();
+    const open = prompt.match(/<!-- LOCKED:multimodal -->/g) ?? [];
+    const close = prompt.match(/<!-- \/LOCKED:multimodal -->/g) ?? [];
+    expect(open.length).toBe(1);
+    expect(close.length).toBe(1);
+  });
+
+  it('declares user-attached images as native model input, exempt from the tool-manifest rule', () => {
+    const prompt = buildAgentSystemPrompt();
+    const start = prompt.indexOf('<!-- LOCKED:multimodal -->');
+    const end = prompt.indexOf('<!-- /LOCKED:multimodal -->');
+    expect(start).toBeGreaterThan(-1);
+    const block = prompt.slice(start, end);
+    expect(block).toContain('attach');
+    expect(block.toLowerCase()).toContain('not a tool');
+    expect(block).toMatch(/never refuse/i);
+  });
+
+  it('multimodal fence appears after the rbac fence so the manifest rule is already scoped', () => {
+    const prompt = buildAgentSystemPrompt();
+    expect(prompt.indexOf('<!-- /LOCKED:rbac -->')).toBeLessThan(prompt.indexOf('<!-- LOCKED:multimodal -->'));
+  });
+});
