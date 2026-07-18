@@ -133,7 +133,7 @@ Phases execute in numeric order: 78 (done) → 79 → 80 → 81 → 82
 | 78. Anti-overlay positioning | v3.5.0 | 1/1 | ✅ Done | 2026-06-01 |
 | 79. CI regression gate | v3.5.0 | 3/3 | Complete   | 2026-06-07 |
 | 80. MCP fix tools for coding agents | v3.5.0 | 3/3 | Complete   | 2026-06-07 |
-| 81. Jurisdiction legal-exposure scoring | v3.5.0 | 0/4 | Planned | - |
+| 81. Jurisdiction legal-exposure scoring | v3.5.0 | 4/4 | Complete | 2026-06-11 |
 | 82. Scheduled executive digest | v3.5.0 | 5/6 | Complete    | 2026-06-11 |
 
 ---
@@ -142,6 +142,6 @@ Phases execute in numeric order: 78 (done) → 79 → 80 → 81 → 82
 
 **Goal:** Two large, mostly-independent efforts that deepen the product where it's genuinely thin — an org-aware agent surface, and the semantic (vision) accessibility checks that no static scanner can do.
 
-**Status:** IN PROGRESS (started 2026-06-02; vision adapter + TTS + WP vision mirror shipped). Single-tier confirmed — do NOT build on or extend the dormant Free/Pro/Agency surfaces. Full detail of remaining items lives in `.planning/NEXT-SESSION-PROMPT.md`.
+**Status:** CODE-COMPLETE (2026-07-18). All development items shipped: vision adapter + analyse-visual capability, core `captureVisualContext()` (incl. per-image bytes for the alt-text check), dashboard vision pass (heading-semantics + alt-text), companion multimodal image upload + TTS, WP vision mirror (enterprise badge v0.27.0 + standalone client-side vision pass v0.28.0), C#2 conservative "Supports-from-vision" VPAT elevation, `llm_analyse_visual` MCP tool. 2026-07-18: fixed Gemini streaming (CRLF SSE frames, `601548cf`) which had blanked companion turns since gemini became the agent-conversation primary; automated live UAT of image upload + TTS wiring green. Remaining before closing the milestone (user-gated): human UAT of image upload + TTS on a real browser/device, and LEGAL sign-off on the C#2 "Supports-from-vision" wording. Single-tier confirmed — do NOT build on or extend the dormant Free/Pro/Agency surfaces.
 
 **Named follow-on milestones (out of scope this wave):** native mobile app testing; managed/guided expert-audit service; moats A2 (deepen PR fixes), A5 (fleet fix-once-apply-everywhere), B3 (remediation-velocity KPIs).
