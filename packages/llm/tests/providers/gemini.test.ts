@@ -219,6 +219,35 @@ describe('GeminiAdapter', () => {
     });
   });
 
+  it('Test 1b: completeStream parses CRLF-delimited SSE frames (real Gemini wire format)', async () => {
+    // The live Gemini API separates SSE frames with \r\n\r\n, not \n\n. The
+    // second frame's delimiter is split across two chunks to cover a CR/LF
+    // pair straddling a network read boundary.
+    const body = sseStream([
+      'data: {"candidates":[{"content":{"parts":[{"text":"Hi"}]}}]}\r\n\r\n',
+      'data: {"candidates":[{"content":{"parts":[{"text":" there"}]}}]}\r\n',
+      '\r\ndata: {"candidates":[{"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":5,"candidatesTokenCount":2}}\r\n\r\n',
+    ]);
+    mockFetch.mockResolvedValueOnce({ ok: true, body });
+
+    const frames = await collect(
+      adapter.completeStream!(
+        [{ role: 'user', content: 'hello' }],
+        { model: 'gemini-2.5-flash', maxTokens: 256 },
+      ),
+    );
+
+    const tokens = frames.filter((f) => f.type === 'token');
+    expect(tokens).toHaveLength(2);
+    expect(tokens[0]).toEqual({ type: 'token', text: 'Hi' });
+    expect(tokens[1]).toEqual({ type: 'token', text: ' there' });
+    expect(frames.find((f) => f.type === 'done')).toMatchObject({
+      type: 'done',
+      finishReason: 'stop',
+      usage: { inputTokens: 5, outputTokens: 2 },
+    });
+  });
+
   it('Test 2: completeStream emits ONE tool_calls frame for functionCall parts (after tokens)', async () => {
     const body = sseStream([
       'data: {"candidates":[{"content":{"parts":[{"functionCall":{"name":"scan_site","args":{"url":"https://example.com"}}}]}}]}\n\n',

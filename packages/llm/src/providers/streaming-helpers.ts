@@ -23,11 +23,16 @@ export function anySignal(signals: readonly AbortSignal[]): AbortSignal {
 /**
  * Yield Server-Sent-Events payloads from a Response body. Each yielded value
  * is the `data:` payload of one SSE frame (frames separated by blank lines).
+ * Frame delimiters may be LF (`\n\n`, OpenAI-style) or CRLF (`\r\n\r\n`,
+ * Gemini's live wire format) — the spec allows both.
  *
  * Skips `data: [DONE]` sentinels and malformed JSON. Callers own JSON.parse.
  *
- * Used by the OpenAI adapter for `/v1/chat/completions` with `stream=true`.
+ * Used by the OpenAI adapter for `/v1/chat/completions` with `stream=true`
+ * and the Gemini adapter for `:streamGenerateContent?alt=sse`.
  */
+const SSE_FRAME_SEPARATOR = /\r?\n\r?\n/;
+
 export async function* readSsePayloads(body: ReadableStream<Uint8Array>): AsyncIterable<string> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
@@ -39,11 +44,11 @@ export async function* readSsePayloads(body: ReadableStream<Uint8Array>): AsyncI
       if (done) break;
       buf += decoder.decode(value, { stream: true });
 
-      let sepIdx: number;
-      while ((sepIdx = buf.indexOf('\n\n')) !== -1) {
-        const rawFrame = buf.slice(0, sepIdx);
-        buf = buf.slice(sepIdx + 2);
-        for (const line of rawFrame.split('\n')) {
+      let sep: RegExpExecArray | null;
+      while ((sep = SSE_FRAME_SEPARATOR.exec(buf)) !== null) {
+        const rawFrame = buf.slice(0, sep.index);
+        buf = buf.slice(sep.index + sep[0].length);
+        for (const line of rawFrame.split(/\r?\n/)) {
           if (!line.startsWith('data:')) continue;
           const data = line.slice(5).trim();
           if (data === '' || data === '[DONE]') continue;
