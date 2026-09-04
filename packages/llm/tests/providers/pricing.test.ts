@@ -43,6 +43,105 @@ describe('lookupPrice', () => {
   });
 });
 
+describe('lookupPrice — sibling-mispricing guards (D1)', () => {
+  it('does NOT price gemini-2.5-flash-lite as gemini-2.5-flash', () => {
+    const flash = lookupPrice('gemini', 'gemini-2.5-flash');
+    const flashLite = lookupPrice('gemini', 'gemini-2.5-flash-lite');
+    expect(flashLite).toBeDefined();
+    expect(flashLite).not.toEqual(flash);
+  });
+
+  it('resolves gemini-2.5-pro-exp to the gemini-2.5-pro row (legitimate dated/suffixed variant)', () => {
+    const price = lookupPrice('gemini', 'gemini-2.5-pro-exp');
+    expect(price).toBeDefined();
+    expect(price!.inputUsdPer1k).toBe(0.00125);
+    expect(price!.outputUsdPer1k).toBe(0.010);
+  });
+
+  it('gemini-2.5-flash-lite resolves to its own row, not to gemini-2.5-flash', () => {
+    const price = lookupPrice('gemini', 'gemini-2.5-flash-lite');
+    expect(price).toBeDefined();
+    expect(price!.inputUsdPer1k).toBe(0.0001);
+    expect(price!.outputUsdPer1k).toBe(0.0004);
+  });
+
+  it('matching rule: a bare startsWith would wrongly match a differently-suffixed sibling', () => {
+    // Direct unit test of the matching rule itself (registry is frozen, so we
+    // can't remove a row to prove this): "gemini-2.5-flash-lite" starts with
+    // "gemini-2.5-flash" under a bare `startsWith(tail)` check, which is
+    // exactly the D1 bug. The variant rule requires the separator immediately
+    // after the tail, so a bare startsWith over-matches here.
+    const tail = 'gemini-2.5-flash';
+    const modelId = 'gemini-2.5-flash-lite';
+    expect(modelId.startsWith(tail)).toBe(true); // the old, buggy check would match
+    expect(modelId === tail || modelId.startsWith(`${tail}-`)) // variant rule alone is not enough
+      .toBe(true);
+    // The real fix is that gemini-2.5-flash-lite has its OWN row and
+    // longest-key-wins selects it over the shorter gemini-2.5-flash key.
+    const price = lookupPrice('gemini', modelId);
+    const flashPrice = lookupPrice('gemini', 'gemini-2.5-flash');
+    expect(price).not.toEqual(flashPrice);
+  });
+
+  it('still resolves gpt-4o-mini to its own row and NOT gpt-4o (no regression)', () => {
+    const price = lookupPrice('openai', 'gpt-4o-mini');
+    const gpt4oPrice = lookupPrice('openai', 'gpt-4o');
+    expect(price).toBeDefined();
+    expect(price!.inputUsdPer1k).toBe(0.00015);
+    expect(price).not.toEqual(gpt4oPrice);
+  });
+
+  it('still resolves the dated OpenAI variant gpt-4o-mini-2024-07-18 to gpt-4o-mini (no regression)', () => {
+    const price = lookupPrice('openai', 'gpt-4o-mini-2024-07-18');
+    expect(price).toBeDefined();
+    expect(price!.inputUsdPer1k).toBe(0.00015);
+    expect(price!.outputUsdPer1k).toBe(0.0006);
+  });
+});
+
+describe('lookupPrice — Gemini price-correctness guards (D2/D3)', () => {
+  it('gemini-2.5-flash is corrected to 0.0003 in / 0.0025 out per 1k', () => {
+    const price = lookupPrice('gemini', 'gemini-2.5-flash');
+    expect(price).toBeDefined();
+    expect(price!.inputUsdPer1k).toBe(0.0003);
+    expect(price!.outputUsdPer1k).toBe(0.0025);
+  });
+
+  it('gemini-2.5-pro is corrected to 0.00125 in / 0.010 out per 1k', () => {
+    const price = lookupPrice('gemini', 'gemini-2.5-pro');
+    expect(price).toBeDefined();
+    expect(price!.inputUsdPer1k).toBe(0.00125);
+    expect(price!.outputUsdPer1k).toBe(0.010);
+  });
+
+  it('gemini-3.7-flash (new row) is 0.00075 in / 0.00375 out per 1k', () => {
+    const price = lookupPrice('gemini', 'gemini-3.7-flash');
+    expect(price).toBeDefined();
+    expect(price!.inputUsdPer1k).toBe(0.00075);
+    expect(price!.outputUsdPer1k).toBe(0.00375);
+  });
+
+  it('gemini-2.5-flash-lite (new row) is 0.0001 in / 0.0004 out per 1k', () => {
+    const price = lookupPrice('gemini', 'gemini-2.5-flash-lite');
+    expect(price).toBeDefined();
+    expect(price!.inputUsdPer1k).toBe(0.0001);
+    expect(price!.outputUsdPer1k).toBe(0.0004);
+  });
+});
+
+describe('lookupPrice — unpriced path must not regress', () => {
+  it('returns undefined for a genuinely missing Gemini model', () => {
+    expect(lookupPrice('gemini', 'gemini-9.9-nonexistent')).toBeUndefined();
+  });
+
+  it('computeCost on a genuinely missing Gemini model returns all nulls', () => {
+    const c = computeCost('gemini', 'gemini-9.9-nonexistent', 1000, 500);
+    expect(c.input).toBeNull();
+    expect(c.output).toBeNull();
+    expect(c.total).toBeNull();
+  });
+});
+
 describe('computeCost', () => {
   it('returns nulls when price is unknown', () => {
     const c = computeCost('openai', 'gpt-99-nope', 1000, 500);
