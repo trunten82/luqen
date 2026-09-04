@@ -8,6 +8,54 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.6.0] - 2026-09-04
+
+This entry covers everything released since 3.4.0 — the v3.5.0 wave, its later
+partial reversal, and the v3.6.0 agent/vision work. Two notes so the list reads
+correctly: the Free/Pro/Agency surfaces appear **both added and removed** below,
+because they were built in the v3.5.0 wave and then deliberately taken out when
+Luqen was confirmed as a single product with no paid tiers; and package versions
+were never bumped for 3.5.0, so this release closes a two-milestone version drift.
+
+### Added — agent surface + semantic depth (v3.6.0)
+
+- **Vision adapter + `analyse-visual` capability.** The LLM module gained a
+  multimodal path (`ImageInput`, inline image parts) and a new `analyse-visual`
+  capability, exposed as the `llm_analyse_visual` MCP tool for coding agents.
+- **Semantic accessibility checks no static scanner can do.** Core gained
+  `captureVisualContext()` (including per-image bytes), feeding a dashboard vision
+  pass that checks heading semantics (WCAG 1.3.1) and alt-text quality (1.1.1).
+- **Companion multimodal + text-to-speech.** The in-dashboard agent companion
+  accepts image attachments (file picker or paste; png/jpeg/webp/gif, up to 4 per
+  message, ~5 MB each) and can speak replies aloud via the browser's own
+  `speechSynthesis` — no provider, no cost, and the control hides itself where the
+  browser does not support it.
+- **WordPress vision mirror.** Enterprise badge (plugin v0.27.0) plus a standalone
+  client-side vision pass (v0.28.0).
+- **Conservative "Supports-from-vision" VPAT elevation (C#2).** A vision result can
+  raise a VPAT criterion's verdict, deliberately conservatively.
+
+### Fixed — v3.6.0 live defects
+
+- **Gemini streaming yielded nothing.** Gemini's SSE uses CRLF (`\r\n\r\n`) frame
+  delimiters and the reader split only on `\n\n`, so `completeStream()` produced zero
+  tokens and then `done`. Latent since the adapter shipped and invisible until
+  gemini-2.5-flash became the `agent-conversation` primary, at which point companion
+  turns went blank. Fixed with a `\r?\n\r?\n` reader plus a CRLF wire-format test.
+- **The model refused attached images.** The agent system prompt's tool-manifest rule
+  predated multimodal support, so the model replied "I cannot directly analyze
+  images". Fixed with an explicit fence declaring attached images native input.
+- **LLM cost accounting was silently wrong for sibling models.** `lookupPrice` matched
+  model ids with a bare prefix test and no separator requirement, so a model sharing a
+  prefix inherited its neighbour's price — `gemini-2.5-flash-lite` was billed at
+  `gemini-2.5-flash` rates and `gemini-2.5-pro-exp` at `gemini-2.5-pro` rates. This
+  produced a **wrong number rather than a null**, so it was invisible to the
+  `unpriced_rows` counter built to catch exactly this. Matching now requires an exact
+  match or a `-`-separated variant. Stale Gemini prices were corrected
+  (`gemini-2.5-flash` was ~4x under on input and ~8x on output; `gemini-2.5-pro`
+  output was 2x under) and the missing `gemini-2.5-flash-lite` and Gemini 3.x rows
+  added, with promotional-pricing expiry dates recorded inline beside the values.
+
 ### Changed
 
 - **Single product, no gates.** Luqen has no paid tiers — every capability is available to every install. The `generate-fix` **credit paywall is removed**: it no longer returns `402` when an org's AI-fix balance is exhausted (the fix always runs; the credit ledger stays as pure usage accounting, never a gate). Mirrors the WordPress plugin's de-gating.
