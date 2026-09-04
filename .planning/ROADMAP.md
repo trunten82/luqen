@@ -145,3 +145,56 @@ Phases execute in numeric order: 78 (done) → 79 → 80 → 81 → 82
 **Status:** COMPLETE — shipped 2026-09-04. Both owner-gated items cleared that day: the human UAT of companion image upload + TTS was run on a real device and PASSED, and the owner cleared the C#2 legal sign-off gate. Note for anyone relying on the C#2 "Supports-from-vision" elevation in a conformance document: that gate was cleared by the product owner, not by external legal counsel. Released as v3.6.0 (package.json 3.4.0 -> 3.6.0, closing a two-milestone version drift — 3.5.0 never bumped). Was CODE-COMPLETE 2026-07-18. All development items shipped: vision adapter + analyse-visual capability, core `captureVisualContext()` (incl. per-image bytes for the alt-text check), dashboard vision pass (heading-semantics + alt-text), companion multimodal image upload + TTS, WP vision mirror (enterprise badge v0.27.0 + standalone client-side vision pass v0.28.0), C#2 conservative "Supports-from-vision" VPAT elevation, `llm_analyse_visual` MCP tool. 2026-07-18: fixed Gemini streaming (CRLF SSE frames, `601548cf`) which had blanked companion turns since gemini became the agent-conversation primary; automated live UAT of image upload + TTS wiring green. Remaining before closing the milestone (user-gated): human UAT of image upload + TTS on a real browser/device, and LEGAL sign-off on the C#2 "Supports-from-vision" wording. Single-tier confirmed — do NOT build on or extend the dormant Free/Pro/Agency surfaces.
 
 **Named follow-on milestones (out of scope this wave):** native mobile app testing; managed/guided expert-audit service; moats A2 (deepen PR fixes), A5 (fleet fix-once-apply-everywhere), B3 (remediation-velocity KPIs).
+
+---
+
+## Next Milestone: v3.7.0 AI output quality — eval harness + labelled reference sets
+
+**Approved** 2026-09-04 (proposed by luqen, approved via the orchestrator; on Alessandro's
+register).
+
+**Goal:** Luqen has NO evaluation infrastructure for ANY LLM capability. Build the instrument
+for the two whose output is DURABLE — `generate-fix`, which ships into someone's source code,
+and `analyse-visual`, which feeds a VPAT/ACR conformance document with legal weight. Everything
+else degrades gracefully or is read once and discarded.
+
+**Why now, and why this is not a new front:** on 2026-09-04 a three-model comparison had to be
+justified on 4 hand-scraped WCAG violations and 4 twenty-pixel icons. That was enough to
+recommend a switch for six capabilities and to REFUSE it for `analyse-visual`, because n=4 is
+not an evidence base for a conformance input. The refusal is correct and it is also permanent:
+the same argument blocks the next model decision and the one after, until the instrument exists.
+This milestone removes the reason a decision cannot be closed rather than opening a new one.
+
+**Pre-registered bars — set BEFORE any measurement exists, so they cannot be fitted to a result:**
+- Text capabilities are a NON-INFERIORITY question, not a superiority one. Nobody needs fixes 10%
+  better; they need to know a model swap breaks nothing. State the tolerated margin in advance —
+  an underpowered non-inferiority test CERTIFIES safety it has not demonstrated, which is the
+  reassuring direction and the one nobody audits.
+- `analyse-visual` errors are ASYMMETRIC. A false ISSUE is cheap (a human reviews it). A false
+  PASS is expensive (it can elevate a VPAT criterion to "Supports" in a document someone relies
+  on legally). Bar: non-inferior AND **zero increase in false-pass**. A candidate that scores
+  better on average while over-elevating more often FAILS.
+
+**Build in from the start:**
+1. **The harness must be breakable.** Feed it a deliberately bad fix and a deliberately wrong
+   alt-text and watch it score them DOWN before trusting any green. A quality gate nobody has
+   watched fail measures nothing.
+2. **Ground-truth provenance per item.** "Expert alt-text" is a claim about a human judgement,
+   not a fact that can be scraped. Record where each label came from and who stands behind it.
+   Unattributed ground truth is a rubric fitted to whoever built it.
+3. **Baseline the CURRENT pins first**, before any candidate, and record what the baseline is a
+   function of — a baseline that is silently measuring the environment rather than the code
+   cannot certify anything.
+
+**Deliverables:** a labelled reference set of real WCAG violations with known-good fixes; a
+labelled image set spanning photographs, charts, decorative icons and complex graphics with
+attributed alt-text ground truth; a runner scoring any candidate model against both; a recorded
+baseline for the current pins; and the break-test evidence for the harness itself.
+
+**Closes:** the READY-BUT-UNAPPLIED pin change in `docs/guides/llm-model-selection.md`. That
+recommendation stands unapplied until Alessandro lifts the live-config permission — this
+milestone must NOT become the reason to apply it early.
+
+**Ranked below and proposed as v3.8.0:** behavioral a11y testing beyond Pa11y (Playwright
+keyboard / dynamic / a11y-tree). Bigger product moat, plan already decided, but it ADDS a
+capability while this milestone protects the ones already shipped and relied upon.
