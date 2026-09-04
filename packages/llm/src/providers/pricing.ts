@@ -79,7 +79,26 @@ export function lookupPrice(
   for (const [key, price] of Object.entries(REGISTRY)) {
     if (!key.startsWith(prefix)) continue;
     const tail = key.slice(prefix.length);
-    if (tail === '' || modelId === tail || modelId.startsWith(`${tail}-`) || modelId.startsWith(tail)) {
+    // D1 fix (measured 2026-09-04): the old rule ALSO matched a bare
+    // `modelId.startsWith(tail)`, with no separator requirement. That
+    // silently mispriced siblings that share a prefix but are NOT dated
+    // variants of the same model — e.g. `gemini-2.5-flash-lite` matched
+    // the `gemini-2.5-flash` row (and `gemini-2.5-pro-exp` matched
+    // `gemini-2.5-pro`), because "gemini-2.5-flash-lite" bare-starts-with
+    // "gemini-2.5-flash". A mispriced sibling produces a WRONG NUMBER, not
+    // a null, so it never surfaces via the unpriced-rows counter.
+    //
+    // The fix alone is not sufficient without also giving
+    // gemini-2.5-flash-lite its OWN registry row (see the Gemini rows
+    // fix) — the variant rule below still matches "gemini-2.5-flash-lite"
+    // against the "gemini-2.5-flash" tail (it starts with
+    // "gemini-2.5-flash-"), so longest-key-wins is what selects the
+    // correct, more specific row. Do not remove either half.
+    if (
+      tail === '' || // catch-all key (used by `ollama:`)
+      modelId === tail || // exact match
+      modelId.startsWith(`${tail}-`) // dated/suffixed variant of the same model
+    ) {
       if (best === undefined || key.length > best.key.length) {
         best = { key, price };
       }
