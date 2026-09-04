@@ -46,6 +46,7 @@ Narrative how-to guides under `guides/`. v3.1.0 surface guides have explicit `##
 | [guides/compliance-check.md](guides/compliance-check.md) | Jurisdictions, reading the matrix, confirmed vs review |
 | [guides/dashboard-admin.md](guides/dashboard-admin.md) | Dashboard user + admin reference; teams, roles, repos, schedules, email reports |
 | [guides/fix-proposals.md](guides/fix-proposals.md) | Auto-fixable issues, interactive CLI, MCP flow |
+| [guides/llm-model-selection.md](guides/llm-model-selection.md) | Which model each LLM capability uses, how the pin actually works (DB rows not config), the measured 2026-09-04 model comparison, and the exact PUT still pending |
 | [guides/mcp-integration.md](guides/mcp-integration.md) | External MCP client setup over OAuth 2.1 + PKCE + DCR (Claude Desktop, Cursor, Windsurf, custom clients) |
 | [guides/multi-org-switching.md](guides/multi-org-switching.md) | Native `<select>` org switcher, force-new-conversation, JWT-driven `ToolContext.orgId` (Phase 38) |
 | [guides/multi-step-tools.md](guides/multi-step-tools.md) | Parallel-dispatch tool calls, shared 3-retry budget, 5-step iteration cap, chip-strip UI (Phase 36) |
