@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.5.0
-milestone_name: Anti-overlay wedge — dev + exec first wave
-status: Awaiting next milestone
-stopped_at: Phase 82 UI-SPEC approved
-last_updated: "2026-06-15T17:06:11.464Z"
-last_activity: 2026-06-15 — Milestone v3.5.0 completed and archived
+milestone: v3.7.0
+milestone_name: AI output quality — eval harness + labelled reference sets
+status: Active — milestone opened 2026-09-04, no phases planned yet
+stopped_at: v3.7.0 opened and approved; next action is /gsd-new-milestone requirements or /gsd-discuss-phase for phase 1
+last_updated: "2026-09-04T22:10:00.000Z"
+last_activity: 2026-09-04 — v3.6.0 RELEASED (tagged v3.6.0, deployed, both owner gates cleared); v3.7.0 opened
 progress:
-  total_phases: 5
-  completed_phases: 4
-  total_plans: 16
-  completed_plans: 16
-  percent: 80
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
