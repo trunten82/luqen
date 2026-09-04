@@ -52,13 +52,32 @@ const REGISTRY: Readonly<Record<string, ModelPrice>> = Object.freeze({
   'anthropic:claude-sonnet-4':     { inputUsdPer1k: 0.003, outputUsdPer1k: 0.015 },
   'anthropic:claude-opus-4':       { inputUsdPer1k: 0.015, outputUsdPer1k: 0.075 },
 
-  // Gemini — published ai.google.dev/pricing
+  // Gemini — published ai.google.dev/gemini-api/docs/pricing.
+  // 1.5-*, 2.0-flash below are UNAUDITED as of 2026-09-04 — carried over
+  // from an earlier pass, not verified against the current pricing page.
+  // Only the rows below marked CORRECTED/NEW were checked on that date.
   'gemini:gemini-1.5-pro':         { inputUsdPer1k: 0.00125, outputUsdPer1k: 0.005 },
   'gemini:gemini-1.5-flash':       { inputUsdPer1k: 0.000075, outputUsdPer1k: 0.0003 },
   'gemini:gemini-1.5-flash-8b':    { inputUsdPer1k: 0.0000375, outputUsdPer1k: 0.00015 },
   'gemini:gemini-2.0-flash':       { inputUsdPer1k: 0.000075, outputUsdPer1k: 0.0003 },
-  'gemini:gemini-2.5-pro':         { inputUsdPer1k: 0.00125, outputUsdPer1k: 0.005 },
-  'gemini:gemini-2.5-flash':       { inputUsdPer1k: 0.000075, outputUsdPer1k: 0.0003 },
+
+  // Retrieved 2026-09-04 from ai.google.dev/gemini-api/docs/pricing.
+  // Values are the text/image/video tier; models with a separate, higher
+  // audio-input tier are noted inline — using the lower tier for audio
+  // workloads under-reports cost, a known direction, not a bug.
+  'gemini:gemini-2.5-pro':            { inputUsdPer1k: 0.00125, outputUsdPer1k: 0.010 }, // CORRECTED, output was 0.005; <=200k prompt tier
+  'gemini:gemini-2.5-flash':          { inputUsdPer1k: 0.0003, outputUsdPer1k: 0.0025 }, // CORRECTED, was 0.000075 / 0.0003
+  'gemini:gemini-2.5-flash-lite':     { inputUsdPer1k: 0.0001, outputUsdPer1k: 0.0004 }, // NEW — also the D1 sibling-mispricing fix (see lookupPrice)
+  'gemini:gemini-3.1-pro':            { inputUsdPer1k: 0.002, outputUsdPer1k: 0.012 }, // <=200k prompt tier; >200k is 0.004 / 0.018
+  'gemini:gemini-3.1-flash-lite':     { inputUsdPer1k: 0.00025, outputUsdPer1k: 0.0015 }, // audio input is 0.0005/1k
+  'gemini:gemini-3.5-flash-lite':     { inputUsdPer1k: 0.0003, outputUsdPer1k: 0.0025 },
+  'gemini:gemini-3.5-flash':          { inputUsdPer1k: 0.0015, outputUsdPer1k: 0.009 },
+  // PROMOTIONAL through 2026-12-31; reverts to 0.0015 / 0.0075 per 1k on
+  // 2027-01-01. Whoever reads this after that date: update these three
+  // rows or they will quietly under-report cost.
+  'gemini:gemini-3.6-flash':          { inputUsdPer1k: 0.00075, outputUsdPer1k: 0.00375 },
+  'gemini:gemini-3.7-flash':          { inputUsdPer1k: 0.00075, outputUsdPer1k: 0.00375 },
+  'gemini:gemini-3.8-flash':          { inputUsdPer1k: 0.00075, outputUsdPer1k: 0.00375 },
 
   // Ollama — locally hosted; zero marginal token cost.
   'ollama:': { inputUsdPer1k: 0, outputUsdPer1k: 0 },
@@ -79,7 +98,26 @@ export function lookupPrice(
   for (const [key, price] of Object.entries(REGISTRY)) {
     if (!key.startsWith(prefix)) continue;
     const tail = key.slice(prefix.length);
-    if (tail === '' || modelId === tail || modelId.startsWith(`${tail}-`) || modelId.startsWith(tail)) {
+    // D1 fix (measured 2026-09-04): the old rule ALSO matched a bare
+    // `modelId.startsWith(tail)`, with no separator requirement. That
+    // silently mispriced siblings that share a prefix but are NOT dated
+    // variants of the same model — e.g. `gemini-2.5-flash-lite` matched
+    // the `gemini-2.5-flash` row (and `gemini-2.5-pro-exp` matched
+    // `gemini-2.5-pro`), because "gemini-2.5-flash-lite" bare-starts-with
+    // "gemini-2.5-flash". A mispriced sibling produces a WRONG NUMBER, not
+    // a null, so it never surfaces via the unpriced-rows counter.
+    //
+    // The fix alone is not sufficient without also giving
+    // gemini-2.5-flash-lite its OWN registry row (see the Gemini rows
+    // fix) — the variant rule below still matches "gemini-2.5-flash-lite"
+    // against the "gemini-2.5-flash" tail (it starts with
+    // "gemini-2.5-flash-"), so longest-key-wins is what selects the
+    // correct, more specific row. Do not remove either half.
+    if (
+      tail === '' || // catch-all key (used by `ollama:`)
+      modelId === tail || // exact match
+      modelId.startsWith(`${tail}-`) // dated/suffixed variant of the same model
+    ) {
       if (best === undefined || key.length > best.key.length) {
         best = { key, price };
       }
