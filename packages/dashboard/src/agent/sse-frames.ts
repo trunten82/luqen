@@ -52,6 +52,18 @@ export const PendingConfirmationFrameSchema = z.object({
 export const DoneFrameSchema = z.object({
   type: z.literal('done'),
   aborted: z.boolean().optional(),
+  /**
+   * 2026-09-04 companion-truncation quick task — the LLM route forwards the
+   * upstream provider's terminal `finishReason` verbatim on this frame
+   * ('stop' | 'length' | 'tool_calls' | 'error' upstream; kept as a loose
+   * string here so a new upstream value never fails schema validation).
+   * Optional and additive: dashboard-originated `done` frames (e.g. the
+   * abort path) never set it. Without this field the schema silently
+   * stripped `finishReason` before LLMClient.streamAgentConversation ever
+   * saw it, which is how a truncated turn and a complete turn became the
+   * same observation all the way to the user's screen.
+   */
+  finishReason: z.string().optional(),
 });
 
 export const ErrorFrameSchema = z.object({

@@ -282,6 +282,40 @@ describe('executeAgentConversation', () => {
     expect(capture.options?.tools).toEqual(tools);
   });
 
+  // Test 7b — 2026-09-04 companion-truncation quick task: the maxTokens
+  // budget passed to completeStream must be large enough that a thinking
+  // model's thoughts (measured 1,400-3,200 tokens on gemini-2.5-flash for
+  // real questions) don't starve the visible reply. Threshold matches
+  // Task 2's fix (raise 2048 -> 8192).
+  it('passes a maxTokens budget of at least 8192 to adapter.completeStream (thinking models share the budget)', async () => {
+    const seedOrgId = 'max-tokens-org';
+    await db.assignCapability({
+      capability: 'agent-conversation',
+      modelId,
+      priority: 1,
+      orgId: seedOrgId,
+    });
+
+    const capture: CaptureHook = {};
+    const adapter = makeStreamingAdapter(
+      [{ type: 'done', finishReason: 'stop' }],
+      capture,
+    );
+    const factory = vi.fn().mockReturnValue(adapter);
+
+    await collect(
+      executeAgentConversation(db, factory, {
+        orgId: seedOrgId,
+        userId: 'user-1',
+        messages: [{ role: 'user', content: 'hi' }],
+        tools: [],
+        agentDisplayName: 'Luna',
+      }),
+    );
+
+    expect(capture.options?.maxTokens).toBeGreaterThanOrEqual(8192);
+  });
+
   // Test 8 — per-org override is read
   it('per-org override of agent-system is honoured on the read path', async () => {
     const seedOrgId = 'override-read-org';
