@@ -16,6 +16,27 @@ progress:
 
 # Project State
 
+## Known intermittent — NOT a regression, cause diagnosed 2026-09-04
+
+`packages/dashboard/tests/vpat-identity-render.test.ts` — the case
+"PDF ACR > embeds the logo + identity without throwing, and produces a PDF"
+**will fail intermittently under a loaded full-suite run.**
+
+MEASURED 2026-09-04: one full run gave 1 failed / 4225 passed. The same file in
+isolation is 9/9 green, and **that single test takes 22.7 seconds** because it
+cold-starts Chromium. An immediate full re-run was 338 files / 4226 passed / 0 failed.
+
+Cause: browser launch racing the test timeout when the suite runs in parallel on a busy
+host. It is a standing race, not a one-off — it will fire again, and more often on a
+slower or busier machine. This project's own notes already record that browser-launching
+tests need 90s+ timeouts and that local green is not CI green.
+
+**If you see this red, do not start from zero and do not assume it is whatever you just
+changed.** Re-run the file alone first; if it passes in isolation, this is that race. The
+real fix is a longer timeout on the browser-launching cases, and it is NOT done.
+
+
+
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-06-07 — v3.5.0 redefined: Anti-overlay wedge)
