@@ -1770,6 +1770,7 @@
   "agent.error.rateLimitBody": "You're sending messages too quickly. Try again in {{seconds}} seconds.",
   "agent.error.iterationCapTitle": "I stopped to avoid a loop",
   "agent.error.iterationCapBody": "I tried several tools but couldn't complete this in one go. Try rephrasing, or split the request.",
+  "agent.error.responseTruncated": "[Response was cut short — ask a narrower question, or ask me to continue.]",
   "agent.actions.assistantGroupLabel": "Message actions",
   "agent.actions.cancel": "Cancel",
   "agent.actions.copy": "Copy message",

@@ -123,6 +123,16 @@ export interface AgentStreamTurn {
    * by populating this field; defaults to undefined.
    */
   readonly thinking?: string;
+  /**
+   * 2026-09-04 companion-truncation quick task — the upstream provider's
+   * terminal finishReason ('stop' | 'length' | 'tool_calls' | 'error'),
+   * threaded through from the raw StreamFrame by
+   * LLMClient.streamAgentConversation. Additive/optional: no existing
+   * caller reads it, so this cannot break anything that doesn't opt in.
+   * When 'length', `text` already has a visible truncation notice appended
+   * by the client — this field is for callers that want the raw signal too.
+   */
+  readonly finishReason?: string;
 }
 
 export interface LlmAgentTransport {

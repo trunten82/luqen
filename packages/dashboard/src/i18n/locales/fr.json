@@ -1351,6 +1351,7 @@
   "agent.error.rateLimitBody": "[FR] You're sending messages too quickly. Try again in {{seconds}} seconds.",
   "agent.error.iterationCapTitle": "[FR] I stopped to avoid a loop",
   "agent.error.iterationCapBody": "[FR] I tried several tools but couldn't complete this in one go. Try rephrasing, or split the request.",
+  "agent.error.responseTruncated": "[FR] [Response was cut short — ask a narrower question, or ask me to continue.]",
   "agent.confirm.pendingBadge": "[FR] Awaiting confirmation",
   "agent.confirm.title": "[FR] Confirm destructive action",
   "agent.confirm.intro": "[FR] {{name}} wants to make a change that can't be undone automatically. Review the details before approving.",
