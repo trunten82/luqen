@@ -168,7 +168,16 @@ export async function* executeAgentConversation(
         {
           model: model.modelId,
           temperature: 0.3,
-          maxTokens: 2048,
+          // 2026-09-04 companion-truncation quick task: on a thinking model
+          // (gemini-2.5-flash — the live primary for this capability),
+          // THINKING TOKENS COUNT AGAINST maxTokens. Measured on real
+          // questions: 1,400-3,200 thought tokens per turn. At the old
+          // 2048 cap that left almost nothing for the visible reply, and
+          // 3/4 complex live answers ended mid-word (finishReason:
+          // 'length') while returning a normal HTTP 200 `done` frame.
+          // 8192 leaves headroom for both; still a real bound, not removed
+          // (this is an unbounded user-facing surface).
+          maxTokens: 8192,
           timeout: provider.timeout,
           tools: input.tools,
         },

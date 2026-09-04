@@ -5,6 +5,7 @@
 import { ServiceTokenManager } from './auth/service-token.js';
 import type { OrgRepository } from './db/interfaces/org-repository.js';
 import { SseFrameSchema, type SseFrame } from './agent/sse-frames.js';
+import { t } from './i18n/index.js';
 import type {
   AgentStreamInput,
   AgentStreamOptions,
@@ -664,6 +665,11 @@ export class LLMClient {
     let buffer = '';
     let accumulatedText = '';
     let toolCalls: ReadonlyArray<{ id: string; name: string; args: Record<string, unknown> }> = [];
+    // 2026-09-04 companion-truncation quick task — the terminal `done` frame's
+    // finishReason was previously read by nobody: a turn cut off mid-word by
+    // the provider's own token budget (finishReason: 'length') returned a
+    // normal HTTP 200 stream and looked identical to a complete answer.
+    let finishReason: string | undefined;
 
     try {
       for (;;) {
@@ -685,6 +691,9 @@ export class LLMClient {
               toolCalls = parsed.calls;
               opts.onFrame(parsed);
             } else if (parsed.type === 'done' || parsed.type === 'error') {
+              if (parsed.type === 'done') {
+                finishReason = parsed.finishReason;
+              }
               opts.onFrame(parsed);
             }
           }
@@ -695,7 +704,15 @@ export class LLMClient {
       reader.releaseLock();
     }
 
-    return { text: accumulatedText, toolCalls };
+    // A truncated turn is worse than a blank one: a blank turn is obviously
+    // broken, but a truncated turn reads as a complete, confident, short
+    // answer — so append a clearly-marked, immutable notice rather than
+    // silently returning the raw (possibly mid-word) text.
+    const text = finishReason === 'length'
+      ? `${accumulatedText}${accumulatedText.length > 0 ? '\n\n' : ''}${t('agent.error.responseTruncated')}`
+      : accumulatedText;
+
+    return { text, toolCalls, finishReason };
   }
 
   // -- Usage telemetry (Phase 72-03) ──────────────────────────────────────
