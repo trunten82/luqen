@@ -3,7 +3,7 @@
   "info": {
     "title": "Luqen Dashboard",
     "description": "Web dashboard, admin surface, and MCP Streamable HTTP endpoint for the Luqen WCAG accessibility platform",
-    "version": "3.4.0"
+    "version": "3.6.0"
   },
   "components": {
     "securitySchemes": {
