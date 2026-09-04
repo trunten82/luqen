@@ -65,22 +65,21 @@ describe('lookupPrice — sibling-mispricing guards (D1)', () => {
     expect(price!.outputUsdPer1k).toBe(0.0004);
   });
 
-  it('matching rule: a bare startsWith would wrongly match a differently-suffixed sibling', () => {
-    // Direct unit test of the matching rule itself (registry is frozen, so we
-    // can't remove a row to prove this): "gemini-2.5-flash-lite" starts with
-    // "gemini-2.5-flash" under a bare `startsWith(tail)` check, which is
-    // exactly the D1 bug. The variant rule requires the separator immediately
-    // after the tail, so a bare startsWith over-matches here.
-    const tail = 'gemini-2.5-flash';
-    const modelId = 'gemini-2.5-flash-lite';
-    expect(modelId.startsWith(tail)).toBe(true); // the old, buggy check would match
-    expect(modelId === tail || modelId.startsWith(`${tail}-`)) // variant rule alone is not enough
-      .toBe(true);
-    // The real fix is that gemini-2.5-flash-lite has its OWN row and
-    // longest-key-wins selects it over the shorter gemini-2.5-flash key.
-    const price = lookupPrice('gemini', modelId);
-    const flashPrice = lookupPrice('gemini', 'gemini-2.5-flash');
-    expect(price).not.toEqual(flashPrice);
+  it('matching rule: a bare-prefix sibling with NO separator and NO dedicated row must NOT inherit the parent price', () => {
+    // Direct unit test of the matching RULE itself, not just an end-to-end
+    // lookup — the registry is frozen so we can't remove
+    // gemini-2.5-flash-lite's own row to prove the separator requirement in
+    // isolation (longest-key-wins would mask the matcher regression via that
+    // dedicated row regardless of whether the separator check exists).
+    // "gemini-2.5-flashXtra" has no dedicated registry row and shares the
+    // "gemini-2.5-flash" prefix WITHOUT a "-" separator immediately after
+    // it — under the old bare `modelId.startsWith(tail)` rule this wrongly
+    // matched the gemini-2.5-flash row; the fixed rule requires the
+    // separator (or an exact match) and must return undefined here.
+    const modelId = 'gemini-2.5-flashXtra';
+    expect(modelId.startsWith('gemini-2.5-flash')).toBe(true); // the old, buggy bare check would match
+    expect(modelId.startsWith('gemini-2.5-flash-')).toBe(false); // but there is no separator
+    expect(lookupPrice('gemini', modelId)).toBeUndefined();
   });
 
   it('still resolves gpt-4o-mini to its own row and NOT gpt-4o (no regression)', () => {
