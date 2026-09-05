@@ -196,7 +196,10 @@ describe('reference-set loader refusals — every named error observed firing', 
 
     const result = loadImageAltSet(setPath, 'v1');
 
-    expect(result.items).toHaveLength(1);
+    // 83-03 populated image-alt.v1.json beyond the 83-01 seed; assert against
+    // the real committed set's own item count rather than a hardcoded "1" so
+    // this control does not need editing every time the set grows again.
+    expect(result.items.length).toBe(loadRealImageSet().items.length);
     expect(result.items[0].id).toBe('img-informative-seed');
   });
 
