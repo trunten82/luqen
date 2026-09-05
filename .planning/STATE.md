@@ -6,7 +6,7 @@ current_phase: 83
 current_phase_name: Labelled reference sets
 status: Phase 83 COMPLETE and verified (4/4 success criteria) — Phase 84 (Scoring harness) ready to plan
 stopped_at: "Phase 83 complete: all 3 plans merged and verified; 83-VERIFICATION.md status=passed. Next: /gsd-plan-phase 84"
-last_updated: "2026-09-05T21:38:32.693Z"
+last_updated: "2026-09-05T22:50:00.000Z"
 last_activity: 2026-09-05
 last_activity_desc: Phase 83 wave 2 (83-02 WCAG-fix set, 83-03 image set) merged, verified 4/4, EVALSET-01..05 all Complete
 state_head: 0272957c  # last CODE commit of phase 83 (the 83-03 merge). Deliberately NOT "latest commit": planning-only commits land after it, so this names a re-checkable thing — `git diff --stat 0272957c..HEAD` must list nothing outside .planning/ and .gitignore.
@@ -19,6 +19,29 @@ progress:
 ---
 
 # Project State
+
+## STATE.md frontmatter was rebuilt by `state.advance-plan`-family tooling — content was lost
+
+MEASURED 2026-09-05, after Eventine reported the defect fleet-wide. This session called
+`gsd-tools query state.begin-phase`. It REBUILDS the YAML frontmatter by scraping the prose body,
+and it discarded the previous `last_activity` line. Restored here verbatim, because it is the only
+record of how 83-01 landed:
+
+> 2026-09-05 — 83-01 merged (63c2ccf9) and pushed; ledger rescued from the worktree (4b69721c);
+> cycling to pick up the new ssh assign permission
+
+What was NOT damaged in this repo, checked rather than assumed: no `paused_milestone` record
+existed before or after, so none was lost; and the progress block was verified against disk on
+2026-09-05 — 4 phases in the v3.7.0 roadmap, 1 marked done, 3 PLAN files, 3 SUMMARY files. It
+agrees. **Eventine's finding is that this tool's errors run in the FLATTERING direction (it wrote
+"9 plans, 7 complete" against a truth of 5/3), which is the direction nobody re-checks.** Mine
+happened to be right; that is an observation about this run, not about the tool.
+
+**How to apply:** re-read STATE.md after ANY `state.*` call and diff the frontmatter against
+`git show HEAD:.planning/STATE.md`. Do not trust the exit code — `advance-plan` has been observed
+returning `{"advanced": false}` while mutating the file anyway. Do not try to fix gsd-tools; it is
+not this repo's code. Correct by hand and name the cause in the commit.
+
 
 ## Known intermittent — NOT a regression, cause diagnosed 2026-09-04
 
