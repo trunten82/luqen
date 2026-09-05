@@ -218,7 +218,7 @@ milestone protects the ones already shipped and relied upon.
   3. Loading an item that lacks attributed provenance (where the label came from, who stands behind it, and when) is REFUSED by the loader, not silently accepted
   4. Both sets contain deliberately-wrong poison items (a bad fix, a wrong alt-text), explicitly flagged as such in the data, ready for Phase 84's break-test
 **Plans**: 3 plans (waves: 83-01 alone in wave 1; 83-02 and 83-03 parallel in wave 2)
-- [ ] 83-01-PLAN.md — Reference-set schema, loader, and its six refusals, proven on a one-item seed of each set and then broken
+- [x] 83-01-PLAN.md — Reference-set schema, loader, and its six refusals, proven on a one-item seed of each set and then broken
 - [ ] 83-02-PLAN.md — WCAG-fix set content: ≥15 items each citing BOTH a Failure and a Sufficient Technique, plus poison items
 - [ ] 83-03-PLAN.md — Labelled image set: openly-licensed assets with a stated licence, expectedVerdict as data, poison including a false-PASS (has a blocking licence checkpoint)
 
@@ -270,7 +270,7 @@ Phases execute in numeric order: 83 → 84 → 85 → 86
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 83. Labelled reference sets | v3.7.0 | 0/3 | Planned | - |
+| 83. Labelled reference sets | v3.7.0 | 1/3 | In Progress|  |
 | 84. Scoring harness | v3.7.0 | 0/TBD | Not started | - |
 | 85. Pre-registered decision bars | v3.7.0 | 0/TBD | Not started | - |
 | 86. Recorded baseline | v3.7.0 | 0/TBD | Not started | - |

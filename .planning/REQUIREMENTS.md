@@ -17,7 +17,7 @@ rewritten once one does.** A bar edited after its result is not a bar.
 ### Reference sets — the ground truth
 
 - [ ] **EVALSET-01**: A maintainer can load a versioned reference set of real WCAG violations, each item carrying the offending source snippet, the failing success criterion, and a known-good fix
-- [ ] **EVALSET-02**: Every reference item records attributed provenance — where the label came from, who stands behind it, and when — and the loader REFUSES an item that has none
+- [x] **EVALSET-02**: Every reference item records attributed provenance — where the label came from, who stands behind it, and when — and the loader REFUSES an item that has none
 - [ ] **EVALSET-03**: A maintainer can load a versioned labelled image set spanning photographs, charts, decorative icons and complex graphics, each with attributed alt-text ground truth
 - [ ] **EVALSET-04**: Every image item carries its expected VPAT-relevant verdict (issue vs pass) as explicit data, so false-pass can be COUNTED rather than inferred from a score
 - [ ] **EVALSET-05**: Each set contains deliberately-wrong poison items — a bad fix, a wrong alt-text — flagged as such in the data, so the harness's own scoring can be watched to fail
@@ -65,10 +65,10 @@ Deferred, tracked, not in this roadmap.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | EVALSET-01 | Phase 83 | Pending |
-| EVALSET-02 | Phase 83 | Pending |
+| EVALSET-02 | Phase 83 | Complete |
 | EVALSET-03 | Phase 83 | Pending |
-| EVALSET-04 | Phase 83 | Pending |
-| EVALSET-05 | Phase 83 | Pending |
+| EVALSET-04 | Phase 83 | In Progress |
+| EVALSET-05 | Phase 83 | In Progress |
 | HARNESS-01 | Phase 84 | Pending |
 | HARNESS-02 | Phase 84 | Pending |
 | HARNESS-03 | Phase 84 | Pending |
@@ -80,6 +80,13 @@ Deferred, tracked, not in this roadmap.
 | BARS-03 | Phase 85 | Pending |
 | BASELINE-01 | Phase 86 | Pending |
 | BASELINE-02 | Phase 86 | Pending |
+
+> **EVALSET-04 and -05 are IN PROGRESS, not Complete.** The 83-01 executor marked both complete;
+> corrected here. Both are multi-plan in the roadmap (-04 → 83-01 + 83-03, -05 → 83-01 + 83-02 +
+> 83-03). 83-01 delivered the MECHANISM — `expectedVerdict` as top-level data, poison items that
+> load and round-trip — against a ONE-ITEM seed of each set. The populated sets, and the required
+> minimum of 3 poison items per set including a false-PASS, are 83-02 and 83-03. Marking them
+> complete now would let Phase 84 read a seeded schema as a populated set.
 
 **Coverage:**
 - v3.7.0 requirements: 16 total
