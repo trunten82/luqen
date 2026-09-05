@@ -2,10 +2,14 @@
 gsd_state_version: 1.0
 milestone: v3.7.0
 milestone_name: AI output quality — eval harness + labelled reference sets
-status: Phase 83 in progress — 83-01 merged and pushed; 83-02 and 83-03 (wave 2) NOT started
+current_phase: 83
+current_phase_name: Labelled reference sets
+status: executing
 stopped_at: "Completed 83-01-PLAN.md (labelled reference-set spine: types/schema/loader/set-paths + seed sets + refusal tests)"
-last_updated: "2026-09-05T09:36:52.886Z"
-last_activity: 2026-09-05 — 83-01 merged (63c2ccf9) and pushed; ledger rescued from the worktree (4b69721c); cycling to pick up the new ssh assign permission
+last_updated: "2026-09-05T21:38:32.693Z"
+last_activity: 2026-09-05
+last_activity_desc: Phase 83 execution started
+state_head: 292d73e797a03cb04817c59e288c69672d39aaed
 progress:
   total_phases: 4
   completed_phases: 0
@@ -40,14 +44,14 @@ real fix is a longer timeout on the browser-launching cases, and it is NOT done.
 See: .planning/PROJECT.md (updated 2026-09-05 — v3.7.0 AI output quality opened)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** v3.7.0 — build the eval harness + labelled reference sets for `generate-fix` and `analyse-visual`. Phase 83 (labelled reference sets) is ready to plan.
+**Current focus:** Phase 83 — Labelled reference sets
 
 ## Current Position
 
-Phase: Milestone v3.7.0 — Phase 83 of 4 (Labelled reference sets) ready to plan
-Plan: — (no plans created yet)
-Status: Roadmap created; ready for `/gsd-discuss-phase 83` or `/gsd-plan-phase 83`
-Last activity: 2026-09-05 — Roadmap created for v3.7.0 (Phases 83-86)
+Phase: 83 (Labelled reference sets) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 83
+Last activity: 2026-09-05 — Phase 83 execution started
 
 Progress: [███░░░░░░░] 33%
 

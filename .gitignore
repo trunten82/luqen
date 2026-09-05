@@ -45,3 +45,6 @@ docs/design/
 docs/superpowers/
 .planning/
 CLAUDE.md
+
+# GSD run-scoped runtime sentinel (not project state)
+.gsd/
