@@ -238,7 +238,7 @@ milestone protects the ones already shipped and relied upon.
 **Success Criteria** (what must be TRUE):
   1. The tolerated non-inferiority margin for text capabilities, together with the number of items required to detect it, is recorded in the repo before any baseline or candidate measurement exists
   2. The `analyse-visual` bar — non-inferior AND zero increase in false-pass — is encoded in the runner, which emits PASS/FAIL against it rather than leaving a reader to judge
-  3. A verdict produced by the runner names the bar, the measured value, and whether the sample was large enough to have detected the margin; an underpowered result reports UNDERPOWERED and never PASS
+  3. Every verdict the runner emits carries a REQUIRED power field — bar, measured value, the variance ASSUMPTION the sample size came from, and the observed variance — and a run whose observed variance exceeds that assumption reports UNDERPOWERED and can never report PASS. The field is structurally non-omittable (a required field, not a habit): a rule that lives only in a plan does not fire at the moment of use
 **Known circularity — must be handled in this phase, not discovered in Phase 86**: SC1 asks for the number of items required to detect the margin. A power calculation needs a variance estimate, and the only variance estimate this milestone produces is BASELINE-02's run-to-run variance, which does not exist until Phase 86 — after the bars are locked. Do NOT resolve this by moving the baseline earlier; that reintroduces exactly the fitting risk Phase 85 exists to prevent. Resolve it by recording the sample size WITH the variance ASSUMPTION it was derived from, labelled as an assumption rather than a measurement. Phase 86 then checks the observed variance against that assumption and reports whether the pre-registered n is sufficient — **the margin itself stays fixed either way**. An n that turns out too small makes results UNDERPOWERED; it never relaxes the bar.
 **Plans**: TBD
 
@@ -250,7 +250,8 @@ milestone protects the ones already shipped and relied upon.
   1. A recorded baseline for the CURRENT production pins of both `generate-fix` and `analyse-visual` exists and is committed — before any candidate model is measured
   2. The baseline records what it is a function of (model, prompt version, temperature, harness version, date), so it cannot be confused with a measurement of a different environment
   3. A maintainer can re-run the baseline unchanged and read the harness's own run-to-run variance, so a future candidate's delta is judged against noise rather than against zero
-  4. The observed run-to-run variance is checked against the variance ASSUMPTION Phase 85 recorded its sample size from, and the phase reports whether the pre-registered item count is actually sufficient to detect the margin — without altering the margin
+  4. The observed run-to-run variance is checked against the variance ASSUMPTION Phase 85 recorded its sample size from, and the harness OUTPUTS the power verdict as a required field of every report — not as prose a future reader is trusted to remember — without altering the margin
+  5. The power check is BROKEN and watched to fail: feed the harness an observed variance above the assumption and confirm the report flips to UNDERPOWERED and refuses PASS. A guard nobody has watched fire measures nothing
 **Plans**: TBD
 
 ## Progress
