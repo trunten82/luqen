@@ -56,12 +56,16 @@ describe('loadWcagFixSet', () => {
 });
 
 describe('loadImageAltSet', () => {
-  it('loads the committed one-item v1 image set end to end', () => {
+  it('loads the committed v1 image set end to end (83-03 populated it beyond the 83-01 seed)', () => {
     const result = loadImageAltSet(IMAGE_ALT_V1_PATH, 'v1');
 
     expect(result.set).toBe('image-alt');
     expect(result.capability).toBe('analyse-visual');
-    expect(result.items).toHaveLength(1);
+    // >=12, not an exact count: this asserts the loader still works end to
+    // end against whatever the committed set currently holds, without
+    // re-coupling this loader test to image-alt-set.test.ts's own content
+    // gate (which owns the precise item-count/category assertions).
+    expect(result.items.length).toBeGreaterThanOrEqual(12);
   });
 
   it('carries expectedVerdict as data, never derived', () => {
