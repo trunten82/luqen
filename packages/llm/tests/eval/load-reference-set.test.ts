@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
-import { loadWcagFixSet } from '../../src/eval/load-reference-set.js';
+import { loadWcagFixSet, loadImageAltSet } from '../../src/eval/load-reference-set.js';
 
 const WCAG_FIXES_V1_PATH = join(__dirname, 'sets', 'wcag-fixes.v1.json');
+const IMAGE_ALT_V1_PATH = join(__dirname, 'sets', 'image-alt.v1.json');
 
 describe('loadWcagFixSet', () => {
   it('loads the committed one-item v1 set end to end', () => {
@@ -51,5 +52,48 @@ describe('loadWcagFixSet', () => {
       item.id = 'mutated';
     }).toThrow();
     expect(item.id).toBe('wcag-img-missing-alt-01');
+  });
+});
+
+describe('loadImageAltSet', () => {
+  it('loads the committed one-item v1 image set end to end', () => {
+    const result = loadImageAltSet(IMAGE_ALT_V1_PATH, 'v1');
+
+    expect(result.set).toBe('image-alt');
+    expect(result.capability).toBe('analyse-visual');
+    expect(result.items).toHaveLength(1);
+  });
+
+  it('carries expectedVerdict as data, never derived', () => {
+    const result = loadImageAltSet(IMAGE_ALT_V1_PATH, 'v1');
+    const item = result.items[0];
+
+    expect(['issue', 'pass']).toContain(item.expectedVerdict);
+    expect(item.category).toBeDefined();
+    expect(item.input.check).toBe('alt-text');
+    expect(item.input.context.length).toBeGreaterThan(0);
+    expect(item.expected.suggestedAlt.length).toBeGreaterThan(0);
+  });
+
+  it('carries a licence block with all required fields non-empty', () => {
+    const result = loadImageAltSet(IMAGE_ALT_V1_PATH, 'v1');
+    const item = result.items[0];
+
+    expect(item.licence.id.length).toBeGreaterThan(0);
+    expect(item.licence.sourceUrl.length).toBeGreaterThan(0);
+    expect(item.licence.fileUrl.length).toBeGreaterThan(0);
+    expect(item.licence.author.length).toBeGreaterThan(0);
+    expect(item.licence.retrievedAt.length).toBeGreaterThan(0);
+  });
+
+  it('resolves the asset path from the item id, with no caller-supplied path field', () => {
+    const result = loadImageAltSet(IMAGE_ALT_V1_PATH, 'v1');
+    const item = result.items[0];
+
+    expect(existsSync(item.assetPath)).toBe(true);
+    expect(item.assetPath.endsWith('.jpg')).toBe(true);
+    // No caller-supplied asset path field exists on the raw item shape.
+    expect((item as unknown as Record<string, unknown>).path).toBeUndefined();
+    expect((item as unknown as Record<string, unknown>).assetFile).toBeUndefined();
   });
 });

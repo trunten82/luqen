@@ -1,15 +1,19 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { Value } from '@sinclair/typebox/value';
 import type { TSchema } from '@sinclair/typebox';
-import { WcagFixItemSchema, WcagFixSetSchema } from './schema.js';
+import { WcagFixItemSchema, WcagFixSetSchema, ImageAltItemSchema, ImageAltSetSchema } from './schema.js';
 import {
   InvalidReferenceSetError,
   InvalidProvenanceTierError,
+  MissingReferenceAssetError,
   ReferenceSetVersionMismatchError,
   UnattributedReferenceItemError,
   UnsafeReferenceIdentifierError,
   type ReferenceSet,
   type WcagFixItem,
+  type ImageAltItem,
+  type ResolvedImageAltItem,
 } from './types.js';
 
 const KNOWN_TIERS = new Set(['w3c', 'owner', 'derived']);
@@ -207,10 +211,60 @@ export function loadWcagFixSet(setPath: string, expectedVersion: string): Refere
   );
 }
 
-// Exported for reuse by loadImageAltSet (Task 2) so both loaders share this
-// exact refusal ladder rather than forking a second validation routine.
+const MEDIA_TYPE_EXTENSIONS: Record<ImageAltItem['mediaType'], string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+};
+
+/**
+ * Asset resolution is DERIVED, never declared: the item has no path field, so
+ * a downloaded file can never carry its original name into this repo
+ * (identifiers are content). Throws `MissingReferenceAssetError` when the
+ * derived path does not exist rather than returning a degraded item.
+ */
+function resolveImageAssetPath(setPath: string, item: ImageAltItem): string {
+  const ext = MEDIA_TYPE_EXTENSIONS[item.mediaType];
+  const assetPath = join(dirname(setPath), '..', 'images', `${item.id}.${ext}`);
+  if (!existsSync(assetPath)) {
+    throw new MissingReferenceAssetError(item.id, assetPath);
+  }
+  return assetPath;
+}
+
+export function loadImageAltSet(
+  setPath: string,
+  expectedVersion: string,
+): ReferenceSet<ResolvedImageAltItem> {
+  // Shares the exact refusal ladder from loadWcagFixSet — the same
+  // loadTypedSet, not a forked second validation routine.
+  const base = loadTypedSet<ImageAltItem>(
+    setPath,
+    expectedVersion,
+    'image-alt',
+    'analyse-visual',
+    ImageAltItemSchema,
+  );
+
+  const items: ResolvedImageAltItem[] = base.items.map((item) => {
+    const assetPath = resolveImageAssetPath(setPath, item);
+    return deepFreeze({ ...item, assetPath });
+  });
+
+  return deepFreeze({
+    set: base.set,
+    setVersion: base.setVersion,
+    capability: base.capability,
+    notes: base.notes,
+    items,
+  });
+}
+
+// Exported for reuse by refusals.test.ts (Task 3) so the break-tests exercise
+// the exact same primitives the loaders use, rather than re-deriving them.
 export { loadTypedSet, deepFreeze, assertSafeId, UNSAFE_ID_PATTERN };
 
 // Re-exported so callers that only imported from this module still get the
-// full-set schema without a second import path.
-export { WcagFixSetSchema };
+// full-set schemas without a second import path.
+export { WcagFixSetSchema, ImageAltSetSchema };
