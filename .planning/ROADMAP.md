@@ -201,7 +201,7 @@ milestone protects the ones already shipped and relied upon.
   numbered phase — v3.6.0 shipped directly to master with no numbered phases)
 - Decimal phases (e.g. 84.1): Urgent insertions (marked INSERTED)
 
-- [ ] **Phase 83: Labelled reference sets** — Versioned, provenance-attributed WCAG-violation and image reference sets, each carrying the poison items the harness break-test needs.
+- [x] **Phase 83: Labelled reference sets** — Versioned, provenance-attributed WCAG-violation and image reference sets, each carrying the poison items the harness break-test needs.
 - [ ] **Phase 84: Scoring harness** — A runner that scores any registered model against both sets, reports asymmetric `analyse-visual` errors separately, records its own run-function, and is proven to score poison items down before any green result is trusted.
 - [ ] **Phase 85: Pre-registered decision bars** — The non-inferiority margin and the `analyse-visual` zero-false-pass bar, recorded and encoded into the runner's PASS/FAIL/UNDERPOWERED verdict, before any measurement exists.
 - [ ] **Phase 86: Recorded baseline** — The current production pins of `generate-fix` and `analyse-visual`, baselined and committed with run-to-run variance, before any candidate model is measured.
@@ -219,8 +219,8 @@ milestone protects the ones already shipped and relied upon.
   4. Both sets contain deliberately-wrong poison items (a bad fix, a wrong alt-text), explicitly flagged as such in the data, ready for Phase 84's break-test
 **Plans**: 3 plans (waves: 83-01 alone in wave 1; 83-02 and 83-03 parallel in wave 2)
 - [x] 83-01-PLAN.md — Reference-set schema, loader, and its six refusals, proven on a one-item seed of each set and then broken
-- [ ] 83-02-PLAN.md — WCAG-fix set content: ≥15 items each citing BOTH a Failure and a Sufficient Technique, plus poison items
-- [ ] 83-03-PLAN.md — Labelled image set: openly-licensed assets with a stated licence, expectedVerdict as data, poison including a false-PASS (has a blocking licence checkpoint)
+- [x] 83-02-PLAN.md — WCAG-fix set content: ≥15 items each citing BOTH a Failure and a Sufficient Technique, plus poison items
+- [x] 83-03-PLAN.md — Labelled image set: openly-licensed assets with a stated licence, expectedVerdict as data, poison including a false-PASS (has a blocking licence checkpoint)
 
 ### Phase 84: Scoring harness
 **Goal**: A maintainer can run a single harness against any registered model for either durable capability and receive per-item and aggregate scores worth trusting — because the harness has already been watched to fail on poison data before any green result from it is believed.

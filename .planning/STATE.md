@@ -4,18 +4,18 @@ milestone: v3.7.0
 milestone_name: AI output quality — eval harness + labelled reference sets
 current_phase: 83
 current_phase_name: Labelled reference sets
-status: executing
-stopped_at: "Completed 83-01-PLAN.md (labelled reference-set spine: types/schema/loader/set-paths + seed sets + refusal tests)"
+status: Phase 83 COMPLETE and verified (4/4 success criteria) — Phase 84 (Scoring harness) ready to plan
+stopped_at: "Phase 83 complete: all 3 plans merged and verified; 83-VERIFICATION.md status=passed. Next: /gsd-plan-phase 84"
 last_updated: "2026-09-05T21:38:32.693Z"
 last_activity: 2026-09-05
-last_activity_desc: Phase 83 execution started
-state_head: 292d73e797a03cb04817c59e288c69672d39aaed
+last_activity_desc: Phase 83 wave 2 (83-02 WCAG-fix set, 83-03 image set) merged, verified 4/4, EVALSET-01..05 all Complete
+state_head: 0272957c  # last CODE commit of phase 83 (the 83-03 merge). Deliberately NOT "latest commit": planning-only commits land after it, so this names a re-checkable thing — `git diff --stat 0272957c..HEAD` must list nothing outside .planning/ and .gitignore.
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 1
-  percent: 0
+  completed_plans: 3
+  percent: 25
 ---
 
 # Project State
@@ -48,12 +48,12 @@ See: .planning/PROJECT.md (updated 2026-09-05 — v3.7.0 AI output quality opene
 
 ## Current Position
 
-Phase: 83 (Labelled reference sets) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 83
-Last activity: 2026-09-05 — Phase 83 execution started
+Phase: 83 (Labelled reference sets) — COMPLETE, verified 4/4
+Plan: 3 of 3
+Status: Phase 83 verified and merged to master. Next: /gsd-plan-phase 84 (Scoring harness)
+Last activity: 2026-09-05 — 83-02 + 83-03 executed in parallel worktrees, merged, full suite green, verified
 
-Progress: [███░░░░░░░] 33%
+Progress: [██░░░░░░░░] 25%
 
 ## Phase Map (v3.7.0 — AI output quality)
 
