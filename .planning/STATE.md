@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v3.7.0
 milestone_name: AI output quality — eval harness + labelled reference sets
-status: Active — milestone opened 2026-09-04, no phases planned yet
-stopped_at: v3.7.0 opened and approved; next action is /gsd-new-milestone requirements or /gsd-discuss-phase for phase 1
-last_updated: "2026-09-04T22:10:00.000Z"
-last_activity: 2026-09-04 — v3.6.0 RELEASED (tagged v3.6.0, deployed, both owner gates cleared); v3.7.0 opened
+status: Active — roadmap created (Phases 83-86), ready for phase planning
+stopped_at: ROADMAP.md + REQUIREMENTS.md traceability written for v3.7.0 (4 phases, 16/16 requirements mapped); next action is /gsd-discuss-phase 83 or /gsd-plan-phase 83
+last_updated: "2026-09-05T08:05:00.000Z"
+last_activity: 2026-09-05 — v3.7.0 roadmap created (4 phases, 83-86, 16/16 requirements mapped, coarse granularity)
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -39,29 +39,34 @@ real fix is a longer timeout on the browser-launching cases, and it is NOT done.
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-07 — v3.5.0 redefined: Anti-overlay wedge)
+See: .planning/PROJECT.md (updated 2026-09-05 — v3.7.0 AI output quality opened)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** Milestone complete
+**Current focus:** v3.7.0 — build the eval harness + labelled reference sets for `generate-fix` and `analyse-visual`. Phase 83 (labelled reference sets) is ready to plan.
 
 ## Current Position
 
-Phase: Milestone v3.5.0 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-06-15 — Milestone v3.5.0 completed and archived
+Phase: Milestone v3.7.0 — Phase 83 of 4 (Labelled reference sets) ready to plan
+Plan: — (no plans created yet)
+Status: Roadmap created; ready for `/gsd-discuss-phase 83` or `/gsd-plan-phase 83`
+Last activity: 2026-09-05 — Roadmap created for v3.7.0 (Phases 83-86)
 
-## Phase Map (v3.5.0 — Anti-overlay wedge)
+Progress: [░░░░░░░░░░] 0%
 
-| # | Phase | Track | Requirements | Depends on |
-|---|-------|-------|--------------|------------|
-| 78 | Anti-overlay positioning | Cross-repo (WP readme + platform) | POS-01..03 | — (DONE 2026-06-01) |
-| 79 | CI regression gate | Cross-repo (`luqen` core CLI/Action + `luqen-wordpress` publish gate) | CIGATE-01..05 | 78 (cadence; functionally independent — dev track A) |
-| 80 | MCP fix tools for coding agents | Cross-repo (`luqen` core MCP + llm + `luqen-wordpress` WP-block fixes) | MCPFIX-01..05 | 78 (cadence; independent — dev track B, parallel with 79) |
-| 81 | Jurisdiction legal-exposure scoring (FLAGSHIP) | Cross-repo (`luqen` exposure model + dashboard + fleet view + `luqen-wordpress` per-site) | EXPO-01..05 | 78; precedes 82 (produces the exposure trend 82 reports) |
-| 82 | Scheduled executive digest | Cross-repo (`luqen` scheduler + notify + board PDF + `luqen-wordpress` per-site digest) | DIGEST-01..05 | 81 (reports the exposure trend) |
+## Phase Map (v3.7.0 — AI output quality)
 
-**Parallelism:** Phases 79 (CI gate) and 80 (MCP fix tools) are independent developer tracks — run concurrently after 78. Phase 81 (flagship exposure scoring) MUST precede Phase 82 (digest reports the exposure trend). Every phase is cross-repo: `luqen` + `luqen-wordpress` (v0.32.0), WordPress-leaned SMB surface.
+| # | Phase | Requirements | Depends on |
+|---|-------|--------------|------------|
+| 83 | Labelled reference sets | EVALSET-01..05 | — (first phase this milestone) |
+| 84 | Scoring harness | HARNESS-01..06 | 83 (needs both reference sets, incl. poison items, to run against and break-test) |
+| 85 | Pre-registered decision bars | BARS-01..03 | 84 (bars encoded into the runner's verdict logic; locked BEFORE any measurement exists, not just before a future candidate) |
+| 86 | Recorded baseline | BASELINE-01..02 | 85 (bars fixed before this run exists, so the baseline cannot shape the margin) and, transitively, 84 (break-test evidence must precede the first trusted green result) |
+
+**Sequencing is strictly linear (83 → 84 → 85 → 86), not parallelizable** — this milestone is a
+single evidentiary chain: sets feed the harness, the harness's break-test must be watched to fail
+before any result is trusted, the bars are locked before any measurement exists, and the baseline
+is the first trusted measurement produced only after both are in place. No phase in this milestone
+measures a candidate model — that is explicitly next-milestone work.
 
 ## Accumulated Context
 
@@ -69,23 +74,23 @@ Last activity: 2026-06-15 — Milestone v3.5.0 completed and archived
 
 - 2026-05-29: original v3.5.0 roadmap (monetization: phases 78-82 GATE/CREDIT/AGENCY/PRICE) created, then shipped direct-to-master — but the monetization spine was REVERSED by the single-product decision ([[project_single_tier_decision]]). Only Phase 78 (anti-overlay positioning) survived.
 - 2026-06-07: **v3.5.0 redefined** as "Anti-overlay wedge — dev + exec first wave". Roadmap recreated: Phase 78 (shipped) preserved; new phases 79-82 (CIGATE / MCPFIX / EXPO / DIGEST) replace the retired monetization phases — same numbers, entirely new concepts. 20/20 requirements mapped, no orphans, coarse granularity (4 feature tracks → 4 phases). Key sequencing: developer tracks 79+80 are independent and parallelizable; EXPO (81, flagship) sequences before DIGEST (82) because the digest reports the exposure trend EXPO produces.
+- 2026-09-04: v3.6.0 (agent surface + semantic depth) shipped directly to master with no numbered phases; v3.7.0 opened same day (approved via orchestrator, on the owner's register).
+- 2026-09-05: **v3.7.0 roadmap created.** 16 requirements (EVALSET/HARNESS/BASELINE/BARS) mapped 1:1 onto the four requirement groups from the approved brief, giving 4 phases (83-86), coarse granularity, zero orphans. Bars (Phase 85) deliberately sequenced BEFORE baseline (Phase 86) — a stronger guarantee than the literal requirement text ("before any candidate measurement"), chosen so neither the non-inferiority margin nor the `analyse-visual` bar can be shaped by having already seen any real measurement, including the baseline's own.
 
-### Decisions (v3.5.0 — Anti-overlay wedge)
+### Decisions (v3.7.0 — AI output quality)
 
-- **Conservative-by-default is a hard product constraint** — NO surface (CLI, PR comment, MCP fix, exposure indicator, digest, PDF) may emit "compliant" / "100%" / "lawsuit-proof". Exposure-indication + good-faith remediation + transparency framing only ("not legal advice").
-- **Single product, no gates** — the Free/Pro/Agency surfaces are dormant; do NOT build on or extend them. No credits, no plan model, no billing.
-- **Reuse existing infrastructure** — CI gate on `@luqen/core` CLI + multi-engine scan; MCP tools on the existing `@luqen/core` MCP server + `generate-fix` capability + jurisdiction legal-framings service; digest on existing notify plugins (email/Slack/Teams) + report/fleet PDF pipelines + WP company-info.
-- **MCP fix tools never auto-apply** — human-supervised; they return review-and-merge drafts (the anti-overlay posture).
-- **WordPress-leaned throughout** — the WP SMB segment (mis-sold overlays, getting sued) is the beachhead; each phase surfaces in the `luqen-wordpress` plugin (v0.32.0).
-- `luqen` and `luqen-wordpress` are SEPARATE repos with SEPARATE CI; WP tests run via wp-test lxc + Playwright.
+- **Bars sequenced before baseline, not just before a future candidate** — BARS-01/02/03 (Phase 85) precede BASELINE-01/02 (Phase 86) so the non-inferiority margin and the `analyse-visual` bar cannot be shaped by having already seen a real measurement.
+- **Four phases, one per requirement group (A/B/C/D from the approved brief)** — reference sets, harness, bars, baseline — each independently observable; the milestone's explicit ordering constraints (HARNESS-05 with/before first green; BASELINE-01 before any candidate; BARS-01 before any candidate) map cleanly onto phase boundaries.
+- **No candidate-model-measurement phase in this milestone** — the 16 requirements build the instrument only; using it to decide a specific model swap is next-milestone work.
 
-### Constraints (v3.5.0)
+### Constraints (v3.7.0)
 
-- Tech stack: TypeScript, Fastify, existing patterns — no new frameworks
-- Auth: OAuth2 client credentials (RS256 JWT) — same across all services; MCP enforces JWT + RBAC + `mcp.use` org scoping
-- All capabilities degrade gracefully when LLM/scan unavailable — conservative output on degrade, never assert "compliant"
-- Must integrate with compliance/branding/llm without breaking changes
-- No external billing / payment processing / monetization
+- Tech stack: reuse the existing `@luqen/llm` capability-execution engine and provider adapters — no new frameworks, no new vendor dependency
+- Ground-truth provenance is per-item and mandatory — the loader refuses an item with none
+- `analyse-visual` false-PASS and false-ISSUE are scored and reported separately, never fused
+- `parseGenerateFixResponse` / `parseAnalyseVisualResponse` never throw (catch → empty string) — the harness persists the raw response per item so an all-empty parse is distinguishable from a genuine low score
+- Pre-registered bars must not be rewritten once a measurement exists
+- `analyse-visual` stays on gemini-2.5-flash for the duration of this milestone — the READY-BUT-UNAPPLIED pin change in `docs/guides/llm-model-selection.md` stays unapplied until the live-config permission is lifted; this milestone must not become the reason to apply it early
 
 ### Known Gotchas (carried forward)
 
@@ -100,6 +105,8 @@ Last activity: 2026-06-15 — Milestone v3.5.0 completed and archived
 - **WP plugin must not assume a local service** — remote Luqen endpoints are the norm; gate on a configured connection, degrade silently
 - **UI phases need human UAT** — automated checks miss cross-persona / mobile / URL edge cases
 - **Live tracks master, not develop** — push to master before deploy; no CI on lxc-luqen, deploy via explicit ssh
+- **`parseGenerateFixResponse`/`parseAnalyseVisualResponse` never throw** — they catch and return empty strings; an all-empty parse looks identical to a genuine empty/low result unless the raw response is persisted alongside it (v3.7.0 HARNESS-06)
+- **Gemini thinking models share `maxOutputTokens` with thoughts** — a low cap truncates live output silently; relevant if a candidate under evaluation is a thinking model
 
 ### Quick Tasks Completed
 
@@ -118,11 +125,12 @@ Last activity: 2026-06-15 — Milestone v3.5.0 completed and archived
 
 ## Session Continuity
 
-Last session: 2026-06-11T17:24:42.183Z
-Stopped at: Phase 82 UI-SPEC approved
-Resume file: .planning/phases/82-scheduled-executive-digest/82-UI-SPEC.md
-Next action: `/gsd:plan-phase 79` (CI regression gate) — or plan 79 and 80 in parallel (independent developer tracks)
+Last session: 2026-09-05
+Stopped at: v3.7.0 ROADMAP.md + REQUIREMENTS.md traceability created (4 phases, 83-86, 16/16 requirements mapped)
+Resume file: None
+Next action: `/gsd-discuss-phase 83` (Labelled reference sets) or `/gsd-plan-phase 83`
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Review the v3.7.0 roadmap in .planning/ROADMAP.md
+- Start phase work with `/gsd-discuss-phase 83` or `/gsd-plan-phase 83`
