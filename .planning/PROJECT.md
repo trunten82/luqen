@@ -10,33 +10,73 @@ AI-powered accessibility compliance that adapts to each organization's jurisdict
 
 ## Current State
 
-v3.4.0 line (package version 3.4.0). Since v3.1.0 the platform shipped the WordPress plugin (standalone axe-core + enterprise mode), WP network/multi-team modes, public badges, the UI revision, dashboard/LLM phases 71–77 (NOTIF per-recipient unsubscribe; the LLM cost-telemetry stack), the single-source localizable ACR/VPAT program (M1–M4: byte-identical dashboard + WordPress render, Snapshot per-site report page with revisions + audit history, 58-jurisdiction legal framing), and the **de-gating to a single product with no paid tiers** (the Free/Pro/Agency UI and the generate-fix credit paywall were removed in commits `30cfb5d`/`e9df8cc`). Note: `.planning` artifacts lagged this direct-to-master run; this milestone resyncs them.
+v3.6.0 (package version 3.6.0, tagged `v3.6.0`, deployed to lxc-luqen 2026-09-04). Since v3.4.0 the
+platform shipped the **anti-overlay wedge** (v3.5.0: CI regression gate with `luqen scan --fail-on=new`
++ GitHub Action PR comments + WP scan-on-publish gate; MCP fix tools for coding agents; scheduled
+executive digest) and the **agent surface + semantic depth** milestone (v3.6.0: vision adapter +
+`analyse-visual` capability, `captureVisualContext()`, dashboard vision pass, companion multimodal
+image upload + TTS, WP vision mirror, the conservative C#2 "Supports-from-vision" VPAT elevation, and
+the `llm_analyse_visual` MCP tool).
 
-**Superseded:** the previously drafted v3.5.0 "Commercial positioning & agency monetization" milestone is **dead** — its monetization spine (Pro/Agency feature gates, credit-metered fixes) was explicitly reversed by the single-product decision ([[project_single_tier_decision]]). Only its Phase 78 (anti-overlay positioning) shipped. v3.5.0 is redefined below.
+**The gap this milestone closes:** the platform now has seven LLM capabilities in production and **no
+evaluation infrastructure for any of them**. On 2026-09-04 a three-model comparison had to be argued
+from 4 hand-scraped WCAG violations and 4 twenty-pixel icons. That was enough to recommend a model
+switch for six text capabilities and to REFUSE it for `analyse-visual` — n=4 is not an evidence base
+for an input to a conformance document. The refusal is correct and permanent: the same argument
+blocks the next model decision, and the one after, until the instrument exists.
 
-## Current Milestone: v3.5.0 Anti-overlay wedge — dev + exec first wave
+**Superseded:** the previously drafted v3.5.0 "Commercial positioning & agency monetization" milestone
+is **dead** — its monetization spine (Pro/Agency feature gates, credit-metered fixes) was explicitly
+reversed by the single-product decision ([[project_single_tier_decision]]). Only its Phase 78
+(anti-overlay positioning) shipped; v3.5.0 was redefined as the anti-overlay wedge and is complete.
 
-**Goal:** Convert the verified 2026-06 market-positioning brief (`.planning/MARKET-POSITIONING-2026-06.md`) into product. Give developers real source-level remediation inside their workflow (CI gate + agent-native fix tools), and give executives a conservative, jurisdiction-grounded, proactive risk picture (legal-exposure scoring + scheduled digest). WordPress-leaned throughout — the SMB segment that was mis-sold overlays and is getting sued is the beachhead. Position Luqen as "the anti-overlay, legal-defensibility platform for developers and executives."
+## Current Milestone: v3.7.0 AI output quality — eval harness + labelled reference sets
+
+**Goal:** Build the evaluation instrument for the two LLM capabilities whose output is DURABLE —
+`generate-fix`, which ships into someone's source code, and `analyse-visual`, which feeds a VPAT/ACR
+conformance document with legal weight — so that a model decision can be closed on evidence instead of
+on n=4. Everything else degrades gracefully or is read once and discarded, and stays out of scope.
 
 **Target features:**
 
-*A1 — CI regression gate (developer)*
-- GitHub Action / `luqen scan --fail-on=new` with baseline diff + PR comment, built on the existing core CLI + multi-engine scan
-- WP analog: scan-on-publish / warn-before-publish gate in the plugin
+*A — Labelled reference sets (the ground truth)*
+- A set of real WCAG violations with known-good fixes, each item carrying **attributed provenance**:
+  where the label came from and who stands behind it. Unattributed ground truth is a rubric fitted to
+  whoever built it.
+- A labelled image set spanning photographs, charts, decorative icons and complex graphics, with
+  attributed alt-text ground truth and an explicit expected VPAT-relevant verdict per item.
 
-*A3 — MCP fix tools (developer / agent-native)*
-- Expose scan + generate-fix (with 58-jurisdiction legal context) as MCP tools so Cursor/Claude Code remediate inline; `@luqen/core` MCP server already exists
-- Surface WP-block-aware fixes through the same path
+*B — The scoring runner (the instrument)*
+- A runner that scores ANY candidate model against both sets and emits per-item and aggregate scores.
+- **The harness must be breakable.** Feed it a deliberately bad fix and a deliberately wrong alt-text
+  and watch it score them DOWN before any green result is trusted. A quality gate nobody has watched
+  fail measures nothing.
 
-*B1 — Jurisdiction legal-exposure scoring (executive, flagship)*
-- Fuse scan results + per-scan legal framing + lawsuit/deadline data into a CONSERVATIVE exposure indicator (EU-post-EAA, high-filing US states NY/FL/IL, ADA Title II 2027/2028 deadline countdowns)
-- Never claims "compliant" or asserts fault — exposure indicator only; surfaced per-site in the WP plugin dashboard
+*C — The recorded baseline (what a candidate is compared against)*
+- Baseline the CURRENT pins first, before any candidate, recording what the baseline is a function of
+  (model, prompt version, temperature, harness version, date). A baseline that is silently measuring
+  the environment rather than the code cannot certify anything.
 
-*B5 — Scheduled exec digest (executive)*
-- Weekly/monthly "what changed / what's at risk" email + board-ready PDF via existing notify (slack/teams/email) + report pipelines
-- Per-site WP digest reusing WP company-info / per-site master data
+*D — The pre-registered decision bars*
+- **Text capabilities are a NON-INFERIORITY question, not a superiority one.** Nobody needs fixes 10%
+  better; they need to know a model swap breaks nothing. The tolerated margin is stated IN ADVANCE —
+  an underpowered non-inferiority test CERTIFIES safety it has not demonstrated, which is the
+  reassuring direction and the one nobody audits.
+- **`analyse-visual` errors are ASYMMETRIC.** A false ISSUE is cheap (a human reviews it). A false PASS
+  is expensive (it can elevate a VPAT criterion to "Supports" in a document someone relies on legally).
+  Bar: non-inferior AND **zero increase in false-pass**. A candidate scoring better on average while
+  over-elevating more often FAILS.
 
-**Key constraints:** ALL reporting stays legally conservative — never emit "compliant"/"100%"/"lawsuit-proof"; frame as transparency + good-faith remediation + exposure indication. Reuse existing infrastructure (core CLI + multi-engine, `@luqen/core` MCP, notify plugins, report/fleet pipelines, jurisdiction legal-framings service). Cross-repo: dashboard `/root/luqen` + plugin `/root/luqen-wordpress` (v0.32.0). Follow the proven ship pattern: wip branch → build → test → merge to master → deploy to lxc-luqen → CI green. **Out of scope / named follow-on milestones:** native mobile app testing; managed/guided expert-audit service; and the moats A2 (deepen PR fixes), A5 (fleet fix-once-apply-everywhere), B3 (remediation-velocity KPIs).
+**Key constraints:** The pre-registered bars above were set BEFORE any measurement exists and MUST NOT
+be rewritten once a measurement does — a bar edited after its result is not a bar. This milestone
+**closes** the READY-BUT-UNAPPLIED pin change in `docs/guides/llm-model-selection.md`, but must NOT
+become the reason to apply it early: that recommendation stands unapplied until the live-config
+permission is lifted, and `analyse-visual` stays on gemini-2.5-flash until this harness says otherwise.
+Reuse the existing capability-execution engine and provider adapters — no new frameworks.
+
+**Out of scope / named follow-on:** behavioral a11y testing beyond Pa11y (Playwright keyboard / dynamic
+/ a11y-tree) is ranked next and proposed as v3.8.0. It is a bigger product moat with a decided plan,
+but it ADDS a capability while this milestone protects the ones already shipped and relied upon.
 
 ## Requirements
 
@@ -208,4 +248,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-07 — v3.5.0 redefined (Anti-overlay wedge: dev + exec first wave); supersedes the reversed monetization milestone*
+*Last updated: 2026-09-05 — v3.7.0 opened (AI output quality: eval harness + labelled reference sets); Current State resynced past v3.5.0 and v3.6.0*

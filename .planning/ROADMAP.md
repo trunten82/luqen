@@ -5,13 +5,15 @@
 - ✅ **v2.7.0 – v3.0.0** — Phases 01-33 (shipped) — see `milestones/` archives
 - ✅ **v3.1.0 Agent Companion v2 + Tech Debt & Docs** — Phases 34-42 (shipped)
 - ✅ **v3.2.0 – v3.4.0 WP Plugin, UI Revision, LLM Cost Telemetry** — Phases 43-77 (shipped directly to master)
-- 🚧 **v3.5.0 Anti-overlay wedge — dev + exec first wave** — Phase 78 (Anti-overlay positioning) shipped; Phases 79-82 (CI gate, MCP fix tools, legal-exposure scoring, exec digest) below.
+- ✅ **v3.5.0 Anti-overlay wedge — dev + exec first wave** — Phases 78-82 (shipped 2026-06-15)
+- ✅ **v3.6.0 Agent surface + semantic depth** — shipped 2026-09-04 directly to master (no numbered phases — vision adapter + `analyse-visual`, companion multimodal image upload + TTS, WP vision mirror, C#2 VPAT elevation)
+- 🚧 **v3.7.0 AI output quality — eval harness + labelled reference sets** — Phases 83-86 (in progress)
 
-> **Milestone redefined.** The original v3.5.0 "Commercial positioning & agency monetization" (Pro/Agency gates, credit-metered fixes) was **reversed by the single-product decision** ([[project_single_tier_decision]]). Only its Phase 78 (anti-overlay positioning) survives. The dead monetization phases that were numbered 79-82 (GATE/CREDIT/AGENCY/PRICE) are **retired** — their concepts must NOT be reused. v3.5.0 is now the **Anti-overlay wedge**: convert the verified 2026-06 market-positioning brief into product. Phase numbering continues from 78 (no reset).
+> **Milestone redefined (v3.5.0).** The original v3.5.0 "Commercial positioning & agency monetization" (Pro/Agency gates, credit-metered fixes) was **reversed by the single-product decision** ([[project_single_tier_decision]]). Only its Phase 78 (anti-overlay positioning) survives. The dead monetization phases that were numbered 79-82 (GATE/CREDIT/AGENCY/PRICE) are **retired** — their concepts must NOT be reused. v3.5.0 is now the **Anti-overlay wedge**: convert the verified 2026-06 market-positioning brief into product. Phase numbering continues from 78 (no reset).
 
 ---
 
-## Current Milestone: v3.5.0 Anti-overlay wedge — dev + exec first wave
+## Completed Milestone: v3.5.0 Anti-overlay wedge — dev + exec first wave
 
 **Goal:** Convert the verified 2026-06 market-positioning brief (`.planning/MARKET-POSITIONING-2026-06.md`) into product. Give developers real source-level remediation inside their workflow (CI gate + agent-native fix tools), and give executives a conservative, jurisdiction-grounded, proactive risk picture (legal-exposure scoring + scheduled digest). WordPress-leaned throughout — the SMB segment that was mis-sold overlays and is getting sued is the beachhead. Position Luqen as "the anti-overlay, legal-defensibility platform for developers and executives."
 
@@ -148,53 +150,123 @@ Phases execute in numeric order: 78 (done) → 79 → 80 → 81 → 82
 
 ---
 
-## Next Milestone: v3.7.0 AI output quality — eval harness + labelled reference sets
+## Current Milestone: v3.7.0 AI output quality — eval harness + labelled reference sets
 
-**Approved** 2026-09-04 (proposed by luqen, approved via the orchestrator; on Alessandro's
-register).
+**Approved** 2026-09-04 (proposed by luqen, approved via the orchestrator; on the owner's register). **Roadmapped** 2026-09-05.
 
-**Goal:** Luqen has NO evaluation infrastructure for ANY LLM capability. Build the instrument
-for the two whose output is DURABLE — `generate-fix`, which ships into someone's source code,
-and `analyse-visual`, which feeds a VPAT/ACR conformance document with legal weight. Everything
-else degrades gracefully or is read once and discarded.
+**Goal:** Luqen has NO evaluation infrastructure for ANY LLM capability. Build the instrument for
+the two whose output is DURABLE — `generate-fix`, which ships into someone's source code, and
+`analyse-visual`, which feeds a VPAT/ACR conformance document with legal weight — so a model
+decision can be closed on evidence instead of on n=4. On 2026-09-04 a three-model comparison had
+to be justified on 4 hand-scraped WCAG violations and 4 twenty-pixel icons; that was enough to
+recommend a switch for six capabilities and to REFUSE it for `analyse-visual`, because n=4 is not
+an evidence base for a conformance input. Everything else degrades gracefully or is read once and
+discarded, and stays out of scope.
 
-**Why now, and why this is not a new front:** on 2026-09-04 a three-model comparison had to be
-justified on 4 hand-scraped WCAG violations and 4 twenty-pixel icons. That was enough to
-recommend a switch for six capabilities and to REFUSE it for `analyse-visual`, because n=4 is
-not an evidence base for a conformance input. The refusal is correct and it is also permanent:
-the same argument blocks the next model decision and the one after, until the instrument exists.
-This milestone removes the reason a decision cannot be closed rather than opening a new one.
+**Granularity:** coarse · **Phases:** 4 (83-86, new) · **Requirements:** 16/16 mapped ✓
 
-**Pre-registered bars — set BEFORE any measurement exists, so they cannot be fitted to a result:**
-- Text capabilities are a NON-INFERIORITY question, not a superiority one. Nobody needs fixes 10%
-  better; they need to know a model swap breaks nothing. State the tolerated margin in advance —
-  an underpowered non-inferiority test CERTIFIES safety it has not demonstrated, which is the
-  reassuring direction and the one nobody audits.
-- `analyse-visual` errors are ASYMMETRIC. A false ISSUE is cheap (a human reviews it). A false
-  PASS is expensive (it can elevate a VPAT criterion to "Supports" in a document someone relies
-  on legally). Bar: non-inferior AND **zero increase in false-pass**. A candidate that scores
-  better on average while over-elevating more often FAILS.
+**Hard constraints threaded through every phase:**
+- **Pre-registration, not post-hoc fitting.** The tolerated non-inferiority margin and the
+  `analyse-visual` bar are recorded and encoded BEFORE any measurement exists and MUST NOT be
+  rewritten once one does — a bar edited after its result is not a bar.
+- **The harness must be breakable.** Poison items (a bad fix, a wrong alt-text) must be scored DOWN
+  by a committed, evidenced break-test before any green result from the runner is trusted. A
+  quality gate nobody has watched fail measures nothing.
+- **Ground-truth provenance is mandatory, per item.** Unattributed ground truth is a rubric fitted
+  to whoever built it — the loader refuses an item that has none.
+- **`analyse-visual` errors are asymmetric.** A false ISSUE is cheap (a human reviews it); a false
+  PASS is expensive (it can elevate a VPAT criterion to "Supports" in a document someone relies on
+  legally). Bar: non-inferior AND zero increase in false-pass — a candidate that scores better on
+  average while over-elevating more often FAILS.
+- **Reuse only.** Built on the existing `@luqen/llm` capability-execution engine and provider
+  adapters — no new frameworks, no new vendor dependency.
 
-**Build in from the start:**
-1. **The harness must be breakable.** Feed it a deliberately bad fix and a deliberately wrong
-   alt-text and watch it score them DOWN before trusting any green. A quality gate nobody has
-   watched fail measures nothing.
-2. **Ground-truth provenance per item.** "Expert alt-text" is a claim about a human judgement,
-   not a fact that can be scraped. Record where each label came from and who stands behind it.
-   Unattributed ground truth is a rubric fitted to whoever built it.
-3. **Baseline the CURRENT pins first**, before any candidate, and record what the baseline is a
-   function of — a baseline that is silently measuring the environment rather than the code
-   cannot certify anything.
-
-**Deliverables:** a labelled reference set of real WCAG violations with known-good fixes; a
-labelled image set spanning photographs, charts, decorative icons and complex graphics with
-attributed alt-text ground truth; a runner scoring any candidate model against both; a recorded
-baseline for the current pins; and the break-test evidence for the harness itself.
+**Cross-cutting trap to design around:** `parseGenerateFixResponse` and `parseAnalyseVisualResponse`
+never throw — they catch and return empty strings. The harness persists the raw model response per
+item so an all-empty parse is distinguishable from a genuine low score (HARNESS-06).
 
 **Closes:** the READY-BUT-UNAPPLIED pin change in `docs/guides/llm-model-selection.md`. That
-recommendation stands unapplied until Alessandro lifts the live-config permission — this
-milestone must NOT become the reason to apply it early.
+recommendation stands unapplied until the owner lifts the live-config permission — this milestone
+must NOT become the reason to apply it early, and `analyse-visual` stays on gemini-2.5-flash for the
+duration of this milestone.
 
-**Ranked below and proposed as v3.8.0:** behavioral a11y testing beyond Pa11y (Playwright
-keyboard / dynamic / a11y-tree). Bigger product moat, plan already decided, but it ADDS a
-capability while this milestone protects the ones already shipped and relied upon.
+**Ranked next and proposed as v3.8.0:** behavioral a11y testing beyond Pa11y (Playwright keyboard /
+dynamic / a11y-tree). Bigger product moat, plan already decided, but it ADDS a capability while this
+milestone protects the ones already shipped and relied upon.
+
+## Phases
+
+**Phase Numbering:**
+- Integer phases (83, 84, 85, 86): Planned milestone work, continuing from Phase 82 (v3.5.0's last
+  numbered phase — v3.6.0 shipped directly to master with no numbered phases)
+- Decimal phases (e.g. 84.1): Urgent insertions (marked INSERTED)
+
+- [ ] **Phase 83: Labelled reference sets** — Versioned, provenance-attributed WCAG-violation and image reference sets, each carrying the poison items the harness break-test needs.
+- [ ] **Phase 84: Scoring harness** — A runner that scores any registered model against both sets, reports asymmetric `analyse-visual` errors separately, records its own run-function, and is proven to score poison items down before any green result is trusted.
+- [ ] **Phase 85: Pre-registered decision bars** — The non-inferiority margin and the `analyse-visual` zero-false-pass bar, recorded and encoded into the runner's PASS/FAIL/UNDERPOWERED verdict, before any measurement exists.
+- [ ] **Phase 86: Recorded baseline** — The current production pins of `generate-fix` and `analyse-visual`, baselined and committed with run-to-run variance, before any candidate model is measured.
+
+## Phase Details
+
+### Phase 83: Labelled reference sets
+**Goal**: A maintainer has versioned, provenance-attributed reference sets for both durable capabilities — real WCAG violations with known-good fixes, and a labelled image set spanning photographs, charts, decorative icons and complex graphics — each carrying the poison items the harness will later be proven against.
+**Depends on**: Nothing (first phase this milestone)
+**Requirements**: EVALSET-01, EVALSET-02, EVALSET-03, EVALSET-04, EVALSET-05
+**Success Criteria** (what must be TRUE):
+  1. A maintainer can load a versioned reference set of real WCAG violations, each item carrying the offending source snippet, the failing success criterion, and a known-good fix
+  2. A maintainer can load a versioned labelled image set spanning photographs, charts, decorative icons, and complex graphics, each item carrying attributed alt-text ground truth and an explicit expected VPAT-relevant verdict (issue vs pass) recorded as data, not inferred later from a score
+  3. Loading an item that lacks attributed provenance (where the label came from, who stands behind it, and when) is REFUSED by the loader, not silently accepted
+  4. Both sets contain deliberately-wrong poison items (a bad fix, a wrong alt-text), explicitly flagged as such in the data, ready for Phase 84's break-test
+**Plans**: TBD
+
+### Phase 84: Scoring harness
+**Goal**: A maintainer can run a single harness against any registered model for either durable capability and receive per-item and aggregate scores worth trusting — because the harness has already been watched to fail on poison data before any green result from it is believed.
+**Depends on**: Phase 83 (needs both reference sets, including their poison items, to run against and to break-test)
+**Requirements**: HARNESS-01, HARNESS-02, HARNESS-03, HARNESS-04, HARNESS-05, HARNESS-06
+**Success Criteria** (what must be TRUE):
+  1. A maintainer runs the harness against any registered model for `generate-fix` and receives per-item and aggregate scores
+  2. A maintainer runs the harness against any registered model for `analyse-visual` and receives per-item and aggregate scores, with false-PASS and false-ISSUE counts reported separately — never fused into one accuracy number, because the two errors have different costs
+  3. A maintainer can point at a committed break-test whose recorded output shows the harness scoring the poison items down — this evidence exists WITH or BEFORE the first trusted green result from the harness, never after
+  4. Every harness run records what its result is a function of (model id, prompt version, temperature, harness version, set version, timestamp), and the runner refuses to compare two runs whose function differs
+  5. A maintainer inspecting any scored item can see the raw model response next to the parsed score, so an all-empty parse (the silent-catch trap in `parseGenerateFixResponse`/`parseAnalyseVisualResponse`) is distinguishable from a genuine low score
+**Plans**: TBD
+
+### Phase 85: Pre-registered decision bars
+**Goal**: The tolerated margins for both durable capabilities are locked into the repo and into the runner's verdict logic before the first real measurement exists, so neither bar can be fitted to a result once one is produced.
+**Depends on**: Phase 84. The bars are encoded into the runner's comparison/verdict logic (needs the runner to exist), and are deliberately locked in BEFORE Phase 86 produces the first baseline measurement — a stronger guarantee than the literal requirement text ("before any candidate measurement"), chosen so that no measurement of any kind, baseline included, can shape the margin.
+**Requirements**: BARS-01, BARS-02, BARS-03
+**Success Criteria** (what must be TRUE):
+  1. The tolerated non-inferiority margin for text capabilities, together with the number of items required to detect it, is recorded in the repo before any baseline or candidate measurement exists
+  2. The `analyse-visual` bar — non-inferior AND zero increase in false-pass — is encoded in the runner, which emits PASS/FAIL against it rather than leaving a reader to judge
+  3. A verdict produced by the runner names the bar, the measured value, and whether the sample was large enough to have detected the margin; an underpowered result reports UNDERPOWERED and never PASS
+**Known circularity — must be handled in this phase, not discovered in Phase 86**: SC1 asks for the number of items required to detect the margin. A power calculation needs a variance estimate, and the only variance estimate this milestone produces is BASELINE-02's run-to-run variance, which does not exist until Phase 86 — after the bars are locked. Do NOT resolve this by moving the baseline earlier; that reintroduces exactly the fitting risk Phase 85 exists to prevent. Resolve it by recording the sample size WITH the variance ASSUMPTION it was derived from, labelled as an assumption rather than a measurement. Phase 86 then checks the observed variance against that assumption and reports whether the pre-registered n is sufficient — **the margin itself stays fixed either way**. An n that turns out too small makes results UNDERPOWERED; it never relaxes the bar.
+**Plans**: TBD
+
+### Phase 86: Recorded baseline
+**Goal**: The CURRENT production pins of `generate-fix` and `analyse-visual` are baselined and committed against the already-fixed bars, with known run-to-run variance, so any future candidate is judged against noise and a real reference point rather than against zero or against a bar that has already seen a result.
+**Depends on**: Phase 85 (the bars must be fixed before this run exists, so the baseline cannot shape the margin) and, transitively, Phase 84 (needs the runner and its break-test evidence to produce a trusted result — HARNESS-05 lands with or before this phase's first green result)
+**Requirements**: BASELINE-01, BASELINE-02
+**Success Criteria** (what must be TRUE):
+  1. A recorded baseline for the CURRENT production pins of both `generate-fix` and `analyse-visual` exists and is committed — before any candidate model is measured
+  2. The baseline records what it is a function of (model, prompt version, temperature, harness version, date), so it cannot be confused with a measurement of a different environment
+  3. A maintainer can re-run the baseline unchanged and read the harness's own run-to-run variance, so a future candidate's delta is judged against noise rather than against zero
+  4. The observed run-to-run variance is checked against the variance ASSUMPTION Phase 85 recorded its sample size from, and the phase reports whether the pre-registered item count is actually sufficient to detect the margin — without altering the margin
+**Plans**: TBD
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 83 → 84 → 85 → 86
+
+**Dependency / parallelism notes:**
+- **Strictly sequential** — every phase in this milestone consumes an artifact or guarantee the previous phase produced (data → runner → locked bars → baseline). No two phases here are independent or parallelizable.
+- The break-test evidence (HARNESS-05, produced in Phase 84) must exist WITH or BEFORE Phase 86 produces the first trusted green (baseline) result.
+- The decision bars (Phase 85) are deliberately sequenced BEFORE the baseline (Phase 86) — not merely before a future candidate — so neither the non-inferiority margin nor the `analyse-visual` bar can be shaped by having already seen a real measurement.
+- No phase in this milestone measures a candidate model — that is explicitly next-milestone work, once the instrument built here exists.
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 83. Labelled reference sets | v3.7.0 | 0/TBD | Not started | - |
+| 84. Scoring harness | v3.7.0 | 0/TBD | Not started | - |
+| 85. Pre-registered decision bars | v3.7.0 | 0/TBD | Not started | - |
+| 86. Recorded baseline | v3.7.0 | 0/TBD | Not started | - |
