@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v3.7.0
 milestone_name: AI output quality — eval harness + labelled reference sets
-status: Roadmap created; ready for `/gsd-discuss-phase 83` or `/gsd-plan-phase 83`
+status: Phase 83 in progress — 83-01 merged and pushed; 83-02 and 83-03 (wave 2) NOT started
 stopped_at: "Completed 83-01-PLAN.md (labelled reference-set spine: types/schema/loader/set-paths + seed sets + refusal tests)"
 last_updated: "2026-09-05T09:36:52.886Z"
-last_activity: 2026-09-05 — Roadmap created for v3.7.0 (Phases 83-86)
+last_activity: 2026-09-05 — 83-01 merged (63c2ccf9) and pushed; ledger rescued from the worktree (4b69721c); cycling to pick up the new ssh assign permission
 progress:
   total_phases: 4
   completed_phases: 0
