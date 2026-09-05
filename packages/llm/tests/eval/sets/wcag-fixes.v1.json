@@ -1,0 +1,42 @@
+{
+  "set": "wcag-fixes",
+  "setVersion": "v1",
+  "capability": "generate-fix",
+  "notes": "Seed set: one attributed W3C item proving the loader end to end. Plan 83-02 fills this set with the remaining WCAG-anchored items.",
+  "items": [
+    {
+      "id": "wcag-img-missing-alt-01",
+      "input": {
+        "wcagCriterion": "1.1.1",
+        "issueMessage": "img element has no alt attribute or equivalent text alternative, so assistive technology cannot identify the image or convey its purpose",
+        "htmlContext": "<img src=\"../images/animal.jpg\">",
+        "platform": "html"
+      },
+      "expected": {
+        "fixedHtml": "<img src=\"../images/animal.jpg\" alt=\"A golden retriever running across a grassy field\">",
+        "explanationMustMention": [
+          "alt attribute",
+          "text alternative",
+          "1.1.1"
+        ],
+        "effort": "low"
+      },
+      "provenance": {
+        "tier": "w3c",
+        "failure": {
+          "id": "F65",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/failures/F65",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Failure of Success Criterion 1.1.1 due to omitting the alt attribute or text alternative on img elements, area elements, and input elements of type \\\"image\\\"\" (F65), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/failures/F65."
+        },
+        "technique": {
+          "id": "H37",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/html/H37",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Using alt attributes on img elements\" (H37), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/html/H37."
+        },
+        "techniqueRating": "sufficient"
+      }
+    }
+  ]
+}
