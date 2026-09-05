@@ -40,7 +40,7 @@ rewritten once one does.** A bar edited after its result is not a bar.
 
 - [ ] **BARS-01**: The tolerated non-inferiority margin for text capabilities is recorded in the repo before any candidate measurement, together with the number of items required to detect it
 - [ ] **BARS-02**: The `analyse-visual` bar — non-inferior AND zero increase in false-pass — is encoded in the runner, which emits PASS/FAIL against it rather than leaving a reader to judge
-- [ ] **BARS-03**: A candidate verdict names the bar, the measured value, and whether the sample was large enough to have detected the margin; an underpowered result reports UNDERPOWERED and never PASS
+- [ ] **BARS-03**: Every verdict the runner emits carries a REQUIRED, non-omittable power field — the bar, the measured value, the variance assumption the sample size was derived from, and the observed variance — and a run whose observed variance exceeds that assumption reports UNDERPOWERED and can never report PASS. The report must be structurally incapable of omitting the field: a rule that lives only in a plan does not fire at the moment of use
 
 ## Future Requirements
 
