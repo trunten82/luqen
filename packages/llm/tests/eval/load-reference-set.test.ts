@@ -7,13 +7,18 @@ const WCAG_FIXES_V1_PATH = join(__dirname, 'sets', 'wcag-fixes.v1.json');
 const IMAGE_ALT_V1_PATH = join(__dirname, 'sets', 'image-alt.v1.json');
 
 describe('loadWcagFixSet', () => {
-  it('loads the committed one-item v1 set end to end', () => {
+  it('loads the committed v1 set end to end', () => {
     const result = loadWcagFixSet(WCAG_FIXES_V1_PATH, 'v1');
 
     expect(result.set).toBe('wcag-fixes');
     expect(result.setVersion).toBe('v1');
     expect(result.capability).toBe('generate-fix');
-    expect(result.items).toHaveLength(1);
+    // Was toHaveLength(1) when only the 83-01 seed item existed. Plan 83-02
+    // populated the set to 17 items (15 w3c-tier + 2 derived); a hardcoded
+    // count here would break every time the set legitimately grows. Assert
+    // the seed item is still present instead of the total count.
+    expect(result.items.length).toBeGreaterThanOrEqual(1);
+    expect(result.items.some((item) => item.id === 'wcag-img-missing-alt-01')).toBe(true);
   });
 
   it('returns an item with the expected input/expected fields', () => {

@@ -2,7 +2,7 @@
   "set": "wcag-fixes",
   "setVersion": "v1",
   "capability": "generate-fix",
-  "notes": "Seed set: one attributed W3C item proving the loader end to end. Plan 83-02 fills this set with the remaining WCAG-anchored items.",
+  "notes": "Populated by Plan 83-02. Tier counts: 15 w3c-tier items (14 newly authored + the 83-01 seed item wcag-img-missing-alt-01), 2 derived-tier items (0 owner-tier). Poison items: 3, each failing in a different way (unchanged markup, F30-pattern filename-as-alt, empty fixedHtml with a confident explanation) -- see packages/llm/tests/eval/SOURCES.md for the full Failure/Technique citation table and selection rule. Distinct success criteria covered (8): 1.1.1, 1.3.1, 1.3.5, 1.4.8, 2.4.4, 2.4.10 (derived only), 3.3.2 (derived only), 4.1.2. Coverage gaps, stated honestly: no items for perceivable-media SCs (1.2.x captions/audio-description), keyboard/focus SCs (2.1.x, 2.4.3, 2.4.7), timing SCs (2.2.x), language SCs (3.1.x), or error-handling SCs (3.3.1/3.3.3/3.3.4) -- the W3C corpus has Failure+Technique pairs with real markup examples for several of these, but this plan's selection rule (Task 1, step 4: stop at >=15 pairs spanning >=8 SCs) was satisfied before reaching them; a future plan revising this set should treat the remaining SCs as the next slice, not an oversight. Contrast (1.4.3/1.4.6) was deliberately NOT populated: 83-RESEARCH.md's Q1 finding held on direct verification -- F24/F83 (the paired failures) describe missing colour DECLARATIONS, not the contrast-RATIO markup diff this set otherwise demonstrates, and no committed repo fixture offered a defensible derived alternative in the time this plan budgeted. Item count and tier ratio are an INPUT to Phase 85's power calculation, not a target this plan invented (CONTEXT.md open question 1).",
   "items": [
     {
       "id": "wcag-img-missing-alt-01",
@@ -27,7 +27,7 @@
           "id": "F65",
           "url": "https://www.w3.org/WAI/WCAG22/Techniques/failures/F65",
           "retrievedAt": "2026-09-05T00:00:00.000Z",
-          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Failure of Success Criterion 1.1.1 due to omitting the alt attribute or text alternative on img elements, area elements, and input elements of type \\\"image\\\"\" (F65), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/failures/F65."
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Failure of Success Criterion 1.1.1 due to omitting the alt attribute or text alternative on img elements, area elements, and input elements of type \"image\"\" (F65), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/failures/F65."
         },
         "technique": {
           "id": "H37",
@@ -36,6 +36,590 @@
           "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Using alt attributes on img elements\" (H37), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/html/H37."
         },
         "techniqueRating": "sufficient"
+      }
+    },
+    {
+      "id": "wcag-css-background-image-info",
+      "input": {
+        "wcagCriterion": "1.1.1",
+        "issueMessage": "Text-bearing information is conveyed exclusively through a CSS background-image with no text alternative available to assistive technology",
+        "htmlContext": "<p id=\"bestinterest\">Where else would you find a better interest rate?</p>",
+        "cssContext": "p#bestinterest {\n  padding-left: 200px;\n  background: transparent url(/images/TopRate.png) no-repeat top left;\n}",
+        "platform": "html"
+      },
+      "expected": {
+        "fixedHtml": "<p id=\"bestinterest\"><img src=\"/images/TopRate.png\" alt=\"19.3% APR Typical Variable\"> Where else would you find a better interest rate?</p>",
+        "explanationMustMention": [
+          "alt attribute",
+          "background-image",
+          "1.1.1"
+        ],
+        "effort": "medium"
+      },
+      "poison": {
+        "expect": "scored-down",
+        "reason": "Candidate's alt text is the image filename ('TopRate.png'), not a text alternative -- this is the exact F30 failure pattern (placeholder/filename text is not a real alternative) even though the markup is syntactically valid.",
+        "candidate": {
+          "fixedHtml": "<p id=\"bestinterest\"><img src=\"/images/TopRate.png\" alt=\"TopRate.png\"> Where else would you find a better interest rate?</p>",
+          "explanation": "Added an alt attribute to the image so assistive technology has a text alternative.",
+          "effort": "low"
+        }
+      },
+      "provenance": {
+        "tier": "w3c",
+        "failure": {
+          "id": "F3",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/failures/F3",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Failure of Success Criterion 1.1.1 due to conveying information exclusively using CSS background images\" (F3), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/failures/F3."
+        },
+        "technique": {
+          "id": "H37",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/html/H37",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Using alt attributes on img elements\" (H37), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/html/H37."
+        },
+        "techniqueRating": "sufficient"
+      }
+    },
+    {
+      "id": "wcag-decorative-img-no-null-alt",
+      "input": {
+        "wcagCriterion": "1.1.1",
+        "issueMessage": "Decorative img element has no role or alt attribute indicating it should be ignored by assistive technology, so a screen reader may announce it as meaningful content",
+        "htmlContext": "<img src=\"squiggle.gif\" height=\"20\" width=\"20\">",
+        "platform": "html"
+      },
+      "expected": {
+        "fixedHtml": "<img alt=\"\" src=\"squiggle.gif\" height=\"20\" width=\"20\">",
+        "explanationMustMention": [
+          "null alt",
+          "decorative",
+          "1.1.1"
+        ],
+        "effort": "low"
+      },
+      "provenance": {
+        "tier": "w3c",
+        "failure": {
+          "id": "F38",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/failures/F38",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Failure of Success Criterion 1.1.1 due to not marking up decorative images in HTML in a way that allows assistive technology to ignore them\" (F38), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/failures/F38."
+        },
+        "technique": {
+          "id": "H67",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/html/H67",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Using null alt text and no title attribute on img elements for images that assistive technology should ignore\" (H67), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/html/H67."
+        },
+        "techniqueRating": "sufficient"
+      }
+    },
+    {
+      "id": "wcag-decorative-img-spacer-alt",
+      "input": {
+        "wcagCriterion": "1.1.1",
+        "issueMessage": "img element used purely for spacing has alt=\"spacer\", which is announced by screen readers instead of being ignored",
+        "htmlContext": "<div>\n  Tree type: <img src=\"spacer.gif\" width=\"100\" height=\"1\" alt=\"spacer\">\n  Cedrus deodara\n</div>",
+        "platform": "html"
+      },
+      "expected": {
+        "fixedHtml": "<div>\n  Tree type: <img src=\"spacer.gif\" width=\"100\" height=\"1\" alt=\"\">\n  Cedrus deodara\n</div>",
+        "explanationMustMention": [
+          "null alt",
+          "spacer",
+          "1.1.1"
+        ],
+        "effort": "low"
+      },
+      "provenance": {
+        "tier": "w3c",
+        "failure": {
+          "id": "F39",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/failures/F39",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Failure of Success Criterion 1.1.1 due to providing a text alternative that is not null (e.g., alt=\"spacer\" or alt=\"image\") for images that should be ignored by assistive technology\" (F39), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/failures/F39."
+        },
+        "technique": {
+          "id": "H67",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/html/H67",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Using null alt text and no title attribute on img elements for images that assistive technology should ignore\" (H67), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/html/H67."
+        },
+        "techniqueRating": "sufficient"
+      }
+    },
+    {
+      "id": "wcag-fake-heading-css-style",
+      "input": {
+        "wcagCriterion": "1.3.1",
+        "issueMessage": "Text is styled to look like a heading using CSS on a p element, but no heading markup is used, so assistive technology cannot identify it as a heading",
+        "htmlContext": "<p class=\"heading1\">Introduction</p>\n<p>This introduction provides detailed information about how to use this ...</p>",
+        "cssContext": ".heading1{\n  font-family: Times, serif;\n  font-size:200%;\n  font-weight:bold;\n}",
+        "platform": "html"
+      },
+      "expected": {
+        "fixedHtml": "<h1 class=\"heading1\">Introduction</h1>\n<p>This introduction provides detailed information about how to use this ...</p>",
+        "explanationMustMention": [
+          "heading element",
+          "H42",
+          "1.3.1"
+        ],
+        "effort": "low"
+      },
+      "provenance": {
+        "tier": "w3c",
+        "failure": {
+          "id": "F2",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/failures/F2",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Failure of Success Criterion 1.3.1 due to using changes in text presentation to convey information without using the appropriate markup or text\" (F2), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/failures/F2."
+        },
+        "technique": {
+          "id": "H42",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/html/H42",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Using h1-h6 to identify headings\" (H42), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/html/H42."
+        },
+        "techniqueRating": "sufficient"
+      }
+    },
+    {
+      "id": "wcag-heading-visual-effect-only",
+      "input": {
+        "wcagCriterion": "1.3.1",
+        "issueMessage": "An h4 element is used to visually style an address in large bold text, but the address does not begin a new section, so the heading markup misrepresents the document structure",
+        "htmlContext": "<p>Interested in learning more? Write to us at</p>\n<h4>3333 Third Avenue, Suite 300 &middot; New York City</h4>\n<p>And we'll send you the complete informational packet absolutely Free!</p>",
+        "platform": "html"
+      },
+      "expected": {
+        "fixedHtml": "<p>Interested in learning more? Write to us at</p>\n<p class=\"address-emphasis\">3333 Third Avenue, Suite 300 &middot; New York City</p>\n<p>And we'll send you the complete informational packet absolutely Free!</p>",
+        "explanationMustMention": [
+          "heading",
+          "structure",
+          "1.3.1"
+        ],
+        "effort": "low"
+      },
+      "provenance": {
+        "tier": "w3c",
+        "failure": {
+          "id": "F43",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/failures/F43",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Failure of Success Criterion 1.3.1 due to using structural markup in a way that does not represent relationships in the content\" (F43), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/failures/F43."
+        },
+        "technique": {
+          "id": "H42",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/html/H42",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Using h1-h6 to identify headings\" (H42), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/html/H42."
+        },
+        "techniqueRating": "sufficient"
+      }
+    },
+    {
+      "id": "wcag-table-headers-not-marked-up",
+      "input": {
+        "wcagCriterion": "1.3.1",
+        "issueMessage": "Data table uses td elements for all cells including the header row, so screen readers cannot announce column headers when navigating data cells",
+        "htmlContext": "<table>\n  <tr>\n    <td>Name</td>\n    <td>Age</td>\n    <td>Height (cm)</td>\n    <td>Weight (kg)</td>\n  </tr>\n  <tr>\n    <td>Linda</td>\n    <td>33</td>\n    <td>169</td>\n    <td>59</td>\n  </tr>\n</table>",
+        "platform": "html"
+      },
+      "expected": {
+        "fixedHtml": "<table>\n  <tr>\n    <th>Name</th>\n    <th>Age</th>\n    <th>Height (cm)</th>\n    <th>Weight (kg)</th>\n  </tr>\n  <tr>\n    <td>Linda</td>\n    <td>33</td>\n    <td>169</td>\n    <td>59</td>\n  </tr>\n</table>",
+        "explanationMustMention": [
+          "th element",
+          "table headers",
+          "1.3.1"
+        ],
+        "effort": "low"
+      },
+      "poison": {
+        "expect": "scored-down",
+        "reason": "Candidate's fixedHtml is byte-identical to the offending input -- no th elements were added, so the table headers remain programmatically undeterminable.",
+        "candidate": {
+          "fixedHtml": "<table>\n  <tr>\n    <td>Name</td>\n    <td>Age</td>\n    <td>Height (cm)</td>\n    <td>Weight (kg)</td>\n  </tr>\n  <tr>\n    <td>Linda</td>\n    <td>33</td>\n    <td>169</td>\n    <td>59</td>\n  </tr>\n</table>",
+          "explanation": "The table structure is already valid and does not require header markup changes.",
+          "effort": "low"
+        }
+      },
+      "provenance": {
+        "tier": "w3c",
+        "failure": {
+          "id": "F91",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/failures/F91",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Failure of Success Criterion 1.3.1 for not correctly marking up table headers\" (F91), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/failures/F91."
+        },
+        "technique": {
+          "id": "H51",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/html/H51",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Using table markup to present tabular information\" (H51), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/html/H51."
+        },
+        "techniqueRating": "sufficient"
+      }
+    },
+    {
+      "id": "wcag-table-role-presentation",
+      "input": {
+        "wcagCriterion": "1.3.1",
+        "issueMessage": "role=\"presentation\" is applied to a data table, suppressing its native semantic markup from the accessibility tree even though the table conveys real row/column relationships",
+        "htmlContext": "<table role=\"presentation\">\n  <caption>Fruits and their colors</caption>\n  <tr>\n    <th>Name</th>\n    <th>Color</th>\n  </tr>\n  <tr>\n    <td scope=\"row\">banana</td>\n    <td>yellow</td>\n  </tr>\n</table>",
+        "platform": "html"
+      },
+      "expected": {
+        "fixedHtml": "<table>\n  <caption>Fruits and their colors</caption>\n  <tr>\n    <th>Name</th>\n    <th>Color</th>\n  </tr>\n  <tr>\n    <th scope=\"row\">banana</th>\n    <td>yellow</td>\n  </tr>\n</table>",
+        "explanationMustMention": [
+          "role=\"presentation\"",
+          "table semantics",
+          "1.3.1"
+        ],
+        "effort": "low"
+      },
+      "provenance": {
+        "tier": "w3c",
+        "failure": {
+          "id": "F92",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/failures/F92",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Failure of Success Criterion 1.3.1 due to the use of role presentation on content which conveys semantic information\" (F92), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/failures/F92."
+        },
+        "technique": {
+          "id": "H51",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/html/H51",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Using table markup to present tabular information\" (H51), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/html/H51."
+        },
+        "techniqueRating": "sufficient"
+      }
+    },
+    {
+      "id": "wcag-form-control-no-label",
+      "input": {
+        "wcagCriterion": "4.1.2",
+        "issueMessage": "Text input has no associated label element, aria-label, or aria-labelledby, so assistive technology cannot determine its accessible name",
+        "htmlContext": "<form>\n  First name:\n  <input type=\"text\" name=\"firstname\">\n</form>",
+        "platform": "html"
+      },
+      "expected": {
+        "fixedHtml": "<form>\n  <label for=\"firstname\">First name:</label>\n  <input id=\"firstname\" type=\"text\" name=\"firstname\">\n</form>",
+        "explanationMustMention": [
+          "label element",
+          "for attribute",
+          "4.1.2"
+        ],
+        "effort": "low"
+      },
+      "poison": {
+        "expect": "scored-down",
+        "reason": "Candidate's fixedHtml is empty despite a confident-sounding explanation -- this is the degraded shape parseGenerateFixResponse produces on a malformed model response, and must not be scored as a genuine (if imperfect) attempt.",
+        "candidate": {
+          "fixedHtml": "",
+          "explanation": "Added a descriptive label to the form control so screen reader users can identify its purpose.",
+          "effort": "low"
+        }
+      },
+      "provenance": {
+        "tier": "w3c",
+        "failure": {
+          "id": "F68",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/failures/F68",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Failure of Success Criterion 4.1.2 due to a user interface control not having a programmatically determined name\" (F68), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/failures/F68."
+        },
+        "technique": {
+          "id": "H44",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/html/H44",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Using label elements to associate text labels with form controls\" (H44), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/html/H44."
+        },
+        "techniqueRating": "sufficient"
+      }
+    },
+    {
+      "id": "wcag-div-checkbox-no-role",
+      "input": {
+        "wcagCriterion": "4.1.2",
+        "issueMessage": "A span with a click handler and an image is used to simulate a checkbox, but no role is exposed, so assistive technology cannot identify it as a checkbox",
+        "htmlContext": "<p>\n  <span onclick=\"toggleCheckbox('chkbox')\">\n    <img src=\"unchecked.gif\" id=\"chkbox\" alt=\"\"> Include Signature\n  </span>\n</p>",
+        "platform": "html"
+      },
+      "expected": {
+        "fixedHtml": "<p>\n  <span role=\"checkbox\" aria-checked=\"false\" tabindex=\"0\" onclick=\"toggleCheckbox('chkbox')\">\n    <img src=\"unchecked.gif\" id=\"chkbox\" alt=\"\"> Include Signature\n  </span>\n</p>",
+        "explanationMustMention": [
+          "role=\"checkbox\"",
+          "WAI-ARIA",
+          "4.1.2"
+        ],
+        "effort": "medium"
+      },
+      "provenance": {
+        "tier": "w3c",
+        "failure": {
+          "id": "F59",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/failures/F59",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Failure of Success Criterion 4.1.2 due to using script to make div or span a user interface control in HTML without providing a role for the control\" (F59), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/failures/F59."
+        },
+        "technique": {
+          "id": "ARIA4",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/aria/ARIA4",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Using a WAI-ARIA role to expose the role of a user interface component\" (ARIA4), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/aria/ARIA4."
+        },
+        "techniqueRating": "sufficient"
+      }
+    },
+    {
+      "id": "wcag-multipart-phone-no-names",
+      "input": {
+        "wcagCriterion": "4.1.2",
+        "issueMessage": "A three-part US phone number field has a visible label programmatically associated only with the first input, leaving the other two parts with no accessible name",
+        "htmlContext": "<label for=\"area\">Phone number:</label> (<input id=\"area\" type=\"text\" size=\"3\">)\n<input type=\"text\" size=\"3\">-<input type=\"text\" size=\"4\">",
+        "platform": "html"
+      },
+      "expected": {
+        "fixedHtml": "<label for=\"area\">Phone number, area code:</label> (<input id=\"area\" type=\"text\" size=\"3\">)\n<label for=\"prefix\">Phone number, prefix:</label> <input id=\"prefix\" type=\"text\" size=\"3\">-<label for=\"suffix\">Phone number, line number:</label> <input id=\"suffix\" type=\"text\" size=\"4\">",
+        "explanationMustMention": [
+          "label element",
+          "each field",
+          "4.1.2"
+        ],
+        "effort": "medium"
+      },
+      "provenance": {
+        "tier": "w3c",
+        "failure": {
+          "id": "F86",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/failures/F86",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Failure of Success Criterion 4.1.2 due to not providing names for each part of a multi-part form field, such as a US telephone number\" (F86), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/failures/F86."
+        },
+        "technique": {
+          "id": "H44",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/html/H44",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Using label elements to associate text labels with form controls\" (H44), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/html/H44."
+        },
+        "techniqueRating": "sufficient"
+      }
+    },
+    {
+      "id": "wcag-link-context-unrelated-paragraph",
+      "input": {
+        "wcagCriterion": "2.4.4",
+        "issueMessage": "Link text \"Read More...\" gets its context from a preceding paragraph that is not programmatically associated with the link, so the link purpose cannot be determined out of context",
+        "htmlContext": "<p>A British businessman has racked up 2 million flyer miles and plans to travel on the world's first commercial tourism flights to space.</p>\n<p><a href=\"ff.html\">Read More...</a></p>",
+        "platform": "html"
+      },
+      "expected": {
+        "fixedHtml": "<p id=\"headline\">A British businessman has racked up 2 million flyer miles and plans to travel on the world's first commercial tourism flights to space.</p>\n<p><a href=\"ff.html\" aria-labelledby=\"p123 headline\" id=\"p123\">Read More...</a></p>",
+        "explanationMustMention": [
+          "aria-labelledby",
+          "link purpose",
+          "2.4.4"
+        ],
+        "effort": "medium"
+      },
+      "provenance": {
+        "tier": "w3c",
+        "failure": {
+          "id": "F63",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/failures/F63",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Failure of Success Criterion 2.4.4 due to providing link context only in content that is not related to the link\" (F63), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/failures/F63."
+        },
+        "technique": {
+          "id": "ARIA7",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/aria/ARIA7",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Using aria-labelledby for link purpose\" (ARIA7), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/aria/ARIA7."
+        },
+        "techniqueRating": "sufficient"
+      }
+    },
+    {
+      "id": "wcag-image-only-link-no-name",
+      "input": {
+        "wcagCriterion": "2.4.4",
+        "issueMessage": "A link contains only an image with a null alt attribute, and a separate duplicate text link exists for the same target, leaving screen readers to guess the image link's purpose from its filename",
+        "htmlContext": "<a href=\"scores.html\">\n  <img src=\"football.gif\" alt=\"\">\n</a>\n<a href=\"scores.html\">Football Scoreboard</a>",
+        "platform": "html"
+      },
+      "expected": {
+        "fixedHtml": "<a href=\"scores.html\">\n  <img src=\"football.gif\" alt=\"Football Scoreboard\">\n</a>",
+        "explanationMustMention": [
+          "alt attribute",
+          "link purpose",
+          "2.4.4"
+        ],
+        "effort": "low"
+      },
+      "provenance": {
+        "tier": "w3c",
+        "failure": {
+          "id": "F89",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/failures/F89",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Failure of Success Criteria 2.4.4, 2.4.9 and 4.1.2 due to not providing an accessible name for an image which is the only content in a link\" (F89), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/failures/F89."
+        },
+        "technique": {
+          "id": "H30",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/html/H30",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Providing link text that describes the purpose of a link for anchor elements\" (H30), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/html/H30."
+        },
+        "techniqueRating": "sufficient"
+      }
+    },
+    {
+      "id": "wcag-justified-text",
+      "input": {
+        "wcagCriterion": "1.4.8",
+        "issueMessage": "Paragraph text is fully justified (aligned to both left and right margins), creating uneven word spacing that is difficult to read for some users with cognitive disabilities",
+        "htmlContext": "<p>\n How much wood would a woodchuck chuck if a woodchuck could chuck wood?\n He would chuck, he would, as much as he could, and chuck as much wood\n As a woodchuck would if a woodchuck could chuck wood.\n</p>",
+        "cssContext": "p {text-align: justify}",
+        "platform": "html"
+      },
+      "expected": {
+        "fixedHtml": "<p style=\"text-align: left;\">\n How much wood would a woodchuck chuck if a woodchuck could chuck wood?\n He would chuck, he would, as much as he could, and chuck as much wood\n As a woodchuck would if a woodchuck could chuck wood.\n</p>",
+        "explanationMustMention": [
+          "text-align",
+          "justified",
+          "1.4.8"
+        ],
+        "effort": "low"
+      },
+      "provenance": {
+        "tier": "w3c",
+        "failure": {
+          "id": "F88",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/failures/F88",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Failure of Success Criterion 1.4.8 due to using text that is justified (aligned to both the left and the right margins)\" (F88), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/failures/F88."
+        },
+        "technique": {
+          "id": "C19",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/css/C19",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Specifying alignment either to the left or right in CSS\" (C19), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/css/C19."
+        },
+        "techniqueRating": "sufficient"
+      }
+    },
+    {
+      "id": "wcag-autocomplete-wrong-token",
+      "input": {
+        "wcagCriterion": "1.3.5",
+        "issueMessage": "The birthday input's autocomplete attribute is set to an invalid, made-up token instead of the HTML specification's defined 'bday' token, so its input purpose cannot be programmatically determined",
+        "htmlContext": "<h2>Your details:</h2>\n<label for=\"uname\">Name:</label>\n<input autocomplete=\"email\" id=\"uname\" type=\"text\">\n<label for=\"ubirthday\">Birthday:</label>\n<input autocomplete=\"birthday\" id=\"ubirthday\" type=\"text\">",
+        "platform": "html"
+      },
+      "expected": {
+        "fixedHtml": "<h2>Your details:</h2>\n<label for=\"uname\">Name:</label>\n<input autocomplete=\"name\" id=\"uname\" type=\"text\">\n<label for=\"ubirthday\">Birthday:</label>\n<input autocomplete=\"bday\" id=\"ubirthday\" type=\"text\">",
+        "explanationMustMention": [
+          "autocomplete",
+          "bday",
+          "1.3.5"
+        ],
+        "effort": "low"
+      },
+      "provenance": {
+        "tier": "w3c",
+        "failure": {
+          "id": "F107",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/failures/F107",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Failure of Success Criterion 1.3.5 due to incorrect autocomplete attribute values\" (F107), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/failures/F107."
+        },
+        "technique": {
+          "id": "H98",
+          "url": "https://www.w3.org/WAI/WCAG22/Techniques/html/H98",
+          "retrievedAt": "2026-09-05T00:00:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Using HTML autocomplete attributes\" (H98), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/html/H98."
+        },
+        "techniqueRating": "sufficient"
+      }
+    },
+    {
+      "id": "wcag-derived-input-missing-visible-label",
+      "input": {
+        "wcagCriterion": "3.3.2",
+        "issueMessage": "Text input requesting an email address has no visible, programmatically associated label, so users are not told what to enter",
+        "htmlContext": "<input type=\"text\" name=\"email\">",
+        "platform": "html"
+      },
+      "expected": {
+        "fixedHtml": "<label for=\"email\">Email address:</label>\n<input type=\"text\" name=\"email\" id=\"email\">",
+        "explanationMustMention": [
+          "label element",
+          "visible",
+          "3.3.2"
+        ],
+        "effort": "low"
+      },
+      "provenance": {
+        "tier": "derived",
+        "markupOrigin": "scan-corpus",
+        "markupNote": "Markup taken verbatim from packages/core/tests/fixer/fix-rules.test.ts:12, a committed fixture in this repo's own fix-suggestion rule engine test ('Input element does not have a label'). The input element itself is real repo content; the SC=3.3.2 framing (a label must be VISIBLE, not just programmatically associated) and the fix are an owner judgement traced to H44's own documented applicability to 3.3.2.",
+        "labelSource": {
+          "tier": "w3c",
+          "failure": {
+            "id": "F68",
+            "url": "https://www.w3.org/WAI/WCAG22/Techniques/failures/F68",
+            "retrievedAt": "2026-09-05T00:00:00.000Z",
+            "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Failure of Success Criterion 4.1.2 due to a user interface control not having a programmatically determined name\" (F68), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/failures/F68."
+          },
+          "technique": {
+            "id": "H44",
+            "url": "https://www.w3.org/WAI/WCAG22/Techniques/html/H44",
+            "retrievedAt": "2026-09-05T00:00:00.000Z",
+            "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Using label elements to associate text labels with form controls\" (H44), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/html/H44."
+          },
+          "techniqueRating": "sufficient"
+        }
+      }
+    },
+    {
+      "id": "wcag-derived-heading-css-class-only",
+      "input": {
+        "wcagCriterion": "2.4.10",
+        "issueMessage": "A visually-styled paragraph is used to introduce a new section instead of a heading element, so the section has no programmatically identifiable heading for screen-reader navigation",
+        "htmlContext": "<p class=\"title\">Big text</p>",
+        "platform": "html"
+      },
+      "expected": {
+        "fixedHtml": "<h2 class=\"title\">Big text</h2>",
+        "explanationMustMention": [
+          "heading element",
+          "section",
+          "2.4.10"
+        ],
+        "effort": "low"
+      },
+      "provenance": {
+        "tier": "derived",
+        "markupOrigin": "scan-corpus",
+        "markupNote": "Markup taken verbatim from packages/core/tests/fixer/fix-rules.test.ts:24, a committed fixture in this repo's own fix-suggestion rule engine test ('Heading markup should be used'). The p.title element is real repo content; framing it under SC=2.4.10 (Section Headings, AAA) rather than 1.3.1 is an owner judgement -- G141 is confirmed Sufficient for 2.4.10 (no official W3C failure document is paired with 2.4.10 in the WCAG understanding data), and F43 (Sufficient technique H42, cited elsewhere in this set for 1.3.1) documents the same underlying pattern of heading markup misuse that this derived item's section-heading framing extends.",
+        "labelSource": {
+          "tier": "w3c",
+          "failure": {
+            "id": "F43",
+            "url": "https://www.w3.org/WAI/WCAG22/Techniques/failures/F43",
+            "retrievedAt": "2026-09-05T00:00:00.000Z",
+            "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Failure of Success Criterion 1.3.1 due to using structural markup in a way that does not represent relationships in the content\" (F43), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/failures/F43."
+          },
+          "technique": {
+            "id": "G141",
+            "url": "https://www.w3.org/WAI/WCAG22/Techniques/general/G141",
+            "retrievedAt": "2026-09-05T00:00:00.000Z",
+            "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Organizing a page using headings\" (G141), WCAG 2.2 Techniques, https://www.w3.org/WAI/WCAG22/Techniques/general/G141."
+          },
+          "techniqueRating": "sufficient"
+        }
       }
     }
   ]
