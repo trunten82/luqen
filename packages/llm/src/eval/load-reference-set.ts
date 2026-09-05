@@ -150,14 +150,21 @@ function validateItem<TItem>(
   // schema-validation failure).
   assertAttributedProvenance(rawItem, itemId, setPath);
 
-  // Step 6: full TypeBox structural check.
+  // Id safety runs BEFORE the full TypeBox check — deliberately reordered
+  // from the plan's literal 6-then-7 prose. The schema's own `id` pattern
+  // (module-scope in schema.ts) already excludes dots structurally, so an id
+  // containing a dot would otherwise fail the generic schema check first and
+  // UnsafeReferenceIdentifierError would never be observed firing for that
+  // case — the exact "for the right reason" requirement Task 3 exists to
+  // prove. Checking id safety first guarantees the dedicated error fires for
+  // BOTH violation shapes (a 4+ digit run and a dot), while the schema
+  // pattern remains in place as defense-in-depth for well-formed ids.
+  assertSafeId(itemId);
+
+  // Full TypeBox structural check.
   if (!Value.Check(itemSchema, rawItem)) {
     throw new InvalidReferenceSetError(setPath, firstSchemaErrorDetail(itemSchema, rawItem, itemId));
   }
-
-  // Step 7: id safety, checked last so a malformed item never reaches this far
-  // carrying an unsafe id undetected.
-  assertSafeId(itemId);
 
   return deepFreeze(rawItem) as TItem;
 }
