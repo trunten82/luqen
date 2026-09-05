@@ -21,7 +21,7 @@ reputation, or the absence of a restriction.
 | `images/complex-flowchart-goal.png` | `complex-flowchart-goal` | `cc0` | Creative Commons Zero (Public Domain Dedication) | https://commons.wikimedia.org/wiki/File:Flowchart_Showing_Driving_to_a_Goal.png | https://upload.wikimedia.org/wikipedia/commons/3/37/Flowchart_Showing_Driving_to_a_Goal.png | Tomwsulcer | 2026-09-05T21:50:00.000Z | 116606 |
 | `images/complex-thyroid-incidence.png` | `complex-thyroid-incidence` | `cc0` | Creative Commons Zero (Public Domain Dedication) | https://commons.wikimedia.org/wiki/File:Pie_chart_of_thyroid_cancer_types_by_incidence.png | https://upload.wikimedia.org/wikipedia/commons/e/e4/Pie_chart_of_thyroid_cancer_types_by_incidence.png | Mikael Häggström, M.D. | 2026-09-05T21:50:00.000Z | 69297 |
 | `images/decorative-geometric-pattern.jpg` | `decorative-geometric-pattern` | `cc0` | Creative Commons Zero (Public Domain Dedication) | https://commons.wikimedia.org/wiki/File:Grey_dusty_worn_geometric_diagonal_pattern_seamless_tiled_floor_paving_texture.jpg | https://thumb.wikimedia.org/wikipedia/commons/thumb/7/72/Grey_dusty_worn_geometric_diagonal_pattern_seamless_tiled_floor_paving_texture.jpg/960px-Grey_dusty_worn_geometric_diagonal_pattern_seamless_tiled_floor_paving_texture.jpg | Sisters.seamless | 2026-09-05T21:50:00.000Z | 288101 |
-| `images/decorative-architectural-ornament.png` | `decorative-architectural-ornament` | `cc-by-sa-4.0` | Creative Commons Attribution-ShareAlike 4.0 | https://commons.wikimedia.org/wiki/File:Architectural_Corner_Ornament_Featuring_Leaf_and_Curl_Patterns,_Vishrambaug_Wada,_Pune.svg | https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e2/Architectural_Corner_Ornament_Featuring_Leaf_and_Curl_Patterns%2C_Vishrambaug_Wada%2C_Pune.svg/500px-Architectural_Corner_Ornament_Featuring_Leaf_and_Curl_Patterns%2C_Vishrambaug_Wada%2C_Pune.svg.png | Art Projects MKCL KF | 2026-09-05T21:50:00.000Z | 24609 |
+| `images/decorative-floral-wallpaper.jpg` | `decorative-floral-wallpaper` | `cc0` | Creative Commons Zero (Public Domain Dedication) | https://commons.wikimedia.org/wiki/File:Blad_behangselpapier_met_bloemenvaas_Ornament_met_bloemmotieven,_RP-P-1993-143.jpg | https://thumb.wikimedia.org/wikipedia/commons/thumb/6/69/Blad_behangselpapier_met_bloemenvaas_Ornament_met_bloemmotieven%2C_RP-P-1993-143.jpg/500px-Blad_behangselpapier_met_bloemenvaas_Ornament_met_bloemmotieven%2C_RP-P-1993-143.jpg | Rijksmuseum | 2026-09-05T22:01:00.000Z | 176081 |
 | `images/decorative-wallpaper-corner.jpg` | `decorative-wallpaper-corner` | `cc0` | Creative Commons Zero (Public Domain Dedication) | https://commons.wikimedia.org/wiki/File:Papierbehangsel_met_hoekpatroon_van_een_palmet,_BK-2001-17.jpg | https://thumb.wikimedia.org/wikipedia/commons/thumb/5/50/Papierbehangsel_met_hoekpatroon_van_een_palmet%2C_BK-2001-17.jpg/960px-Papierbehangsel_met_hoekpatroon_van_een_palmet%2C_BK-2001-17.jpg | Rijksmuseum | 2026-09-05T21:50:00.000Z | 238281 |
 | `images/functional-print-icon.png` | `functional-print-icon` | `cc0` | Creative Commons Zero (Public Domain Dedication) | https://commons.wikimedia.org/wiki/File:Green_icon_-_Print.ZGH.png | https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3f/Green_icon_-_Print.ZGH.png/330px-Green_icon_-_Print.ZGH.png | Aksel Tinfat | 2026-09-05T21:50:00.000Z | 34514 |
 | `images/functional-search-icon.png` | `functional-search-icon` | `cc0` | Creative Commons Zero (Public Domain Dedication) | https://commons.wikimedia.org/wiki/File:Green_icon_-_Search.ZGH.png | https://thumb.wikimedia.org/wikipedia/commons/thumb/7/77/Green_icon_-_Search.ZGH.png/330px-Green_icon_-_Search.ZGH.png | Aksel Tinfat | 2026-09-05T21:50:00.000Z | 42229 |
@@ -82,9 +82,15 @@ reputation, or the absence of a stated restriction. Retrieved 2026-09-05 (this s
 - `decorative-geometric-pattern` — API returned `LicenseShortName: "CC0"`,
   `AttributionRequired: false`, `Artist: Sisters.seamless`. A seamless floor-texture photograph; no
   identifiable location or person.
-- `decorative-architectural-ornament` — API returned `LicenseShortName: "CC BY-SA 4.0"`,
-  `AttributionRequired: true`, `Artist: Art Projects MKCL KF`. **Attribution obligation is
-  ongoing** — carried forward into the item's `licence.author` field and this manifest row.
+- `decorative-floral-wallpaper` — API returned `LicenseShortName: "CC0"`, `AttributionRequired:
+  false`, `Artist: Rijksmuseum` (a museum-collection wallpaper-sheet photograph, flower-vase
+  ornament motif — no person depicted). **Replaces `decorative-architectural-ornament`
+  (CC BY-SA 4.0, Art Projects MKCL KF), rejected at the Task 2 checkpoint** — the orchestrator's
+  reasoning (recorded verbatim): "share-alike is a materially stronger, ongoing obligation than
+  anything else in the set, and it is being carried by a decorative texture — the single most
+  substitutable item here. There is no reason to accept a copyleft obligation in perpetuity for an
+  image whose only job is to be ignored by alt-text." The rejected file and its manifest row have
+  been deleted, not merely superseded.
 - `decorative-wallpaper-corner` — API returned `LicenseShortName: "CC0"`, `AttributionRequired:
   false`, `Artist: Rijksmuseum` (Rijksmuseum's own open-access CC0 release of a museum-collection
   wallpaper-sample photograph — no living person depicted).
@@ -93,9 +99,19 @@ reputation, or the absence of a stated restriction. Retrieved 2026-09-05 (this s
   `Artist: Aksel Tinfat` for each.
 
 **Reviewer flags for Task 2 (per the plan's checkpoint instructions):**
-- One CC-BY-SA asset requiring ongoing attribution: `decorative-architectural-ornament` (Art
-  Projects MKCL KF). All other new assets are CC0 or public domain with no attribution obligation.
-- No asset in this batch depicts an identifiable person, a home interior, or a location-revealing
+- **One asset in the whole SET carries an attribution obligation — `img-informative-seed`
+  (CC BY 3.0, MichaelMcPhee), inherited from 83-01. Every other asset in the set is CC0 or public
+  domain, with no attribution obligation.** (Earlier revision of this manifest scoped this sentence
+  to "this batch" — true of the 12 new rows in isolation, but false of the set as a whole, since it
+  read as an answer to the set-scope question while only answering the narrower one. The
+  CC BY-SA 4.0 asset that batch originally flagged, `decorative-architectural-ornament`, was
+  rejected at the Task 2 checkpoint and replaced with `decorative-floral-wallpaper` (CC0) — see
+  above — so it no longer contributes an obligation either way.) This sentence is also now backed
+  by an automated check, not merely a claim to remember: `image-alt-set.test.ts` asserts every
+  item's `licence.id` is in the allowlist `{cc0, public-domain}` except a named exception list
+  (currently `[img-informative-seed]`), so a future attribution-bearing asset trips a test instead
+  of relying on the next author re-reading this paragraph.
+- No asset in the set depicts an identifiable person, a home interior, or a location-revealing
   photograph. `complex-thyroid-incidence` is an aggregate-data chart, not a patient photograph.
 - The W3C tutorial photographs (`dog.jpg`, `family.jpg`, `peafowl.jpg`, `chart.png`) were NOT used
   and the underlying rights question remains OPEN (`83-RESEARCH.md` Open Question 1) — not resolved
