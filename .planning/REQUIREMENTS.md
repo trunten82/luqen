@@ -16,11 +16,11 @@ rewritten once one does.** A bar edited after its result is not a bar.
 
 ### Reference sets — the ground truth
 
-- [ ] **EVALSET-01**: A maintainer can load a versioned reference set of real WCAG violations, each item carrying the offending source snippet, the failing success criterion, and a known-good fix
+- [x] **EVALSET-01**: A maintainer can load a versioned reference set of real WCAG violations, each item carrying the offending source snippet, the failing success criterion, and a known-good fix
 - [x] **EVALSET-02**: Every reference item records attributed provenance — where the label came from, who stands behind it, and when — and the loader REFUSES an item that has none
-- [ ] **EVALSET-03**: A maintainer can load a versioned labelled image set spanning photographs, charts, decorative icons and complex graphics, each with attributed alt-text ground truth
-- [ ] **EVALSET-04**: Every image item carries its expected VPAT-relevant verdict (issue vs pass) as explicit data, so false-pass can be COUNTED rather than inferred from a score
-- [ ] **EVALSET-05**: Each set contains deliberately-wrong poison items — a bad fix, a wrong alt-text — flagged as such in the data, so the harness's own scoring can be watched to fail
+- [x] **EVALSET-03**: A maintainer can load a versioned labelled image set spanning photographs, charts, decorative icons and complex graphics, each with attributed alt-text ground truth
+- [x] **EVALSET-04**: Every image item carries its expected VPAT-relevant verdict (issue vs pass) as explicit data, so false-pass can be COUNTED rather than inferred from a score
+- [x] **EVALSET-05**: Each set contains deliberately-wrong poison items — a bad fix, a wrong alt-text — flagged as such in the data, so the harness's own scoring can be watched to fail
 
 ### Scoring runner — the instrument
 
@@ -64,11 +64,11 @@ Deferred, tracked, not in this roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| EVALSET-01 | Phase 83 | Pending |
+| EVALSET-01 | Phase 83 | Complete |
 | EVALSET-02 | Phase 83 | Complete |
-| EVALSET-03 | Phase 83 | Pending |
-| EVALSET-04 | Phase 83 | In Progress |
-| EVALSET-05 | Phase 83 | In Progress |
+| EVALSET-03 | Phase 83 | Complete |
+| EVALSET-04 | Phase 83 | Complete |
+| EVALSET-05 | Phase 83 | Complete |
 | HARNESS-01 | Phase 84 | Pending |
 | HARNESS-02 | Phase 84 | Pending |
 | HARNESS-03 | Phase 84 | Pending |
@@ -81,6 +81,17 @@ Deferred, tracked, not in this roadmap.
 | BASELINE-01 | Phase 86 | Pending |
 | BASELINE-02 | Phase 86 | Pending |
 
+> **EVALSET-04 and -05: RESOLVED to Complete on 2026-09-05, after 83-02 and 83-03 merged.**
+> The correction below is kept rather than deleted — it is the evidence for why the check exists,
+> and a recorded verdict is not overwritten. What changed is the FACT it was guarding, not the
+> judgement: the populated sets now exist (wcag-fixes.v1.json 17 items / 3 poison; image-alt.v1.json
+> 13 items / 4 poison including a false-PASS), so the condition the note demanded is met and
+> verified independently in 83-VERIFICATION.md. Note that BOTH the 83-01 and 83-03 executors
+> declined to mark these complete from inside an isolated worktree that could not see its siblings —
+> that refusal was correct, and the readiness check belongs centrally, after the merge, which is
+> where it was finally run.
+>
+> ORIGINAL CORRECTION, 2026-09-05, retained verbatim:
 > **EVALSET-04 and -05 are IN PROGRESS, not Complete.** The 83-01 executor marked both complete;
 > corrected here. Both are multi-plan in the roadmap (-04 → 83-01 + 83-03, -05 → 83-01 + 83-02 +
 > 83-03). 83-01 delivered the MECHANISM — `expectedVerdict` as top-level data, poison items that
