@@ -184,7 +184,10 @@ describe('reference-set loader refusals — every named error observed firing', 
 
     const result = loadWcagFixSet(setPath, 'v1');
 
-    expect(result.items).toHaveLength(1);
+    // Was toHaveLength(1) when only the 83-01 seed item existed. Plan 83-02
+    // populated the set to 17 items; assert the seed item's presence and
+    // position instead of a total count that legitimately grows over time.
+    expect(result.items.length).toBeGreaterThanOrEqual(1);
     expect(result.items[0].id).toBe('wcag-img-missing-alt-01');
   });
 
