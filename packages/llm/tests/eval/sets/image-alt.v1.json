@@ -2,7 +2,7 @@
   "set": "image-alt",
   "setVersion": "v1",
   "capability": "analyse-visual",
-  "notes": "Seed set: one W3C-anchored informative-category item proving the image loader end to end, including asset resolution and licence recording. Plan 83-03 fills this set with the remaining categories (complex, decorative, functional).",
+  "notes": "Image-alt v1 set: 13 items. Provenance tier: 8 w3c, 5 owner. The w3c-tier items are either a verbatim W3C WAI-tutorial worked-example alt text applied to a substitute image (telephone/fax/print/search icons), or a decorative image, tagged w3c because the ground-truth alt (the empty string) is the universal W3C rule for ALL decorative images regardless of pixel content, not image-specific wording (geometric-pattern, floral-wallpaper, wallpaper-corner). The 5 owner-tier items (a bicycle photograph, three chart/diagram images, and a home icon) carry alt text written for this phase, following the W3C category criteria but not quoting a verbatim W3C example -- that ratio is stated here rather than disguised (D-03). Category counts: informative 4, complex 3, decorative 3, functional 3. Verdict split: 7 issue, 6 pass. Poison items: 4, covering a false-PASS, a false-ISSUE, a filename-as-suggestedAlt plausible-wrong-alt, and an empty-suggestedAlt confident-looking variant -- see each item's poison field. This v1 set covers check: 'alt-text' only. analyse-visual also supports heading-semantics, which needs rendered page screenshots rather than single images and is NOT covered here; this gap is recorded so Phase 84 does not read image-alt.v1.json as covering the whole analyse-visual capability. Licensing: one asset in the set carries an attribution obligation -- img-informative-seed (CC BY 3.0, MichaelMcPhee), inherited from 83-01. Every other asset is CC0 or public domain; see LICENCES.md.",
   "items": [
     {
       "id": "img-informative-seed",
@@ -34,6 +34,421 @@
           "retrievedAt": "2026-09-05T09:22:25.000Z",
           "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Images Tutorial — Informative Images\", Web Accessibility Initiative (WAI), https://www.w3.org/WAI/tutorials/images/informative/. The category criteria and alt-text phrasing guidance are W3C prose; the pixels of the seed asset are separately licensed per the \"licence\" block above."
         }
+      },
+      "poison": {
+        "expect": "scored-down",
+        "reason": "False-PASS: accepting 'pass' when the presented markup carries no alt attribute at all would incorrectly clear a real WCAG 1.1.1 violation -- the expensive error, since it can elevate a criterion to 'Supports' in a document someone relies on legally.",
+        "candidate": {
+          "verdict": "pass",
+          "findings": [],
+          "altClassification": "informational",
+          "suggestedAlt": "A golden retriever puppy resting on a wooden floor"
+        }
+      }
+    },
+    {
+      "id": "informative-telephone-icon",
+      "category": "informative",
+      "mediaType": "image/png",
+      "input": {
+        "check": "alt-text",
+        "context": "<img src=\"informative-telephone-icon.png\">"
+      },
+      "expectedVerdict": "issue",
+      "expected": {
+        "altClassification": "informational",
+        "suggestedAlt": "Telephone"
+      },
+      "licence": {
+        "id": "public-domain",
+        "name": "Public domain (PD-self)",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Black_telephone_icon_from_DejaVu_Sans.svg",
+        "fileUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/63/Black_telephone_icon_from_DejaVu_Sans.svg/330px-Black_telephone_icon_from_DejaVu_Sans.svg.png",
+        "author": "DejaVu Fonts — Authors; vector: Remember the dot",
+        "retrievedAt": "2026-09-05T21:50:00.000Z",
+        "verifiedVia": "Wikimedia Commons API imageinfo|extmetadata: LicenseShortName=\"Public domain\", AttributionRequired=false"
+      },
+      "provenance": {
+        "tier": "w3c",
+        "guidance": {
+          "id": "wai-tutorials-images-informative",
+          "url": "https://www.w3.org/WAI/tutorials/images/informative/",
+          "retrievedAt": "2026-09-05T21:50:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Images Tutorial — Informative Images\", Web Accessibility Initiative (WAI), https://www.w3.org/WAI/tutorials/images/informative/, whose phone-icon worked example gives the alt text \"Telephone\" verbatim -- reused here on a substitute telephone icon. The category criteria and this alt-text value are W3C prose; the pixels of this asset are separately licensed per the \"licence\" block above."
+        }
+      }
+    },
+    {
+      "id": "informative-fax-icon",
+      "category": "informative",
+      "mediaType": "image/png",
+      "input": {
+        "check": "alt-text",
+        "context": "<img src=\"informative-fax-icon.png\" alt=\"Fax\">"
+      },
+      "expectedVerdict": "pass",
+      "expected": {
+        "altClassification": "informational",
+        "suggestedAlt": "Fax"
+      },
+      "licence": {
+        "id": "cc0",
+        "name": "Creative Commons Zero (Public Domain Dedication)",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Fax_machine.svg",
+        "fileUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/76/Fax_machine.svg/330px-Fax_machine.svg.png",
+        "author": "cactus cowboy (Openclipart)",
+        "retrievedAt": "2026-09-05T21:50:00.000Z",
+        "verifiedVia": "Wikimedia Commons API imageinfo|extmetadata: LicenseShortName=\"CC0\", LicenseUrl=http://creativecommons.org/publicdomain/zero/1.0/deed.en, AttributionRequired=false"
+      },
+      "provenance": {
+        "tier": "w3c",
+        "guidance": {
+          "id": "wai-tutorials-images-informative",
+          "url": "https://www.w3.org/WAI/tutorials/images/informative/",
+          "retrievedAt": "2026-09-05T21:50:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Images Tutorial — Informative Images\", Web Accessibility Initiative (WAI), https://www.w3.org/WAI/tutorials/images/informative/, whose fax-icon worked example gives the alt text \"Fax\" verbatim -- reused here on a substitute fax icon. The category criteria and this alt-text value are W3C prose; the pixels of this asset are separately licensed per the \"licence\" block above."
+        }
+      }
+    },
+    {
+      "id": "informative-bicycle-photo",
+      "category": "informative",
+      "mediaType": "image/jpeg",
+      "input": {
+        "check": "alt-text",
+        "context": "<img src=\"informative-bicycle-photo.jpg\" alt=\"Bicycles parked against a brick wall in dappled spring sunlight\">"
+      },
+      "expectedVerdict": "pass",
+      "expected": {
+        "altClassification": "informational",
+        "suggestedAlt": "Bicycles parked against a brick wall in dappled spring sunlight"
+      },
+      "licence": {
+        "id": "cc0",
+        "name": "Creative Commons Zero (Public Domain Dedication)",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:2013.04_-_%27A_close-up_of_parked_bicycles_and_gentle_branches%27,_in_the_sun-light_of_Spring_-_on_the_corner_of_Hoogtekadijk_and_Matrozenhof,_in_district_Kadijken,_city_Amsterdam;_urban_photography,_Fons_Heijnsbroek_(11176613523).jpg",
+        "fileUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/18/2013.04_-_%27A_close-up_of_parked_bicycles_and_gentle_branches%27%2C_in_the_sun-light_of_Spring_-_on_the_corner_of_Hoogtekadijk_and_Matrozenhof%2C_in_district_Kadijken%2C_city_Amsterdam%3B_urban_photography%2C_Fons_Heijnsbroek_%2811176613523%29.jpg/960px-thumbnail.jpg",
+        "author": "Fons Heijnsbroek",
+        "retrievedAt": "2026-09-05T21:50:00.000Z",
+        "verifiedVia": "Wikimedia Commons API imageinfo|extmetadata: LicenseShortName=\"CC0\", AttributionRequired=false"
+      },
+      "provenance": {
+        "tier": "owner",
+        "adjudicatedBy": "Luqen product owner",
+        "adjudicatedAt": "2026-09-05T21:50:00.000Z",
+        "rationale": "Substitute photograph for the informative category (depicts identifiable real content, per W3C's informative-image criteria at the guidance URL below). No W3C-attributed photograph of this subject exists in our approved asset set, so the alt text is original wording written for this phase, not a verbatim W3C worked example."
+      }
+    },
+    {
+      "id": "complex-energy-consumption",
+      "category": "complex",
+      "mediaType": "image/png",
+      "input": {
+        "check": "alt-text",
+        "context": "<img src=\"complex-energy-consumption.png\" alt=\"chart\">"
+      },
+      "expectedVerdict": "issue",
+      "expected": {
+        "altClassification": "informational",
+        "suggestedAlt": "Bar chart of U.S. energy consumption by sector, showing residential, commercial, industrial and transportation shares"
+      },
+      "licence": {
+        "id": "public-domain",
+        "name": "Public domain (US federal government work, DOE)",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:US_Energy_consumption_by_sector.png",
+        "fileUrl": "https://upload.wikimedia.org/wikipedia/commons/d/d1/US_Energy_consumption_by_sector.png",
+        "author": "U.S. Department of Energy (no named individual author recorded on file page)",
+        "retrievedAt": "2026-09-05T21:50:00.000Z",
+        "verifiedVia": "Wikimedia Commons API imageinfo|extmetadata: LicenseShortName=\"Public domain\", UsageTerms=\"Public domain\", AttributionRequired=false"
+      },
+      "provenance": {
+        "tier": "owner",
+        "adjudicatedBy": "Luqen product owner",
+        "adjudicatedAt": "2026-09-05T21:50:00.000Z",
+        "rationale": "Substitute chart for the complex category, following W3C's complex-image criteria (a short alt cannot substitute for the underlying data) at the guidance URL below, but the alt wording describing this specific chart's content is original, not a verbatim W3C worked example."
+      },
+      "poison": {
+        "expect": "scored-down",
+        "reason": "Plausible-but-wrong alt: verdict is correct (issue), but suggestedAlt is set to the bare filename -- W3C names this Failure F30 explicitly, and it must be distinguishable from a genuine low-confidence result.",
+        "candidate": {
+          "verdict": "issue",
+          "findings": [
+            { "description": "Chart lacks a meaningful alt attribute", "wcagCriterion": "1.1.1", "confidence": "high" }
+          ],
+          "altClassification": "informational",
+          "suggestedAlt": "complex-energy-consumption.png"
+        }
+      }
+    },
+    {
+      "id": "complex-flowchart-goal",
+      "category": "complex",
+      "mediaType": "image/png",
+      "input": {
+        "check": "alt-text",
+        "context": "<img src=\"complex-flowchart-goal.png\" alt=\"Flowchart showing the steps to plan and achieve a personal goal, from setting the goal to reviewing the outcome\">"
+      },
+      "expectedVerdict": "pass",
+      "expected": {
+        "altClassification": "informational",
+        "suggestedAlt": "Flowchart showing the steps to plan and achieve a personal goal, from setting the goal to reviewing the outcome"
+      },
+      "licence": {
+        "id": "cc0",
+        "name": "Creative Commons Zero (Public Domain Dedication)",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Flowchart_Showing_Driving_to_a_Goal.png",
+        "fileUrl": "https://upload.wikimedia.org/wikipedia/commons/3/37/Flowchart_Showing_Driving_to_a_Goal.png",
+        "author": "Tomwsulcer",
+        "retrievedAt": "2026-09-05T21:50:00.000Z",
+        "verifiedVia": "Wikimedia Commons API imageinfo|extmetadata: LicenseShortName=\"CC0\", LicenseUrl=http://creativecommons.org/publicdomain/zero/1.0/deed.en, AttributionRequired=false"
+      },
+      "provenance": {
+        "tier": "owner",
+        "adjudicatedBy": "Luqen product owner",
+        "adjudicatedAt": "2026-09-05T21:50:00.000Z",
+        "rationale": "Substitute diagram for the complex category, following W3C's complex-image criteria at the guidance URL below, but the alt wording describing this specific flowchart's steps is original, not a verbatim W3C worked example."
+      }
+    },
+    {
+      "id": "complex-thyroid-incidence",
+      "category": "complex",
+      "mediaType": "image/png",
+      "input": {
+        "check": "alt-text",
+        "context": "<img src=\"complex-thyroid-incidence.png\">"
+      },
+      "expectedVerdict": "issue",
+      "expected": {
+        "altClassification": "informational",
+        "suggestedAlt": "Pie chart of thyroid cancer types by relative incidence"
+      },
+      "licence": {
+        "id": "cc0",
+        "name": "Creative Commons Zero (Public Domain Dedication)",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Pie_chart_of_thyroid_cancer_types_by_incidence.png",
+        "fileUrl": "https://upload.wikimedia.org/wikipedia/commons/e/e4/Pie_chart_of_thyroid_cancer_types_by_incidence.png",
+        "author": "Mikael Häggström, M.D.",
+        "retrievedAt": "2026-09-05T21:50:00.000Z",
+        "verifiedVia": "Wikimedia Commons API imageinfo|extmetadata: LicenseShortName=\"CC0\", AttributionRequired=false"
+      },
+      "provenance": {
+        "tier": "owner",
+        "adjudicatedBy": "Luqen product owner",
+        "adjudicatedAt": "2026-09-05T21:50:00.000Z",
+        "rationale": "Substitute chart for the complex category, following W3C's complex-image criteria at the guidance URL below, but the alt wording describing this specific chart's content is original, not a verbatim W3C worked example. Aggregate-incidence medical illustration, not a patient photograph."
+      },
+      "poison": {
+        "expect": "scored-down",
+        "reason": "Confident-looking-but-empty variant: verdict is correct (issue), but suggestedAlt is empty despite a confident, non-decorative finding -- exactly what parseAnalyseVisualResponse produces when it silently swallows a malformed model response, and this must stay distinguishable from a genuine low score.",
+        "candidate": {
+          "verdict": "issue",
+          "findings": [
+            { "description": "Missing accessible description of chart data", "wcagCriterion": "1.1.1", "confidence": "high" }
+          ],
+          "altClassification": "informational",
+          "suggestedAlt": ""
+        }
+      }
+    },
+    {
+      "id": "decorative-geometric-pattern",
+      "category": "decorative",
+      "mediaType": "image/jpeg",
+      "input": {
+        "check": "alt-text",
+        "context": "<img src=\"decorative-geometric-pattern.jpg\" alt=\"\">"
+      },
+      "expectedVerdict": "pass",
+      "expected": {
+        "altClassification": "decorative",
+        "suggestedAlt": ""
+      },
+      "licence": {
+        "id": "cc0",
+        "name": "Creative Commons Zero (Public Domain Dedication)",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Grey_dusty_worn_geometric_diagonal_pattern_seamless_tiled_floor_paving_texture.jpg",
+        "fileUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/72/Grey_dusty_worn_geometric_diagonal_pattern_seamless_tiled_floor_paving_texture.jpg/960px-Grey_dusty_worn_geometric_diagonal_pattern_seamless_tiled_floor_paving_texture.jpg",
+        "author": "Sisters.seamless",
+        "retrievedAt": "2026-09-05T21:50:00.000Z",
+        "verifiedVia": "Wikimedia Commons API imageinfo|extmetadata: LicenseShortName=\"CC0\", AttributionRequired=false"
+      },
+      "provenance": {
+        "tier": "w3c",
+        "guidance": {
+          "id": "wai-tutorials-images-decorative",
+          "url": "https://www.w3.org/WAI/tutorials/images/decorative/",
+          "retrievedAt": "2026-09-05T21:50:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Images Tutorial — Decorative Images\", Web Accessibility Initiative (WAI), https://www.w3.org/WAI/tutorials/images/decorative/, whose worked examples all use alt=\"\" -- the universal, pixel-independent rule for decorative images, reused here verbatim. The category rule is W3C prose; the pixels of this asset are separately licensed per the \"licence\" block above."
+        }
+      }
+    },
+    {
+      "id": "decorative-floral-wallpaper",
+      "category": "decorative",
+      "mediaType": "image/jpeg",
+      "input": {
+        "check": "alt-text",
+        "context": "<img src=\"decorative-floral-wallpaper.jpg\" alt=\"Floral wallpaper pattern\">"
+      },
+      "expectedVerdict": "issue",
+      "expected": {
+        "altClassification": "decorative",
+        "suggestedAlt": ""
+      },
+      "licence": {
+        "id": "cc0",
+        "name": "Creative Commons Zero (Public Domain Dedication)",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Blad_behangselpapier_met_bloemenvaas_Ornament_met_bloemmotieven,_RP-P-1993-143.jpg",
+        "fileUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/69/Blad_behangselpapier_met_bloemenvaas_Ornament_met_bloemmotieven%2C_RP-P-1993-143.jpg/500px-Blad_behangselpapier_met_bloemenvaas_Ornament_met_bloemmotieven%2C_RP-P-1993-143.jpg",
+        "author": "Rijksmuseum",
+        "retrievedAt": "2026-09-05T22:01:00.000Z",
+        "verifiedVia": "Wikimedia Commons API imageinfo|extmetadata: LicenseShortName=\"CC0\", AttributionRequired=false"
+      },
+      "provenance": {
+        "tier": "w3c",
+        "guidance": {
+          "id": "wai-tutorials-images-decorative",
+          "url": "https://www.w3.org/WAI/tutorials/images/decorative/",
+          "retrievedAt": "2026-09-05T22:01:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Images Tutorial — Decorative Images\", Web Accessibility Initiative (WAI), https://www.w3.org/WAI/tutorials/images/decorative/, whose worked examples all use alt=\"\" -- the universal, pixel-independent rule for decorative images, reused here verbatim. The category rule is W3C prose; the pixels of this asset are separately licensed per the \"licence\" block above. Replaces a CC BY-SA 4.0 decorative ornament rejected at the Task 2 checkpoint (see LICENCES.md)."
+        }
+      }
+    },
+    {
+      "id": "decorative-wallpaper-corner",
+      "category": "decorative",
+      "mediaType": "image/jpeg",
+      "input": {
+        "check": "alt-text",
+        "context": "<img src=\"decorative-wallpaper-corner.jpg\" alt=\"\">"
+      },
+      "expectedVerdict": "pass",
+      "expected": {
+        "altClassification": "decorative",
+        "suggestedAlt": ""
+      },
+      "licence": {
+        "id": "cc0",
+        "name": "Creative Commons Zero (Public Domain Dedication)",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Papierbehangsel_met_hoekpatroon_van_een_palmet,_BK-2001-17.jpg",
+        "fileUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/50/Papierbehangsel_met_hoekpatroon_van_een_palmet%2C_BK-2001-17.jpg/960px-Papierbehangsel_met_hoekpatroon_van_een_palmet%2C_BK-2001-17.jpg",
+        "author": "Rijksmuseum",
+        "retrievedAt": "2026-09-05T21:50:00.000Z",
+        "verifiedVia": "Wikimedia Commons API imageinfo|extmetadata: LicenseShortName=\"CC0\", AttributionRequired=false"
+      },
+      "provenance": {
+        "tier": "w3c",
+        "guidance": {
+          "id": "wai-tutorials-images-decorative",
+          "url": "https://www.w3.org/WAI/tutorials/images/decorative/",
+          "retrievedAt": "2026-09-05T21:50:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Images Tutorial — Decorative Images\", Web Accessibility Initiative (WAI), https://www.w3.org/WAI/tutorials/images/decorative/, whose worked examples all use alt=\"\" -- the universal, pixel-independent rule for decorative images, reused here verbatim. The category rule is W3C prose; the pixels of this asset are separately licensed per the \"licence\" block above."
+        }
+      }
+    },
+    {
+      "id": "functional-print-icon",
+      "category": "functional",
+      "mediaType": "image/png",
+      "input": {
+        "check": "alt-text",
+        "context": "<img src=\"functional-print-icon.png\" alt=\"Print this page\">"
+      },
+      "expectedVerdict": "pass",
+      "expected": {
+        "altClassification": "informational",
+        "suggestedAlt": "Print this page"
+      },
+      "licence": {
+        "id": "cc0",
+        "name": "Creative Commons Zero (Public Domain Dedication)",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Green_icon_-_Print.ZGH.png",
+        "fileUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3f/Green_icon_-_Print.ZGH.png/330px-Green_icon_-_Print.ZGH.png",
+        "author": "Aksel Tinfat",
+        "retrievedAt": "2026-09-05T21:50:00.000Z",
+        "verifiedVia": "Wikimedia Commons API imageinfo|extmetadata: LicenseShortName=\"CC0\", AttributionRequired=false"
+      },
+      "provenance": {
+        "tier": "w3c",
+        "guidance": {
+          "id": "wai-tutorials-images-functional",
+          "url": "https://www.w3.org/WAI/tutorials/images/functional/",
+          "retrievedAt": "2026-09-05T21:50:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Images Tutorial — Functional Images\", Web Accessibility Initiative (WAI), https://www.w3.org/WAI/tutorials/images/functional/, whose print-icon worked example gives the alt text \"Print this page\" verbatim -- reused here on a substitute print icon. The category criteria and this alt-text value are W3C prose; the pixels of this asset are separately licensed per the \"licence\" block above."
+        }
+      },
+      "poison": {
+        "expect": "scored-down",
+        "reason": "False-ISSUE: incorrectly flagging an already-correct alt as a violation is the cheap error, but it must still be caught so the harness's two error counts (false-PASS vs false-ISSUE) can be told apart rather than fused.",
+        "candidate": {
+          "verdict": "issue",
+          "findings": [
+            { "description": "Icon has no accessible name", "wcagCriterion": "1.1.1", "confidence": "medium" }
+          ],
+          "altClassification": "informational",
+          "suggestedAlt": "Print this page"
+        }
+      }
+    },
+    {
+      "id": "functional-search-icon",
+      "category": "functional",
+      "mediaType": "image/png",
+      "input": {
+        "check": "alt-text",
+        "context": "<img src=\"functional-search-icon.png\" alt=\"search-icon.png\">"
+      },
+      "expectedVerdict": "issue",
+      "expected": {
+        "altClassification": "informational",
+        "suggestedAlt": "Search"
+      },
+      "licence": {
+        "id": "cc0",
+        "name": "Creative Commons Zero (Public Domain Dedication)",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Green_icon_-_Search.ZGH.png",
+        "fileUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/77/Green_icon_-_Search.ZGH.png/330px-Green_icon_-_Search.ZGH.png",
+        "author": "Aksel Tinfat",
+        "retrievedAt": "2026-09-05T21:50:00.000Z",
+        "verifiedVia": "Wikimedia Commons API imageinfo|extmetadata: LicenseShortName=\"CC0\", AttributionRequired=false"
+      },
+      "provenance": {
+        "tier": "w3c",
+        "guidance": {
+          "id": "wai-tutorials-images-functional",
+          "url": "https://www.w3.org/WAI/tutorials/images/functional/",
+          "retrievedAt": "2026-09-05T21:50:00.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Images Tutorial — Functional Images\", Web Accessibility Initiative (WAI), https://www.w3.org/WAI/tutorials/images/functional/, whose search-icon worked example gives the alt text \"Search\" verbatim -- reused here on a substitute search icon. The category criteria and this alt-text value are W3C prose; the pixels of this asset are separately licensed per the \"licence\" block above."
+        }
+      }
+    },
+    {
+      "id": "functional-home-icon",
+      "category": "functional",
+      "mediaType": "image/png",
+      "input": {
+        "check": "alt-text",
+        "context": "<img src=\"functional-home-icon.png\">"
+      },
+      "expectedVerdict": "issue",
+      "expected": {
+        "altClassification": "informational",
+        "suggestedAlt": "Home"
+      },
+      "licence": {
+        "id": "cc0",
+        "name": "Creative Commons Zero (Public Domain Dedication)",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Green_icon_-_Home.ZGH.png",
+        "fileUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/28/Green_icon_-_Home.ZGH.png/330px-Green_icon_-_Home.ZGH.png",
+        "author": "Aksel Tinfat",
+        "retrievedAt": "2026-09-05T21:50:00.000Z",
+        "verifiedVia": "Wikimedia Commons API imageinfo|extmetadata: LicenseShortName=\"CC0\", AttributionRequired=false"
+      },
+      "provenance": {
+        "tier": "owner",
+        "adjudicatedBy": "Luqen product owner",
+        "adjudicatedAt": "2026-09-05T21:50:00.000Z",
+        "rationale": "Substitute icon for the functional category, following W3C's functional-image criteria at the guidance URL below, but \"Home\" is not one of the three verbatim worked-example alt values W3C's functional-images page gives (\"W3C home\", \"Print this page\", \"Search\") -- it is plausible, original wording for this specific icon, not a quoted W3C example."
       }
     }
   ]
