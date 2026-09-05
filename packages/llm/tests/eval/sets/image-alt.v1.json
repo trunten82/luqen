@@ -1,0 +1,40 @@
+{
+  "set": "image-alt",
+  "setVersion": "v1",
+  "capability": "analyse-visual",
+  "notes": "Seed set: one W3C-anchored informative-category item proving the image loader end to end, including asset resolution and licence recording. Plan 83-03 fills this set with the remaining categories (complex, decorative, functional).",
+  "items": [
+    {
+      "id": "img-informative-seed",
+      "category": "informative",
+      "mediaType": "image/jpeg",
+      "input": {
+        "check": "alt-text",
+        "context": "<img src=\"callie-puppy.jpg\">"
+      },
+      "expectedVerdict": "issue",
+      "expected": {
+        "altClassification": "informational",
+        "suggestedAlt": "A golden retriever puppy resting on a wooden floor"
+      },
+      "licence": {
+        "id": "cc-by-3.0",
+        "name": "Creative Commons Attribution 3.0",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Callie_the_golden_retriever_puppy.jpg",
+        "fileUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/33/Callie_the_golden_retriever_puppy.jpg/960px-Callie_the_golden_retriever_puppy.jpg",
+        "author": "MichaelMcPhee",
+        "retrievedAt": "2026-09-05T09:22:25.000Z",
+        "verifiedVia": "Wikimedia Commons API imageinfo|extmetadata: LicenseShortName=\"CC BY 3.0\", LicenseUrl=https://creativecommons.org/licenses/by/3.0, AttributionRequired=true"
+      },
+      "provenance": {
+        "tier": "w3c",
+        "guidance": {
+          "id": "wai-tutorials-images-informative",
+          "url": "https://www.w3.org/WAI/tutorials/images/informative/",
+          "retrievedAt": "2026-09-05T09:22:25.000Z",
+          "notice": "© W3C (MIT, ERCIM, Keio, Beihang). This work is licensed under the W3C Document License (https://www.w3.org/copyright/document-license/). Source: \"Images Tutorial — Informative Images\", Web Accessibility Initiative (WAI), https://www.w3.org/WAI/tutorials/images/informative/. The category criteria and alt-text phrasing guidance are W3C prose; the pixels of the seed asset are separately licensed per the \"licence\" block above."
+        }
+      }
+    }
+  ]
+}
