@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.7.0
 milestone_name: AI output quality — eval harness + labelled reference sets
-status: Active — roadmap created (Phases 83-86), ready for phase planning
-stopped_at: ROADMAP.md + REQUIREMENTS.md traceability written for v3.7.0 (4 phases, 16/16 requirements mapped); next action is /gsd-discuss-phase 83 or /gsd-plan-phase 83
-last_updated: "2026-09-05T08:05:00.000Z"
-last_activity: 2026-09-05 — v3.7.0 roadmap created (4 phases, 83-86, 16/16 requirements mapped, coarse granularity)
+status: Roadmap created; ready for `/gsd-discuss-phase 83` or `/gsd-plan-phase 83`
+stopped_at: "Completed 83-01-PLAN.md (labelled reference-set spine: types/schema/loader/set-paths + seed sets + refusal tests)"
+last_updated: "2026-09-05T09:36:52.886Z"
+last_activity: 2026-09-05 — Roadmap created for v3.7.0 (Phases 83-86)
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 1
   percent: 0
 ---
 
@@ -35,8 +35,6 @@ tests need 90s+ timeouts and that local green is not CI green.
 changed.** Re-run the file alone first; if it passes in isolation, this is that race. The
 real fix is a longer timeout on the browser-launching cases, and it is NOT done.
 
-
-
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-09-05 — v3.7.0 AI output quality opened)
@@ -51,7 +49,7 @@ Plan: — (no plans created yet)
 Status: Roadmap created; ready for `/gsd-discuss-phase 83` or `/gsd-plan-phase 83`
 Last activity: 2026-09-05 — Roadmap created for v3.7.0 (Phases 83-86)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 33%
 
 ## Phase Map (v3.7.0 — AI output quality)
 
@@ -125,8 +123,8 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-09-05
-Stopped at: v3.7.0 ROADMAP.md + REQUIREMENTS.md traceability created (4 phases, 83-86, 16/16 requirements mapped)
+Last session: 2026-09-05T09:36:52.873Z
+Stopped at: Completed 83-01-PLAN.md (labelled reference-set spine: types/schema/loader/set-paths + seed sets + refusal tests)
 Resume file: None
 Next action: `/gsd-discuss-phase 83` (Labelled reference sets) or `/gsd-plan-phase 83`
 
