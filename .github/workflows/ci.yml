@@ -17,6 +17,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Phase 86 Task 3: a shallow clone (the default, fetch-depth: 1)
+          # cannot answer `git merge-base --is-ancestor` -- the pre-registration
+          # ancestry check (packages/llm/src/eval/pre-registration-ancestry.ts)
+          # requires full history and THROWS rather than silently skipping or
+          # answering wrong when it cannot see enough of the object graph.
+          fetch-depth: 0
 
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
