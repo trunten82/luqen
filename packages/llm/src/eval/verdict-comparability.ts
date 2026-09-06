@@ -33,7 +33,9 @@
  * unclassified. See run-manifest.ts's own recorded note about an earlier,
  * INERT version of that guard before "simplifying" this one.
  */
+import { isFailedItem, isScoredItem, type ItemRecord } from './report.js';
 import type { RunFunction } from './run-manifest.js';
+import type { GenerateFixScoreRecord } from './score-generate-fix.js';
 import type { TreatmentFieldsDiffered } from './verdict-types.js';
 
 // ---------------------------------------------------------------------------
@@ -133,4 +135,109 @@ export function treatmentFieldsThatDiffered(
     providerType: baseline.providerType !== candidate.providerType,
     endpointFingerprint: baseline.endpointFingerprint !== candidate.endpointFingerprint,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Task 3 refusals — closing the paths a verdict can be reached through that
+// the Task 1 tracer did not travel. Every refusal is a named error subclass
+// carrying both sides' values, following Phase 83/84's convention. Nothing
+// in this module catches a failure and returns a default.
+// ---------------------------------------------------------------------------
+
+/**
+ * Thrown when either report contains a `FailedItemRecord`. A bar registered
+ * against a fixed n cannot be applied to a run that scored fewer items than
+ * that — a failed item and a bad score are different facts, and silently
+ * treating a failure as "not counted" would let a partial run pass as a
+ * complete one.
+ */
+export class FailedItemInReportError extends Error {
+  constructor(
+    public readonly side: 'baseline' | 'candidate',
+    public readonly itemId: string,
+  ) {
+    super(
+      `The ${side} report contains a failed item "${itemId}" — refusing to compute a verdict against an incomplete run`,
+    );
+    this.name = 'FailedItemInReportError';
+  }
+}
+
+/** Refuses a comparison in which either report contains a failed item, naming the item and which side. */
+export function assertNoFailedItems<TScore>(
+  baselineItems: readonly ItemRecord<TScore>[],
+  candidateItems: readonly ItemRecord<TScore>[],
+): void {
+  const failedBaseline = baselineItems.find(isFailedItem);
+  if (failedBaseline !== undefined) {
+    throw new FailedItemInReportError('baseline', failedBaseline.itemId);
+  }
+  const failedCandidate = candidateItems.find(isFailedItem);
+  if (failedCandidate !== undefined) {
+    throw new FailedItemInReportError('candidate', failedCandidate.itemId);
+  }
+}
+
+/**
+ * Thrown when the baseline and candidate reports do not carry the identical
+ * set of item ids. Carries the ids present on only one side, sorted for a
+ * deterministic message.
+ */
+export class ItemIdSetMismatchError extends Error {
+  constructor(
+    public readonly onlyInBaseline: readonly string[],
+    public readonly onlyInCandidate: readonly string[],
+  ) {
+    super(
+      `Baseline and candidate reports do not carry the identical set of item ids — only in baseline: [${onlyInBaseline.join(', ')}], only in candidate: [${onlyInCandidate.join(', ')}]`,
+    );
+    this.name = 'ItemIdSetMismatchError';
+  }
+}
+
+/** Refuses a comparison whose two reports' item id sets differ, naming the difference. */
+export function assertIdenticalItemIdSets<TScore>(
+  baselineItems: readonly ItemRecord<TScore>[],
+  candidateItems: readonly ItemRecord<TScore>[],
+): void {
+  const baselineIds = new Set(baselineItems.map((item) => item.itemId));
+  const candidateIds = new Set(candidateItems.map((item) => item.itemId));
+  const onlyInBaseline = [...baselineIds].filter((id) => !candidateIds.has(id)).sort();
+  const onlyInCandidate = [...candidateIds].filter((id) => !baselineIds.has(id)).sort();
+  if (onlyInBaseline.length > 0 || onlyInCandidate.length > 0) {
+    throw new ItemIdSetMismatchError(onlyInBaseline, onlyInCandidate);
+  }
+}
+
+/**
+ * Thrown when a report's `aggregate.exactMatchCount` disagrees with a
+ * recount of its own per-item scored records. A report is a JSON file a
+ * person can edit — this is the cheapest guard in the phase and the one
+ * most likely to matter: a verdict computed from an aggregate that no
+ * longer describes the items beneath it would be confidently wrong.
+ */
+export class AggregateRecountMismatchError extends Error {
+  constructor(
+    public readonly side: 'baseline' | 'candidate',
+    public readonly counterName: string,
+    public readonly aggregateValue: number,
+    public readonly recountedValue: number,
+  ) {
+    super(
+      `The ${side} report's aggregate.${counterName} (${aggregateValue}) disagrees with a recount of its own per-item records (${recountedValue}) — refusing to judge a report whose aggregate no longer describes its own items`,
+    );
+    this.name = 'AggregateRecountMismatchError';
+  }
+}
+
+/** Refuses a report whose gating-axis aggregate counter disagrees with a fresh recount of its own scored items. */
+export function assertAggregateMatchesRecount(
+  side: 'baseline' | 'candidate',
+  items: readonly ItemRecord<GenerateFixScoreRecord>[],
+  aggregateExactMatchCount: number,
+): void {
+  const recounted = items.filter((item) => isScoredItem(item) && item.score.exactMatch).length;
+  if (recounted !== aggregateExactMatchCount) {
+    throw new AggregateRecountMismatchError(side, 'exactMatchCount', aggregateExactMatchCount, recounted);
+  }
 }
