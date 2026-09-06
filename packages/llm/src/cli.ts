@@ -11,6 +11,11 @@ import { createFixtureAdapter } from './eval/fixture-adapter.js';
 import { assertComparable, RunFunctionMismatchError, type RunFunction, type RunMode } from './eval/run-manifest.js';
 import { createAdapter } from './providers/registry.js';
 import type { ProviderType } from './types.js';
+import { loadDecisionBars } from './eval/decision-bars.js';
+import { compareGenerateFix, serialiseVerdict } from './eval/verdict.js';
+import type { GenerateFixVerdict, PowerAssessment } from './eval/verdict-types.js';
+import { compareAnalyseVisual, serialiseAnalyseVisualVerdict, type AnalyseVisualVerdict } from './eval/verdict-analyse-visual.js';
+import type { GenerateFixReport, AnalyseVisualReport } from './eval/report.js';
 
 function createDbAdapter(dbPath?: string): SqliteAdapter {
   const config = loadConfig();
@@ -96,6 +101,56 @@ function printEvalSummary(result: RunHarnessResult): void {
       `Suggested-alt empty-despite-informational: ${a.suggestedAltEmptyDespiteInformationalCount}/${a.total}`,
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// eval verdict (Phase 85, BARS-02/BARS-03, D-85-1, D-85-7) — a THIN wrapper
+// over the library comparators (verdict.ts / verdict-analyse-visual.ts).
+// This command never dials a provider, never spends, and accepts no live
+// mode — it reads two report files a maintainer already has and judges them
+// against the pre-registered bar (see the structural option-list test,
+// cli-verdict.test.ts).
+// ---------------------------------------------------------------------------
+
+/** Prints a power assessment's sufficiency and, if insufficient, every named reason -- shared by both capabilities' print functions so the shape stays identical. */
+function printPowerAssessment(label: string, power: PowerAssessment): void {
+  console.log(`${label} power sufficient: ${power.sufficient}`);
+  if (!power.sufficient) {
+    for (const reason of power.reasons) {
+      console.log(`${label} power insufficiency reason: ${reason.kind}`);
+    }
+  }
+}
+
+function printGenerateFixVerdictSummary(verdict: GenerateFixVerdict): void {
+  console.log(`Capability: generate-fix`);
+  console.log(`Outcome: ${verdict.outcome}`);
+  console.log(`Gating axis: ${verdict.gatingAxis.counterName}`);
+  console.log(`Baseline-better count: ${verdict.gatingAxis.baselineBetterCount}`);
+  console.log(`Candidate-better count: ${verdict.gatingAxis.candidateBetterCount}`);
+  console.log(`Margin items: ${verdict.gatingAxis.marginItems}`);
+  printPowerAssessment('Non-inferiority clause', verdict.power);
+  console.log(`Licence: ${verdict.licence}`);
+}
+
+/**
+ * `analyse-visual`'s two mechanisms are printed as SEPARATE lines, always,
+ * with the derived overall word never standing alone (D-85-1). This is the
+ * CLI-layer half of the same anti-fusion discipline `printEvalSummary`
+ * already applies to the harness's own False-PASS/False-ISSUE counters —
+ * see cli-verdict.test.ts's positive label-set pin, which fails the moment
+ * these two clause lines are replaced by one blended figure.
+ */
+function printAnalyseVisualVerdictSummary(verdict: AnalyseVisualVerdict): void {
+  console.log(`Capability: analyse-visual`);
+  console.log(`False-PASS gate: ${verdict.falsePassGate.outcome}`);
+  console.log(`False-PASS gate licence: ${verdict.falsePassGate.licence}`);
+  console.log(`Non-inferiority clause: ${verdict.nonInferiorityClause.outcome}`);
+  printPowerAssessment('Non-inferiority clause', verdict.nonInferiorityClause.power);
+  console.log(`Non-inferiority clause licence: ${verdict.nonInferiorityClause.licence}`);
+  console.log(`Overall: ${verdict.overallVerdict.outcome}`);
+  console.log(`Overall note: ${verdict.overallVerdict.derivedNote}`);
+  console.log(`Overall licence: ${verdict.overallVerdict.licence}`);
 }
 
 export function createProgram(): Command {
@@ -498,6 +553,62 @@ export function createProgram(): Command {
           return;
         }
         throw err;
+      }
+    });
+
+  evalGroup
+    .command('verdict')
+    .description(
+      'Judge two written eval reports against the Phase 85 pre-registered decision bar. Reads two files a maintainer already has -- never dials a provider, never spends, never accepts a live mode (D-85-7).',
+    )
+    .requiredOption('--baseline <path>', 'Baseline report JSON path')
+    .requiredOption('--candidate <path>', 'Candidate report JSON path')
+    .option('--out <path>', 'Write the full JSON verdict to this path')
+    .action((opts: { baseline: string; candidate: string; out?: string }) => {
+      let capability: string;
+      try {
+        const probe = JSON.parse(readFileSync(opts.baseline, 'utf-8')) as { runFunction?: { capability?: string } };
+        capability = probe.runFunction?.capability ?? '';
+      } catch (err) {
+        console.error(
+          `error: could not read/parse --baseline "${opts.baseline}": ${err instanceof Error ? err.message : String(err)}`,
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      try {
+        const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
+
+        if (capability === 'generate-fix') {
+          const baseline = JSON.parse(readFileSync(opts.baseline, 'utf-8')) as GenerateFixReport;
+          const candidate = JSON.parse(readFileSync(opts.candidate, 'utf-8')) as GenerateFixReport;
+          const verdict = compareGenerateFix(bar, baseline, candidate);
+          printGenerateFixVerdictSummary(verdict);
+          if (opts.out) {
+            writeFileSync(opts.out, serialiseVerdict(verdict));
+            console.log(`Verdict written to ${opts.out}`);
+          }
+          if (verdict.outcome === 'FAIL') process.exitCode = 1;
+        } else if (capability === 'analyse-visual') {
+          const baseline = JSON.parse(readFileSync(opts.baseline, 'utf-8')) as AnalyseVisualReport;
+          const candidate = JSON.parse(readFileSync(opts.candidate, 'utf-8')) as AnalyseVisualReport;
+          const verdict = compareAnalyseVisual(bar, baseline, candidate);
+          printAnalyseVisualVerdictSummary(verdict);
+          if (opts.out) {
+            writeFileSync(opts.out, serialiseAnalyseVisualVerdict(verdict));
+            console.log(`Verdict written to ${opts.out}`);
+          }
+          if (verdict.overallVerdict.outcome === 'FAIL') process.exitCode = 1;
+        } else {
+          console.error(
+            `error: --baseline report's runFunction.capability must be "generate-fix" or "analyse-visual" (found ${JSON.stringify(capability)})`,
+          );
+          process.exitCode = 1;
+        }
+      } catch (err) {
+        console.error(`error: ${err instanceof Error ? err.message : String(err)}`);
+        process.exitCode = 1;
       }
     });
 
