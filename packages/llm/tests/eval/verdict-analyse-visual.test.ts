@@ -326,3 +326,29 @@ describe('analyse-visual verdict — exact key sets pinned (D-85-1, T-85-11, T-8
     expect(verdict.overallVerdict.derivedNote.length).toBeGreaterThan(0);
   });
 });
+
+
+// T-85-06 regression guard, added after phase verification found this check was
+// wired for generate-fix and NOT for analyse-visual — a LIVE gap, not a latent
+// one: a hand-edited aggregate flowed straight into a verdict. Both
+// decision-bearing counters are covered because both drive a decision
+// (falsePass -> the deterministic gate D-85-4; correct -> the non-inferiority
+// clause D-85-2), and checking only the one that happened to be tampered in the
+// reproduction would repeat the narrow-predicate mistake one level down.
+describe('T-85-06: aggregate must describe its own items (analyse-visual)', () => {
+  const tamper = (counter: 'falsePass' | 'correct') => {
+    const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
+    const env = loadFixture();
+    const candidate = JSON.parse(JSON.stringify(env.candidates.identical)) as typeof env.baseline;
+    (candidate.aggregate as Record<string, number>)[counter] += 5;
+    return () => compareAnalyseVisual(bar, env.baseline, candidate);
+  };
+
+  it('refuses a candidate whose aggregate.falsePass disagrees with its own items', () => {
+    expect(tamper('falsePass')).toThrow(/falsePass/);
+  });
+
+  it('refuses a candidate whose aggregate.correct disagrees with its own items', () => {
+    expect(tamper('correct')).toThrow(/correct/);
+  });
+});

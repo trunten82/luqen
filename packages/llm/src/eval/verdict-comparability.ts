@@ -36,6 +36,7 @@
 import { isFailedItem, isScoredItem, type ItemRecord } from './report.js';
 import type { RunFunction } from './run-manifest.js';
 import type { GenerateFixScoreRecord } from './score-generate-fix.js';
+import type { AnalyseVisualScoreRecord } from './score-analyse-visual.js';
 import type { TreatmentFieldsDiffered } from './verdict-types.js';
 
 // ---------------------------------------------------------------------------
@@ -227,6 +228,44 @@ export class AggregateRecountMismatchError extends Error {
       `The ${side} report's aggregate.${counterName} (${aggregateValue}) disagrees with a recount of its own per-item records (${recountedValue}) — refusing to judge a report whose aggregate no longer describes its own items`,
     );
     this.name = 'AggregateRecountMismatchError';
+  }
+}
+
+/**
+ * Refuses an `analyse-visual` report whose DECISION-BEARING aggregate counters
+ * disagree with a fresh recount of its own scored items (T-85-06).
+ *
+ * The `generate-fix` path has had this guard since 85-02; `analyse-visual` was
+ * added from the same threat-model entry and shipped without it, so a report
+ * whose `aggregate.falsePass` had been edited by hand flowed straight into a
+ * verdict — LIVE, not latent. Found by the phase verifier, which checked every
+ * generate-fix guard for an analyse-visual sibling rather than checking the
+ * path it had already been told about, and then PROVED it by tampering a
+ * committed fixture's count and watching the verdict absorb it.
+ *
+ * Both counters are checked because both are decision-bearing: `falsePass`
+ * drives the deterministic gate (D-85-4) and `correct` drives the
+ * non-inferiority clause (D-85-2). Checking only the one that happened to be
+ * tampered in the reproduction would be the same narrow-predicate mistake one
+ * level down.
+ *
+ * THE SHAPE, three times in this phase now: when a second path is added to an
+ * existing operation, it does not inherit the first path's invariants. Two of
+ * the three instances were guarantees the requirement stated absolutely.
+ */
+export function assertAnalyseVisualAggregateMatchesRecount(
+  side: 'baseline' | 'candidate',
+  items: readonly ItemRecord<AnalyseVisualScoreRecord>[],
+  aggregate: { readonly correct: number; readonly falsePass: number },
+): void {
+  const scored = items.filter(isScoredItem);
+  const recountedCorrect = scored.filter((item) => item.score.verdictOutcome === 'correct').length;
+  if (recountedCorrect !== aggregate.correct) {
+    throw new AggregateRecountMismatchError(side, 'correct', aggregate.correct, recountedCorrect);
+  }
+  const recountedFalsePass = scored.filter((item) => item.score.verdictOutcome === 'false-pass').length;
+  if (recountedFalsePass !== aggregate.falsePass) {
+    throw new AggregateRecountMismatchError(side, 'falsePass', aggregate.falsePass, recountedFalsePass);
   }
 }
 
