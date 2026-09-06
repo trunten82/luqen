@@ -1,33 +1,33 @@
 /**
- * HARNESS-04: the run function and the refusal to compare (Phase 84 Task 1).
+ * HARNESS-04: the run function and the refusal to compare (Phase 84 Task 1-3).
  *
- * Task 1 proves: the temperature the manifest will one day record is the
- * SAME constant the capability actually hands to `adapter.complete()` —
- * captured off the adapter call, not read back from the constant itself. A
- * test that reads the constant and compares it against the same constant
- * proves nothing; this captures the value at the seam.
+ * Three things this file proves:
+ *  1. The temperature the manifest would record is the SAME constant the
+ *     capability actually hands to `adapter.complete()` — captured off the
+ *     adapter call, not read back from the constant itself.
+ *  2. Prompt version is COMPUTED from the applied template (default or
+ *     override), tracks the template's shape and not per-item variables,
+ *     and is pinned so a future template edit fails loudly.
+ *  3. `RunFunction` has fourteen required fields, and `assertComparable`
+ *     refuses to compare two records differing on any field but timestamp,
+ *     naming every differing field.
  */
-import { describe, it } from 'vitest';
-import { expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { createEphemeralRunDb, EVAL_ORG_ID } from '../../src/eval/run-context.js';
 import { executeGenerateFix, GENERATE_FIX_TEMPERATURE } from '../../src/capabilities/generate-fix.js';
 import { executeAnalyseVisual, ANALYSE_VISUAL_TEMPERATURE } from '../../src/capabilities/analyse-visual.js';
 import type { LLMProviderAdapter, CompletionOptions } from '../../src/providers/types.js';
-import type { PromptOverride } from '../../src/types.js';
+import type { PromptOverride, Provider, Model } from '../../src/types.js';
 import {
   computeGenerateFixPromptVersion,
   computeAnalyseVisualPromptVersion,
+  buildRunFunction,
+  assertComparable,
+  RunFunctionMismatchError,
+  computeEndpointFingerprint,
+  type RunFunction,
+  type PromptVersion,
 } from '../../src/eval/run-manifest.js';
-
-function makePromptOverride(template: string): PromptOverride {
-  return {
-    capability: 'generate-fix',
-    orgId: EVAL_ORG_ID,
-    template,
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-  };
-}
 
 function capturingAdapter(
   responseText: string,
@@ -46,6 +46,20 @@ function capturingAdapter(
   };
   return { adapter, captured: () => capturedOptions };
 }
+
+function makePromptOverride(template: string): PromptOverride {
+  return {
+    capability: 'generate-fix',
+    orgId: EVAL_ORG_ID,
+    template,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Task 1 — one source for temperature
+// ---------------------------------------------------------------------------
 
 describe('run-manifest — temperature is a single source (Task 1)', () => {
   it('generate-fix hands adapter.complete() the exported GENERATE_FIX_TEMPERATURE constant', async () => {
@@ -167,5 +181,171 @@ describe('run-manifest — computed prompt version (Task 2)', () => {
     expect(computeAnalyseVisualPromptVersion('heading-semantics', undefined).digest).toBe(
       PINNED_ANALYSE_VISUAL_HEADING_DIGEST,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 3 — RunFunction and the refusal to compare
+// ---------------------------------------------------------------------------
+
+const SENTINEL_API_KEY = 'sk-ZZ_RUN_MANIFEST_SENTINEL_DO_NOT_LEAK';
+const SENTINEL_PRIVATE_HOST = 'http://internal-host.private.example:11434';
+
+function sentinelProvider(overrides?: Partial<Provider>): Provider {
+  return {
+    id: 'provider-1',
+    name: 'Sentinel Provider',
+    type: 'ollama',
+    baseUrl: SENTINEL_PRIVATE_HOST,
+    apiKey: SENTINEL_API_KEY,
+    status: 'active',
+    timeout: 30,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+function sentinelModel(overrides?: Partial<Model>): Model {
+  return {
+    id: 'model-1',
+    providerId: 'provider-1',
+    modelId: 'llama3.2',
+    displayName: 'Llama 3.2',
+    status: 'active',
+    capabilities: ['generate-fix'],
+    createdAt: '2026-01-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+const BASE_PROMPT_VERSION: PromptVersion = { digest: 'aaaaaaaaaaaaaaaa', source: 'default' };
+
+function baseRunFunction(overrides?: Partial<RunFunction>): RunFunction {
+  const built = buildRunFunction({
+    capability: 'generate-fix',
+    mode: 'live',
+    provider: sentinelProvider(),
+    model: sentinelModel(),
+    temperature: GENERATE_FIX_TEMPERATURE,
+    promptVersion: BASE_PROMPT_VERSION,
+    setName: 'wcag-fixes',
+    setVersion: 'v1',
+    itemCount: 17,
+    timestamp: '2026-01-01T00:00:00.000Z',
+  });
+  return { ...built, ...overrides };
+}
+
+describe('run-manifest — RunFunction has fourteen required fields (Task 3)', () => {
+  it('carries every named field', () => {
+    const fn = baseRunFunction();
+    const expectedKeys = [
+      'harnessVersion',
+      'capability',
+      'mode',
+      'modelId',
+      'modelDisplayName',
+      'providerType',
+      'endpointFingerprint',
+      'temperature',
+      'promptVersion',
+      'promptSource',
+      'setName',
+      'setVersion',
+      'itemCount',
+      'timestamp',
+    ].sort();
+    expect(Object.keys(fn).sort()).toEqual(expectedKeys);
+    expect(Object.keys(fn)).toHaveLength(14);
+  });
+
+  it('reads modelId from the provider-native model id, not the display name', () => {
+    const fn = baseRunFunction();
+    expect(fn.modelId).toBe('llama3.2');
+    expect(fn.modelDisplayName).toBe('Llama 3.2');
+  });
+});
+
+describe('run-manifest — endpoint fingerprint (T-84-04)', () => {
+  it('is stable for one endpoint and different for two', () => {
+    const a = computeEndpointFingerprint('http://host-a.internal:11434');
+    const aAgain = computeEndpointFingerprint('http://host-a.internal:11434');
+    const b = computeEndpointFingerprint('http://host-b.internal:11434');
+    expect(a).toBe(aAgain);
+    expect(a).not.toBe(b);
+  });
+
+  it('never reveals the source host in the serialised RunFunction', () => {
+    const fn = baseRunFunction();
+    const serialised = JSON.stringify(fn);
+    expect(serialised).not.toContain('internal-host.private.example');
+    expect(serialised).not.toContain(SENTINEL_PRIVATE_HOST);
+  });
+});
+
+describe('run-manifest — no credential ever reaches the serialised record (T-84-04)', () => {
+  it('a record built from a provider carrying a sentinel API key never serialises it', () => {
+    const fn = baseRunFunction();
+    const serialised = JSON.stringify(fn);
+    expect(serialised).not.toContain(SENTINEL_API_KEY);
+    expect(serialised).not.toContain('apiKey');
+  });
+});
+
+describe('run-manifest — assertComparable refuses across a differing RunFunction (Task 3)', () => {
+  it('positive control: two identical records (ignoring timestamp) compare successfully', () => {
+    const a = baseRunFunction({ timestamp: '2026-01-01T00:00:00.000Z' });
+    const b = baseRunFunction({ timestamp: '2026-06-01T00:00:00.000Z' });
+    expect(() => assertComparable(a, b)).not.toThrow();
+  });
+
+  it('timestamp alone differing does not block comparison — Phase 86 needs this', () => {
+    const a = baseRunFunction({ timestamp: '2026-01-01T00:00:00.000Z' });
+    const b = baseRunFunction({ timestamp: '2099-12-31T00:00:00.000Z' });
+    expect(() => assertComparable(a, b)).not.toThrow();
+  });
+
+  it.each([
+    ['modelId', { modelId: 'a-different-model' }],
+    ['promptVersion', { promptVersion: 'zzzzzzzzzzzzzzzz' }],
+    ['temperature', { temperature: 0.99 }],
+    ['harnessVersion', { harnessVersion: '999+0.0.0' }],
+    ['setVersion', { setVersion: 'v2' }],
+    ['endpointFingerprint', { endpointFingerprint: 'deadbeefdeadbeef' }],
+    ['mode', { mode: 'replay' as const }],
+  ])('refuses when %s differs, naming that field', (fieldName, patch) => {
+    const a = baseRunFunction();
+    const b = baseRunFunction(patch);
+    expect(() => assertComparable(a, b)).toThrow(RunFunctionMismatchError);
+    try {
+      assertComparable(a, b);
+      throw new Error('unreachable — assertComparable should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(RunFunctionMismatchError);
+      expect((err as RunFunctionMismatchError).differingFields).toContain(fieldName);
+    }
+  });
+
+  it('a live-mode record and a replay-mode record with otherwise identical fields are refused', () => {
+    const live = baseRunFunction({ mode: 'live' });
+    const replay = baseRunFunction({ mode: 'replay' });
+    expect(() => assertComparable(live, replay)).toThrow(RunFunctionMismatchError);
+  });
+
+  it('changing several fields at once names ALL the differing fields, not just the first', () => {
+    const a = baseRunFunction();
+    const b = baseRunFunction({ modelId: 'different-model', temperature: 0.5, setVersion: 'v2' });
+    try {
+      assertComparable(a, b);
+      throw new Error('unreachable — assertComparable should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(RunFunctionMismatchError);
+      const differing = (err as RunFunctionMismatchError).differingFields;
+      expect(differing).toContain('modelId');
+      expect(differing).toContain('temperature');
+      expect(differing).toContain('setVersion');
+      expect(differing).toHaveLength(3);
+    }
   });
 });
