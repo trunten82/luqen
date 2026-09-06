@@ -75,7 +75,7 @@ describe('generate-fix verdict tracer — end to end (Task 1)', () => {
   it('PASS: candidate matches baseline on every item -> zero discordant pairs, zero-event bound, sufficient power', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const fixture = loadFixture();
-    const verdict = compareGenerateFix(bar, fixture.baseline, fixture.candidates.identical);
+    const verdict = compareGenerateFix(bar, fixture.baseline, fixture.candidates.identical, { state: 'not-yet-measured' });
 
     expect(verdict.outcome).toBe('PASS');
     expect(verdict.gatingAxis.counterName).toBe('exactMatchCount');
@@ -105,7 +105,7 @@ describe('generate-fix verdict tracer — end to end (Task 1)', () => {
   it('FAIL: candidate loses more items on the gating axis than the margin allows -> FAIL, names the observed delta and margin', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const fixture = loadFixture();
-    const verdict = compareGenerateFix(bar, fixture.baseline, fixture.candidates.regressedBeyondMargin);
+    const verdict = compareGenerateFix(bar, fixture.baseline, fixture.candidates.regressedBeyondMargin, { state: 'not-yet-measured' });
 
     expect(verdict.outcome).toBe('FAIL');
     expect(verdict.gatingAxis.baselineBetterCount).toBe(4);
@@ -120,7 +120,7 @@ describe('generate-fix verdict tracer — end to end (Task 1)', () => {
   it('UNDERPOWERED (discordance exceeds assumption): names that reason, and no other', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const fixture = loadFixture();
-    const verdict = compareGenerateFix(bar, fixture.baseline, fixture.candidates.discordanceExceedsAssumption);
+    const verdict = compareGenerateFix(bar, fixture.baseline, fixture.candidates.discordanceExceedsAssumption, { state: 'not-yet-measured' });
 
     expect(verdict.outcome).toBe('UNDERPOWERED');
     expect(verdict.gatingAxis.baselineBetterCount).toBe(0);
@@ -147,7 +147,7 @@ describe('generate-fix verdict tracer — end to end (Task 1)', () => {
   it('UNDERPOWERED (bound does not clear margin): names that second, distinct reason, and equal flips report NONZERO discordance, not zero', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const fixture = loadFixture();
-    const verdict = compareGenerateFix(bar, fixture.baseline, fixture.candidates.boundDoesNotClearMargin);
+    const verdict = compareGenerateFix(bar, fixture.baseline, fixture.candidates.boundDoesNotClearMargin, { state: 'not-yet-measured' });
 
     expect(verdict.outcome).toBe('UNDERPOWERED');
     // Equal flips: 2 items the candidate fixed, 2 the candidate broke.
@@ -179,7 +179,7 @@ describe('generate-fix verdict tracer — end to end (Task 1)', () => {
   it('every verdict carries the five non-gating axis deltas as context, and the treatment fields that actually differed', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const fixture = loadFixture();
-    const verdict = compareGenerateFix(bar, fixture.baseline, fixture.candidates.identical);
+    const verdict = compareGenerateFix(bar, fixture.baseline, fixture.candidates.identical, { state: 'not-yet-measured' });
 
     expect(verdict.nonGatingAxisDeltas).toHaveLength(5);
     const counterNames = verdict.nonGatingAxisDeltas.map((d) => d.counterName).sort();
@@ -207,11 +207,29 @@ describe('generate-fix verdict tracer — end to end (Task 1)', () => {
   it('the serialised verdict round-trips to JSON and back with no field lost', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const fixture = loadFixture();
-    const verdict = compareGenerateFix(bar, fixture.baseline, fixture.candidates.regressedBeyondMargin);
+    const verdict = compareGenerateFix(bar, fixture.baseline, fixture.candidates.regressedBeyondMargin, { state: 'not-yet-measured' });
 
     const json = serialiseVerdict(verdict);
     const roundTripped = JSON.parse(json);
     expect(roundTripped).toEqual(JSON.parse(JSON.stringify(verdict)));
     expect(Object.keys(roundTripped).sort()).toEqual(Object.keys(verdict).sort());
+  });
+
+  // Phase 86 Task 2 (BASELINE-02, D-85-5): the instability now arrives from
+  // OUTSIDE the comparator as a required parameter. This proves a supplied
+  // `{ state: 'measured', value }` reaches `power.runToRunInstability`
+  // unchanged -- the comparator neither overwrites it nor drops it.
+  it('a supplied measured runToRunInstability reaches power.runToRunInstability unchanged', () => {
+    const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
+    const fixture = loadFixture();
+    const verdict = compareGenerateFix(bar, fixture.baseline, fixture.candidates.identical, {
+      state: 'measured',
+      value: 0.1234,
+    });
+
+    expect(verdict.outcome).toBe('PASS');
+    if (verdict.outcome === 'PASS') {
+      expect(verdict.power.runToRunInstability).toEqual({ state: 'measured', value: 0.1234 });
+    }
   });
 });
