@@ -10,6 +10,48 @@
  * change. Historical rows in `llm_usage` keep the cost they were
  * written with — pricing is volatile, history is not.
  *
+ * ---------------------------------------------------------------------------
+ * READ THIS BEFORE MAKING ANYTHING DECIDE ON THESE NUMBERS.
+ * ---------------------------------------------------------------------------
+ *
+ * Every row here is a LOCALLY CACHED COPY OF A VENDOR'S PUBLISHED PRICE. It
+ * stops being true the moment the vendor moves it, and NOTHING ANYWHERE
+ * ANNOUNCES THAT. There is no last-checked field and no failure state: a stale
+ * row looks exactly like a fresh one. The `gemini-2.5-flash` row below carries
+ * "CORRECTED, was 0.000075 / 0.0003" — this table has already been wrong by a
+ * FACTOR OF EIGHT once.
+ *
+ * Today that is COSMETIC. Audited 2026-09-06, twice and by two different
+ * predicates:
+ *   - `computeCost` has exactly ONE importer (db/sqlite-adapter.ts) and ONE
+ *     call site, inside the usage-telemetry write, AFTER the call has already
+ *     happened.
+ *   - the three stored columns it writes (`input_cost_usd`, `output_cost_usd`,
+ *     `total_cost_usd`) are read only by that same file's row mapper and its
+ *     SUM/ORDER BY aggregate, feeding the admin usage page.
+ *   - credits do NOT read a price: `consumeCredit(orgId, amount, reason)` takes
+ *     a COUNT, and `api/routes/capabilities-exec.ts` calls it with a literal 1.
+ *     That file also states outright that AI fixes are never blocked on a
+ *     credit balance.
+ * So a wrong price today produces a wrong FIGURE ON A TELEMETRY PAGE. It cannot
+ * mis-route a request, mis-bill a customer, or gate a capability.
+ *
+ * IT GOES FROM COSMETIC TO SERIOUS IN ONE COMMIT, AND NO TEST FAILS AT THE
+ * MOMENT IT DOES. The first time anything routes, budgets, gates or bills on
+ * these numbers, it silently inherits an eight-fold error with no reachable
+ * failure state — because, as the note at `lookupPrice` puts it, a mispriced
+ * row produces a WRONG NUMBER, NOT A NULL, so it never surfaces via the
+ * unpriced-rows counter. If you are that commit: give this table a
+ * last-checked date and a way to fail loudly FIRST.
+ *
+ * A METHOD NOTE, because the audit above was nearly narrower than its own
+ * conclusion. "What imports the function that computes this value" is a
+ * STRICTLY NARROWER question than "what decides on this value" — a consumer
+ * that reads the stored columns inherits the error without importing anything
+ * here, and never appears in an import grep. Both queries were run above; only
+ * running both makes the conclusion worth anything.
+ * ---------------------------------------------------------------------------
+ *
  * The matcher is prefix-tolerant: an entry keyed `gpt-4o-mini` will
  * also match `gpt-4o-mini-2024-07-18` (OpenAI dated variants). The
  * longer key wins on tie. See `lookupPrice` for the rule.
