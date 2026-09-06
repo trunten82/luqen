@@ -318,14 +318,197 @@ git merge-base --is-ancestor <introducing-commit-sha> <candidate-commit-sha>
 
 ### What Phase 86 supplies
 
-No measurement of any model exists anywhere in this milestone yet. Phase 86's baseline is the
-first one, and it is the first real exercise of both the harness (Phase 84) and the verdict
-layer (Phase 85) together. In particular, every PASS licence sentence above names an unmeasured
-quantity explicitly: "Run-to-run instability was not measured for this comparison. A PASS whose
-noise floor is unknown licenses less than one whose noise floor is known." That quantity — the
-same model and prompt run repeated, measuring its own non-determinism at fixed temperature, a
-**different** quantity from the discordant-pair-rate assumption above — is exactly what Phase
-86 supplies. Until it does, every PASS this instrument can produce carries that caveat.
+Phase 86 splits into two parts. **Part A (86-01 through 86-04) is the mechanism: it is shipped,
+merged, and exercised entirely on synthetic and replay data.** It supplies:
+
+- **the second variance quantity, run-to-run instability** — defined and computed by
+  `instability.ts`'s `computeRunToRunInstability` (86-01), the same model/prompt run repeated,
+  never baseline-vs-candidate disagreement (see "Run-to-run instability" below);
+- **the assumption check that consumes it** — `verdict.ts`'s `assessPower` (86-02) gained a
+  THIRD, independent insufficiency reason, `run-to-run-instability-exceeds-ceiling`, checked
+  against the same pre-registered discordant-pair-rate number, reused as a ceiling;
+- **the licence qualifier** (`licence-qualifier.ts`, 86-02) — every PASS licence Phase 85
+  pre-registered asserts, verbatim, that instability was not measured; the moment it IS measured
+  for a given verdict, that clause would state something false if left unchanged. The bar file
+  cannot be edited to fix a sentence that has become stale — it is pre-registered and
+  digest-pinned — so `buildLicenceQualifier` marks the affected clauses SUPERSEDED on the
+  verdict instead of editing the pre-registration;
+- **the replication artifact and `eval baseline`** (`baseline.ts`, 86-03) — a discriminated
+  union that makes a replay run structurally unwritable under a name that implies it measured a
+  model, and a CLI command that repeats a reference set K times and reports the instability;
+- **the pre-registration ancestry check** (`pre-registration-ancestry.ts`, 86-03) — implements
+  the bar file's own `verificationProcedure` in code, refusing (never silently skipping or
+  mis-answering) when run against a shallow clone.
+
+**Part A measures no model.** Every piece above was built and tested against synthetic fixtures
+and replay-mode reports — a fixture adapter returning committed strings, never a real provider.
+A green result from any of it is evidence the mechanism works, never evidence about a model.
+
+**Part B (86-05) is the live measurement** — actually repeating the CURRENT production pins
+against a real provider, three times per capability, and committing the result as the first
+recorded baseline this milestone will have. It requires a provider credential and a deliberate,
+authorised decision to spend money, neither of which Part A's tasks can supply. Whether Part B
+has run yet is a fact this document does not assume — see "Standing statement" below for how to
+check it directly rather than trusting a sentence here.
+
+Every PASS licence Phase 85 pre-registered still asserts, verbatim and as originally written,
+that instability was not measured for a given comparison — that sentence remains literally true
+of every verdict produced without a measured `RunToRunInstability` supplied to it. The licence
+qualifier is how a FUTURE verdict, once instability IS measured for it, corrects that sentence
+without ever editing the pre-registration itself.
+
+### Run-to-run instability — the second variance quantity, defined in observed terms
+
+**Definition, checkable by hand:** given K (>= 2) repeat reports of one IDENTICAL run function,
+for each unordered pair of repeats count the items on which the two repeats DISAGREE on the
+capability's gating boolean (`exactMatch` for `generate-fix`, `verdictOutcome === 'correct'` for
+`analyse-visual`), divide by the shared item count, and report the MAXIMUM of those pairwise
+rates as the run-to-run instability. The mean travels beside it as context, never as the gating
+value — the maximum is used because every decision rule in this milestone errs toward alarm
+(85-CONTEXT.md A-1), and a mean would let one unusually stable pair of repeats mask an unusually
+unstable one.
+
+**Name it beside the quantity it must never be confused with.** The McNemar DISCORDANT-PAIR RATE
+(the assumption `varianceAssumption[capability].assumedValue` in the pre-registered bar, and the
+FIRST of `assessPower`'s three insufficiency reasons, `discordance-exceeds-assumption`) measures
+BASELINE-vs-CANDIDATE disagreement — two DIFFERENT experiments, each run once. RUN-TO-RUN
+INSTABILITY measures the SAME model/prompt run REPEATED — one experiment's own non-determinism
+at fixed temperature, with no baseline/candidate distinction at all. They are never the same
+number, and nothing in this codebase ever compares one against the other directly — see the
+shared-ceiling section below for the one place they meet, and note that meeting is a comparison
+of instability against a REUSED number, never a comparison of the two quantities to each other.
+
+### The shared ceiling: a reuse, not a pre-registered threshold
+
+The measured run-to-run instability is checked against the SAME `0.25` number the pre-registered
+bar already carries as `varianceAssumption[capability].assumedValue` for both capabilities — the
+discordant-pair-rate assumption the sample sizes were sized under. **State this plainly, in
+these words rather than a paraphrase: this ceiling is a REUSE of a differently-named quantity's
+number, adopted because it can only tighten — NOT a pre-registered instability threshold. If a
+future milestone wants a real instability bar, it pre-registers one; this is a conservative
+stand-in until then.** No separate instability threshold was ever pre-registered, because Phase
+85 correctly declined to invent a number for a quantity nobody had measured, and inventing one
+now — after this phase exists to produce the first measurement — would be exactly the fitting
+the milestone forbids. A reader must not come away believing an instability bar was
+pre-registered when none was.
+
+**Why the reuse is licensed without new consent, and its direction.** The pre-registered sample
+size was chosen under an assumption that budgets `0.25` total disagreement between the two runs
+being compared. If the instrument's own noise floor — the same model/prompt disagreeing with
+itself — already exceeds that entire budget, the pre-registered `n` cannot detect the margin,
+whatever the baseline-vs-candidate discordance turns out to be. This check can only ever ADD an
+insufficiency reason and never remove one, so it can only make a verdict MORE conservative. A
+correction that STRENGTHENS a bar needs no re-consent; one that WEAKENS it does — this sits on
+the safe side of that line, which is why adding it did not itself require a new pre-registration.
+
+**What a failed check licenses, and what it never does.** An assumption that does not survive
+makes results UNDERPOWERED and NEVER relaxes the margin or `n` — recorded in the artifact's own
+`sampleSizeAssumptionCheck.consequence` field, in this exact wording. UNDERPOWERED outranks PASS
+structurally and can never be silently upgraded to it.
+
+### The new input carries the same two disciplines the pre-registered one already does
+
+**A-9, restated for this input:** at these sample sizes this instrument is a REGRESSION
+DETECTOR, not a parity certifier — true of the instability check exactly as it is true of the
+non-inferiority clause above. A measured instability that exceeds the ceiling makes UNDERPOWERED
+more likely, not a sign that something broke; UNDERPOWERED at n=17/n=13 remains the EXPECTED
+verdict shape, not a fault.
+
+**A-7's shape, applied to the new number: the ceiling is not a budget.** An instability at or
+just under the ceiling does not license a PASS on its own — the false-PASS gate and the
+non-inferiority clause still have to clear independently. It merely fails to BLOCK a PASS the
+other clauses have already earned. Reading "we came in under the ceiling" as itself a positive
+signal is the same reassuring-direction misreading A-7 already warns against for the margin.
+
+### The licence qualifier — correcting a pre-registered sentence without editing it
+
+`packages/llm/src/eval/licence-qualifier.ts`'s `buildLicenceQualifier` is the SOLE constructor of
+the `LicenceQualifier` field every verdict now carries. It exists because every PASS licence
+Phase 85 pre-registered asserts, verbatim, that run-to-run instability was NOT measured for the
+comparison — true when written, and false the moment a measurement is supplied to a verdict that
+emits that clause unchanged, in the reassuring direction ("did anyone ever run the baseline?")
+that nobody re-checks. The bar file cannot be edited to fix this: it is pre-registered and
+digest-pinned, and a bar adjusted after the fact would destroy the guarantee the whole milestone
+exists to provide. So the correction travels on the VERDICT instead:
+
+- **`state: 'not-yet-measured'`** — the default, whenever the caller has not supplied a measured
+  instability. The bar file's licence clauses stand as written; nothing is superseded.
+- **`state: 'measured'`** — walks the loaded bar's `licenceStrings` object for every string
+  containing the fragment `"Run-to-run instability was not measured for this comparison"`,
+  ENUMERATED from the bar's own data rather than a hand-written list of three, so a fourth such
+  clause added to the bar file tomorrow is found automatically. Records which clauses are
+  SUPERSEDED, the observed value, and the ceiling it was checked against. Throws
+  `LicenceQualifierNoSupersededClausesFoundError` if the walk finds zero clauses — a search that
+  finds nothing and a search that cannot match print the same zero, and this module refuses to
+  let that ambiguity stand for a field whose whole job is declaring what changed.
+
+A verdict's `licenceQualifier.state` is cross-checked against its own
+`power.runToRunInstability.state` on every parse (`assertLicenceQualifierMatchesInstabilityState`)
+— a hand-edited or otherwise self-contradictory verdict document is refused rather than trusted.
+
+### `luqen-llm eval baseline`, and why a replay replication's instability is zero by construction
+
+`luqen-llm eval baseline --capability <name>` repeats a reference set K times (`--repeats`,
+default 3, minimum 2) through the same `runHarness` `eval run` uses, and builds a
+`BaselineReplicationArtifact` (`baseline.ts`, 86-03) over the resulting reports. Replay is the
+default — free, deterministic, no credentials — and live mode re-proves `eval run`'s ENTIRE
+four-flag-plus-environment-variable wall as a SECOND path to a real provider call: the same
+`--provider-type`/`--endpoint`/`--model-id`/`--i-acknowledge-spend` flags plus
+`EVAL_HARNESS_API_KEY`, refused before any adapter is built if any is missing. `eval baseline`
+exposes no `--db` option, matching `eval run`.
+
+The artifact is a DISCRIMINATED UNION with no exported path from one shape to the other:
+
+- **`LiveBaselineReplicationArtifact`** — `mode: 'live'` (a literal type) plus a top-level
+  `runFunction`, the artifact's own identity. This is the ONLY shape that may ever be read as a
+  baseline of a real model. The writer, `serialiseLiveBaselineReplicationArtifact`, re-asserts
+  `runFunction.mode === 'live'` at RUNTIME (the type does not survive a JSON boundary, and this
+  artifact is exactly the kind of thing a later phase reads back off disk) and throws
+  `BaselineArtifactRuntimeModeMismatchError` if it does not hold.
+- **`SyntheticBaselineReplicationArtifact`** — `_synthetic: true` plus a `syntheticNote`, and
+  deliberately NO top-level `runFunction` (the per-repeat run functions stay nested under
+  `repeats`, where nothing can mistake them for the artifact's own identity).
+
+**A REPLAY RUN IS NOT A BASELINE, and here is the precise reason.** A fixture adapter returns the
+same string every time, so a replay replication's measured `instability.maximum` is EXACTLY ZERO
+BY CONSTRUCTION — a number that measures the determinism of the fixture adapter, never of a
+model, and reads exactly like a good result if nothing beside it says otherwise. `syntheticNote`
+states this fact directly on the artifact, and the CLI's printed summary states it again as its
+own labelled line, so a reader of either the file or the terminal output cannot mistake a
+meaningless zero for a measured stability result. Every artifact shape — live and synthetic
+alike — carries the same required `sampleSizeAssumptionCheck` field, computed by IMPORTING
+`assessPower` rather than a second `value > ceiling` comparison written a second time.
+
+### A worked example, computed by the shipped code
+
+Three repeats, four items, `generate-fix`'s gating boolean (`exactMatch`):
+
+| Item | Repeat 0 | Repeat 1 | Repeat 2 |
+|---|---|---|---|
+| item-0 | true | true | true |
+| item-1 | true | false | true |
+| item-2 | false | false | true |
+| item-3 | false | false | false |
+
+Pairwise disagreement counts, out of 4 items each:
+
+| Pair | Disagreements | Rate |
+|---|---|---|
+| repeat 0 vs repeat 1 | 1 (item-1) | 0.25 |
+| repeat 0 vs repeat 2 | 1 (item-2) | 0.25 |
+| repeat 1 vs repeat 2 | 2 (item-1, item-2) | 0.50 |
+
+Maximum = **0.50**, mean = 0.333 (context, never the gating value). Checked against the
+pre-registered ceiling of `0.25` (both capabilities' `varianceAssumption[...].assumedValue` in
+the committed bar), `0.50 > 0.25`: the assumption DOES NOT SURVIVE. `assessPower` reports
+`sufficient: false` with the third reason (`run-to-run-instability-exceeds-ceiling`,
+`observedRunToRunInstability: 0.5`, `assumedCeiling: 0.25`), and any comparison against this
+baseline is UNDERPOWERED for that reason — the margin and `n` are unchanged either way.
+
+These numbers were produced by calling `computeRunToRunInstability` (instability.ts) and
+`assessPower` (verdict.ts) directly against three synthetic reports matching the table above, not
+composed by hand and merely checked afterward — the exact invocation and its raw output are
+recorded in `86-04-SUMMARY.md`'s claim-by-claim table.
 
 ### The root cause, so the limit is never mistaken for a defect
 
