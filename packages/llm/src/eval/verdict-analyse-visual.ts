@@ -195,11 +195,19 @@ export type AnalyseVisualVerdict =
  * Computes the `analyse-visual` verdict for a baseline/candidate report pair
  * against a loaded decision bar. Pure function — no db, no adapter, no
  * clock, no network, matching `compareGenerateFix`'s discipline (verdict.ts).
+ *
+ * `runToRunInstability` is a REQUIRED fourth parameter (86-01, D-85-5) —
+ * the identical requirement `compareGenerateFix` now carries, checked here
+ * independently rather than assumed inherited: no default value, so the
+ * caller must say what the instability is (`{ state: 'not-yet-measured' }`
+ * or `{ state: 'measured', value }`, see instability.ts) instead of the
+ * comparator supplying a silent default.
  */
 export function compareAnalyseVisual(
   bar: LoadedDecisionBars,
   baseline: AnalyseVisualReport,
   candidate: AnalyseVisualReport,
+  runToRunInstability: RunToRunInstability,
 ): AnalyseVisualVerdict {
   assertBarAppliesTo(bar, baseline.runFunction);
   assertBarAppliesTo(bar, candidate.runFunction);
@@ -240,7 +248,6 @@ export function compareAnalyseVisual(
     candidateGoodByItemId,
   );
 
-  const runToRunInstability: RunToRunInstability = { state: 'not-yet-measured' };
   const clauseComputation = computeNonInferiorityClause(
     clauseCounterName,
     baselineBetterCount,

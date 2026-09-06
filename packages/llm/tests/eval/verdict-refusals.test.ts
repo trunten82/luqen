@@ -64,7 +64,7 @@ describe('verdict refusals — invariant fields must hold constant', () => {
 
     let caught: unknown;
     try {
-      compareGenerateFix(bar, baseline, candidate);
+      compareGenerateFix(bar, baseline, candidate, { state: 'not-yet-measured' });
     } catch (err) {
       caught = err;
     }
@@ -77,8 +77,8 @@ describe('verdict refusals — invariant fields must hold constant', () => {
     const { baseline, candidate } = freshPair();
     // candidate already differs from baseline only on modelId/modelDisplayName/endpointFingerprint
     // (the fixture's own design) -- confirm this does NOT throw.
-    expect(() => compareGenerateFix(bar, baseline, candidate)).not.toThrow();
-    const verdict = compareGenerateFix(bar, baseline, candidate);
+    expect(() => compareGenerateFix(bar, baseline, candidate, { state: 'not-yet-measured' })).not.toThrow();
+    const verdict = compareGenerateFix(bar, baseline, candidate, { state: 'not-yet-measured' });
     expect(verdict.treatmentFieldsDiffered.modelId).toBe(true);
   });
 });
@@ -88,21 +88,21 @@ describe('verdict refusals — bar registration (delegates to decision-bars.ts, 
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const { baseline, candidate } = freshPair();
     (candidate.runFunction as { setName: string }).setName = 'some-other-set';
-    expect(() => compareGenerateFix(bar, baseline, candidate)).toThrow(BarSetNameMismatchError);
+    expect(() => compareGenerateFix(bar, baseline, candidate, { state: 'not-yet-measured' })).toThrow(BarSetNameMismatchError);
   });
 
   it('refuses a candidate report whose set version does not match the bar (BarSetVersionMismatchError)', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const { baseline, candidate } = freshPair();
     (candidate.runFunction as { setVersion: string }).setVersion = 'v2';
-    expect(() => compareGenerateFix(bar, baseline, candidate)).toThrow(BarSetVersionMismatchError);
+    expect(() => compareGenerateFix(bar, baseline, candidate, { state: 'not-yet-measured' })).toThrow(BarSetVersionMismatchError);
   });
 
   it('refuses a candidate report whose item count does not match the bar (BarItemCountMismatchError)', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const { baseline, candidate } = freshPair();
     (candidate.runFunction as { itemCount: number }).itemCount = 16;
-    expect(() => compareGenerateFix(bar, baseline, candidate)).toThrow(BarItemCountMismatchError);
+    expect(() => compareGenerateFix(bar, baseline, candidate, { state: 'not-yet-measured' })).toThrow(BarItemCountMismatchError);
   });
 });
 
@@ -115,7 +115,7 @@ describe('verdict refusals — a failed item in either report', () => {
 
     let caught: unknown;
     try {
-      compareGenerateFix(bar, baseline, candidate);
+      compareGenerateFix(bar, baseline, candidate, { state: 'not-yet-measured' });
     } catch (err) {
       caught = err;
     }
@@ -131,7 +131,7 @@ describe('verdict refusals — a failed item in either report', () => {
 
     let caught: unknown;
     try {
-      compareGenerateFix(bar, baseline, candidate);
+      compareGenerateFix(bar, baseline, candidate, { state: 'not-yet-measured' });
     } catch (err) {
       caught = err;
     }
@@ -149,7 +149,7 @@ describe('verdict refusals — item id sets must be identical', () => {
 
     let caught: unknown;
     try {
-      compareGenerateFix(bar, baseline, candidate);
+      compareGenerateFix(bar, baseline, candidate, { state: 'not-yet-measured' });
     } catch (err) {
       caught = err;
     }
@@ -168,7 +168,7 @@ describe('verdict refusals — a report aggregate must match a recount of its ow
 
     let caught: unknown;
     try {
-      compareGenerateFix(bar, baseline, candidate);
+      compareGenerateFix(bar, baseline, candidate, { state: 'not-yet-measured' });
     } catch (err) {
       caught = err;
     }
@@ -199,7 +199,7 @@ describe('verdict refusals — parseVerdict is the only supported path back from
   it('a well-formed verdict round-trips through parseVerdict unchanged', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const fixture = loadFixture();
-    const verdict = compareGenerateFix(bar, fixture.baseline, fixture.candidates.regressedBeyondMargin);
+    const verdict = compareGenerateFix(bar, fixture.baseline, fixture.candidates.regressedBeyondMargin, { state: 'not-yet-measured' });
     const json = serialiseVerdict(verdict);
     const roundTripped = parseVerdict(json);
     expect(roundTripped).toEqual(JSON.parse(json));
@@ -209,7 +209,7 @@ describe('verdict refusals — parseVerdict is the only supported path back from
   it('a well-formed PASS document parses cleanly (no false positive from the contradiction guard)', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const fixture = loadFixture();
-    const verdict = compareGenerateFix(bar, fixture.baseline, fixture.candidates.identical);
+    const verdict = compareGenerateFix(bar, fixture.baseline, fixture.candidates.identical, { state: 'not-yet-measured' });
     expect(verdict.outcome).toBe('PASS');
     const json = serialiseVerdict(verdict);
     expect(() => parseVerdict(json)).not.toThrow();
