@@ -1,6 +1,12 @@
 /**
  * `verdict.ts` — the `generate-fix` non-inferiority comparator (85-02,
- * BARS-01/BARS-03).
+ * BARS-01/BARS-03), plus (85-03) the SHARED arithmetic 85-02 established:
+ * item-pairing, power assessment, and the non-inferiority clause
+ * computation. `verdict-analyse-visual.ts` imports these three exports
+ * wholesale rather than re-deriving them — "one shape per phase, established
+ * once for `generate-fix` and applied here" (85-03-PLAN.md Task 1). This
+ * refactor does not change `compareGenerateFix`'s observable behaviour: the
+ * arithmetic moved into named functions, the branching and numbers did not.
  *
  * `compareGenerateFix` is a PURE function of a loaded decision bar plus two
  * `HarnessReport`s: it takes no db, no adapter, no clock, no network. It
@@ -28,7 +34,7 @@ import {
   assertNoFailedItems,
   treatmentFieldsThatDiffered,
 } from './verdict-comparability.js';
-import { computeDifferenceUpperBound } from './power.js';
+import { computeDifferenceUpperBound, type DifferenceUpperBoundResult } from './power.js';
 import type {
   GatingAxisReport,
   GenerateFixVerdict,
@@ -46,14 +52,133 @@ const NON_GATING_COUNTER_NAMES = [
   'filenameShapedAltCount',
 ] as const satisfies readonly (keyof GenerateFixAggregate)[];
 
-function scoresByItemId(
-  items: readonly ItemRecord<GenerateFixScoreRecord>[],
-): Map<string, GenerateFixScoreRecord> {
-  const map = new Map<string, GenerateFixScoreRecord>();
+/**
+ * Reads a capability's per-item scored records into an itemId -> score map.
+ * Generic over the score-record shape so `generate-fix` and `analyse-visual`
+ * share this ONE reading (85-03) rather than each writing their own.
+ */
+export function scoresByItemId<TScore>(items: readonly ItemRecord<TScore>[]): Map<string, TScore> {
+  const map = new Map<string, TScore>();
   for (const item of items) {
     if (isScoredItem(item)) map.set(item.itemId, item.score);
   }
   return map;
+}
+
+export interface PairedItemCounts {
+  readonly baselineBetterCount: number;
+  readonly candidateBetterCount: number;
+}
+
+/**
+ * Pairs two "is this item good" maps item-by-item on their shared item id,
+ * counting how many items each side is better on. DELIBERATELY never derived
+ * from an aggregate delta: a candidate that fixes k items and breaks k
+ * others shows an aggregate delta of zero but a discordance of 2k, and those
+ * are different facts about how much this instrument can see (85-02).
+ * Capability-agnostic — `generate-fix` pairs on `exactMatch`,
+ * `analyse-visual` pairs on `verdictOutcome === 'correct'` (85-03), both
+ * calling this ONE function.
+ */
+export function pairItemsByGoodness(
+  baselineGoodByItemId: ReadonlyMap<string, boolean>,
+  candidateGoodByItemId: ReadonlyMap<string, boolean>,
+): PairedItemCounts {
+  let baselineBetterCount = 0;
+  let candidateBetterCount = 0;
+  for (const [itemId, baselineGood] of baselineGoodByItemId) {
+    const candidateGood = candidateGoodByItemId.get(itemId);
+    if (candidateGood === undefined) continue;
+    if (baselineGood && !candidateGood) baselineBetterCount += 1;
+    if (candidateGood && !baselineGood) candidateBetterCount += 1;
+  }
+  return { baselineBetterCount, candidateBetterCount };
+}
+
+/**
+ * Assesses power for a non-inferiority clause (D-85-5): two INDEPENDENT
+ * insufficiency reasons, both checked, both may appear together — they are
+ * not mutually exclusive. Capability-agnostic: takes the already-computed
+ * Clopper-Pearson bound result, never recomputes it.
+ */
+export function assessPower(
+  observedDiscordantPairRate: number,
+  assumedDiscordantPairRate: number,
+  bound: DifferenceUpperBoundResult,
+  runToRunInstability: RunToRunInstability,
+): PowerAssessment {
+  const reasons: PowerInsufficiencyReason[] = [];
+  if (observedDiscordantPairRate > assumedDiscordantPairRate) {
+    reasons.push({
+      kind: 'discordance-exceeds-assumption',
+      assumedDiscordantPairRate,
+      observedDiscordantPairRate,
+    });
+  }
+  if (!bound.certifies) {
+    reasons.push({
+      kind: 'bound-does-not-clear-margin',
+      upperBound: bound.upperBound,
+      marginProportion: bound.marginProportion,
+    });
+  }
+  if (reasons.length > 0) {
+    return {
+      sufficient: false,
+      reasons: [reasons[0]!, ...reasons.slice(1)],
+      assumedDiscordantPairRate,
+      observedDiscordantPairRate,
+      runToRunInstability,
+    };
+  }
+  return { sufficient: true, assumedDiscordantPairRate, observedDiscordantPairRate, runToRunInstability };
+}
+
+export interface NonInferiorityClauseComputation {
+  readonly gatingAxis: GatingAxisReport;
+  readonly power: PowerAssessment;
+}
+
+/**
+ * The one-sided Clopper-Pearson non-inferiority clause (A-1), computed once
+ * and shared by every capability's clause: `generate-fix`'s single bar and
+ * `analyse-visual`'s `nonInferiorityClause` (85-03) both call this SAME
+ * function with their own counter name / counts / n / margin — never a
+ * second, re-derived arithmetic path (85-03-PLAN.md: "the same decision rule
+ * as the generate-fix gating axis"). Returns the gating-axis report and power
+ * assessment only; FAIL/UNDERPOWERED/PASS composition (verdict precedence)
+ * is a capability-specific concern left to each caller, since `generate-fix`
+ * has no false-PASS gate to compose against and `analyse-visual` does.
+ */
+export function computeNonInferiorityClause(
+  counterName: string,
+  baselineBetterCount: number,
+  candidateBetterCount: number,
+  n: number,
+  marginItems: number,
+  assumedDiscordantPairRate: number,
+  runToRunInstability: RunToRunInstability,
+): NonInferiorityClauseComputation {
+  const discordantPairCount = baselineBetterCount + candidateBetterCount;
+  const observedItemDelta = baselineBetterCount - candidateBetterCount;
+  const observedDiscordantPairRate = discordantPairCount / n;
+
+  const bound = computeDifferenceUpperBound(baselineBetterCount, n, marginItems);
+  const power = assessPower(observedDiscordantPairRate, assumedDiscordantPairRate, bound, runToRunInstability);
+
+  const gatingAxis: GatingAxisReport = {
+    counterName,
+    baselineBetterCount,
+    candidateBetterCount,
+    discordantPairCount,
+    observedItemDelta,
+    marginItems,
+    upperBound: bound.upperBound,
+    marginProportion: bound.marginProportion,
+    certifies: bound.certifies,
+  };
+
+  return { gatingAxis, power };
 }
 
 /**
@@ -90,64 +215,26 @@ export function compareGenerateFix(
   // Per-item pairing on the gating axis (exactMatch). The refusals above
   // already guarantee identical item-id sets and no failed items, so every
   // baseline id has a candidate counterpart here by construction.
-  let baselineBetterCount = 0;
-  let candidateBetterCount = 0;
-  for (const [itemId, baselineScore] of baselineScores) {
-    const candidateScore = candidateScores.get(itemId);
-    if (candidateScore === undefined) continue;
-    const baselineGood = baselineScore.exactMatch;
-    const candidateGood = candidateScore.exactMatch;
-    if (baselineGood && !candidateGood) baselineBetterCount += 1;
-    if (candidateGood && !baselineGood) candidateBetterCount += 1;
-  }
+  const baselineGoodByItemId = new Map<string, boolean>();
+  for (const [itemId, score] of baselineScores) baselineGoodByItemId.set(itemId, score.exactMatch);
+  const candidateGoodByItemId = new Map<string, boolean>();
+  for (const [itemId, score] of candidateScores) candidateGoodByItemId.set(itemId, score.exactMatch);
 
-  const discordantPairCount = baselineBetterCount + candidateBetterCount;
-  const observedItemDelta = baselineBetterCount - candidateBetterCount;
-  const observedDiscordantPairRate = discordantPairCount / n;
-
-  const bound = computeDifferenceUpperBound(baselineBetterCount, n, marginItems);
-
-  // Two INDEPENDENT insufficiency reasons (D-85-5). Both are checked and
-  // both may appear together — they are not mutually exclusive.
-  const reasons: PowerInsufficiencyReason[] = [];
-  if (observedDiscordantPairRate > assumedDiscordantPairRate) {
-    reasons.push({
-      kind: 'discordance-exceeds-assumption',
-      assumedDiscordantPairRate,
-      observedDiscordantPairRate,
-    });
-  }
-  if (!bound.certifies) {
-    reasons.push({
-      kind: 'bound-does-not-clear-margin',
-      upperBound: bound.upperBound,
-      marginProportion: bound.marginProportion,
-    });
-  }
+  const { baselineBetterCount, candidateBetterCount } = pairItemsByGoodness(
+    baselineGoodByItemId,
+    candidateGoodByItemId,
+  );
 
   const runToRunInstability: RunToRunInstability = { state: 'not-yet-measured' };
-  const powerAssessment: PowerAssessment =
-    reasons.length > 0
-      ? {
-          sufficient: false,
-          reasons: [reasons[0]!, ...reasons.slice(1)],
-          assumedDiscordantPairRate,
-          observedDiscordantPairRate,
-          runToRunInstability,
-        }
-      : { sufficient: true, assumedDiscordantPairRate, observedDiscordantPairRate, runToRunInstability };
-
-  const gatingAxis: GatingAxisReport = {
-    counterName: gatingCounterName,
+  const clause = computeNonInferiorityClause(
+    gatingCounterName,
     baselineBetterCount,
     candidateBetterCount,
-    discordantPairCount,
-    observedItemDelta,
+    n,
     marginItems,
-    upperBound: bound.upperBound,
-    marginProportion: bound.marginProportion,
-    certifies: bound.certifies,
-  };
+    assumedDiscordantPairRate,
+    runToRunInstability,
+  );
 
   const nonGatingAxisDeltas = NON_GATING_COUNTER_NAMES.map((counterName) => ({
     counterName,
@@ -160,7 +247,7 @@ export function compareGenerateFix(
     capability: 'generate-fix' as const,
     baselineRunFunction: baseline.runFunction,
     candidateRunFunction: candidate.runFunction,
-    gatingAxis,
+    gatingAxis: clause.gatingAxis,
     nonGatingAxisDeltas,
     treatmentFieldsDiffered,
     decisionBarsVersion: bar.barsVersion,
@@ -178,13 +265,13 @@ export function compareGenerateFix(
   //      "deterministic count comparison, no test" mechanism.
   //   3. Otherwise, an insufficient power assessment yields UNDERPOWERED.
   //   4. A PASS requires the clause to clear AND sufficient power.
-  if (observedItemDelta > marginItems) {
-    return { ...common, outcome: 'FAIL', power: powerAssessment, licence: licences.fail.text };
+  if (clause.gatingAxis.observedItemDelta > marginItems) {
+    return { ...common, outcome: 'FAIL', power: clause.power, licence: licences.fail.text };
   }
-  if (!powerAssessment.sufficient) {
-    return { ...common, outcome: 'UNDERPOWERED', power: powerAssessment, licence: licences.underpowered.text };
+  if (!clause.power.sufficient) {
+    return { ...common, outcome: 'UNDERPOWERED', power: clause.power, licence: licences.underpowered.text };
   }
-  return { ...common, outcome: 'PASS', power: powerAssessment, licence: licences.pass.text };
+  return { ...common, outcome: 'PASS', power: clause.power, licence: licences.pass.text };
 }
 
 /** Serialises a verdict to pretty-printed JSON — the shape a maintainer commits or diffs. */
