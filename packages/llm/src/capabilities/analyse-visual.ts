@@ -140,6 +140,7 @@ export async function executeAnalyseVisual(
           model: model.displayName,
           provider: provider.name,
           attempts: totalAttempts,
+          rawText: result.text,
         };
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
