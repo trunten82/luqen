@@ -1,0 +1,16 @@
+{
+  "_synthetic": "SYNTHETIC -- hand-written fixture responses, not model output. Exercises the harness pipeline deterministically with no spend and no network. A green replay run using this file means the harness RUNS; it does NOT mean any model was measured. No trusted measurement of any model exists from this file -- that is Phase 86's baseline job.",
+  "img-informative-seed": "{\"verdict\": \"issue\", \"findings\": [{\"description\": \"Reference set gold finding\", \"wcagCriterion\": \"1.1.1\", \"confidence\": \"high\"}], \"altClassification\": \"informational\", \"suggestedAlt\": \"A golden retriever puppy resting on a wooden floor\"}",
+  "informative-telephone-icon": "{\"altClassification\": \"informational\", \"suggestedAlt\": \"Telephone\"}",
+  "informative-fax-icon": "Not sure about this one, seems okay I guess.",
+  "informative-bicycle-photo": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"Bicycles parked against a brick wall in dappled spring sunlight\"}",
+  "complex-energy-consumption": "{\"verdict\": \"issue\", \"findings\": [{\"description\": \"Reference set gold finding\", \"wcagCriterion\": \"1.1.1\", \"confidence\": \"high\"}], \"altClassification\": \"informational\", \"suggestedAlt\": \"Bar chart of U.S. energy consumption by sector, showing residential, commercial, industrial and transportation shares\"}",
+  "complex-flowchart-goal": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"Flowchart showing the steps to plan and achieve a personal goal, from setting the goal to reviewing the outcome\"}",
+  "complex-thyroid-incidence": "{\"verdict\": \"issue\", \"findings\": [{\"description\": \"Reference set gold finding\", \"wcagCriterion\": \"1.1.1\", \"confidence\": \"high\"}], \"altClassification\": \"informational\", \"suggestedAlt\": \"Pie chart of thyroid cancer types by relative incidence\"}",
+  "decorative-geometric-pattern": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"decorative\", \"suggestedAlt\": \"\"}",
+  "decorative-floral-wallpaper": "{\"verdict\": \"issue\", \"findings\": [{\"description\": \"Reference set gold finding\", \"wcagCriterion\": \"1.1.1\", \"confidence\": \"high\"}], \"altClassification\": \"decorative\", \"suggestedAlt\": \"\"}",
+  "decorative-wallpaper-corner": "```json\n{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"decorative\", \"suggestedAlt\": \"\"}\n```",
+  "functional-print-icon": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"Print this page\"}",
+  "functional-search-icon": "{\"verdict\": \"issue\", \"findings\": [{\"description\": \"Reference set gold finding\", \"wcagCriterion\": \"1.1.1\", \"confidence\": \"high\"}], \"altClassification\": \"informational\", \"suggestedAlt\": \"Search\"}",
+  "functional-home-icon": "{\"verdict\": \"issue\", \"findings\": [{\"description\": \"Reference set gold finding\", \"wcagCriterion\": \"1.1.1\", \"confidence\": \"high\"}], \"altClassification\": \"informational\", \"suggestedAlt\": \"Home\"}"
+}
