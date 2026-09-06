@@ -1,15 +1,101 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { SqliteAdapter } from './db/sqlite-adapter.js';
 import { loadConfig } from './config.js';
 import { VERSION } from './version.js';
+import { runHarness, type RunHarnessProvider, type RunHarnessResult } from './eval/harness.js';
+import { createFixtureAdapter } from './eval/fixture-adapter.js';
+import { assertComparable, RunFunctionMismatchError, type RunFunction, type RunMode } from './eval/run-manifest.js';
+import { createAdapter } from './providers/registry.js';
+import type { ProviderType } from './types.js';
 
 function createDbAdapter(dbPath?: string): SqliteAdapter {
   const config = loadConfig();
   const resolvedPath = dbPath ?? process.env.LLM_DB_PATH ?? config.dbPath ?? './llm.db';
   return new SqliteAdapter(resolvedPath);
+}
+
+// ---------------------------------------------------------------------------
+// eval (Phase 84, HARNESS-01/HARNESS-02/HARNESS-04/HARNESS-06)
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolved once, from the file's OWN location, never from `process.cwd()` —
+ * a maintainer can invoke `luqen-llm` from any directory. Two levels up from
+ * this file's directory (`src/` at dev time, `dist/` once built) is the
+ * `@luqen/llm` package root, where `tests/eval/sets/` and
+ * `tests/eval/fixtures/` live.
+ */
+const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+const EVAL_CAPABILITIES = ['generate-fix', 'analyse-visual'] as const;
+type EvalCapability = (typeof EVAL_CAPABILITIES)[number];
+
+function isEvalCapability(value: string): value is EvalCapability {
+  return (EVAL_CAPABILITIES as readonly string[]).includes(value);
+}
+
+/**
+ * The committed, labelled-synthetic fixture file for each capability
+ * (Task 2). Replay is the default mode and needs no `--fixtures` override
+ * for the ordinary case.
+ */
+const REPLAY_FIXTURE_FILES: Record<EvalCapability, string> = {
+  'generate-fix': 'tests/eval/fixtures/wcag-fixes.replay.json',
+  'analyse-visual': 'tests/eval/fixtures/image-alt.replay.json',
+};
+
+/**
+ * The ONLY place a live run's provider credential may come from. Never a
+ * CLI argument — a credential passed on the command line lands in shell
+ * history and process listings. T-84-12.
+ */
+const EVAL_LIVE_API_KEY_ENV = 'EVAL_HARNESS_API_KEY';
+
+/** Strips the `_synthetic` label out of a committed replay fixture file, returning the item-id-to-response-text map the fixture adapter looks up. */
+function loadReplayResponses(path: string): Readonly<Record<string, string>> {
+  const raw = JSON.parse(readFileSync(path, 'utf-8')) as Record<string, string>;
+  const { _synthetic: _label, ...responses } = raw;
+  return responses;
+}
+
+function printEvalSummary(result: RunHarnessResult): void {
+  console.log(`Capability: ${result.capability}`);
+  console.log(`Mode: ${result.report.runFunction.mode}`);
+  console.log(
+    `Model: ${result.report.runFunction.modelDisplayName} (${result.report.runFunction.modelId})`,
+  );
+  console.log(
+    `Set: ${result.report.runFunction.setName}@${result.report.runFunction.setVersion} (${result.report.runFunction.itemCount} items)`,
+  );
+  console.log(`Failed: ${result.report.failedCount}`);
+
+  if (result.capability === 'generate-fix') {
+    const a = result.report.aggregate;
+    console.log(`Exact match: ${a.exactMatchCount}/${a.total}`);
+    console.log(`Unchanged from input: ${a.unchangedFromInputCount}/${a.total}`);
+    console.log(`Empty fix: ${a.emptyFixCount}/${a.total}`);
+    console.log(`Missing mentions: ${a.missingMentionsCount}/${a.total}`);
+    console.log(`Effort match: ${a.effortMatchCount}/${a.total}`);
+    console.log(`Filename-shaped alt: ${a.filenameShapedAltCount}/${a.total}`);
+  } else {
+    const a = result.report.aggregate;
+    console.log(`Correct: ${a.correct}/${a.total}`);
+    // HARNESS-03/anti-fusion: false-PASS and false-ISSUE are printed as TWO
+    // SEPARATE lines, never one blended figure. This is one of the two
+    // surfaces a human actually reads (the other is the serialised report).
+    console.log(`False-PASS: ${a.falsePass}/${a.total}`);
+    console.log(`False-ISSUE: ${a.falseIssue}/${a.total}`);
+    console.log(`Uncertain: ${a.uncertain}/${a.total}`);
+    console.log(`Alt classification mismatch: ${a.altClassificationMismatchCount}/${a.total}`);
+    console.log(`Suggested-alt filename-shaped: ${a.suggestedAltFilenameShapedCount}/${a.total}`);
+    console.log(
+      `Suggested-alt empty-despite-informational: ${a.suggestedAltEmptyDespiteInformationalCount}/${a.total}`,
+    );
+  }
 }
 
 export function createProgram(): Command {
@@ -273,6 +359,146 @@ export function createProgram(): Command {
         }
       }
       await db.close();
+    });
+
+  // ---- eval (Phase 84 scoring harness — measurement, no verdict) ----
+  const evalGroup = program
+    .command('eval')
+    .description('Run the Phase 84 scoring harness against a reference set (measurement only — no bar, no verdict)');
+
+  evalGroup
+    .command('run')
+    .description('Run a reference set through a capability and score it. Replay mode is the default: free, deterministic, no credentials.')
+    .requiredOption('--capability <name>', `Capability to score (${EVAL_CAPABILITIES.join(' | ')})`)
+    .option('--mode <mode>', 'replay (default) or live', 'replay')
+    .option('--set-version <version>', 'Reference set version', 'v1')
+    .option('--fixtures <path>', 'Override the replay fixture file (defaults to the committed synthetic fixture for the chosen capability)')
+    .option('--provider-type <type>', 'LIVE MODE ONLY: ollama | openai | anthropic | gemini')
+    .option('--endpoint <url>', 'LIVE MODE ONLY: provider base URL')
+    .option('--model-id <id>', 'LIVE MODE ONLY: provider-native model id')
+    .option('--i-acknowledge-spend', 'LIVE MODE ONLY: explicit acknowledgement that this run spends money against a real provider and is non-deterministic', false)
+    .option('--out <path>', 'Write the full JSON report to this path')
+    .action(async (opts: {
+      capability: string;
+      mode: string;
+      setVersion: string;
+      fixtures?: string;
+      providerType?: string;
+      endpoint?: string;
+      modelId?: string;
+      iAcknowledgeSpend?: boolean;
+      out?: string;
+    }) => {
+      // Validate the capability BEFORE anything else runs — mirrors the
+      // strict enum checks the routes already do (capabilities-exec.ts).
+      if (!isEvalCapability(opts.capability)) {
+        console.error(`error: --capability must be one of: ${EVAL_CAPABILITIES.join(', ')} (got "${opts.capability}")`);
+        process.exitCode = 1;
+        return;
+      }
+      const capability = opts.capability;
+
+      if (opts.mode !== 'replay' && opts.mode !== 'live') {
+        console.error(`error: --mode must be "replay" or "live" (got "${opts.mode}")`);
+        process.exitCode = 1;
+        return;
+      }
+      const mode: RunMode = opts.mode;
+
+      let provider: RunHarnessProvider | undefined;
+      let modelIdOnProvider: string | undefined;
+      let adapterFactoryFor: (itemId: string) => (type: string) => import('./providers/types.js').LLMProviderAdapter;
+
+      if (mode === 'live') {
+        // Every one of these is required, and the refusal below runs BEFORE
+        // any adapter is built or any db is seeded — no network call is
+        // ever attempted when any one of them is missing (T-84-11).
+        const missing: string[] = [];
+        if (!opts.providerType) missing.push('--provider-type');
+        if (!opts.endpoint) missing.push('--endpoint');
+        if (!opts.modelId) missing.push('--model-id');
+        if (!opts.iAcknowledgeSpend) missing.push('--i-acknowledge-spend');
+        const apiKey = process.env[EVAL_LIVE_API_KEY_ENV];
+        if (!apiKey) missing.push(`${EVAL_LIVE_API_KEY_ENV} environment variable`);
+        if (missing.length > 0) {
+          console.error(
+            `error: live mode requires all of the following, missing: ${missing.join(', ')}`,
+          );
+          process.exitCode = 1;
+          return;
+        }
+
+        provider = {
+          type: opts.providerType as ProviderType,
+          baseUrl: opts.endpoint as string,
+          apiKey,
+          timeout: 30000,
+        };
+        modelIdOnProvider = opts.modelId;
+        // The REAL createAdapter from providers/registry.ts — the identical
+        // factory the HTTP route and the MCP tools hand to
+        // executeGenerateFix/executeAnalyseVisual. Never a re-implemented
+        // dialing path.
+        adapterFactoryFor = () => (type: string) => createAdapter(type as ProviderType);
+      } else {
+        const fixturesPath = opts.fixtures ?? join(PACKAGE_ROOT, REPLAY_FIXTURE_FILES[capability]);
+        const responsesByItemId = loadReplayResponses(fixturesPath);
+        adapterFactoryFor = (itemId: string) => () =>
+          createFixtureAdapter({ responsesByItemId, currentItemId: () => itemId });
+      }
+
+      const result: RunHarnessResult =
+        capability === 'generate-fix'
+          ? await runHarness({
+              capability: 'generate-fix',
+              mode,
+              packageRoot: PACKAGE_ROOT,
+              setVersion: opts.setVersion,
+              adapterFactoryFor,
+              provider,
+              modelIdOnProvider,
+            })
+          : await runHarness({
+              capability: 'analyse-visual',
+              mode,
+              packageRoot: PACKAGE_ROOT,
+              setVersion: opts.setVersion,
+              adapterFactoryFor,
+              provider,
+              modelIdOnProvider,
+            });
+
+      printEvalSummary(result);
+
+      if (opts.out) {
+        // Same pretty-printed shape as report.ts's serialiseReport(); called
+        // via JSON.stringify directly here because result.report is a
+        // discriminated union (GenerateFixReport | AnalyseVisualReport) and
+        // serialiseReport's generic signature does not narrow across it.
+        writeFileSync(opts.out, JSON.stringify(result.report, null, 2));
+        console.log(`Report written to ${opts.out}`);
+      }
+    });
+
+  evalGroup
+    .command('compare')
+    .description('Compare two written eval reports; refuses when their run functions differ on anything but timestamp')
+    .requiredOption('--a <path>', 'First report JSON path')
+    .requiredOption('--b <path>', 'Second report JSON path')
+    .action((opts: { a: string; b: string }) => {
+      const reportA = JSON.parse(readFileSync(opts.a, 'utf-8')) as { runFunction: RunFunction };
+      const reportB = JSON.parse(readFileSync(opts.b, 'utf-8')) as { runFunction: RunFunction };
+      try {
+        assertComparable(reportA.runFunction, reportB.runFunction);
+        console.log('Run functions are comparable (identical apart from timestamp).');
+      } catch (err) {
+        if (err instanceof RunFunctionMismatchError) {
+          console.error(`error: reports are not comparable — differing fields: ${err.differingFields.join(', ')}`);
+          process.exitCode = 1;
+          return;
+        }
+        throw err;
+      }
     });
 
   return program;
