@@ -233,3 +233,70 @@ describe('generate-fix verdict tracer — end to end (Task 1)', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Phase 86 Task 1 (BASELINE-02/SC4/SC5, D-85-5): the third insufficiency
+// reason -- measured instability above the pre-registered ceiling. Both
+// below-ceiling and not-yet-measured must add nothing (byte-identical to
+// every pre-existing verdict test above); only above-ceiling adds the
+// third reason, under its own distinctly-named fields.
+// ---------------------------------------------------------------------------
+describe('generate-fix verdict — the third insufficiency reason (Phase 86 Task 1)', () => {
+  it('not-yet-measured adds nothing: PASS stays PASS, only the two pre-existing reasons are possible', () => {
+    const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
+    const fixture = loadFixture();
+    const verdict = compareGenerateFix(bar, fixture.baseline, fixture.candidates.identical, {
+      state: 'not-yet-measured',
+    });
+
+    expect(verdict.outcome).toBe('PASS');
+    expect(verdict.power.sufficient).toBe(true);
+  });
+
+  it('measured AT the ceiling (0.25) does not exceed it -- exclusive boundary, matching discordance-exceeds-assumption', () => {
+    const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
+    const fixture = loadFixture();
+    const verdict = compareGenerateFix(bar, fixture.baseline, fixture.candidates.identical, {
+      state: 'measured',
+      value: 0.25,
+    });
+
+    expect(verdict.outcome).toBe('PASS');
+    expect(verdict.power.sufficient).toBe(true);
+  });
+
+  it('measured BELOW the ceiling adds nothing: still PASS, still sufficient', () => {
+    const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
+    const fixture = loadFixture();
+    const verdict = compareGenerateFix(bar, fixture.baseline, fixture.candidates.identical, {
+      state: 'measured',
+      value: 0.1,
+    });
+
+    expect(verdict.outcome).toBe('PASS');
+    expect(verdict.power.sufficient).toBe(true);
+  });
+
+  it('measured STRICTLY ABOVE the ceiling flips an otherwise-PASS pair to UNDERPOWERED, naming the third reason with its own distinct field names', () => {
+    const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
+    const fixture = loadFixture();
+    const verdict = compareGenerateFix(bar, fixture.baseline, fixture.candidates.identical, {
+      state: 'measured',
+      value: 0.9,
+    });
+
+    expect(verdict.outcome).toBe('UNDERPOWERED');
+    expect(verdict.power.sufficient).toBe(false);
+    if (!verdict.power.sufficient) {
+      const kinds = verdict.power.reasons.map((r) => r.kind);
+      expect(kinds).toEqual(['run-to-run-instability-exceeds-ceiling']);
+      const reason = verdict.power.reasons[0];
+      expect(reason.kind).toBe('run-to-run-instability-exceeds-ceiling');
+      if (reason.kind === 'run-to-run-instability-exceeds-ceiling') {
+        // Distinct field names -- never observedDiscordantPairRate/assumedDiscordantPairRate.
+        expect(reason.observedRunToRunInstability).toBe(0.9);
+        expect(reason.assumedCeiling).toBe(0.25);
+      }
+    }
+  });
+});

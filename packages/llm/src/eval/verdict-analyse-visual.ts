@@ -54,9 +54,12 @@ import {
   scoresByItemId,
   InvalidVerdictJsonError,
   VerdictPassPowerContradictionError,
+  assertLicenceQualifierMatchesInstabilityState,
 } from './verdict.js';
+import { buildLicenceQualifier } from './licence-qualifier.js';
 import type {
   GatingAxisReport,
+  LicenceQualifier,
   NonGatingAxisDelta,
   PowerAssessment,
   RunToRunInstability,
@@ -137,6 +140,8 @@ interface AnalyseVisualVerdictCommon {
   readonly treatmentFieldsDiffered: TreatmentFieldsDiffered;
   readonly decisionBarsVersion: string;
   readonly decisionBarsDigestSha256: string;
+  /** REQUIRED (Phase 86 Task 2, T-86-07) — the identical requirement `generate-fix` carries, see `LicenceQualifier`'s doc comment (verdict-types.ts). */
+  readonly licenceQualifier: LicenceQualifier;
 }
 
 /**
@@ -346,6 +351,8 @@ export function compareAnalyseVisual(
 
   const treatmentFieldsDiffered = treatmentFieldsThatDiffered(baseline.runFunction, candidate.runFunction);
 
+  const licenceQualifier: LicenceQualifier = buildLicenceQualifier(runToRunInstability, 'analyse-visual', bar);
+
   const common = {
     capability: 'analyse-visual',
     baselineRunFunction: baseline.runFunction,
@@ -355,6 +362,7 @@ export function compareAnalyseVisual(
     treatmentFieldsDiffered,
     decisionBarsVersion: bar.barsVersion,
     decisionBarsDigestSha256: bar.digestSha256,
+    licenceQualifier,
   } as const;
 
   // Narrow into the discriminated union (D-85-6). The PASS branch is the point:
@@ -437,5 +445,12 @@ export function parseAnalyseVisualVerdict(json: string): AnalyseVisualVerdict {
   if (outcome === 'PASS' && sufficient !== true) {
     throw new VerdictPassPowerContradictionError();
   }
+  // Phase 86 Task 2 (T-86-07): the same licence-qualifier/instability-state
+  // cross-check generate-fix's parseVerdict now carries -- reused via the
+  // shared helper (verdict.ts), never re-derived. analyse-visual nests
+  // `power` one level deeper (inside `nonInferiorityClause`), which is
+  // exactly why this is a helper taking the already-extracted `power` value
+  // rather than each parser hand-rolling its own path.
+  assertLicenceQualifierMatchesInstabilityState(record, powerRaw);
   return parsed as AnalyseVisualVerdict;
 }
