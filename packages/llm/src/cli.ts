@@ -12,7 +12,7 @@ import { assertComparable, RunFunctionMismatchError, type RunFunction, type RunM
 import { createAdapter } from './providers/registry.js';
 import type { ProviderType } from './types.js';
 import { loadDecisionBars } from './eval/decision-bars.js';
-import { compareGenerateFix, serialiseVerdict } from './eval/verdict.js';
+import { compareGenerateFix, serialiseVerdict, describeInsufficiencyReason } from './eval/verdict.js';
 import type { GenerateFixVerdict, PowerAssessment, RunToRunInstability } from './eval/verdict-types.js';
 import { compareAnalyseVisual, serialiseAnalyseVisualVerdict, type AnalyseVisualVerdict } from './eval/verdict-analyse-visual.js';
 import type { GenerateFixReport, AnalyseVisualReport } from './eval/report.js';
@@ -117,7 +117,7 @@ function printPowerAssessment(label: string, power: PowerAssessment): void {
   console.log(`${label} power sufficient: ${power.sufficient}`);
   if (!power.sufficient) {
     for (const reason of power.reasons) {
-      console.log(`${label} power insufficiency reason: ${reason.kind}`);
+      console.log(`${label} power insufficiency reason: ${describeInsufficiencyReason(reason)}`);
     }
   }
 }

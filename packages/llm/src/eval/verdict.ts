@@ -42,6 +42,7 @@ import type {
   PowerInsufficiencyReason,
   RunToRunInstability,
 } from './verdict-types.js';
+import { RUN_TO_RUN_INSTABILITY_CEILING_NOTE } from './verdict-types.js';
 
 /** The five `generate-fix` axes reported as context, never gating (D-85-2, bar file `capabilityBars.generate-fix.nonGatingAxes`). */
 const NON_GATING_COUNTER_NAMES = [
@@ -96,10 +97,36 @@ export function pairItemsByGoodness(
 }
 
 /**
- * Assesses power for a non-inferiority clause (D-85-5): two INDEPENDENT
- * insufficiency reasons, both checked, both may appear together — they are
- * not mutually exclusive. Capability-agnostic: takes the already-computed
- * Clopper-Pearson bound result, never recomputes it.
+ * Assesses power for a non-inferiority clause (D-85-5, Phase 86 BASELINE-02):
+ * THREE INDEPENDENT insufficiency reasons, all checked, any subset may appear
+ * together — they are not mutually exclusive. Capability-agnostic: takes the
+ * already-computed Clopper-Pearson bound result, never recomputes it.
+ *
+ * THE THIRD REASON — `run-to-run-instability-exceeds-ceiling` — checks the
+ * measured run-to-run score instability (a DIFFERENT quantity from the
+ * discordant-pair rate, D-85-5) against `assumedDiscordantPairRate` REUSED as
+ * a ceiling. Why that number, and only in this direction: the pre-registered
+ * `n` was sized under an assumption that budgets `assumedDiscordantPairRate`
+ * total disagreement between the two runs being compared; if the
+ * instrument's own noise floor already exceeds that entire budget, the
+ * pre-registered `n` cannot detect the margin regardless of what the
+ * discordance turns out to be. This check can only ever ADD a reason, never
+ * remove one, so it can only make a verdict MORE conservative — a
+ * correction that STRENGTHENS a bar needs no re-consent, one that WEAKENS it
+ * does, and this sits on the safe side of that line, needing no new
+ * pre-registered number of its own. REQUIRED WORDING (coordinator ruling,
+ * 2026-09-06), reproduced verbatim on every rendering surface via
+ * {@link RUN_TO_RUN_INSTABILITY_CEILING_NOTE}: this ceiling is a REUSE of a
+ * differently-named quantity's number, adopted because it can only tighten —
+ * NOT a pre-registered instability threshold. No separate instability
+ * threshold was pre-registered, because Phase 85 correctly declined to
+ * invent a number for a quantity nobody had measured, and inventing one now
+ * — after this phase exists to produce the first measurement — would be
+ * exactly the fitting the milestone forbids.
+ *
+ * The boundary is EXCLUSIVE, consistently with `discordance-exceeds-
+ * assumption` above: a measured value equal to the ceiling is not an
+ * exceedance.
  */
 export function assessPower(
   observedDiscordantPairRate: number,
@@ -122,6 +149,13 @@ export function assessPower(
       marginProportion: bound.marginProportion,
     });
   }
+  if (runToRunInstability.state === 'measured' && runToRunInstability.value > assumedDiscordantPairRate) {
+    reasons.push({
+      kind: 'run-to-run-instability-exceeds-ceiling',
+      observedRunToRunInstability: runToRunInstability.value,
+      assumedCeiling: assumedDiscordantPairRate,
+    });
+  }
   if (reasons.length > 0) {
     return {
       sufficient: false,
@@ -132,6 +166,42 @@ export function assessPower(
     };
   }
   return { sufficient: true, assumedDiscordantPairRate, observedDiscordantPairRate, runToRunInstability };
+}
+
+/**
+ * Renders one `PowerInsufficiencyReason` as a human-readable line — the ONE
+ * real consumer of `reason.kind` beyond a bare print (Phase 86 planning
+ * caught, before this task was executed, that an exhaustiveness assertion
+ * over the reason kinds would otherwise be INERT: nothing consumed
+ * `reason.kind` beyond `printPowerAssessment` in `cli.ts` printing it alone,
+ * so there was nothing for a `never`-typed default branch to force). This
+ * function IS that consumer, and `cli.ts`'s `printPowerAssessment` calls it.
+ *
+ * The `switch` is EXHAUSTIVE over `PowerInsufficiencyReason['kind']` and the
+ * `default` branch types the unreached value as `never` — a fourth reason
+ * kind added to the union without a matching `case` here fails to compile,
+ * not merely to run correctly. To BREAK IT (do this rather than trust it):
+ * add a throwaway fourth member to `PowerInsufficiencyReason` in
+ * verdict-types.ts, run `npx tsc --noEmit -p packages/llm/tsconfig.json`,
+ * and confirm it fails HERE, at the `default` branch's `never` assignment —
+ * not somewhere incidental. Then remove the throwaway member and confirm
+ * `git status --short` is empty. Do not "simplify" this back to a bare
+ * `console.log(reason.kind)` — that is the exact inert-guard shape
+ * `run-manifest.ts` already carries a recorded warning against.
+ */
+export function describeInsufficiencyReason(reason: PowerInsufficiencyReason): string {
+  switch (reason.kind) {
+    case 'discordance-exceeds-assumption':
+      return `discordance-exceeds-assumption: observed McNemar discordant-pair rate ${reason.observedDiscordantPairRate} exceeded the pre-registered assumption ${reason.assumedDiscordantPairRate}`;
+    case 'bound-does-not-clear-margin':
+      return `bound-does-not-clear-margin: the one-sided Clopper-Pearson upper bound ${reason.upperBound} did not clear the margin proportion ${reason.marginProportion}`;
+    case 'run-to-run-instability-exceeds-ceiling':
+      return `run-to-run-instability-exceeds-ceiling: observed run-to-run instability ${reason.observedRunToRunInstability} exceeded the ceiling ${reason.assumedCeiling}. ${RUN_TO_RUN_INSTABILITY_CEILING_NOTE}`;
+    default: {
+      const unreachable: never = reason;
+      throw new Error(`Unhandled PowerInsufficiencyReason kind: ${JSON.stringify(unreachable)}`);
+    }
+  }
 }
 
 export interface NonInferiorityClauseComputation {
