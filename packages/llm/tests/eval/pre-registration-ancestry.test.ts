@@ -151,11 +151,43 @@ describe('checkPreRegistrationAncestry -- shallow clone: THROWS, never skips, ne
     expect(message).toMatch(/fetch-depth: 0|git fetch --unshallow/);
   });
 
-  it('the REAL (non-injected) isShallowRepository throws in THIS worktree, which is itself a genuine shallow clone (measured fact, see file header)', () => {
+  it('the REAL (non-injected) isShallowRepository AGREES WITH THE AMBIENT REPO, whatever it is', () => {
+    // This test originally asserted "THIS worktree is a genuine shallow clone
+    // (measured fact)". That measurement was CORRECT on the host it was taken
+    // on — /root/luqen has a .git/shallow file — and encoding it as an
+    // invariant was the mistake: it is a property of the ENVIRONMENT, not of
+    // the code under test.
+    //
+    // It failed in CI, and the thing that broke it was THIS BRANCH'S OWN FIX.
+    // Setting `fetch-depth: 0` makes the CI checkout non-shallow, so the real
+    // isShallowRepository correctly returned false and the function correctly
+    // did not throw. The branch fixed shallowness in CI and asserted
+    // shallowness in a test, in one commit.
+    //
+    // The point worth keeping is real and is why this test still exists: it
+    // exercises the REAL, non-injected `isShallowRepository`, so the wiring is
+    // covered rather than only the injected fake. So assert the RELATIONSHIP —
+    // the function's behaviour must track the ambient repo — which is true in a
+    // shallow checkout, a full one, and CI.
     const cwd = repoRoot();
-    expect(() => checkPreRegistrationAncestry(cwd, BAR_FILE_PATH, 'irrelevant-commit-sha')).toThrow(
-      ShallowCloneCannotAnswerAncestryError,
-    );
+    const ambientlyShallow =
+      execFileSync('git', ['rev-parse', '--is-shallow-repository'], { cwd, encoding: 'utf-8' }).trim() === 'true';
+
+    if (ambientlyShallow) {
+      expect(() => checkPreRegistrationAncestry(cwd, BAR_FILE_PATH, 'irrelevant-commit-sha')).toThrow(
+        ShallowCloneCannotAnswerAncestryError,
+      );
+    } else {
+      // A full clone must NOT report the shallow error. It may still throw for
+      // the bogus sha — that is a different failure and not what this asserts.
+      let caught: unknown;
+      try {
+        checkPreRegistrationAncestry(cwd, BAR_FILE_PATH, 'irrelevant-commit-sha');
+      } catch (err) {
+        caught = err;
+      }
+      expect(caught).not.toBeInstanceOf(ShallowCloneCannotAnswerAncestryError);
+    }
   });
 });
 
