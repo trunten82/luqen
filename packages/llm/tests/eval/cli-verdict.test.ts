@@ -128,6 +128,33 @@ describe('luqen-llm eval verdict CLI', () => {
     expect(output).toMatch(/^Overall: PASS$/m);
     expect(output).toMatch(/^Overall note: .+$/m);
     expect(output).toMatch(/^Overall licence: .+$/m);
+
+    // POSITIVE KEY-SET PIN on the PRINTED LINES (D-85-1 / BARS-02).
+    // The toMatch assertions above prove every required line is PRESENT. That is
+    // a strictly narrower predicate than "only these lines are printed", and the
+    // gap is not hypothetical: with the assertions above alone, adding
+    // `Overall confidence: 92%` — a single fused figure standing in for two
+    // separately-reported clause results — left all 745 tests green. Verified by
+    // breaking it. D-85-1 requires the two clause results never be collapsed into
+    // one number, so pin the exact label set and fail on ANY addition, whatever
+    // it is called. A blocklist (`not.toMatch(/confidence/i)`) is the wrong shape:
+    // Phase 84 shipped one and a differently-named field sailed past it.
+    const labels = output
+      .split('\n')
+      .map((l) => l.match(/^([A-Z][^:]*):\s/))
+      .filter((m): m is RegExpMatchArray => m !== null)
+      .map((m) => m[1]);
+    expect(new Set(labels)).toEqual(new Set([
+      'Capability',
+      'False-PASS gate',
+      'False-PASS gate licence',
+      'Non-inferiority clause',
+      'Non-inferiority clause licence',
+      'Non-inferiority clause power sufficient',
+      'Overall',
+      'Overall note',
+      'Overall licence',
+    ]));
   });
 
   it('analyse-visual FAIL (gate): a candidate that is PASS on the clause still FAILS overall when it clears one more real violation, exits non-zero', async () => {
