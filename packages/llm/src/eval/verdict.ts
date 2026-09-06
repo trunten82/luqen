@@ -21,7 +21,13 @@ import { assertBarAppliesTo, type LoadedDecisionBars } from './decision-bars.js'
 import { isScoredItem, type GenerateFixReport, type ItemRecord } from './report.js';
 import type { GenerateFixAggregate } from './aggregate.js';
 import type { GenerateFixScoreRecord } from './score-generate-fix.js';
-import { assertHoldsInvariantFields, treatmentFieldsThatDiffered } from './verdict-comparability.js';
+import {
+  assertAggregateMatchesRecount,
+  assertHoldsInvariantFields,
+  assertIdenticalItemIdSets,
+  assertNoFailedItems,
+  treatmentFieldsThatDiffered,
+} from './verdict-comparability.js';
 import { computeDifferenceUpperBound } from './power.js';
 import type {
   GatingAxisReport,
@@ -67,6 +73,10 @@ export function compareGenerateFix(
   assertBarAppliesTo(bar, baseline.runFunction);
   assertBarAppliesTo(bar, candidate.runFunction);
   assertHoldsInvariantFields(baseline.runFunction, candidate.runFunction);
+  assertNoFailedItems(baseline.items, candidate.items);
+  assertIdenticalItemIdSets(baseline.items, candidate.items);
+  assertAggregateMatchesRecount('baseline', baseline.items, baseline.aggregate.exactMatchCount);
+  assertAggregateMatchesRecount('candidate', candidate.items, candidate.aggregate.exactMatchCount);
 
   const capabilityBar = bar.capabilityBars['generate-fix'];
   const n = capabilityBar.n;
@@ -77,10 +87,9 @@ export function compareGenerateFix(
   const baselineScores = scoresByItemId(baseline.items);
   const candidateScores = scoresByItemId(candidate.items);
 
-  // Per-item pairing on the gating axis (exactMatch). A missing counterpart
-  // on either side is a refusal Task 3 checks BEFORE this function is
-  // reached (verdict-comparability.ts's item-id-set refusal); this loop
-  // simply skips an unpaired id defensively rather than crashing.
+  // Per-item pairing on the gating axis (exactMatch). The refusals above
+  // already guarantee identical item-id sets and no failed items, so every
+  // baseline id has a candidate counterpart here by construction.
   let baselineBetterCount = 0;
   let candidateBetterCount = 0;
   for (const [itemId, baselineScore] of baselineScores) {
@@ -181,4 +190,52 @@ export function compareGenerateFix(
 /** Serialises a verdict to pretty-printed JSON — the shape a maintainer commits or diffs. */
 export function serialiseVerdict(verdict: GenerateFixVerdict): string {
   return JSON.stringify(verdict, null, 2);
+}
+
+/** Thrown by `parseVerdict` when the parsed JSON is not an object at the top level. */
+export class InvalidVerdictJsonError extends Error {
+  constructor(public readonly detail: string) {
+    super(`Invalid verdict JSON: ${detail}`);
+    this.name = 'InvalidVerdictJsonError';
+  }
+}
+
+/**
+ * Thrown by `parseVerdict` when a document claims `outcome: 'PASS'` but
+ * carries an insufficient power assessment. The type system's D-85-6
+ * guarantee (PASS's power field narrowed to `SufficientPower` alone) holds
+ * inside this package's SOURCE — it does not survive serialisation, and a
+ * verdict artifact is exactly the thing a later phase reads back off disk.
+ * This is the second code path this repository's own standing lesson
+ * warns about: a second path must re-prove the invariants the first one
+ * enforced, not merely trust that whatever produced the JSON already did.
+ */
+export class VerdictPassPowerContradictionError extends Error {
+  constructor() {
+    super(
+      "A verdict claims outcome 'PASS' but carries an insufficient power assessment — refusing to parse a self-contradictory verdict",
+    );
+    this.name = 'VerdictPassPowerContradictionError';
+  }
+}
+
+/**
+ * The ONLY supported path for reading a verdict back from JSON. Re-checks,
+ * at runtime, the same invariant `GenerateFixVerdict`'s discriminated union
+ * enforces at compile time: a `PASS` outcome's power field must be the
+ * sufficient shape. A well-formed document round-trips unchanged.
+ */
+export function parseVerdict(json: string): GenerateFixVerdict {
+  const parsed: unknown = JSON.parse(json);
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new InvalidVerdictJsonError('top-level value is not an object');
+  }
+  const record = parsed as Record<string, unknown>;
+  const power = record['power'];
+  const sufficient =
+    power !== null && typeof power === 'object' && (power as Record<string, unknown>)['sufficient'];
+  if (record['outcome'] === 'PASS' && sufficient !== true) {
+    throw new VerdictPassPowerContradictionError();
+  }
+  return parsed as GenerateFixVerdict;
 }
