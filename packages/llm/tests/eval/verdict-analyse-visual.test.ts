@@ -260,23 +260,97 @@ describe('analyse-visual verdict — end to end (Task 1)', () => {
     expect(Object.keys(roundTripped).sort()).toEqual(Object.keys(verdict).sort());
   });
 
-  // Phase 86 Task 2 (BASELINE-02, D-85-5): the identical requirement checked
+  // 86-01 Task 2 (BASELINE-02, D-85-5): the identical requirement checked
   // independently for THIS capability, not assumed inherited from
   // generate-fix's own equivalent test.
+  //
+  // 86-02 Task 1 amendment: the value was originally 0.5678 -- above the
+  // 0.25 ceiling this plan's third insufficiency reason now checks. That is
+  // no longer a pass-through-only case: 0.5678 legitimately flips the
+  // outcome to UNDERPOWERED (this is exactly what SC4/SC5 require). Moved
+  // to 0.15 (below the ceiling, matching generate-fix's own equivalent test's
+  // 0.1234) so this test keeps its original 86-01 intent -- proving the
+  // comparator neither overwrites nor drops a measured value -- without
+  // colliding with the new gating behaviour. The above-ceiling flip itself is
+  // covered by "measured STRICTLY ABOVE the ceiling..." below.
   it('a supplied measured runToRunInstability reaches nonInferiorityClause.power.runToRunInstability unchanged', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const fixture = loadFixture();
     const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical, {
       state: 'measured',
-      value: 0.5678,
+      value: 0.15,
     });
 
     expect(verdict.overallVerdict.outcome).toBe('PASS');
     if (verdict.overallVerdict.outcome === 'PASS') {
       expect(verdict.nonInferiorityClause.power.runToRunInstability).toEqual({
         state: 'measured',
-        value: 0.5678,
+        value: 0.15,
       });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 86 Task 1 (BASELINE-02/SC4/SC5, D-85-5): the identical requirement
+// checked independently for THIS capability -- both below-ceiling and
+// not-yet-measured add nothing, only above-ceiling adds the third reason.
+// ---------------------------------------------------------------------------
+describe('analyse-visual verdict — the third insufficiency reason (Phase 86 Task 1)', () => {
+  it('not-yet-measured adds nothing: overall PASS stays PASS', () => {
+    const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
+    const fixture = loadFixture();
+    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical, {
+      state: 'not-yet-measured',
+    });
+
+    expect(verdict.overallVerdict.outcome).toBe('PASS');
+    expect(verdict.nonInferiorityClause.power.sufficient).toBe(true);
+  });
+
+  it('measured AT the ceiling (0.25) does not exceed it -- exclusive boundary', () => {
+    const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
+    const fixture = loadFixture();
+    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical, {
+      state: 'measured',
+      value: 0.25,
+    });
+
+    expect(verdict.overallVerdict.outcome).toBe('PASS');
+    expect(verdict.nonInferiorityClause.power.sufficient).toBe(true);
+  });
+
+  it('measured BELOW the ceiling adds nothing: still PASS', () => {
+    const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
+    const fixture = loadFixture();
+    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical, {
+      state: 'measured',
+      value: 0.1,
+    });
+
+    expect(verdict.overallVerdict.outcome).toBe('PASS');
+    expect(verdict.nonInferiorityClause.power.sufficient).toBe(true);
+  });
+
+  it('measured STRICTLY ABOVE the ceiling flips an otherwise-PASS pair to overall UNDERPOWERED, naming the third reason with its own distinct field names', () => {
+    const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
+    const fixture = loadFixture();
+    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical, {
+      state: 'measured',
+      value: 0.9,
+    });
+
+    expect(verdict.overallVerdict.outcome).toBe('UNDERPOWERED');
+    expect(verdict.nonInferiorityClause.power.sufficient).toBe(false);
+    if (!verdict.nonInferiorityClause.power.sufficient) {
+      const kinds = verdict.nonInferiorityClause.power.reasons.map((r) => r.kind);
+      expect(kinds).toEqual(['run-to-run-instability-exceeds-ceiling']);
+      const reason = verdict.nonInferiorityClause.power.reasons[0];
+      expect(reason.kind).toBe('run-to-run-instability-exceeds-ceiling');
+      if (reason.kind === 'run-to-run-instability-exceeds-ceiling') {
+        expect(reason.observedRunToRunInstability).toBe(0.9);
+        expect(reason.assumedCeiling).toBe(0.25);
+      }
     }
   });
 });
