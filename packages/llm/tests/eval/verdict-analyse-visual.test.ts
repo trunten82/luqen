@@ -83,7 +83,7 @@ describe('analyse-visual verdict — end to end (Task 1)', () => {
   it('PASS: candidate matches baseline on every item -> both clauses clear, overall PASS', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const fixture = loadFixture();
-    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical);
+    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical, { state: 'not-yet-measured' });
 
     expect(verdict.nonInferiorityClause.outcome).toBe('PASS');
     expect(verdict.nonInferiorityClause.gatingAxis.counterName).toBe('correct');
@@ -118,7 +118,7 @@ describe('analyse-visual verdict — end to end (Task 1)', () => {
   it('FAIL (clause): candidate loses more items on `correct` than the margin allows -> overall FAIL', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const fixture = loadFixture();
-    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.regressedBeyondMargin);
+    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.regressedBeyondMargin, { state: 'not-yet-measured' });
 
     expect(verdict.nonInferiorityClause.outcome).toBe('FAIL');
     expect(verdict.nonInferiorityClause.gatingAxis.baselineBetterCount).toBe(4);
@@ -140,7 +140,7 @@ describe('analyse-visual verdict — end to end (Task 1)', () => {
   it('UNDERPOWERED (discordance exceeds assumption): names that reason, and no other', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const fixture = loadFixture();
-    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.discordanceExceedsAssumption);
+    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.discordanceExceedsAssumption, { state: 'not-yet-measured' });
 
     expect(verdict.nonInferiorityClause.outcome).toBe('UNDERPOWERED');
     expect(verdict.nonInferiorityClause.gatingAxis.baselineBetterCount).toBe(0);
@@ -172,7 +172,7 @@ describe('analyse-visual verdict — end to end (Task 1)', () => {
   it('UNDERPOWERED (bound does not clear margin): names that second, distinct reason, and no other', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const fixture = loadFixture();
-    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.boundDoesNotClearMargin);
+    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.boundDoesNotClearMargin, { state: 'not-yet-measured' });
 
     expect(verdict.nonInferiorityClause.outcome).toBe('UNDERPOWERED');
     expect(verdict.nonInferiorityClause.gatingAxis.baselineBetterCount).toBe(2);
@@ -202,7 +202,7 @@ describe('analyse-visual verdict — end to end (Task 1)', () => {
   it('FAIL (gate): a candidate non-inferior (PASS) on the clause still FAILS overall when it clears one more real violation than baseline', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const fixture = loadFixture();
-    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.falsePassGateFails);
+    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.falsePassGateFails, { state: 'not-yet-measured' });
 
     // The clause is a CLEAN PASS -- the item that turned into a false-pass
     // was already `uncertain` (not correct) in the baseline, so the
@@ -226,7 +226,7 @@ describe('analyse-visual verdict — end to end (Task 1)', () => {
   it('every verdict carries the five non-gating axis deltas as context, and never `correct` or `falsePass` among them', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const fixture = loadFixture();
-    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical);
+    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical, { state: 'not-yet-measured' });
 
     expect(verdict.nonGatingAxisDeltas).toHaveLength(5);
     const counterNames = verdict.nonGatingAxisDeltas.map((d) => d.counterName).sort();
@@ -252,12 +252,106 @@ describe('analyse-visual verdict — end to end (Task 1)', () => {
   it('the serialised verdict round-trips to JSON with no field lost', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const fixture = loadFixture();
-    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.falsePassGateFails);
+    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.falsePassGateFails, { state: 'not-yet-measured' });
 
     const json = serialiseAnalyseVisualVerdict(verdict);
     const roundTripped = JSON.parse(json);
     expect(roundTripped).toEqual(JSON.parse(JSON.stringify(verdict)));
     expect(Object.keys(roundTripped).sort()).toEqual(Object.keys(verdict).sort());
+  });
+
+  // 86-01 Task 2 (BASELINE-02, D-85-5): the identical requirement checked
+  // independently for THIS capability, not assumed inherited from
+  // generate-fix's own equivalent test.
+  //
+  // 86-02 Task 1 amendment: the value was originally 0.5678 -- above the
+  // 0.25 ceiling this plan's third insufficiency reason now checks. That is
+  // no longer a pass-through-only case: 0.5678 legitimately flips the
+  // outcome to UNDERPOWERED (this is exactly what SC4/SC5 require). Moved
+  // to 0.15 (below the ceiling, matching generate-fix's own equivalent test's
+  // 0.1234) so this test keeps its original 86-01 intent -- proving the
+  // comparator neither overwrites nor drops a measured value -- without
+  // colliding with the new gating behaviour. The above-ceiling flip itself is
+  // covered by "measured STRICTLY ABOVE the ceiling..." below.
+  it('a supplied measured runToRunInstability reaches nonInferiorityClause.power.runToRunInstability unchanged', () => {
+    const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
+    const fixture = loadFixture();
+    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical, {
+      state: 'measured',
+      value: 0.15,
+    });
+
+    expect(verdict.overallVerdict.outcome).toBe('PASS');
+    if (verdict.overallVerdict.outcome === 'PASS') {
+      expect(verdict.nonInferiorityClause.power.runToRunInstability).toEqual({
+        state: 'measured',
+        value: 0.15,
+      });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 86 Task 1 (BASELINE-02/SC4/SC5, D-85-5): the identical requirement
+// checked independently for THIS capability -- both below-ceiling and
+// not-yet-measured add nothing, only above-ceiling adds the third reason.
+// ---------------------------------------------------------------------------
+describe('analyse-visual verdict — the third insufficiency reason (Phase 86 Task 1)', () => {
+  it('not-yet-measured adds nothing: overall PASS stays PASS', () => {
+    const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
+    const fixture = loadFixture();
+    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical, {
+      state: 'not-yet-measured',
+    });
+
+    expect(verdict.overallVerdict.outcome).toBe('PASS');
+    expect(verdict.nonInferiorityClause.power.sufficient).toBe(true);
+  });
+
+  it('measured AT the ceiling (0.25) does not exceed it -- exclusive boundary', () => {
+    const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
+    const fixture = loadFixture();
+    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical, {
+      state: 'measured',
+      value: 0.25,
+    });
+
+    expect(verdict.overallVerdict.outcome).toBe('PASS');
+    expect(verdict.nonInferiorityClause.power.sufficient).toBe(true);
+  });
+
+  it('measured BELOW the ceiling adds nothing: still PASS', () => {
+    const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
+    const fixture = loadFixture();
+    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical, {
+      state: 'measured',
+      value: 0.1,
+    });
+
+    expect(verdict.overallVerdict.outcome).toBe('PASS');
+    expect(verdict.nonInferiorityClause.power.sufficient).toBe(true);
+  });
+
+  it('measured STRICTLY ABOVE the ceiling flips an otherwise-PASS pair to overall UNDERPOWERED, naming the third reason with its own distinct field names', () => {
+    const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
+    const fixture = loadFixture();
+    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical, {
+      state: 'measured',
+      value: 0.9,
+    });
+
+    expect(verdict.overallVerdict.outcome).toBe('UNDERPOWERED');
+    expect(verdict.nonInferiorityClause.power.sufficient).toBe(false);
+    if (!verdict.nonInferiorityClause.power.sufficient) {
+      const kinds = verdict.nonInferiorityClause.power.reasons.map((r) => r.kind);
+      expect(kinds).toEqual(['run-to-run-instability-exceeds-ceiling']);
+      const reason = verdict.nonInferiorityClause.power.reasons[0];
+      expect(reason.kind).toBe('run-to-run-instability-exceeds-ceiling');
+      if (reason.kind === 'run-to-run-instability-exceeds-ceiling') {
+        expect(reason.observedRunToRunInstability).toBe(0.9);
+        expect(reason.assumedCeiling).toBe(0.25);
+      }
+    }
   });
 });
 
@@ -279,7 +373,7 @@ describe('analyse-visual verdict — exact key sets pinned (D-85-1, T-85-11, T-8
   it('the top-level verdict carries EXACTLY these keys, and no others', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const fixture = loadFixture();
-    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical);
+    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical, { state: 'not-yet-measured' });
 
     expect(Object.keys(verdict).sort()).toEqual(
       [
@@ -293,6 +387,8 @@ describe('analyse-visual verdict — exact key sets pinned (D-85-1, T-85-11, T-8
         'decisionBarsVersion',
         'decisionBarsDigestSha256',
         'overallVerdict',
+        // Phase 86 Task 2 (T-86-07): REQUIRED on both verdict types.
+        'licenceQualifier',
       ].sort(),
     );
   });
@@ -300,7 +396,7 @@ describe('analyse-visual verdict — exact key sets pinned (D-85-1, T-85-11, T-8
   it('falsePassGate carries EXACTLY these keys -- no field fusing it with falseIssue or with nonInferiorityClause', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const fixture = loadFixture();
-    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical);
+    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical, { state: 'not-yet-measured' });
 
     expect(Object.keys(verdict.falsePassGate).sort()).toEqual(
       ['outcome', 'counterName', 'baselineFalsePassCount', 'candidateFalsePassCount', 'opportunityDenominator', 'licence'].sort(),
@@ -310,7 +406,7 @@ describe('analyse-visual verdict — exact key sets pinned (D-85-1, T-85-11, T-8
   it('nonInferiorityClause carries EXACTLY these keys -- no field fusing it with falsePassGate', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const fixture = loadFixture();
-    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical);
+    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical, { state: 'not-yet-measured' });
 
     expect(Object.keys(verdict.nonInferiorityClause).sort()).toEqual(
       ['outcome', 'gatingAxis', 'power', 'licence'].sort(),
@@ -320,7 +416,7 @@ describe('analyse-visual verdict — exact key sets pinned (D-85-1, T-85-11, T-8
   it('overallVerdict (the DERIVED summary, A-5) carries EXACTLY these keys, and its own licence is never rendered without the note labelling it as derived', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
     const fixture = loadFixture();
-    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical);
+    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical, { state: 'not-yet-measured' });
 
     expect(Object.keys(verdict.overallVerdict).sort()).toEqual(['outcome', 'derivedNote', 'licence'].sort());
     expect(verdict.overallVerdict.derivedNote.length).toBeGreaterThan(0);
@@ -341,7 +437,7 @@ describe('T-85-06: aggregate must describe its own items (analyse-visual)', () =
     const env = loadFixture();
     const candidate = JSON.parse(JSON.stringify(env.candidates.identical)) as typeof env.baseline;
     (candidate.aggregate as Record<string, number>)[counter] += 5;
-    return () => compareAnalyseVisual(bar, env.baseline, candidate);
+    return () => compareAnalyseVisual(bar, env.baseline, candidate, { state: 'not-yet-measured' });
   };
 
   it('refuses a candidate whose aggregate.falsePass disagrees with its own items', () => {

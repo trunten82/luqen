@@ -1,0 +1,726 @@
+{
+  "_synthetic": true,
+  "syntheticNote": "Hand-written fixture data. NOT model output. No live provider call, no harness run against a model, and no measurement of any kind produced this file (Phase 86 non-negotiable). Three repeat reports of one IDENTICAL run function (differing only in timestamp), for BOTH capabilities, chosen so the three pairwise disagreement rates are all different from one another and none is zero -- a fixture whose maximum and mean coincide cannot distinguish a correct implementation from one that returns the mean. See 86-01-PLAN.md Task 1 and 86-01-SUMMARY.md.",
+  "generateFix": {
+    "repeats": [
+      {
+        "reportSchemaVersion": "1",
+        "runFunction": {
+          "harnessVersion": "1+synthetic-fixture-not-a-real-package-version",
+          "capability": "generate-fix",
+          "mode": "replay",
+          "modelId": "synthetic-instability-model",
+          "modelDisplayName": "Synthetic Instability Model",
+          "providerType": "ollama",
+          "endpointFingerprint": "synthetic-instability-endpoint-fp",
+          "temperature": 0,
+          "promptVersion": "synthetic-prompt-v1",
+          "promptSource": "default",
+          "setName": "instability-repeats",
+          "setVersion": "v1",
+          "itemCount": 5,
+          "timestamp": "2026-09-06T00:00:00.000Z"
+        },
+        "items": [
+          {
+            "itemId": "gf-instab-01",
+            "outcome": "scored",
+            "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": false
+            },
+            "score": {
+              "exactMatch": true,
+              "unchangedFromInput": false,
+              "emptyFix": false,
+              "missingMentions": [],
+              "effortMatch": true,
+              "filenameShapedAlt": false
+            }
+          },
+          {
+            "itemId": "gf-instab-02",
+            "outcome": "scored",
+            "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": false
+            },
+            "score": {
+              "exactMatch": true,
+              "unchangedFromInput": false,
+              "emptyFix": false,
+              "missingMentions": [],
+              "effortMatch": true,
+              "filenameShapedAlt": false
+            }
+          },
+          {
+            "itemId": "gf-instab-03",
+            "outcome": "scored",
+            "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": false
+            },
+            "score": {
+              "exactMatch": true,
+              "unchangedFromInput": false,
+              "emptyFix": false,
+              "missingMentions": [],
+              "effortMatch": true,
+              "filenameShapedAlt": false
+            }
+          },
+          {
+            "itemId": "gf-instab-04",
+            "outcome": "scored",
+            "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": false
+            },
+            "score": {
+              "exactMatch": true,
+              "unchangedFromInput": false,
+              "emptyFix": false,
+              "missingMentions": [],
+              "effortMatch": true,
+              "filenameShapedAlt": false
+            }
+          },
+          {
+            "itemId": "gf-instab-05",
+            "outcome": "scored",
+            "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": false
+            },
+            "score": {
+              "exactMatch": true,
+              "unchangedFromInput": false,
+              "emptyFix": false,
+              "missingMentions": [],
+              "effortMatch": true,
+              "filenameShapedAlt": false
+            }
+          }
+        ],
+        "aggregate": {
+          "total": 5,
+          "exactMatchCount": 5,
+          "unchangedFromInputCount": 0,
+          "emptyFixCount": 0,
+          "missingMentionsCount": 0,
+          "effortMatchCount": 5,
+          "filenameShapedAltCount": 0
+        },
+        "failedCount": 0
+      },
+      {
+        "reportSchemaVersion": "1",
+        "runFunction": {
+          "harnessVersion": "1+synthetic-fixture-not-a-real-package-version",
+          "capability": "generate-fix",
+          "mode": "replay",
+          "modelId": "synthetic-instability-model",
+          "modelDisplayName": "Synthetic Instability Model",
+          "providerType": "ollama",
+          "endpointFingerprint": "synthetic-instability-endpoint-fp",
+          "temperature": 0,
+          "promptVersion": "synthetic-prompt-v1",
+          "promptSource": "default",
+          "setName": "instability-repeats",
+          "setVersion": "v1",
+          "itemCount": 5,
+          "timestamp": "2026-09-06T00:05:00.000Z"
+        },
+        "items": [
+          {
+            "itemId": "gf-instab-01",
+            "outcome": "scored",
+            "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": false
+            },
+            "score": {
+              "exactMatch": true,
+              "unchangedFromInput": false,
+              "emptyFix": false,
+              "missingMentions": [],
+              "effortMatch": true,
+              "filenameShapedAlt": false
+            }
+          },
+          {
+            "itemId": "gf-instab-02",
+            "outcome": "scored",
+            "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": false
+            },
+            "score": {
+              "exactMatch": true,
+              "unchangedFromInput": false,
+              "emptyFix": false,
+              "missingMentions": [],
+              "effortMatch": true,
+              "filenameShapedAlt": false
+            }
+          },
+          {
+            "itemId": "gf-instab-03",
+            "outcome": "scored",
+            "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": false
+            },
+            "score": {
+              "exactMatch": true,
+              "unchangedFromInput": false,
+              "emptyFix": false,
+              "missingMentions": [],
+              "effortMatch": true,
+              "filenameShapedAlt": false
+            }
+          },
+          {
+            "itemId": "gf-instab-04",
+            "outcome": "scored",
+            "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": false
+            },
+            "score": {
+              "exactMatch": true,
+              "unchangedFromInput": false,
+              "emptyFix": false,
+              "missingMentions": [],
+              "effortMatch": true,
+              "filenameShapedAlt": false
+            }
+          },
+          {
+            "itemId": "gf-instab-05",
+            "outcome": "scored",
+            "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": false
+            },
+            "score": {
+              "exactMatch": false,
+              "unchangedFromInput": false,
+              "emptyFix": false,
+              "missingMentions": [],
+              "effortMatch": true,
+              "filenameShapedAlt": false
+            }
+          }
+        ],
+        "aggregate": {
+          "total": 5,
+          "exactMatchCount": 4,
+          "unchangedFromInputCount": 0,
+          "emptyFixCount": 0,
+          "missingMentionsCount": 0,
+          "effortMatchCount": 5,
+          "filenameShapedAltCount": 0
+        },
+        "failedCount": 0
+      },
+      {
+        "reportSchemaVersion": "1",
+        "runFunction": {
+          "harnessVersion": "1+synthetic-fixture-not-a-real-package-version",
+          "capability": "generate-fix",
+          "mode": "replay",
+          "modelId": "synthetic-instability-model",
+          "modelDisplayName": "Synthetic Instability Model",
+          "providerType": "ollama",
+          "endpointFingerprint": "synthetic-instability-endpoint-fp",
+          "temperature": 0,
+          "promptVersion": "synthetic-prompt-v1",
+          "promptSource": "default",
+          "setName": "instability-repeats",
+          "setVersion": "v1",
+          "itemCount": 5,
+          "timestamp": "2026-09-06T00:10:00.000Z"
+        },
+        "items": [
+          {
+            "itemId": "gf-instab-01",
+            "outcome": "scored",
+            "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": false
+            },
+            "score": {
+              "exactMatch": true,
+              "unchangedFromInput": false,
+              "emptyFix": false,
+              "missingMentions": [],
+              "effortMatch": true,
+              "filenameShapedAlt": false
+            }
+          },
+          {
+            "itemId": "gf-instab-02",
+            "outcome": "scored",
+            "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": false
+            },
+            "score": {
+              "exactMatch": true,
+              "unchangedFromInput": false,
+              "emptyFix": false,
+              "missingMentions": [],
+              "effortMatch": true,
+              "filenameShapedAlt": false
+            }
+          },
+          {
+            "itemId": "gf-instab-03",
+            "outcome": "scored",
+            "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": false
+            },
+            "score": {
+              "exactMatch": false,
+              "unchangedFromInput": false,
+              "emptyFix": false,
+              "missingMentions": [],
+              "effortMatch": true,
+              "filenameShapedAlt": false
+            }
+          },
+          {
+            "itemId": "gf-instab-04",
+            "outcome": "scored",
+            "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": false
+            },
+            "score": {
+              "exactMatch": false,
+              "unchangedFromInput": false,
+              "emptyFix": false,
+              "missingMentions": [],
+              "effortMatch": true,
+              "filenameShapedAlt": false
+            }
+          },
+          {
+            "itemId": "gf-instab-05",
+            "outcome": "scored",
+            "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": false
+            },
+            "score": {
+              "exactMatch": false,
+              "unchangedFromInput": false,
+              "emptyFix": false,
+              "missingMentions": [],
+              "effortMatch": true,
+              "filenameShapedAlt": false
+            }
+          }
+        ],
+        "aggregate": {
+          "total": 5,
+          "exactMatchCount": 2,
+          "unchangedFromInputCount": 0,
+          "emptyFixCount": 0,
+          "missingMentionsCount": 0,
+          "effortMatchCount": 5,
+          "filenameShapedAltCount": 0
+        },
+        "failedCount": 0
+      }
+    ]
+  },
+  "analyseVisual": {
+    "repeats": [
+      {
+        "reportSchemaVersion": "1",
+        "runFunction": {
+          "harnessVersion": "1+synthetic-fixture-not-a-real-package-version",
+          "capability": "analyse-visual",
+          "mode": "replay",
+          "modelId": "synthetic-instability-model",
+          "modelDisplayName": "Synthetic Instability Model",
+          "providerType": "ollama",
+          "endpointFingerprint": "synthetic-instability-endpoint-fp",
+          "temperature": 0,
+          "promptVersion": "synthetic-prompt-v1",
+          "promptSource": "default",
+          "setName": "instability-repeats",
+          "setVersion": "v1",
+          "itemCount": 5,
+          "timestamp": "2026-09-06T00:00:00.000Z"
+        },
+        "items": [
+          {
+            "itemId": "av-instab-01",
+            "outcome": "scored",
+            "rawText": "{\"verdict\": \"synthetic\", \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": true
+            },
+            "score": {
+              "verdictOutcome": "correct",
+              "altClassificationMismatch": false,
+              "suggestedAltAxis": "ok"
+            }
+          },
+          {
+            "itemId": "av-instab-02",
+            "outcome": "scored",
+            "rawText": "{\"verdict\": \"synthetic\", \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": true
+            },
+            "score": {
+              "verdictOutcome": "correct",
+              "altClassificationMismatch": false,
+              "suggestedAltAxis": "ok"
+            }
+          },
+          {
+            "itemId": "av-instab-03",
+            "outcome": "scored",
+            "rawText": "{\"verdict\": \"synthetic\", \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": true
+            },
+            "score": {
+              "verdictOutcome": "correct",
+              "altClassificationMismatch": false,
+              "suggestedAltAxis": "ok"
+            }
+          },
+          {
+            "itemId": "av-instab-04",
+            "outcome": "scored",
+            "rawText": "{\"verdict\": \"synthetic\", \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": true
+            },
+            "score": {
+              "verdictOutcome": "correct",
+              "altClassificationMismatch": false,
+              "suggestedAltAxis": "ok"
+            }
+          },
+          {
+            "itemId": "av-instab-05",
+            "outcome": "scored",
+            "rawText": "{\"verdict\": \"synthetic\", \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": true
+            },
+            "score": {
+              "verdictOutcome": "correct",
+              "altClassificationMismatch": false,
+              "suggestedAltAxis": "ok"
+            }
+          }
+        ],
+        "aggregate": {
+          "total": 5,
+          "correct": 5,
+          "falsePass": 0,
+          "falseIssue": 0,
+          "uncertain": 0,
+          "altClassificationMismatchCount": 0,
+          "suggestedAltFilenameShapedCount": 0,
+          "suggestedAltEmptyDespiteInformationalCount": 0
+        },
+        "failedCount": 0
+      },
+      {
+        "reportSchemaVersion": "1",
+        "runFunction": {
+          "harnessVersion": "1+synthetic-fixture-not-a-real-package-version",
+          "capability": "analyse-visual",
+          "mode": "replay",
+          "modelId": "synthetic-instability-model",
+          "modelDisplayName": "Synthetic Instability Model",
+          "providerType": "ollama",
+          "endpointFingerprint": "synthetic-instability-endpoint-fp",
+          "temperature": 0,
+          "promptVersion": "synthetic-prompt-v1",
+          "promptSource": "default",
+          "setName": "instability-repeats",
+          "setVersion": "v1",
+          "itemCount": 5,
+          "timestamp": "2026-09-06T00:05:00.000Z"
+        },
+        "items": [
+          {
+            "itemId": "av-instab-01",
+            "outcome": "scored",
+            "rawText": "{\"verdict\": \"synthetic\", \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": true
+            },
+            "score": {
+              "verdictOutcome": "correct",
+              "altClassificationMismatch": false,
+              "suggestedAltAxis": "ok"
+            }
+          },
+          {
+            "itemId": "av-instab-02",
+            "outcome": "scored",
+            "rawText": "{\"verdict\": \"synthetic\", \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": true
+            },
+            "score": {
+              "verdictOutcome": "correct",
+              "altClassificationMismatch": false,
+              "suggestedAltAxis": "ok"
+            }
+          },
+          {
+            "itemId": "av-instab-03",
+            "outcome": "scored",
+            "rawText": "{\"verdict\": \"synthetic\", \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": true
+            },
+            "score": {
+              "verdictOutcome": "correct",
+              "altClassificationMismatch": false,
+              "suggestedAltAxis": "ok"
+            }
+          },
+          {
+            "itemId": "av-instab-04",
+            "outcome": "scored",
+            "rawText": "{\"verdict\": \"synthetic\", \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": true
+            },
+            "score": {
+              "verdictOutcome": "correct",
+              "altClassificationMismatch": false,
+              "suggestedAltAxis": "ok"
+            }
+          },
+          {
+            "itemId": "av-instab-05",
+            "outcome": "scored",
+            "rawText": "{\"verdict\": \"synthetic\", \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": true
+            },
+            "score": {
+              "verdictOutcome": "false-pass",
+              "altClassificationMismatch": false,
+              "suggestedAltAxis": "ok"
+            }
+          }
+        ],
+        "aggregate": {
+          "total": 5,
+          "correct": 4,
+          "falsePass": 1,
+          "falseIssue": 0,
+          "uncertain": 0,
+          "altClassificationMismatchCount": 0,
+          "suggestedAltFilenameShapedCount": 0,
+          "suggestedAltEmptyDespiteInformationalCount": 0
+        },
+        "failedCount": 0
+      },
+      {
+        "reportSchemaVersion": "1",
+        "runFunction": {
+          "harnessVersion": "1+synthetic-fixture-not-a-real-package-version",
+          "capability": "analyse-visual",
+          "mode": "replay",
+          "modelId": "synthetic-instability-model",
+          "modelDisplayName": "Synthetic Instability Model",
+          "providerType": "ollama",
+          "endpointFingerprint": "synthetic-instability-endpoint-fp",
+          "temperature": 0,
+          "promptVersion": "synthetic-prompt-v1",
+          "promptSource": "default",
+          "setName": "instability-repeats",
+          "setVersion": "v1",
+          "itemCount": 5,
+          "timestamp": "2026-09-06T00:10:00.000Z"
+        },
+        "items": [
+          {
+            "itemId": "av-instab-01",
+            "outcome": "scored",
+            "rawText": "{\"verdict\": \"synthetic\", \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": true
+            },
+            "score": {
+              "verdictOutcome": "correct",
+              "altClassificationMismatch": false,
+              "suggestedAltAxis": "ok"
+            }
+          },
+          {
+            "itemId": "av-instab-02",
+            "outcome": "scored",
+            "rawText": "{\"verdict\": \"synthetic\", \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": true
+            },
+            "score": {
+              "verdictOutcome": "correct",
+              "altClassificationMismatch": false,
+              "suggestedAltAxis": "ok"
+            }
+          },
+          {
+            "itemId": "av-instab-03",
+            "outcome": "scored",
+            "rawText": "{\"verdict\": \"synthetic\", \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": true
+            },
+            "score": {
+              "verdictOutcome": "false-pass",
+              "altClassificationMismatch": false,
+              "suggestedAltAxis": "ok"
+            }
+          },
+          {
+            "itemId": "av-instab-04",
+            "outcome": "scored",
+            "rawText": "{\"verdict\": \"synthetic\", \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": true
+            },
+            "score": {
+              "verdictOutcome": "false-pass",
+              "altClassificationMismatch": false,
+              "suggestedAltAxis": "ok"
+            }
+          },
+          {
+            "itemId": "av-instab-05",
+            "outcome": "scored",
+            "rawText": "{\"verdict\": \"synthetic\", \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+            "diagnosis": {
+              "present": true,
+              "nonEmpty": true,
+              "parseable": true,
+              "verdictAsserted": true
+            },
+            "score": {
+              "verdictOutcome": "false-pass",
+              "altClassificationMismatch": false,
+              "suggestedAltAxis": "ok"
+            }
+          }
+        ],
+        "aggregate": {
+          "total": 5,
+          "correct": 2,
+          "falsePass": 3,
+          "falseIssue": 0,
+          "uncertain": 0,
+          "altClassificationMismatchCount": 0,
+          "suggestedAltFilenameShapedCount": 0,
+          "suggestedAltEmptyDespiteInformationalCount": 0
+        },
+        "failedCount": 0
+      }
+    ]
+  }
+}
