@@ -124,3 +124,66 @@ export function computeDifferenceUpperBound(
   const marginProportion = marginItems / n;
   return { upperBound, marginProportion, certifies: upperBound < marginProportion };
 }
+
+/**
+ * The rule-of-three approximate one-sided 95% upper bound for zero observed
+ * events in `n` trials: `3 / n`. Cited from the SAME source 85-RESEARCH.md
+ * already retrieved and verified (Wikipedia, "Rule of three (statistics)";
+ * corroborated there against pmean.com) — this module does not re-fetch an
+ * external source at implementation time; it reuses the citation already
+ * vetted in this repository. The exact closed-form zero-event bound
+ * (`zeroEventUpperBound`) converges to this ratio as `n` grows, since
+ * `ln(0.05) ≈ -2.9957 ≈ -3`.
+ */
+export function ruleOfThreeUpperBound(n: number): number {
+  return 3 / n;
+}
+
+/**
+ * Sums the binomial probability mass, at probability `p`, over every
+ * baseline-better count `b` for which A-1's decision rule CERTIFIES at the
+ * given margin. Shared by `achievedPowerToCertifyIdentical` (evaluated at
+ * `p = assumedDiscordantPairRate / 2`) and `worstCaseFalseReassuranceRate`
+ * (evaluated at `p = marginItems / n`) — the same computation, at two
+ * different points on the same distribution.
+ */
+function certifyingProbabilityMass(n: number, marginItems: number, p: number, alpha: number): number {
+  let mass = 0;
+  for (let b = 0; b <= n; b++) {
+    if (computeDifferenceUpperBound(b, n, marginItems, alpha).certifies) {
+      mass += binomialPmf(n, b, p);
+    }
+  }
+  return mass;
+}
+
+/**
+ * The probability the recorded decision rule CERTIFIES (declares
+ * non-inferiority) when the candidate is genuinely IDENTICAL to baseline,
+ * under the pre-registered discordant-pair-rate ASSUMPTION (D-85-5). The
+ * baseline-better rate under "genuinely identical" is HALF the assumed
+ * discordance — an identical model's disagreements with itself split evenly
+ * between the two directions, with no systematic reason to favour either
+ * (bar file: `achievedPower.twoFiguresPerCapability.*.powerToCertify
+ * GenuinelyIdenticalCandidate.howComputed`).
+ */
+export function achievedPowerToCertifyIdentical(
+  n: number,
+  marginItems: number,
+  assumedDiscordantPairRate: number,
+  alpha = 0.05,
+): number {
+  return certifyingProbabilityMass(n, marginItems, assumedDiscordantPairRate / 2, alpha);
+}
+
+/**
+ * The WORST-CASE probability the recorded decision rule falsely certifies
+ * when the candidate is truly worse by EXACTLY the margin — A-1's validity
+ * guarantee, evaluated at the least favourable configuration within the
+ * null region (the candidate improves nothing, so the true baseline-better
+ * rate equals `marginItems / n` exactly — bar file:
+ * `achievedPower.validityStatement.leastFavourableConfiguration`).
+ */
+export function worstCaseFalseReassuranceRate(n: number, marginItems: number, alpha = 0.05): number {
+  return certifyingProbabilityMass(n, marginItems, marginItems / n, alpha);
+}
