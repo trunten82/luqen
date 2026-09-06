@@ -189,11 +189,20 @@ export function computeNonInferiorityClause(
  * aggregates' delta): a candidate that fixes k items and breaks k others
  * shows an aggregate delta of zero but a discordance of 2k, and those are
  * different facts about how much this instrument can see.
+ *
+ * `runToRunInstability` is a REQUIRED fourth parameter (86-01, D-85-5) —
+ * deliberately no default value. A default is exactly the mechanism by
+ * which a required field decays into "optional but always populated in
+ * practice" (85-RESEARCH.md Pitfall 2). The caller must say what the
+ * instability is — `{ state: 'not-yet-measured' }` if it has not been
+ * measured, `{ state: 'measured', value }` (see instability.ts) once it
+ * has — the comparator can no longer supply a silent default on its own.
  */
 export function compareGenerateFix(
   bar: LoadedDecisionBars,
   baseline: GenerateFixReport,
   candidate: GenerateFixReport,
+  runToRunInstability: RunToRunInstability,
 ): GenerateFixVerdict {
   assertBarAppliesTo(bar, baseline.runFunction);
   assertBarAppliesTo(bar, candidate.runFunction);
@@ -225,7 +234,6 @@ export function compareGenerateFix(
     candidateGoodByItemId,
   );
 
-  const runToRunInstability: RunToRunInstability = { state: 'not-yet-measured' };
   const clause = computeNonInferiorityClause(
     gatingCounterName,
     baselineBetterCount,
