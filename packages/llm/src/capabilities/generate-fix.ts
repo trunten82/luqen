@@ -15,6 +15,14 @@ export interface GenerateFixInput {
   readonly platform?: 'html' | 'wordpress-gutenberg';
 }
 
+/**
+ * The temperature this capability passes to `adapter.complete()`. Exported
+ * as the single source of truth (Phase 84, HARNESS-04): the run-manifest
+ * reads this constant rather than re-typing the literal, so the recorded
+ * run-function can never silently drift from the call site below.
+ */
+export const GENERATE_FIX_TEMPERATURE = 0.2;
+
 export interface GenerateFixResult {
   readonly fixedHtml: string;
   readonly explanation: string;
@@ -121,7 +129,7 @@ export async function executeGenerateFix(
           },
           () => adapter.complete(prompt, {
             model: model.modelId,
-            temperature: 0.2,
+            temperature: GENERATE_FIX_TEMPERATURE,
             timeout: provider.timeout,
           }),
         );
