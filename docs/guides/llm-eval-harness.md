@@ -141,7 +141,13 @@ percentage, would hide exactly the asymmetry this harness exists to surface. `un
 kept as its own fourth outcome (never folded into either error bucket), because the model's
 own `uncertain` verdict is neither a correct answer nor either kind of mistake.
 
-## `analyse-visual.ts:51-53` — measured, named, and deliberately left unpatched
+## `capabilities/analyse-visual.ts:58-61` — measured, named, and deliberately left unpatched
+
+> **CORRECTED (86-04).** This section's own file:line locator had drifted to
+> `analyse-visual.ts:51-53` — stale relative to the shipped file, which now carries this logic at
+> `capabilities/analyse-visual.ts:58-61` — from unrelated line-number movement in later phases.
+> Caught by this plan's claim-by-claim check (see `86-04-SUMMARY.md`); the underlying behaviour
+> description below was, and remains, accurate.
 
 A response that parses as valid JSON but carries no `verdict` field and no `findings` does
 **not** fall back to `uncertain`. The parser computes `verdict = findings.length > 0 ? 'issue'
@@ -523,7 +529,39 @@ green PASS and assuming it means more than it does.
 
 ## Standing statement
 
-Live mode has not been dialled. No live model call has ever been made by this harness. No
-trusted measurement of any model's actual performance exists anywhere in this milestone yet —
-Phase 86's baseline is the first one, and it is a deliberate, reviewed decision to spend
-money, not a side effect of running this tool.
+**No trusted measurement of any model's actual performance exists anywhere in this milestone.**
+This is true independent of whether Phase 86 Part B (86-05) ever runs — check the re-checkable
+invariant below rather than trusting this sentence to still be accurate by the time you read it.
+
+**What Part A (86-01 through 86-04) delivered, and its limit.** The second variance quantity, its
+assumption check, the licence qualifier, the discriminated-union replication artifact, `eval
+baseline`, and the pre-registration ancestry check are all shipped and merged, and every one of
+them has been exercised entirely against synthetic fixtures and replay-mode reports — a fixture
+adapter returning committed strings, never a real provider. No green result from any of this,
+including the worked example above, is evidence about any model. This is not a defect of the
+instrument: it is the honest state of a mechanism proven correct on inputs it controls, and not
+yet pointed at a real one.
+
+**What is missing, and whose decision it is.** The live baseline run of the CURRENT production
+pins (BASELINE-01) requires a provider credential (`EVAL_HARNESS_API_KEY`, read only from the
+environment, never from a file or CLI argument) and a deliberate, authorised decision to spend
+money against a real provider — both the product owner's to grant, and neither is something an
+automated task can supply for itself. Phase 86 Part B (86-05) is that run; as of this commit it
+has not been authorised. This is stated as neither a defect of the instrument nor as done — it is
+simply what has, and has not, happened yet.
+
+**The re-checkable invariant, so this section cannot go stale silently.** A snapshot like "the
+live run has not happened yet" is a DISTANCE, not a STATE — it decays with the very next commit
+that makes it false. Check the fact directly instead of trusting this prose:
+
+```bash
+# If this returns any commits, the live baseline has been recorded. Read
+# packages/llm/tests/eval/baselines/README.md before trusting anything else
+# in this document about whether a measurement of a model exists.
+git log --oneline -- packages/llm/tests/eval/baselines/
+```
+
+An empty result means no live measurement of any model exists yet under this milestone, whatever
+the prose above says by the time you read it. A non-empty result means Part B ran; 86-05's own
+SUMMARY.md and the narrowed (never deleted) revision of this section it is required to write are
+the record of what it found.
