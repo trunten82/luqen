@@ -247,7 +247,10 @@ milestone protects the ones already shipped and relied upon.
   2. The `analyse-visual` bar — non-inferior AND zero increase in false-pass — is encoded in the runner, which emits PASS/FAIL against it rather than leaving a reader to judge
   3. Every verdict the runner emits carries a REQUIRED power field — bar, measured value, the variance ASSUMPTION the sample size came from, and the observed variance — and a run whose observed variance exceeds that assumption reports UNDERPOWERED and can never report PASS. The field is structurally non-omittable (a required field, not a habit): a rule that lives only in a plan does not fire at the moment of use
 **Known circularity — must be handled in this phase, not discovered in Phase 86**: SC1 asks for the number of items required to detect the margin. A power calculation needs a variance estimate, and the only variance estimate this milestone produces is BASELINE-02's run-to-run variance, which does not exist until Phase 86 — after the bars are locked. Do NOT resolve this by moving the baseline earlier; that reintroduces exactly the fitting risk Phase 85 exists to prevent. Resolve it by recording the sample size WITH the variance ASSUMPTION it was derived from, labelled as an assumption rather than a measurement. Phase 86 then checks the observed variance against that assumption and reports whether the pre-registered n is sufficient — **the margin itself stays fixed either way**. An n that turns out too small makes results UNDERPOWERED; it never relaxes the bar.
-**Plans**: TBD
+**Plans**: 3 plans (3 waves, strictly sequential — the phase's guarantee is an ORDERING one: the bar file is committed before any code exists that could judge a measurement against it, and every later surface consumes the previous one's interface)
+- [ ] 85-01-PLAN.md — The pre-registered bar file committed alone before anything that can judge, plus its loader, its set-registration refusals, and a digest pin that makes a later edit fail a test
+- [ ] 85-02-PLAN.md — Tracer: one `generate-fix` verdict end to end, the hand-rolled arithmetic pinned against hand-checkable values, and a PASS the compiler refuses to build without a sufficient power assessment
+- [ ] 85-03-PLAN.md — The `analyse-visual` bar as two side-by-side mechanisms (count gate + statistical clause), the `eval verdict` CLI, and a guide stating what each verdict licenses
 
 ### Phase 86: Recorded baseline
 **Goal**: The CURRENT production pins of `generate-fix` and `analyse-visual` are baselined and committed against the already-fixed bars, with known run-to-run variance, so any future candidate is judged against noise and a real reference point rather than against zero or against a bar that has already seen a result.
@@ -276,5 +279,5 @@ Phases execute in numeric order: 83 → 84 → 85 → 86
 |-------|-----------|----------------|--------|-----------|
 | 83. Labelled reference sets | v3.7.0 | 3/3 | Complete | 2026-09-05 |
 | 84. Scoring harness | v3.7.0 | 4/4 | Complete | 2026-09-06 |
-| 85. Pre-registered decision bars | v3.7.0 | 0/TBD | Not started | - |
+| 85. Pre-registered decision bars | v3.7.0 | 0/3 | Planned | - |
 | 86. Recorded baseline | v3.7.0 | 0/TBD | Not started | - |
