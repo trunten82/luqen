@@ -16,6 +16,13 @@ import { compareGenerateFix, serialiseVerdict, describeInsufficiencyReason } fro
 import type { GenerateFixVerdict, PowerAssessment, RunToRunInstability } from './eval/verdict-types.js';
 import { compareAnalyseVisual, serialiseAnalyseVisualVerdict, type AnalyseVisualVerdict } from './eval/verdict-analyse-visual.js';
 import type { GenerateFixReport, AnalyseVisualReport } from './eval/report.js';
+import {
+  buildGenerateFixBaselineReplicationArtifact,
+  buildAnalyseVisualBaselineReplicationArtifact,
+  serialiseBaselineReplicationArtifact,
+  isLiveBaselineReplicationArtifact,
+  type BaselineReplicationArtifact,
+} from './eval/baseline.js';
 
 function createDbAdapter(dbPath?: string): SqliteAdapter {
   const config = loadConfig();
@@ -112,9 +119,20 @@ function printEvalSummary(result: RunHarnessResult): void {
 // cli-verdict.test.ts).
 // ---------------------------------------------------------------------------
 
-/** Prints a power assessment's sufficiency and, if insufficient, every named reason -- shared by both capabilities' print functions so the shape stays identical. */
+/**
+ * Prints a power assessment's sufficiency, its run-to-run instability state
+ * (Phase 86 Task 2 -- one shared printer, not two additions: BOTH
+ * capabilities' printed verdicts carry this line, since both call this SAME
+ * function) and, if insufficient, every named reason -- shared by both
+ * capabilities' print functions so the shape stays identical.
+ */
 function printPowerAssessment(label: string, power: PowerAssessment): void {
   console.log(`${label} power sufficient: ${power.sufficient}`);
+  console.log(
+    `${label} run-to-run instability: ${power.runToRunInstability.state}${
+      power.runToRunInstability.state === 'measured' ? ` (${power.runToRunInstability.value})` : ''
+    }`,
+  );
   if (!power.sufficient) {
     for (const reason of power.reasons) {
       console.log(`${label} power insufficiency reason: ${describeInsufficiencyReason(reason)}`);
@@ -151,6 +169,43 @@ function printAnalyseVisualVerdictSummary(verdict: AnalyseVisualVerdict): void {
   console.log(`Overall: ${verdict.overallVerdict.outcome}`);
   console.log(`Overall note: ${verdict.overallVerdict.derivedNote}`);
   console.log(`Overall licence: ${verdict.overallVerdict.licence}`);
+}
+
+// ---------------------------------------------------------------------------
+// eval baseline (Phase 86 Task 2, BASELINE-01/02) -- a SECOND path to a live
+// provider call. `eval run`'s wall is not inherited by writing a new
+// command; the same four-flag plus environment-variable refusal is
+// re-proven below, before any adapter is built or any db is seeded
+// (T-86-12).
+// ---------------------------------------------------------------------------
+
+/**
+ * Prints the replication artifact's own summary: repeat count, the measured
+ * run-to-run instability, and the required sample-size assumption check --
+ * each as its own labelled line (Phase 86 Task 2). In replay mode, states
+ * plainly that a replay replication's instability is zero by construction
+ * and is not a measurement of a model -- the reassuring-direction failure
+ * this whole plan is arranged against, if that sentence were ever omitted.
+ */
+function printBaselineSummary(capability: EvalCapability, artifact: BaselineReplicationArtifact): void {
+  const isLive = isLiveBaselineReplicationArtifact(artifact);
+  console.log(`Capability: ${capability}`);
+  console.log(`Mode: ${isLive ? 'live' : 'replay'}`);
+  console.log(`Repeats: ${artifact.instability.repeatCount}`);
+  console.log(
+    `Run-to-run instability: ${artifact.instability.runToRunInstability.state}${
+      artifact.instability.runToRunInstability.state === 'measured'
+        ? ` (${artifact.instability.runToRunInstability.value})`
+        : ''
+    }`,
+  );
+  console.log(`Sample-size assumption survives: ${artifact.sampleSizeAssumptionCheck.assumptionSurvives}`);
+  console.log(`Sample-size assumption check: ${artifact.sampleSizeAssumptionCheck.consequence}`);
+  if (!isLive) {
+    console.log(
+      "Replay note: a replay replication's run-to-run instability is zero by construction and is not a measurement of a model.",
+    );
+  }
 }
 
 export function createProgram(): Command {
@@ -612,6 +667,159 @@ export function createProgram(): Command {
             `error: --baseline report's runFunction.capability must be "generate-fix" or "analyse-visual" (found ${JSON.stringify(capability)})`,
           );
           process.exitCode = 1;
+        }
+      } catch (err) {
+        console.error(`error: ${err instanceof Error ? err.message : String(err)}`);
+        process.exitCode = 1;
+      }
+    });
+
+  evalGroup
+    .command('baseline')
+    .description(
+      'Repeat a reference set K times through the harness and measure run-to-run instability, writing a committable replication artifact. Replay mode is the default: free, deterministic, no credentials. This is a SECOND path to a live provider call -- the same four-flag plus environment-variable wall `eval run` enforces is re-proven here, before any adapter is built or any db is seeded (T-86-12).',
+    )
+    .requiredOption('--capability <name>', `Capability to score (${EVAL_CAPABILITIES.join(' | ')})`)
+    .option('--repeats <n>', 'Number of repeat runs (minimum 2)', '3')
+    .option('--mode <mode>', 'replay (default) or live', 'replay')
+    .option('--set-version <version>', 'Reference set version', 'v1')
+    .option('--fixtures <path>', 'REPLAY MODE ONLY: override the replay fixture file (defaults to the committed synthetic fixture for the chosen capability)')
+    .option('--provider-type <type>', 'LIVE MODE ONLY: ollama | openai | anthropic | gemini')
+    .option('--endpoint <url>', 'LIVE MODE ONLY: provider base URL')
+    .option('--model-id <id>', 'LIVE MODE ONLY: provider-native model id')
+    .option(
+      '--i-acknowledge-spend',
+      'LIVE MODE ONLY: explicit acknowledgement that this run spends money against a real provider and is non-deterministic',
+      false,
+    )
+    .option('--out-dir <path>', "Directory to write each repeat's full JSON report")
+    .option('--out <path>', 'Write the full JSON replication artifact to this path')
+    .action(async (opts: {
+      capability: string;
+      repeats: string;
+      mode: string;
+      setVersion: string;
+      fixtures?: string;
+      providerType?: string;
+      endpoint?: string;
+      modelId?: string;
+      iAcknowledgeSpend?: boolean;
+      outDir?: string;
+      out?: string;
+    }) => {
+      // Validate the capability BEFORE anything else runs, mirroring `eval run`.
+      if (!isEvalCapability(opts.capability)) {
+        console.error(`error: --capability must be one of: ${EVAL_CAPABILITIES.join(', ')} (got "${opts.capability}")`);
+        process.exitCode = 1;
+        return;
+      }
+      const capability = opts.capability;
+
+      const repeats = parseInt(opts.repeats, 10);
+      if (!Number.isInteger(repeats) || repeats < 2) {
+        console.error(`error: --repeats must be an integer >= 2 (got "${opts.repeats}")`);
+        process.exitCode = 1;
+        return;
+      }
+
+      if (opts.mode !== 'replay' && opts.mode !== 'live') {
+        console.error(`error: --mode must be "replay" or "live" (got "${opts.mode}")`);
+        process.exitCode = 1;
+        return;
+      }
+      const mode: RunMode = opts.mode;
+
+      let provider: RunHarnessProvider | undefined;
+      let modelIdOnProvider: string | undefined;
+      let adapterFactoryFor: (itemId: string) => (type: string) => import('./providers/types.js').LLMProviderAdapter;
+
+      if (mode === 'live') {
+        // SECOND PATH to a live provider call -- `eval run`'s wall is NOT
+        // inherited by writing a new command; re-proven here verbatim,
+        // before any adapter is built or any db is seeded (T-86-12).
+        const missing: string[] = [];
+        if (!opts.providerType) missing.push('--provider-type');
+        if (!opts.endpoint) missing.push('--endpoint');
+        if (!opts.modelId) missing.push('--model-id');
+        if (!opts.iAcknowledgeSpend) missing.push('--i-acknowledge-spend');
+        const apiKey = process.env[EVAL_LIVE_API_KEY_ENV];
+        if (!apiKey) missing.push(`${EVAL_LIVE_API_KEY_ENV} environment variable`);
+        if (missing.length > 0) {
+          console.error(
+            `error: live mode requires all of the following, missing: ${missing.join(', ')}`,
+          );
+          process.exitCode = 1;
+          return;
+        }
+
+        provider = {
+          type: opts.providerType as ProviderType,
+          baseUrl: opts.endpoint as string,
+          apiKey,
+          timeout: 30000,
+        };
+        modelIdOnProvider = opts.modelId;
+        // The REAL createAdapter, identical to `eval run` -- never a
+        // re-implemented dialing path.
+        adapterFactoryFor = () => (type: string) => createAdapter(type as ProviderType);
+      } else {
+        const fixturesPath = opts.fixtures ?? join(PACKAGE_ROOT, REPLAY_FIXTURE_FILES[capability]);
+        const responsesByItemId = loadReplayResponses(fixturesPath);
+        adapterFactoryFor = (itemId: string) => () =>
+          createFixtureAdapter({ responsesByItemId, currentItemId: () => itemId });
+      }
+
+      if (opts.outDir) mkdirSync(opts.outDir, { recursive: true });
+
+      try {
+        const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
+
+        if (capability === 'generate-fix') {
+          const reports: GenerateFixReport[] = [];
+          for (let i = 0; i < repeats; i++) {
+            const result = await runHarness({
+              capability: 'generate-fix',
+              mode,
+              packageRoot: PACKAGE_ROOT,
+              setVersion: opts.setVersion,
+              adapterFactoryFor,
+              provider,
+              modelIdOnProvider,
+            });
+            reports.push(result.report);
+            if (opts.outDir) {
+              writeFileSync(join(opts.outDir, `repeat-${i}.json`), JSON.stringify(result.report, null, 2));
+            }
+          }
+          const artifact = buildGenerateFixBaselineReplicationArtifact(reports, bar);
+          printBaselineSummary('generate-fix', artifact);
+          if (opts.out) {
+            writeFileSync(opts.out, serialiseBaselineReplicationArtifact(artifact));
+            console.log(`Replication artifact written to ${opts.out}`);
+          }
+        } else {
+          const reports: AnalyseVisualReport[] = [];
+          for (let i = 0; i < repeats; i++) {
+            const result = await runHarness({
+              capability: 'analyse-visual',
+              mode,
+              packageRoot: PACKAGE_ROOT,
+              setVersion: opts.setVersion,
+              adapterFactoryFor,
+              provider,
+              modelIdOnProvider,
+            });
+            reports.push(result.report);
+            if (opts.outDir) {
+              writeFileSync(join(opts.outDir, `repeat-${i}.json`), JSON.stringify(result.report, null, 2));
+            }
+          }
+          const artifact = buildAnalyseVisualBaselineReplicationArtifact(reports, bar);
+          printBaselineSummary('analyse-visual', artifact);
+          if (opts.out) {
+            writeFileSync(opts.out, serialiseBaselineReplicationArtifact(artifact));
+            console.log(`Replication artifact written to ${opts.out}`);
+          }
         }
       } catch (err) {
         console.error(`error: ${err instanceof Error ? err.message : String(err)}`);
