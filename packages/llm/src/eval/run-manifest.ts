@@ -237,6 +237,46 @@ const COMPARABLE_FIELDS = [
 ] as const satisfies readonly (keyof RunFunction)[];
 
 /**
+ * Fields deliberately EXCLUDED from comparison, and why. `timestamp` differs on
+ * every run by construction, so comparing it would make every pair of runs
+ * incomparable and the refusal meaningless.
+ */
+const NON_COMPARABLE_FIELDS = ['timestamp'] as const satisfies readonly (keyof RunFunction)[];
+
+/**
+ * COMPILE-TIME EXHAUSTIVENESS GUARD (HARNESS-04).
+ *
+ * `satisfies readonly (keyof RunFunction)[]` above proves every LISTED field is
+ * a real key. It does NOT prove the reverse — that every key is listed. So
+ * adding a 14th field to RunFunction and forgetting to classify it would have
+ * left it silently unchecked by `assertComparable`, and two runs differing only
+ * in that field would have compared as equal. That is the exact defect
+ * HARNESS-04 exists to prevent, reintroduced one field at a time.
+ *
+ * The 84-02 SUMMARY claimed the `satisfies` clause already made such an omission
+ * "a type error". Verified false during phase verification with a scratch
+ * `tsc --strict` run: it compiled cleanly. This is the guard that actually does
+ * it. Every key of RunFunction must appear in exactly one of the two lists, or
+ * `UnclassifiedRunFunctionField` resolves to a non-never type and this file
+ * fails to compile.
+ *
+ * To BREAK IT (do this rather than trust it): add `readonly foo: string` to
+ * RunFunction without touching either list, then run
+ * `npx tsc --noEmit -p tsconfig.json`. It must fail here.
+ */
+type UnclassifiedRunFunctionField = Exclude<
+  keyof RunFunction,
+  (typeof COMPARABLE_FIELDS)[number] | (typeof NON_COMPARABLE_FIELDS)[number]
+>;
+type AssertNever<T extends never> = T;
+// If any RunFunction key is unclassified, UnclassifiedRunFunctionField is that
+// key's literal type, `T extends never` fails, and this line is a compile error.
+// NOTE: an earlier attempt here was `const x: UnclassifiedRunFunctionField[] = []`,
+// which is INERT — an empty array satisfies both `never[]` and `'foo'[]`, so it
+// can never fail. Caught by breaking it. Do not "simplify" it back.
+export type _EveryRunFunctionFieldIsClassified = AssertNever<UnclassifiedRunFunctionField>;
+
+/**
  * Thrown by `assertComparable` when two `RunFunction` records differ on any
  * field except `timestamp`. Carries every differing field name, not just
  * the first, following the named-error-subclass pattern established by
