@@ -42,6 +42,7 @@ import type { RunFunction } from './run-manifest.js';
 import type { AnalyseVisualAggregate } from './aggregate.js';
 import { assertBarAppliesTo, type LoadedDecisionBars } from './decision-bars.js';
 import {
+  assertAnalyseVisualAggregateMatchesRecount,
   assertHoldsInvariantFields,
   assertIdenticalItemIdSets,
   assertNoFailedItems,
@@ -205,6 +206,11 @@ export function compareAnalyseVisual(
   assertHoldsInvariantFields(baseline.runFunction, candidate.runFunction);
   assertNoFailedItems(baseline.items, candidate.items);
   assertIdenticalItemIdSets(baseline.items, candidate.items);
+  // T-85-06 — both decision-bearing counters, for BOTH sides. Without this a
+  // hand-edited aggregate.falsePass flowed straight into the verdict (live gap,
+  // found by phase verification).
+  assertAnalyseVisualAggregateMatchesRecount('baseline', baseline.items, baseline.aggregate);
+  assertAnalyseVisualAggregateMatchesRecount('candidate', candidate.items, candidate.aggregate);
 
   const capabilityBar = bar.capabilityBars['analyse-visual'];
   const clauseN = capabilityBar.nonInferiorityClause.n;
