@@ -177,6 +177,34 @@ describe('checkPreRegistrationAncestry -- never mutates, never writes', () => {
   });
 });
 
+describe('checkPreRegistrationAncestry -- a genuine git execution failure propagates, never silently read as "does not hold"', () => {
+  it('re-throws when `git merge-base --is-ancestor` fails for a reason OTHER than "not an ancestor" (exit 1) -- e.g. an unresolvable object name', () => {
+    const cwd = repoRoot();
+    // MEASURED: `git merge-base --is-ancestor <realCommit> not-a-real-sha-000000`
+    // exits 128 ("fatal: Not a valid object name"), not 1 -- a genuine
+    // execution failure, distinct from the "not an ancestor" (exit 1) case
+    // this module treats as a normal `false` result.
+    expect(() =>
+      checkPreRegistrationAncestry(cwd, BAR_FILE_PATH, 'not-a-real-sha-000000', {
+        isShallowRepository: () => false,
+      }),
+    ).toThrow();
+    let caught: unknown;
+    try {
+      checkPreRegistrationAncestry(cwd, BAR_FILE_PATH, 'not-a-real-sha-000000', {
+        isShallowRepository: () => false,
+      });
+    } catch (err) {
+      caught = err;
+    }
+    // NOT one of this module's own named errors -- the raw execFileSync
+    // failure propagates unchanged, so a genuine execution failure is never
+    // silently read as "the invariant does not hold".
+    expect(caught).not.toBeInstanceOf(ShallowCloneCannotAnswerAncestryError);
+    expect(caught).not.toBeInstanceOf(NoIntroducingCommitFoundError);
+  });
+});
+
 describe('checkPreRegistrationAncestry -- a mistyped/never-committed path is refused, never treated as "holds"', () => {
   it('throws NoIntroducingCommitFoundError for a path with no introducing commit', () => {
     const cwd = repoRoot();
