@@ -176,8 +176,31 @@ describe('luqen-llm eval CLI', () => {
     const output = logs.join('\n');
     expect(output).toMatch(/^False-PASS: \d+\/\d+$/m);
     expect(output).toMatch(/^False-ISSUE: \d+\/\d+$/m);
-    // Never a single fused figure standing in for both.
-    expect(output).not.toMatch(/accuracy/i);
+
+    // POSITIVE KEY-SET PIN, not a blocklist. The previous form here asserted
+    // `not.toMatch(/accuracy/i)`, which is a predicate NARROWER than the label
+    // put on it: it catches a fused field that happens to be spelled
+    // "accuracy" and passes a fused field spelled anything else. Verified by
+    // breaking it — adding `Overall: 87%` to the printed summary left all ten
+    // tests green. HARNESS-03 forbids fusing the two error counts into ONE
+    // number, whatever it is called, so pin the exact set of label lines the
+    // summary is allowed to print and fail on any addition.
+    const labels = output
+      .split('\n')
+      .map((l) => l.match(/^([A-Z][^:]*):\s/))
+      .filter((m): m is RegExpMatchArray => m !== null)
+      .map((m) => m[1])
+      .filter((l) => l !== 'Mode' && l !== 'Set' && l !== 'Capability' && l !== 'Model' && l !== 'Report');
+    expect(new Set(labels)).toEqual(new Set([
+      'Correct',
+      'False-PASS',
+      'False-ISSUE',
+      'Uncertain',
+      'Alt classification mismatch',
+      'Suggested-alt filename-shaped',
+      'Suggested-alt empty-despite-informational',
+      'Failed',
+    ]));
   });
 
   it('writes a valid JSON report to --out and prints it is comparable to itself', async () => {
