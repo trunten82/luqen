@@ -144,6 +144,9 @@ describe('luqen-llm eval verdict CLI', () => {
       .map((l) => l.match(/^([A-Z][^:]*):\s/))
       .filter((m): m is RegExpMatchArray => m !== null)
       .map((m) => m[1]);
+    // Phase 86 Task 2 extends this pin with the new run-to-run-instability
+    // line `printPowerAssessment` (cli.ts) now prints -- one shared printer,
+    // both capabilities carry the line, so the pin must too.
     expect(new Set(labels)).toEqual(new Set([
       'Capability',
       'False-PASS gate',
@@ -151,6 +154,7 @@ describe('luqen-llm eval verdict CLI', () => {
       'Non-inferiority clause',
       'Non-inferiority clause licence',
       'Non-inferiority clause power sufficient',
+      'Non-inferiority clause run-to-run instability',
       'Overall',
       'Overall note',
       'Overall licence',
