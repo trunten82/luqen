@@ -1,0 +1,395 @@
+{
+  "barsVersion": "v1",
+  "recordedAt": "2026-09-06",
+  "capabilities": ["generate-fix", "analyse-visual"],
+
+  "preRegistrationGuarantee": {
+    "statement": "This file is a pre-registration, not a config file. Every number below is either a locked decision, an arithmetic consequence of one, or an assumption labelled as an assumption -- none of them is a measurement. This file was committed as this plan's FIRST commit, by itself, while no harness report, baseline, or verdict artifact existed anywhere in this repository or its git history, on any branch. Phase 86 produces the first real measurement, deliberately after this file exists.",
+    "reCheckableInvariant": "The commit that ADDS this file must be an ancestor of the commit that adds any baseline or verdict artifact. This is checkable by any future reader without trusting a claim in this file -- it does not decay the way a recorded SHA or a recorded distance would.",
+    "verificationProcedure": "1) Find the introducing commit: `git log --diff-filter=A --format=%H --reverse -- packages/llm/tests/eval/bars/decision-bars.v1.json | head -1`. 2) For any candidate baseline/verdict artifact commit, run `git merge-base --is-ancestor <introducing-commit-sha> <candidate-commit-sha>` and check the exit code -- 0 means the invariant holds, non-zero means it was violated (the bar was edited or created after a measurement, and must no longer be trusted as a pre-registration).",
+    "noSelfReferentialShaNote": "This file deliberately does NOT record the SHA of the commit that adds it -- that SHA cannot be known before the commit is made, and a field that is wrong the moment it is committed is worse than no field. Use the verification procedure above instead.",
+    "measurementStateAtWriteTime": "Checked by walking every file ever added on any ref across the whole repository (`git log --all --diff-filter=A --name-only`, 3539 lines / 2730 distinct files at the time of this check) and grepping for 'baseline', 'verdict', 'decision-bar' (case-insensitive) in the resulting path list. Nine matches total, all outside the LLM eval subsystem and unrelated to a harness report: two archived phase-18 scanner BASELINE.md planning docs, packages/core/src/baseline/{baseline,diff}.ts + tests (WCAG compliance-scan baselines, a different domain), packages/compliance/src/seed/baseline.json (seed fixture, unrelated), packages/dashboard/src/views/partials/verdict-line.hbs (a UI partial), and packages/llm/tests/providers/parity-baseline.json (a streaming-adapter parity fixture from Phase 32, unrelated to eval scoring). A second targeted search over every commit that ever touched a path under packages/llm/src/eval or packages/llm/tests/eval found exactly two commits whose message contains the word 'verdict' or 'baseline', both about the ANALYSE-VISUAL SCORER's verdictOutcome enum (ab54ea24, 09a8bb64) -- source code for classifying a single item's outcome, not a stored harness report or baseline artifact. Zero hits for any file under packages/llm/src/eval or packages/llm/tests/eval containing 'baseline', 'verdict', 'bars', or 'decision-bar' in its own path. Full commands and output are recorded verbatim in this plan's SUMMARY.md."
+  },
+
+  "capabilityBars": {
+    "generate-fix": {
+      "setName": "wcag-fixes",
+      "setVersion": "v1",
+      "n": 17,
+
+      "gatingAxis": {
+        "counterName": "exactMatchCount",
+        "sourceDecision": "D-85-2",
+        "reason": "The margin lands on ONE named axis, not a blended score -- Phase 84 deliberately refused to create a fused number (HARNESS-03); a margin defined over 'overall quality' would smuggle that number back in through the bars. exactMatch is chosen because it is the least interpretation-dependent axis and the one whose regression is unambiguous."
+      },
+      "nonGatingAxes": [
+        { "counterName": "unchangedFromInputCount", "status": "reported as context, never gating" },
+        { "counterName": "emptyFixCount", "status": "reported as context, never gating" },
+        { "counterName": "missingMentionsCount", "status": "reported as context, never gating" },
+        { "counterName": "effortMatchCount", "status": "reported as context, never gating" },
+        { "counterName": "filenameShapedAltCount", "status": "reported as context, never gating" }
+      ],
+
+      "nonInferiorityMargin": {
+        "axis": "exactMatchCount",
+        "kind": "a judgement, not a derivation -- labelled as one (D-85-3)",
+        "marginItems": 3,
+        "percentageEquivalent": {
+          "value": 17.6,
+          "unit": "percentage points",
+          "denominator": 17,
+          "note": "The item count (3) IS the bar. This percentage is DERIVED from it for readability and must never be reused directly against a set of a different size -- recorded as an item count specifically because the denominator (17) is fixed and a percentage would invite exactly that reuse."
+        },
+        "rejectedAlternatives": [
+          {
+            "marginItems": 1,
+            "percentageEquivalent": 5.9,
+            "reason": "Intuitive choice, but below what n=17 can resolve at any reasonable power -- would make UNDERPOWERED permanent and teach readers to ignore it, which is worse than a wider honest bar."
+          },
+          {
+            "marginItems": 2,
+            "percentageEquivalent": 11.8,
+            "reason": "Same defect as 1 item: still below what n=17 can resolve at any reasonable power."
+          },
+          {
+            "marginItems": 5,
+            "percentageEquivalent": 29.4,
+            "reason": "Comfortably detectable, but tolerates a regression large enough to matter to users -- wider than necessary given 3 items is reachable."
+          }
+        ],
+        "history": {
+          "recordingPolicy": "Three layers, ALL kept visible on purpose (A-2). A recorded verdict is never overwritten here -- a reader who later asks whether this margin was ever fitted to anything needs the whole path, including the detour, plus the fact that no measurement touched any step of it. None exists; that was checked before the amendment, before the retraction, and again while this file was written.",
+          "layer1Original": {
+            "label": "Layer 1 -- the original (D-85-3), INTACT",
+            "value": "3 items on exactMatchCount at n=17",
+            "text": "Chosen as a JUDGEMENT: 1 and 2 items were below what the instrument could resolve, 5 tolerated more than a user should have to accept, and 3 was the point where the bar still meant something and the instrument had some chance of resolving it. The reachability boundary it was judged against belonged to a decision rule that conditioned on the observed discordant-pair count -- a rule later ruled invalid (see A-1)."
+          },
+          "layer2Amendment": {
+            "label": "Layer 2 -- the amendment, as made, NOT tidied away",
+            "value": "amended from 3 to 4 items",
+            "text": "A-1 rejected the conditional-discordance rule as anti-conservative, which removed the ground the original digit stood on. The amended rule was stated as: the margin is the smallest integer item count REACHABLE under the valid method. The coordinator costed that rule against a Bonferroni-split joint bound -- a bound on the discordance rate combined with a bound on the discordant split -- under which the smallest reachable count was 4, and amended 3 to 4 on that basis. The reasoning was sound GIVEN THE METHOD IN FRONT OF IT."
+          },
+          "layer3Retraction": {
+            "label": "Layer 3 -- the retraction, and its cause. The original 3 stands.",
+            "value": "retracted back to 3 items -- the original D-85-3 value survives unchanged",
+            "cause": "The Bonferroni-split method did not survive scrutiny, and the reason is worth more than the digit that was being argued about: it is NOT MONOTONE. At zero discordant pairs the split is unbounded, so the joint bound collapses to the discordance bound alone, and adding evidence of candidate superiority can FLIP a certifying result to a non-certifying one.",
+            "workedCounterexample": {
+              "configuration": "n=17, margin=4 items (the coordinator's own configuration), candidate that loses nothing on the gating axis",
+              "underRejectedBonferroniSplitMethod": [
+                { "candidateImprovesItems": 0, "bound": 0.1951, "certifies": true },
+                { "candidateImprovesItems": 1, "bound": 0.2725, "certifies": false },
+                { "candidateImprovesItems": 2, "bound": 0.2492, "certifies": false },
+                { "candidateImprovesItems": 3, "bound": 0.1803, "certifies": true }
+              ],
+              "finding": "A candidate that got strictly better fails where the same candidate that did nothing passes. Any reader would report that as a defect and would be right."
+            },
+            "replacementMethod": "An exact one-sided 95 percent Clopper-Pearson upper bound on the BASELINE-BETTER RATE over all n items. The true difference is the baseline-better rate minus the candidate-better rate, and the second term is never negative, so a bound on the first alone is a valid bound on the difference -- one parameter, nothing conditioned on, no nuisance split, monotone in the observed count, and closed-form at zero (one minus alpha raised to the power one over n) so the case the whole reachability argument turns on is checkable with a calculator.",
+            "underReplacementMethod": {
+              "resultAtN17": 3,
+              "resultAtN13": 3,
+              "statement": "Under the replacement, the coordinator's OWN stated rule returns 3 items at n=17 and 3 items at n=13. The original D-85-3 value survives unchanged."
+            },
+            "whatWasWrongAndWhen": "The amendment in layer 2 was WRONG AT THE MOMENT IT WAS MADE -- not because the digit was unreasonable, but because it was derived from a method that was itself replaced. What the margin now rests on is not a judgement about reachability, but an error rate bounded below 5 percent by construction -- the probability of certifying a candidate that is truly worse by exactly the margin. So D-85-3's VALUE is unchanged and its JUSTIFICATION is replaced. That is the whole amendment.",
+            "crossCheckOfCoordinatorsFigures": {
+              "note": "The coordinator reproduced the replacement method's bounds independently before retracting: at n=17 the bound reads 0.1616 at zero baseline-better items, 0.2501 at one, 0.3262 at two; at n=13, 0.2058, 0.3163, 0.4101. This executing plan (Task 1) INDEPENDENTLY reproduced the identical figures a THIRD time, using scipy.stats.beta.ppf (the exact Clopper-Pearson quantile function) as a calculator -- not by copying the coordinator's numbers or 85-CONTEXT.md's text. See achievedPower.decisionRule below and this plan's SUMMARY.md for the working. All figures agree exactly."
+            }
+          }
+        },
+        "channel": "Amended and then retracted by the coordinator, in messages to the luqen planner during Phase 85 planning, on 2026-09-06 -- NOT a product-owner decision. Alessandro has not been asked and has not answered on any of this. Anyone citing the amendment or the retraction must cite it as the coordinator's.",
+        "behaviourallyInert": {
+          "finding": "Under the valid (Clopper-Pearson) method, the digit is behaviourally INERT: at both n=17 and n=13, a margin of 3 items and a margin of 4 items certify on EXACTLY the same observation set -- zero baseline-better items and nothing else.",
+          "whatMoves": "Only the worst-case false-reassurance rate moves with the digit, from 3.7 percent (margin=3) to 1.05 percent (margin=4) at n=17 -- see achievedPower.validityStatement.exactWorstCaseValues below for the independently reproduced figures.",
+          "conclusion": "The 3-versus-4 question was never a question about what the instrument would DO."
+        },
+        "haltConditionRule": "If the reachability derivation below shows that 3 items is NOT reachable under the valid method at n=17, this plan must HALT and report rather than silently widen the margin -- 'the smallest margin this instrument can certify is N of 17 items' would itself be a finding someone has to be told. This did NOT happen: the derivation in achievedPower.reachabilityDerivation.generateFix below shows 3 IS reachable, and equals the recorded margin."
+      }
+    },
+
+    "analyse-visual": {
+      "setName": "image-alt",
+      "setVersion": "v1",
+      "n": 13,
+
+      "falsePassScreeningGate": {
+        "sourceDecision": "D-85-1, D-85-4",
+        "mechanism": "A deterministic SCREENING GATE. Pure count comparison, no hypothesis test, no p-value. Recorded as a SEPARATE object from nonInferiorityClause below and never merged into one bar.",
+        "counterName": "falsePass",
+        "rule": "candidate.falsePass strictly greater than baseline.falsePass -> FAIL. Deterministic -- no test, because no test at n=7 has meaningful power and dressing it as one would be the exact false precision this milestone exists to prevent.",
+        "opportunityDenominator": {
+          "value": 7,
+          "measuredFrom": "image-alt.v1.json items whose stored expectedVerdict is 'issue' -- the only items on which a false-PASS is OBSERVABLE, since a false-pass by definition requires a real violation the candidate wrongly clears. MEASURED programmatically against the committed set during this plan's authoring: 13 total items, 7 with expectedVerdict:'issue', 6 with expectedVerdict:'pass'.",
+          "note": "This denominator CANNOT be derived from a harness report alone (a report does not carry per-item ground truth) and is therefore PINNED to image-alt v1 HERE."
+        },
+        "toleranceField": null,
+        "toleranceFieldNote": "No tolerance, epsilon, or margin field of any kind exists on this gate, by design (D-85-4). A future edit adding one would quietly turn a zero-tolerance clause into an unstated non-inferiority bar -- exactly the failure 85-RESEARCH.md's Pitfall 3 describes -- and the loader (decision-bars.ts, Task 2) refuses to load a gate object carrying any tolerance-shaped field."
+      },
+
+      "nonInferiorityClause": {
+        "sourceDecision": "A-3 (not one of 85-CONTEXT.md's original seven decisions)",
+        "mechanism": "A statistical NON-INFERIORITY VERDICT, which must carry its power and will often be UNDERPOWERED (D-85-1). Recorded as a SEPARATE object from falsePassScreeningGate above and never merged into one bar.",
+        "axis": "correct",
+        "counterName": "correct",
+        "n": 13,
+        "marginItems": 3,
+        "percentageEquivalent": {
+          "value": 23.1,
+          "unit": "percentage points",
+          "denominator": 13
+        },
+        "provenance": "NOT one of 85-CONTEXT.md's original seven decisions (D-85-1..D-85-7). Proposed during Phase 85 planning and ruled on by the coordinator on 2026-09-06 (A-3), re-derived by the SAME amended rule as generate-fix's margin under the valid method -- the smallest integer item count reachable at n=13.",
+        "whyNotTightenedBelowGenerateFix": "This clause is deliberately NOT tightened below generate-fix's margin despite analyse-visual's errors carrying more legal weight (a false-PASS can elevate a criterion to 'Supports' in a document someone relies on legally). The tightening belongs on the false-PASS screening gate above, which is ALREADY zero-tolerance. Squeezing `correct` further would only make UNDERPOWERED permanent, which D-85-3 explicitly rejects as an outcome.",
+        "haltConditionRule": "Same rule as capabilityBars.generate-fix.nonInferiorityMargin.haltConditionRule, evaluated independently at n=13. Did NOT trigger -- see achievedPower.reachabilityDerivation.analyseVisualCorrect below: 3 IS reachable at n=13 and equals the recorded margin."
+      }
+    }
+  },
+
+  "varianceAssumption": {
+    "sourceDecision": "D-85-5",
+    "generate-fix": {
+      "quantity": "McNemar discordant-pair rate",
+      "quantityDefinition": "The fraction of items on which baseline and candidate DISAGREE on the gating boolean axis (exactMatch) -- i.e. (b+c)/n, where b is the baseline-better count and c is the candidate-better count.",
+      "assumedValue": 0.25,
+      "label": "ASSUMPTION",
+      "measurementState": "No measurement of this quantity exists. Phase 86 produces the first one."
+    },
+    "analyse-visual": {
+      "quantity": "McNemar discordant-pair rate",
+      "quantityDefinition": "The fraction of items on which baseline and candidate DISAGREE on the gating boolean axis (correct/not-correct) -- i.e. (b+c)/n, where b is the baseline-better count and c is the candidate-better count.",
+      "assumedValue": 0.25,
+      "label": "ASSUMPTION",
+      "measurementState": "No measurement of this quantity exists. Phase 86 produces the first one."
+    },
+    "runToRunInstability": {
+      "quantity": "Phase 86 BASELINE-02 run-to-run score instability",
+      "isDifferentQuantityFromDiscordanceAbove": true,
+      "note": "This is a DIFFERENT quantity from the discordant-pair rate above (85-RESEARCH.md Open Question 1). It measures the SAME model/prompt run repeated (non-determinism at fixed temperature), not baseline-vs-candidate disagreement. It is not measured yet, and Phase 86 produces the first measurement of it, separately from the discordant-pair rate. A verdict must name explicitly WHICH of the two quantities moved, rather than leaving a reader to guess which is meant."
+    }
+  },
+
+  "achievedPower": {
+    "framingNote": "n is already FIXED by Phase 83's committed reference sets (17, 13, 7 opportunities). This is therefore an ACHIEVED-POWER calculation -- given this fixed n, what margin is detectable at what power, under what variance assumption -- NOT a sample-size calculation. See ROADMAP.md's 'Known circularity' paragraph (ROADMAP.md:249).",
+
+    "decisionRule": {
+      "sourceDecision": "A-1",
+      "method": "Exact one-sided 95 percent Clopper-Pearson upper confidence bound on the baseline-better rate.",
+      "derivation": "Pair the two reports item by item on the gating boolean axis. Let b be the count of items where baseline is good and candidate is not (the baseline-better count), c the reverse, and m = b + c the discordant pairs. The quantity bounded is the TRUE DIFFERENCE, the baseline-better RATE minus the candidate-better rate. The second term can never be negative, so the difference can never exceed the baseline-better rate alone -- which means a valid upper bound on that ONE rate is a valid upper bound on the difference, with no nuisance-parameter split and nothing to condition on. Take the exact one-sided 95 percent Clopper-Pearson upper bound U(b, n) on the baseline-better rate from b events observed over the n items, and declare the clause non-inferior only when that bound is strictly below the margin expressed as a proportion (marginItems / n).",
+      "closedFormAtZero": "U(0, n) = 1 - 0.05^(1/n) (one minus alpha raised to the power one over n) -- exact, closed-form, checkable with a calculator, and the case the whole reachability argument turns on.",
+      "generalFormula": "U(b, n) = the 1-alpha quantile of Beta(b+1, n-b) (the standard Clopper-Pearson upper-bound identity), or 1.0 when b = n."
+    },
+
+    "validityStatement": {
+      "guarantee": "The probability that this rule declares non-inferiority when the candidate is truly worse by exactly the margin is bounded below 0.05 BY CONSTRUCTION, because the quantity it compares is a genuine one-sided 95 percent confidence bound on the very difference the margin is about.",
+      "whyThisMethodWasChosen": "The method planning first proposed conditioned on the observed discordant-pair count and was REJECTED under A-1 as anti-conservative -- it would have declared non-inferiority roughly 1 time in 4 against a candidate truly worse by exactly the margin. That is the same error class the whole milestone exists to prevent, one level up, in the instrument rather than in the thing measured. This method's error runs toward ALARM instead: a wrong result that says 'less work' is believed and never re-checked; a wrong result that says 'we cannot certify this yet' costs a model upgrade that might have been taken, which is the cheap direction.",
+      "leastFavourableConfiguration": "Computed where the candidate improves nothing -- true candidate-better count = 0, so the true baseline-better rate equals the margin/n exactly, and the worst case is P(B=0 | n, p=margin/n) = (1 - margin/n)^n, since only b=0 certifies at these n and margins (see observedResultsThatCanCertify below).",
+      "exactWorstCaseValues": {
+        "generateFix": {
+          "n": 17,
+          "marginItems": 3,
+          "worstCaseFalseReassuranceRate": 0.0369,
+          "asPercentage": "3.69% (~3.7%)"
+        },
+        "analyseVisualCorrect": {
+          "n": 13,
+          "marginItems": 3,
+          "worstCaseFalseReassuranceRate": 0.0330,
+          "asPercentage": "3.30% (~3.3%)"
+        },
+        "crossCheckAgainstTheRejectedFourItemDigit": {
+          "n": 17,
+          "marginItems": 4,
+          "worstCaseFalseReassuranceRate": 0.0105,
+          "asPercentage": "1.05%",
+          "note": "The digit's ONLY effect on the valid method: moving the margin 3 to 4 at n=17 moves the worst case from 3.7% to 1.05%, both bounded below 5% -- confirming capabilityBars.generate-fix.nonInferiorityMargin.behaviourallyInert.whatMoves above, and independently reproducing A-2's stated figures."
+        },
+        "howComputed": "(1 - marginItems/n) ** n, evaluated with Python's arbitrary-precision floats -- e.g. n17/M3: (1 - 3/17)**17 = (14/17)**17 = 0.036859...; n13/M3: (10/13)**13 = 0.033017...; n17/M4: (13/17)**17 = 0.010457.... All three independently derived during this plan's Task 1 authoring, matching the coordinator's A-2 figures exactly (0.1616/0.2501/0.3262 at n=17 and 0.2058/0.3163/0.4101 at n=13 for the b=0/1/2 Clopper-Pearson bounds that feed this calculation -- see reachabilityDerivation below)."
+      }
+    },
+
+    "twoFiguresPerCapability": {
+      "assumedDiscordantPairRateUsedHere": 0.25,
+      "generateFix": {
+        "n": 17,
+        "powerToCertifyGenuinelyIdenticalCandidate": {
+          "value": 0.1033,
+          "howComputed": "(1 - assumedDiscordance/2)^n = 0.875^17. Baseline-better rate under 'genuinely identical' = HALF the assumed discordance, since disagreement between two truly-equal models is split evenly between the two directions with no systematic reason to favour either."
+        },
+        "worstCaseFalseReassuranceRate": {
+          "value": 0.0369,
+          "note": "Identical to achievedPower.validityStatement.exactWorstCaseValues.generateFix above -- this figure does NOT vary with the discordance assumption, because the Clopper-Pearson bound's coverage guarantee is unconditional on it. See sensitivityTable.worstCaseFalseReassuranceInvarianceNote below."
+        }
+      },
+      "analyseVisualCorrect": {
+        "n": 13,
+        "powerToCertifyGenuinelyIdenticalCandidate": {
+          "value": 0.1762,
+          "howComputed": "0.875^13, same reasoning as generateFix above."
+        },
+        "worstCaseFalseReassuranceRate": {
+          "value": 0.0330,
+          "note": "Identical to achievedPower.validityStatement.exactWorstCaseValues.analyseVisualCorrect above -- same discordance-invariance as generateFix."
+        }
+      },
+      "readerNote": "At these n, powerToCertifyGenuinelyIdenticalCandidate is SMALL (10.3% / 17.6%) -- a reader must see how small, because it is the number that makes UNDERPOWERED the EXPECTED verdict rather than a fault (A-9), not merely an unlikely edge case."
+    },
+
+    "sensitivityTable": {
+      "sourceDecision": "A-4",
+      "axis": "assumedDiscordantPairRate, swept 0.10 to 0.50",
+      "purposeNote": "A single assumed number with no visible sensitivity is an undesigned number (A-4). This table shows how much the 0.25 assumption used above is doing to powerToCertifyGenuinelyIdenticalCandidate.",
+      "worstCaseFalseReassuranceInvarianceNote": "worstCaseFalseReassuranceRate is deliberately NOT a varying column in this table -- it does not depend on the assumed discordant-pair rate at all. It is fixed at 0.0369 (generate-fix, n=17) and 0.0330 (analyse-visual `correct`, n=13) for every row, by construction of the Clopper-Pearson bound's unconditional coverage guarantee (see validityStatement above). Recorded explicitly here so a reader does not mistake a genuinely constant figure for a missing one.",
+      "rows": [
+        { "assumedDiscordantPairRate": 0.10, "generateFixPowerToCertifyIdentical_n17": 0.4181, "analyseVisualPowerToCertifyIdentical_n13": 0.5133 },
+        { "assumedDiscordantPairRate": 0.15, "generateFixPowerToCertifyIdentical_n17": 0.2657, "analyseVisualPowerToCertifyIdentical_n13": 0.3629 },
+        { "assumedDiscordantPairRate": 0.20, "generateFixPowerToCertifyIdentical_n17": 0.1668, "analyseVisualPowerToCertifyIdentical_n13": 0.2542 },
+        { "assumedDiscordantPairRate": 0.25, "generateFixPowerToCertifyIdentical_n17": 0.1033, "analyseVisualPowerToCertifyIdentical_n13": 0.1762 },
+        { "assumedDiscordantPairRate": 0.30, "generateFixPowerToCertifyIdentical_n17": 0.0631, "analyseVisualPowerToCertifyIdentical_n13": 0.1209 },
+        { "assumedDiscordantPairRate": 0.35, "generateFixPowerToCertifyIdentical_n17": 0.0380, "analyseVisualPowerToCertifyIdentical_n13": 0.0820 },
+        { "assumedDiscordantPairRate": 0.40, "generateFixPowerToCertifyIdentical_n17": 0.0225, "analyseVisualPowerToCertifyIdentical_n13": 0.0550 },
+        { "assumedDiscordantPairRate": 0.45, "generateFixPowerToCertifyIdentical_n17": 0.0131, "analyseVisualPowerToCertifyIdentical_n13": 0.0364 },
+        { "assumedDiscordantPairRate": 0.50, "generateFixPowerToCertifyIdentical_n17": 0.0075, "analyseVisualPowerToCertifyIdentical_n13": 0.0238 }
+      ]
+    },
+
+    "reachabilityDerivation": {
+      "rule": "The margin is the SMALLEST integer item count m such that m/n strictly exceeds U(0, n) = 1 - 0.05^(1/n) (the closed-form Clopper-Pearson upper bound at zero baseline-better items). This is a hand-checkable derivation, not a reference to a library.",
+      "generateFix": {
+        "n": 17,
+        "closedFormBoundAtZero": 0.1616,
+        "checkedCounts": [
+          { "m": 0, "proportion": 0.0, "reachable": false },
+          { "m": 1, "proportion": 0.0588, "reachable": false },
+          { "m": 2, "proportion": 0.1176, "reachable": false },
+          { "m": 3, "proportion": 0.1765, "reachable": true },
+          { "m": 4, "proportion": 0.2353, "reachable": true },
+          { "m": 5, "proportion": 0.2941, "reachable": true }
+        ],
+        "smallestReachableMarginItems": 3,
+        "haltCheck": "Recorded margin (3) EQUALS smallest reachable (3) -- HALT NOT triggered. Margins 1 and 2 are unreachable even for a candidate that matches the baseline on every single item."
+      },
+      "analyseVisualCorrect": {
+        "n": 13,
+        "closedFormBoundAtZero": 0.2058,
+        "checkedCounts": [
+          { "m": 0, "proportion": 0.0, "reachable": false },
+          { "m": 1, "proportion": 0.0769, "reachable": false },
+          { "m": 2, "proportion": 0.1538, "reachable": false },
+          { "m": 3, "proportion": 0.2308, "reachable": true },
+          { "m": 4, "proportion": 0.3077, "reachable": true },
+          { "m": 5, "proportion": 0.3846, "reachable": true }
+        ],
+        "smallestReachableMarginItems": 3,
+        "haltCheck": "Recorded margin (3) EQUALS smallest reachable (3) -- HALT NOT triggered. Margins 1 and 2 are unreachable even for a candidate that matches the baseline on every single item."
+      }
+    },
+
+    "observedResultsThatCanCertify": {
+      "sourceDecision": "A-7",
+      "warningLabel": "THE MARGIN IS NOT A BUDGET",
+      "warning": "The certifying condition at the recorded margin is ZERO baseline-better items: the candidate must not lose a single item on the gating axis. '3 items' is a tolerated TRUE DIFFERENCE and it licenses losing NONE. Reading '3 items' as 'we are allowed to lose three' is a misreading available to every reader, and it runs in the reassuring direction -- the direction nobody re-checks.",
+      "generateFix": {
+        "n": 17,
+        "marginItems": 3,
+        "largestCertifyingBaselineBetterCount": 0,
+        "derivation": "U(0,17)=0.1616 < 3/17=0.1765 -> certifies. U(1,17)=0.2501, which is NOT less than 0.1765 -> does not certify. So b=0 is the ONLY certifying observed baseline-better count."
+      },
+      "analyseVisualCorrect": {
+        "n": 13,
+        "marginItems": 3,
+        "largestCertifyingBaselineBetterCount": 0,
+        "derivation": "U(0,13)=0.2058 < 3/13=0.2308 -> certifies. U(1,13)=0.3163, which is NOT less than 0.2308 -> does not certify. So b=0 is the ONLY certifying observed baseline-better count."
+      }
+    },
+
+    "namedLimitations": [
+      {
+        "id": "A-8",
+        "title": "No credit for improvements",
+        "text": "The bound ignores the candidate-better count entirely -- the candidate is NEVER given credit for items it improved. Conservative, intended, and a direct consequence of the one-parameter construction that buys the method its validity and its monotonicity. A candidate that is visibly better overall can still fail to certify."
+      },
+      {
+        "id": "non-identical-item-difficulty",
+        "title": "Reference items are not identically difficult",
+        "text": "The reference items are not identically difficult, so the baseline-better count is a sum of independent but NON-IDENTICAL events rather than a true binomial. The binomial bound stays conservative for the mean because the binomial is the MOST DISPERSED case at a fixed mean -- this reasoning is written down here rather than merely assumed."
+      },
+      {
+        "id": "rejected-conditional-method",
+        "title": "Why the conditional-discordance method was rejected",
+        "text": "The method planning first proposed -- conditioning on the observed discordance count -- was REJECTED under A-1 for being anti-conservative (it would declare non-inferiority roughly 1 time in 4 against a candidate truly worse by exactly the margin). Recorded here so a future reader who reinvents it finds the reason it was already refused, rather than re-deriving the same mistake."
+      }
+    ]
+  },
+
+  "verdictPrecedence": {
+    "sourceDecision": "D-85-6",
+    "sourceReasoning": "85-RESEARCH.md section 7 point 3 -- most pre-registrations fail by not saying what happens on an ambiguous result.",
+    "order": [
+      { "rank": 1, "rule": "An observed regression beyond the tolerated margin FAILS -- regardless of power." },
+      { "rank": 2, "rule": "The false-PASS screening gate FAILS -- regardless of everything else." },
+      { "rank": 3, "rule": "Otherwise, an insufficient power assessment yields UNDERPOWERED." },
+      { "rank": 4, "rule": "A PASS requires EVERY clause clear AND sufficient power." }
+    ],
+    "structuralRule": "UNDERPOWERED outranks PASS, structurally -- not 'should not' but CANNOT. The verdict TYPE must make PASS unreachable when the power check fails, so it is a property of the type rather than a discipline someone maintains. A rule that lives only in a plan does not fire at the moment of use.",
+    "expectedOutcomeNote": "At these n, UNDERPOWERED is the EXPECTED verdict and NOT an edge case (A-9). Under the assumed discordance of 0.25, the probability of certifying a candidate that is genuinely IDENTICAL to baseline is 0.103 at n=17 and 0.176 at n=13 -- UNDERPOWERED is very nearly the ONLY path for the PASS direction. This is ACCEPTED as shipped behaviour: the FAIL direction still works unconditionally on power (a clearly worse candidate pushes the bound past the margin and is caught), and the false-PASS count gate is deterministic and unaffected by power at all. This milestone's core value was never 'certify parity'; it was 'do not let a model swap silently degrade output'. Detection is that job; certification was always the ambitious half, and n=17/13/7 cannot buy it."
+  },
+
+  "licenceStrings": {
+    "falsePassGate": {
+      "pass": {
+        "verbatimFromD854": "no observed increase across 7 opportunities; by rule of three this bounds the true false-PASS rate only below ~43%. It is a screen against visible regression, NOT evidence of parity.",
+        "sourceDecision": "D-85-4",
+        "doNotModify": "This sentence must be reproduced VERBATIM wherever a PASS is reported on this clause -- do not paraphrase it, do not modernise the number, do not add a competing figure inside it.",
+        "additionalCaveatRequiredOnEveryPass": "Run-to-run instability was not measured for this comparison. A PASS whose noise floor is unknown licenses less than one whose noise floor is known."
+      },
+      "fail": {
+        "text": "candidate.falsePass exceeded baseline.falsePass, observed over 7 opportunities (items whose stored ground truth is a real violation). This is a literal, exact count comparison -- not a statistical test -- so this FAIL carries full confidence about what was OBSERVED on this run, though it says nothing by itself about how the underlying tendency compares beyond that."
+      }
+    },
+    "nonInferiorityClause": {
+      "generateFix": {
+        "pass": {
+          "text": "Zero items scored worse than baseline on exactMatchCount, out of 17 -- the ONLY observed baseline-better count that clears this bound at the 3-item margin. This licenses the conclusion that the candidate is not worse than baseline by more than 3 items on exactMatchCount, at 95 percent one-sided confidence. It does NOT license the reading that losing up to 3 items would also have passed: the margin is a tolerated TRUE difference, not a budget of items the candidate may lose. Run-to-run instability was not measured for this comparison; a PASS whose noise floor is unknown licenses less than one whose noise floor is known."
+        },
+        "fail": {
+          "text": "The observed baseline-better count on exactMatchCount exceeded the count this bound can certify at the 3-item margin (any observed count of 1 or more). This FAILS regardless of power."
+        },
+        "underpowered": {
+          "text": "Observed variance for this comparison exceeded the pre-registered discordant-pair-rate assumption (0.25) this margin's achieved power was derived from. At n=17 this instrument was never powered to certify near-parity (power to certify a genuinely identical candidate under the assumption is 10.3 percent) -- an UNDERPOWERED result here is the EXPECTED outcome, not a fault, and can never be silently read as a PASS."
+        }
+      },
+      "analyseVisualCorrect": {
+        "pass": {
+          "text": "Zero items scored worse than baseline on `correct`, out of 13 -- the ONLY observed baseline-better count that clears this bound at the 3-item margin. This licenses the conclusion that the candidate is not worse than baseline by more than 3 items on `correct`, at 95 percent one-sided confidence. It does NOT license the reading that losing up to 3 items would also have passed: the margin is a tolerated TRUE difference, not a budget of items the candidate may lose. Run-to-run instability was not measured for this comparison; a PASS whose noise floor is unknown licenses less than one whose noise floor is known."
+        },
+        "fail": {
+          "text": "The observed baseline-better count on `correct` exceeded the count this bound can certify at the 3-item margin (any observed count of 1 or more). This FAILS regardless of power."
+        },
+        "underpowered": {
+          "text": "Observed variance for this comparison exceeded the pre-registered discordant-pair-rate assumption (0.25) this margin's achieved power was derived from. At n=13 this instrument was never powered to certify near-parity (power to certify a genuinely identical candidate under the assumption is 17.6 percent) -- an UNDERPOWERED result here is the EXPECTED outcome, not a fault, and can never be silently read as a PASS."
+        }
+      }
+    },
+    "overallVerdict": {
+      "note": "ONE derived summary word exists because BARS-02 demands it (A-5), labelled as derived, and never rendered anywhere a human reads without both underlying clause fields beside it. D-85-1's 'never combined into one word' was aimed at a fused NUMBER standing in for two error counts with different costs, not at forbidding this labelled summary.",
+      "pass": {
+        "text": "Every clause (the false-PASS screening gate, and every non-inferiority clause in scope) is clear AND sufficient power was assessed. See each clause's own licence sentence above for exactly what this does and does not establish -- a PASS here is the conjunction of narrower licences, not a stronger claim than any one of them."
+      },
+      "fail": {
+        "text": "At least one clause FAILED -- either an observed regression beyond a tolerated margin, or the false-PASS screening gate. See the failing clause's own licence sentence for the specific reason."
+      },
+      "underpowered": {
+        "text": "No clause FAILED, but at least one clause's power assessment was insufficient (observed variance exceeded the pre-registered assumption). UNDERPOWERED outranks PASS structurally (D-85-6) and can never be silently upgraded to PASS. At these n this is the EXPECTED verdict (A-9), not a fault."
+      }
+    }
+  },
+
+  "explicitExclusions": {
+    "noBlendedScore": "This file contains NO blended, fused, or weighted score across axes for EITHER capability (D-85-2; HARNESS-03, which Phase 84 deliberately refused to violate).",
+    "noToleranceOnFalsePassGate": "This file contains NO tolerance, epsilon, or margin field of any kind attached to the false-PASS screening gate (D-85-4)."
+  },
+
+  "lessonRecorded": {
+    "id": "A-10",
+    "generalisesPastThisPhase": true,
+    "text": "Planning first proposed the anti-conservative conditional-discordance rule and defended it on the grounds that its roughly 24 percent false-reassurance rate would be 'recorded honestly' in this bar file -- treating the disclaimer as the safeguard. That figure would have sat in a file while the verdict said PASS. Recording a hazard is not avoiding it."
+  }
+}
