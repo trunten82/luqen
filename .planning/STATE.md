@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v3.7.0
 milestone_name: AI output quality — eval harness + labelled reference sets
-current_phase: 84
-current_phase_name: Scoring harness
-status: Phase 84 COMPLETE and verified 6/6 — Phase 85 (Pre-registered decision bars) ready to plan
-stopped_at: "Phase 84 complete and verified (84-VERIFICATION.md status=passed). Next: /gsd-plan-phase 85. Re-check what is done with: ls .planning/phases/8*/[0-9]*-SUMMARY.md"
+current_phase: 85
+current_phase_name: Pre-registered decision bars
+status: Phase 85 COMPLETE, merged via PR #73 and DEPLOYED (prod 8324e58) — Phase 86 (Recorded baseline) is the last phase of v3.7.0
+stopped_at: "Phase 85 complete and deployed. Next: /gsd-plan-phase 86 (Recorded baseline) — the LAST phase of v3.7.0. Re-check what is done with: ls .planning/phases/8*/[0-9]*-SUMMARY.md"
 last_updated: "2026-09-06T06:37:35.660Z"
 last_activity: 2026-09-06
-last_activity_desc: Phase 84 all 4 plans merged, verified 6/6; HARNESS-01..06 Complete; two narrow-predicate guards found by breaking and repaired
-state_head: 682ad829  # last CODE commit of phase 84. NOT "latest commit" — D-53 tooling overwrites this with the newest SHA; re-checkable: `git diff --name-only 682ad829..HEAD` must list nothing outside .planning/ and .gitignore.
+last_activity_desc: Phase 85 shipped via PR #73; BARS-01..03 Complete; three second-path defects found by breaking guards and closed
+state_head: 8324e583  # last CODE commit (PR #73 merge). NOT "latest commit" — D-53 tooling overwrites this; re-checkable: `git diff --name-only 8324e583..HEAD` must list nothing outside .planning/.
 progress:
   total_phases: 4
-  completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
-  percent: 50
+  completed_phases: 3
+  total_plans: 10
+  completed_plans: 10
+  percent: 75
 ---
 
 # Project State
@@ -70,12 +70,12 @@ See: .planning/PROJECT.md (updated 2026-09-05 — v3.7.0 AI output quality opene
 
 ## Current Position
 
-Phase: 84 (Scoring harness) — COMPLETE, verified 6/6
-Plan: 4 of 4
-Status: Phase 84 verified and merged to master. Next: /gsd-plan-phase 85 (Pre-registered decision bars)
+Phase: 85 (Pre-registered decision bars) — COMPLETE, deployed
+Plan: 3 of 3
+Status: Phase 85 shipped via PR #73 (prod 8324e58). Next: /gsd-plan-phase 86
 Last activity: 2026-09-06 — Phase 84 harness shipped; break-test evidence committed BEFORE the first full-set green
 
-Progress: [█████░░░░░] 50%
+Progress: [████████░░] 75%
 
 ## Phase Map (v3.7.0 — AI output quality)
 
