@@ -1,0 +1,1447 @@
+{
+  "_synthetic": true,
+  "syntheticNote": "Hand-written fixture data. NOT model output. No live provider call, no harness run against a model, and no calibration run of any kind produced this file (Phase 85 non-negotiable: nothing in this phase may produce, read, or be informed by a measurement). See 85-03-PLAN.md Task 1 and 85-03-SUMMARY.md.",
+  "capability": "analyse-visual",
+  "baseline": {
+    "reportSchemaVersion": "1",
+    "runFunction": {
+      "harnessVersion": "1+synthetic-fixture-not-a-real-package-version",
+      "capability": "analyse-visual",
+      "mode": "replay",
+      "modelId": "synthetic-baseline-model",
+      "modelDisplayName": "Synthetic Baseline Model",
+      "providerType": "ollama",
+      "endpointFingerprint": "synthetic-baseline-endpoint-fp",
+      "temperature": 0,
+      "promptVersion": "synthetic-prompt-v1",
+      "promptSource": "default",
+      "setName": "image-alt",
+      "setVersion": "v1",
+      "itemCount": 13,
+      "timestamp": "2026-09-06T00:00:00.000Z"
+    },
+    "items": [
+      {
+        "itemId": "av-synth-01",
+        "outcome": "scored",
+        "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": true
+        },
+        "score": {
+          "verdictOutcome": "correct",
+          "altClassificationMismatch": false,
+          "suggestedAltAxis": "ok"
+        }
+      },
+      {
+        "itemId": "av-synth-02",
+        "outcome": "scored",
+        "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": true
+        },
+        "score": {
+          "verdictOutcome": "correct",
+          "altClassificationMismatch": false,
+          "suggestedAltAxis": "ok"
+        }
+      },
+      {
+        "itemId": "av-synth-03",
+        "outcome": "scored",
+        "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": true
+        },
+        "score": {
+          "verdictOutcome": "correct",
+          "altClassificationMismatch": false,
+          "suggestedAltAxis": "ok"
+        }
+      },
+      {
+        "itemId": "av-synth-04",
+        "outcome": "scored",
+        "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": true
+        },
+        "score": {
+          "verdictOutcome": "correct",
+          "altClassificationMismatch": false,
+          "suggestedAltAxis": "ok"
+        }
+      },
+      {
+        "itemId": "av-synth-05",
+        "outcome": "scored",
+        "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": true
+        },
+        "score": {
+          "verdictOutcome": "correct",
+          "altClassificationMismatch": false,
+          "suggestedAltAxis": "ok"
+        }
+      },
+      {
+        "itemId": "av-synth-06",
+        "outcome": "scored",
+        "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": true
+        },
+        "score": {
+          "verdictOutcome": "correct",
+          "altClassificationMismatch": false,
+          "suggestedAltAxis": "ok"
+        }
+      },
+      {
+        "itemId": "av-synth-07",
+        "outcome": "scored",
+        "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": true
+        },
+        "score": {
+          "verdictOutcome": "correct",
+          "altClassificationMismatch": false,
+          "suggestedAltAxis": "ok"
+        }
+      },
+      {
+        "itemId": "av-synth-08",
+        "outcome": "scored",
+        "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": true
+        },
+        "score": {
+          "verdictOutcome": "correct",
+          "altClassificationMismatch": false,
+          "suggestedAltAxis": "ok"
+        }
+      },
+      {
+        "itemId": "av-synth-09",
+        "outcome": "scored",
+        "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": true
+        },
+        "score": {
+          "verdictOutcome": "correct",
+          "altClassificationMismatch": false,
+          "suggestedAltAxis": "ok"
+        }
+      },
+      {
+        "itemId": "av-synth-10",
+        "outcome": "scored",
+        "rawText": "{\"verdict\": \"issue\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": true
+        },
+        "score": {
+          "verdictOutcome": "false-issue",
+          "altClassificationMismatch": false,
+          "suggestedAltAxis": "ok"
+        }
+      },
+      {
+        "itemId": "av-synth-11",
+        "outcome": "scored",
+        "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": true
+        },
+        "score": {
+          "verdictOutcome": "uncertain",
+          "altClassificationMismatch": false,
+          "suggestedAltAxis": "ok"
+        }
+      },
+      {
+        "itemId": "av-synth-12",
+        "outcome": "scored",
+        "rawText": "{\"verdict\": \"issue\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": true
+        },
+        "score": {
+          "verdictOutcome": "false-issue",
+          "altClassificationMismatch": false,
+          "suggestedAltAxis": "ok"
+        }
+      },
+      {
+        "itemId": "av-synth-13",
+        "outcome": "scored",
+        "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": true
+        },
+        "score": {
+          "verdictOutcome": "uncertain",
+          "altClassificationMismatch": false,
+          "suggestedAltAxis": "ok"
+        }
+      }
+    ],
+    "aggregate": {
+      "total": 13,
+      "correct": 9,
+      "falsePass": 0,
+      "falseIssue": 2,
+      "uncertain": 2,
+      "altClassificationMismatchCount": 0,
+      "suggestedAltFilenameShapedCount": 0,
+      "suggestedAltEmptyDespiteInformationalCount": 0
+    },
+    "failedCount": 0
+  },
+  "candidates": {
+    "identical": {
+      "reportSchemaVersion": "1",
+      "runFunction": {
+        "harnessVersion": "1+synthetic-fixture-not-a-real-package-version",
+        "capability": "analyse-visual",
+        "mode": "replay",
+        "modelId": "synthetic-candidate-model",
+        "modelDisplayName": "Synthetic Candidate Model",
+        "providerType": "ollama",
+        "endpointFingerprint": "synthetic-candidate-endpoint-fp",
+        "temperature": 0,
+        "promptVersion": "synthetic-prompt-v1",
+        "promptSource": "default",
+        "setName": "image-alt",
+        "setVersion": "v1",
+        "itemCount": 13,
+        "timestamp": "2026-09-06T00:01:00.000Z"
+      },
+      "items": [
+        {
+          "itemId": "av-synth-01",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-02",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-03",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-04",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-05",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-06",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-07",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-08",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-09",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-10",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"issue\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "false-issue",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-11",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "uncertain",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-12",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"issue\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "false-issue",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-13",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "uncertain",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        }
+      ],
+      "aggregate": {
+        "total": 13,
+        "correct": 9,
+        "falsePass": 0,
+        "falseIssue": 2,
+        "uncertain": 2,
+        "altClassificationMismatchCount": 0,
+        "suggestedAltFilenameShapedCount": 0,
+        "suggestedAltEmptyDespiteInformationalCount": 0
+      },
+      "failedCount": 0
+    },
+    "regressedBeyondMargin": {
+      "reportSchemaVersion": "1",
+      "runFunction": {
+        "harnessVersion": "1+synthetic-fixture-not-a-real-package-version",
+        "capability": "analyse-visual",
+        "mode": "replay",
+        "modelId": "synthetic-candidate-model",
+        "modelDisplayName": "Synthetic Candidate Model",
+        "providerType": "ollama",
+        "endpointFingerprint": "synthetic-candidate-endpoint-fp",
+        "temperature": 0,
+        "promptVersion": "synthetic-prompt-v1",
+        "promptSource": "default",
+        "setName": "image-alt",
+        "setVersion": "v1",
+        "itemCount": 13,
+        "timestamp": "2026-09-06T00:02:00.000Z"
+      },
+      "items": [
+        {
+          "itemId": "av-synth-01",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"issue\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "false-issue",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-02",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"issue\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "false-issue",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-03",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"issue\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "false-issue",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-04",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"issue\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "false-issue",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-05",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-06",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-07",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-08",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-09",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-10",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"issue\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "false-issue",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-11",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "uncertain",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-12",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"issue\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "false-issue",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-13",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "uncertain",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        }
+      ],
+      "aggregate": {
+        "total": 13,
+        "correct": 5,
+        "falsePass": 0,
+        "falseIssue": 6,
+        "uncertain": 2,
+        "altClassificationMismatchCount": 0,
+        "suggestedAltFilenameShapedCount": 0,
+        "suggestedAltEmptyDespiteInformationalCount": 0
+      },
+      "failedCount": 0
+    },
+    "discordanceExceedsAssumption": {
+      "reportSchemaVersion": "1",
+      "runFunction": {
+        "harnessVersion": "1+synthetic-fixture-not-a-real-package-version",
+        "capability": "analyse-visual",
+        "mode": "replay",
+        "modelId": "synthetic-candidate-model",
+        "modelDisplayName": "Synthetic Candidate Model",
+        "providerType": "ollama",
+        "endpointFingerprint": "synthetic-candidate-endpoint-fp",
+        "temperature": 0,
+        "promptVersion": "synthetic-prompt-v1",
+        "promptSource": "default",
+        "setName": "image-alt",
+        "setVersion": "v1",
+        "itemCount": 13,
+        "timestamp": "2026-09-06T00:03:00.000Z"
+      },
+      "items": [
+        {
+          "itemId": "av-synth-01",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-02",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-03",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-04",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-05",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-06",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-07",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-08",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-09",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-10",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-11",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-12",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-13",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        }
+      ],
+      "aggregate": {
+        "total": 13,
+        "correct": 13,
+        "falsePass": 0,
+        "falseIssue": 0,
+        "uncertain": 0,
+        "altClassificationMismatchCount": 0,
+        "suggestedAltFilenameShapedCount": 0,
+        "suggestedAltEmptyDespiteInformationalCount": 0
+      },
+      "failedCount": 0
+    },
+    "boundDoesNotClearMargin": {
+      "reportSchemaVersion": "1",
+      "runFunction": {
+        "harnessVersion": "1+synthetic-fixture-not-a-real-package-version",
+        "capability": "analyse-visual",
+        "mode": "replay",
+        "modelId": "synthetic-candidate-model",
+        "modelDisplayName": "Synthetic Candidate Model",
+        "providerType": "ollama",
+        "endpointFingerprint": "synthetic-candidate-endpoint-fp",
+        "temperature": 0,
+        "promptVersion": "synthetic-prompt-v1",
+        "promptSource": "default",
+        "setName": "image-alt",
+        "setVersion": "v1",
+        "itemCount": 13,
+        "timestamp": "2026-09-06T00:04:00.000Z"
+      },
+      "items": [
+        {
+          "itemId": "av-synth-01",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"issue\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "false-issue",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-02",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"issue\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "false-issue",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-03",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-04",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-05",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-06",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-07",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-08",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-09",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-10",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"issue\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "false-issue",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-11",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "uncertain",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-12",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"issue\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "false-issue",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-13",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "uncertain",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        }
+      ],
+      "aggregate": {
+        "total": 13,
+        "correct": 7,
+        "falsePass": 0,
+        "falseIssue": 4,
+        "uncertain": 2,
+        "altClassificationMismatchCount": 0,
+        "suggestedAltFilenameShapedCount": 0,
+        "suggestedAltEmptyDespiteInformationalCount": 0
+      },
+      "failedCount": 0
+    },
+    "falsePassGateFails": {
+      "reportSchemaVersion": "1",
+      "runFunction": {
+        "harnessVersion": "1+synthetic-fixture-not-a-real-package-version",
+        "capability": "analyse-visual",
+        "mode": "replay",
+        "modelId": "synthetic-candidate-model",
+        "modelDisplayName": "Synthetic Candidate Model",
+        "providerType": "ollama",
+        "endpointFingerprint": "synthetic-candidate-endpoint-fp",
+        "temperature": 0,
+        "promptVersion": "synthetic-prompt-v1",
+        "promptSource": "default",
+        "setName": "image-alt",
+        "setVersion": "v1",
+        "itemCount": 13,
+        "timestamp": "2026-09-06T00:05:00.000Z"
+      },
+      "items": [
+        {
+          "itemId": "av-synth-01",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-02",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-03",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-04",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-05",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-06",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-07",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-08",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-09",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "correct",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-10",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"issue\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "false-issue",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-11",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"issue\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "false-pass",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-12",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"issue\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "false-issue",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        },
+        {
+          "itemId": "av-synth-13",
+          "outcome": "scored",
+          "rawText": "{\"verdict\": \"pass\", \"findings\": [], \"altClassification\": \"informational\", \"suggestedAlt\": \"synthetic alt text\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": true
+          },
+          "score": {
+            "verdictOutcome": "uncertain",
+            "altClassificationMismatch": false,
+            "suggestedAltAxis": "ok"
+          }
+        }
+      ],
+      "aggregate": {
+        "total": 13,
+        "correct": 9,
+        "falsePass": 1,
+        "falseIssue": 2,
+        "uncertain": 1,
+        "altClassificationMismatchCount": 0,
+        "suggestedAltFilenameShapedCount": 0,
+        "suggestedAltEmptyDespiteInformationalCount": 0
+      },
+      "failedCount": 0
+    }
+  }
+}
