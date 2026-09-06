@@ -387,6 +387,8 @@ describe('analyse-visual verdict — exact key sets pinned (D-85-1, T-85-11, T-8
         'decisionBarsVersion',
         'decisionBarsDigestSha256',
         'overallVerdict',
+        // Phase 86 Task 2 (T-86-07): REQUIRED on both verdict types.
+        'licenceQualifier',
       ].sort(),
     );
   });

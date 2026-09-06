@@ -35,9 +35,11 @@ import {
   treatmentFieldsThatDiffered,
 } from './verdict-comparability.js';
 import { computeDifferenceUpperBound, type DifferenceUpperBoundResult } from './power.js';
+import { buildLicenceQualifier } from './licence-qualifier.js';
 import type {
   GatingAxisReport,
   GenerateFixVerdict,
+  LicenceQualifier,
   PowerAssessment,
   PowerInsufficiencyReason,
   RunToRunInstability,
@@ -321,6 +323,8 @@ export function compareGenerateFix(
 
   const treatmentFieldsDiffered = treatmentFieldsThatDiffered(baseline.runFunction, candidate.runFunction);
 
+  const licenceQualifier: LicenceQualifier = buildLicenceQualifier(runToRunInstability, 'generate-fix', bar);
+
   const common = {
     capability: 'generate-fix' as const,
     baselineRunFunction: baseline.runFunction,
@@ -330,6 +334,7 @@ export function compareGenerateFix(
     treatmentFieldsDiffered,
     decisionBarsVersion: bar.barsVersion,
     decisionBarsDigestSha256: bar.digestSha256,
+    licenceQualifier,
   };
 
   const licences = bar.licenceStrings.nonInferiorityClause.generateFix;
@@ -385,10 +390,67 @@ export class VerdictPassPowerContradictionError extends Error {
 }
 
 /**
+ * Thrown by both parsers (`parseVerdict` here, `parseAnalyseVisualVerdict`
+ * in verdict-analyse-visual.ts) when a document's top-level
+ * `licenceQualifier.state` disagrees with the `state` nested inside its
+ * power assessment's `runToRunInstability` (Phase 86 Task 2, T-86-07). The
+ * two fields are supposed to be constructed together, from the same
+ * `RunToRunInstability` value, by `buildLicenceQualifier` — a hand-edited
+ * document can make them disagree, and this is the second code path this
+ * repository's own standing lesson warns about: the source-level guarantee
+ * that they travel together does not survive serialisation.
+ */
+export class VerdictLicenceQualifierStateMismatchError extends Error {
+  constructor(
+    public readonly licenceQualifierState: unknown,
+    public readonly runToRunInstabilityState: unknown,
+  ) {
+    super(
+      `A verdict's licenceQualifier.state (${JSON.stringify(licenceQualifierState)}) disagrees with its power.runToRunInstability.state (${JSON.stringify(runToRunInstabilityState)}) — refusing to parse a self-contradictory verdict`,
+    );
+    this.name = 'VerdictLicenceQualifierStateMismatchError';
+  }
+}
+
+/**
+ * Shared by both parsers — reused rather than re-derived, matching this
+ * repository's own "one arithmetic path, two named capability wrappers"
+ * discipline (86-01-SUMMARY.md). Refuses a document whose top-level
+ * `licenceQualifier.state` disagrees with the `runToRunInstability.state`
+ * nested inside the `power` value the caller extracted (each capability
+ * nests `power` at a different path, so the caller does that extraction and
+ * hands the raw value here).
+ */
+export function assertLicenceQualifierMatchesInstabilityState(
+  record: Record<string, unknown>,
+  power: unknown,
+): void {
+  const runToRunInstabilityState =
+    power !== null && typeof power === 'object'
+      ? (
+          (power as Record<string, unknown>)['runToRunInstability'] as Record<string, unknown> | undefined
+        )?.['state']
+      : undefined;
+  const licenceQualifierRaw = record['licenceQualifier'];
+  const licenceQualifierState =
+    licenceQualifierRaw !== null && typeof licenceQualifierRaw === 'object'
+      ? (licenceQualifierRaw as Record<string, unknown>)['state']
+      : undefined;
+  if (
+    licenceQualifierState !== undefined &&
+    runToRunInstabilityState !== undefined &&
+    licenceQualifierState !== runToRunInstabilityState
+  ) {
+    throw new VerdictLicenceQualifierStateMismatchError(licenceQualifierState, runToRunInstabilityState);
+  }
+}
+
+/**
  * The ONLY supported path for reading a verdict back from JSON. Re-checks,
  * at runtime, the same invariant `GenerateFixVerdict`'s discriminated union
  * enforces at compile time: a `PASS` outcome's power field must be the
- * sufficient shape. A well-formed document round-trips unchanged.
+ * sufficient shape. Also re-checks the licence-qualifier/instability-state
+ * agreement (Phase 86 Task 2). A well-formed document round-trips unchanged.
  */
 export function parseVerdict(json: string): GenerateFixVerdict {
   const parsed: unknown = JSON.parse(json);
@@ -402,5 +464,6 @@ export function parseVerdict(json: string): GenerateFixVerdict {
   if (record['outcome'] === 'PASS' && sufficient !== true) {
     throw new VerdictPassPowerContradictionError();
   }
+  assertLicenceQualifierMatchesInstabilityState(record, power);
   return parsed as GenerateFixVerdict;
 }
