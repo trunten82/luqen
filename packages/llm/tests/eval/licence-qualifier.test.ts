@@ -121,3 +121,43 @@ describe('buildLicenceQualifier — zero-clause throw (Task 2, "a search that fi
     ).not.toThrow();
   });
 });
+
+describe('buildLicenceQualifier — the walk over non-object, non-string leaves and array-valued clauses (Task 2 defensive coverage)', () => {
+  it('descends into an array-valued clause, finding the fragment inside one element', () => {
+    const scratchBar = {
+      licenceStrings: {
+        arrayHolder: [
+          { text: 'nothing relevant' },
+          { text: UNMEASURED_INSTABILITY_CLAUSE_FRAGMENT + ', found inside an array element' },
+        ],
+      },
+      varianceAssumption: { 'generate-fix': { assumedValue: 0.25 }, 'analyse-visual': { assumedValue: 0.25 } },
+    } as unknown as LoadedDecisionBars;
+
+    const qualifier = buildLicenceQualifier({ state: 'measured', value: 0.9 }, 'generate-fix', scratchBar);
+    expect(qualifier.state).toBe('measured');
+    if (qualifier.state === 'measured') {
+      expect(qualifier.supersededClauses).toHaveLength(1);
+      expect(qualifier.supersededClauses[0]!.path).toBe('licenceStrings.arrayHolder[1].text');
+    }
+  });
+
+  it('a number or boolean leaf is neither a string nor an object -- the walk skips it without throwing, and finds the fragment beside it', () => {
+    const scratchBar = {
+      licenceStrings: {
+        someNumericField: 42,
+        someBooleanField: true,
+        someNullField: null,
+        actualClause: { text: UNMEASURED_INSTABILITY_CLAUSE_FRAGMENT },
+      },
+      varianceAssumption: { 'generate-fix': { assumedValue: 0.25 }, 'analyse-visual': { assumedValue: 0.25 } },
+    } as unknown as LoadedDecisionBars;
+
+    const qualifier = buildLicenceQualifier({ state: 'measured', value: 0.9 }, 'generate-fix', scratchBar);
+    expect(qualifier.state).toBe('measured');
+    if (qualifier.state === 'measured') {
+      expect(qualifier.supersededClauses).toHaveLength(1);
+      expect(qualifier.supersededClauses[0]!.path).toBe('licenceStrings.actualClause.text');
+    }
+  });
+});
