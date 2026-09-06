@@ -24,12 +24,12 @@ rewritten once one does.** A bar edited after its result is not a bar.
 
 ### Scoring runner — the instrument
 
-- [ ] **HARNESS-01**: A maintainer runs the harness against any registered model for `generate-fix` and receives per-item and aggregate scores
-- [ ] **HARNESS-02**: A maintainer runs the harness against any registered model for `analyse-visual` and receives per-item and aggregate scores
-- [ ] **HARNESS-03**: The `analyse-visual` scorer reports false-PASS and false-ISSUE counts separately, never fused into one accuracy number — the two errors have different costs
-- [ ] **HARNESS-04**: Every run records what its result is a function of (model id, prompt version, temperature, harness version, set version, timestamp) and the runner REFUSES to compare two runs whose function differs
-- [ ] **HARNESS-05**: A maintainer can see the harness score the poison items DOWN, evidenced by a committed break-test whose recorded output shows the failure — no green is trusted before this
-- [ ] **HARNESS-06**: The raw model response is persisted per item, so an all-empty parse is distinguishable from a genuine low score (`parseGenerateFixResponse` and `parseAnalyseVisualResponse` never throw — they return empty strings)
+- [x] **HARNESS-01**: A maintainer runs the harness against any registered model for `generate-fix` and receives per-item and aggregate scores
+- [x] **HARNESS-02**: A maintainer runs the harness against any registered model for `analyse-visual` and receives per-item and aggregate scores
+- [x] **HARNESS-03**: The `analyse-visual` scorer reports false-PASS and false-ISSUE counts separately, never fused into one accuracy number — the two errors have different costs
+- [x] **HARNESS-04**: Every run records what its result is a function of (model id, prompt version, temperature, harness version, set version, timestamp) and the runner REFUSES to compare two runs whose function differs
+- [x] **HARNESS-05**: A maintainer can see the harness score the poison items DOWN, evidenced by a committed break-test whose recorded output shows the failure — no green is trusted before this
+- [x] **HARNESS-06**: The raw model response is persisted per item, so an all-empty parse is distinguishable from a genuine low score (`parseGenerateFixResponse` and `parseAnalyseVisualResponse` never throw — they return empty strings)
 
 ### Baseline — what a candidate is measured against
 
@@ -69,12 +69,12 @@ Deferred, tracked, not in this roadmap.
 | EVALSET-03 | Phase 83 | Complete |
 | EVALSET-04 | Phase 83 | Complete |
 | EVALSET-05 | Phase 83 | Complete |
-| HARNESS-01 | Phase 84 | Pending |
-| HARNESS-02 | Phase 84 | Pending |
-| HARNESS-03 | Phase 84 | Pending |
-| HARNESS-04 | Phase 84 | Pending |
-| HARNESS-05 | Phase 84 | Pending |
-| HARNESS-06 | Phase 84 | Pending |
+| HARNESS-01 | Phase 84 | Complete |
+| HARNESS-02 | Phase 84 | Complete |
+| HARNESS-03 | Phase 84 | Complete |
+| HARNESS-04 | Phase 84 | Complete |
+| HARNESS-05 | Phase 84 | Complete |
+| HARNESS-06 | Phase 84 | Complete |
 | BARS-01 | Phase 85 | Pending |
 | BARS-02 | Phase 85 | Pending |
 | BARS-03 | Phase 85 | Pending |

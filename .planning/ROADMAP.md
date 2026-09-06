@@ -202,7 +202,7 @@ milestone protects the ones already shipped and relied upon.
 - Decimal phases (e.g. 84.1): Urgent insertions (marked INSERTED)
 
 - [x] **Phase 83: Labelled reference sets** — Versioned, provenance-attributed WCAG-violation and image reference sets, each carrying the poison items the harness break-test needs.
-- [ ] **Phase 84: Scoring harness** — A runner that scores any registered model against both sets, reports asymmetric `analyse-visual` errors separately, records its own run-function, and is proven to score poison items down before any green result is trusted.
+- [x] **Phase 84: Scoring harness** — A runner that scores any registered model against both sets, reports asymmetric `analyse-visual` errors separately, records its own run-function, and is proven to score poison items down before any green result is trusted.
 - [ ] **Phase 85: Pre-registered decision bars** — The non-inferiority margin and the `analyse-visual` zero-false-pass bar, recorded and encoded into the runner's PASS/FAIL/UNDERPOWERED verdict, before any measurement exists.
 - [ ] **Phase 86: Recorded baseline** — The current production pins of `generate-fix` and `analyse-visual`, baselined and committed with run-to-run variance, before any candidate model is measured.
 
@@ -232,7 +232,11 @@ milestone protects the ones already shipped and relied upon.
   3. A maintainer can point at a committed break-test whose recorded output shows the harness scoring the poison items down — this evidence exists WITH or BEFORE the first trusted green result from the harness, never after
   4. Every harness run records what its result is a function of (model id, prompt version, temperature, harness version, set version, timestamp), and the runner refuses to compare two runs whose function differs
   5. A maintainer inspecting any scored item can see the raw model response next to the parsed score, so an all-empty parse (the silent-catch trap in `parseGenerateFixResponse`/`parseAnalyseVisualResponse`) is distinguishable from a genuine low score
-**Plans**: TBD
+**Plans**: 4 plans (3 waves: 84-01 alone in wave 1; 84-02 and 84-03 parallel in wave 2; 84-04 in wave 3)
+- [x] 84-01-PLAN.md — Raw-response seam through production (HARNESS-06) + end-to-end tracer on one WCAG item + the generate-fix scorer
+- [x] 84-02-PLAN.md — Run function: computed prompt version, single-source temperature, and the refusal to compare across a differing run (HARNESS-04)
+- [x] 84-03-PLAN.md — analyse-visual scorer with false-PASS/false-ISSUE never fused (HARNESS-03) + the committed poison break-test (HARNESS-05), landing before any full-set green
+- [x] 84-04-PLAN.md — Full-set runner, replay fixtures, per-item + aggregate report, and the `luqen-llm eval` CLI (HARNESS-01/02)
 
 ### Phase 85: Pre-registered decision bars
 **Goal**: The tolerated margins for both durable capabilities are locked into the repo and into the runner's verdict logic before the first real measurement exists, so neither bar can be fitted to a result once one is produced.
@@ -270,7 +274,7 @@ Phases execute in numeric order: 83 → 84 → 85 → 86
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 83. Labelled reference sets | v3.7.0 | 1/3 | In Progress|  |
-| 84. Scoring harness | v3.7.0 | 0/TBD | Not started | - |
+| 83. Labelled reference sets | v3.7.0 | 3/3 | Complete | 2026-09-05 |
+| 84. Scoring harness | v3.7.0 | 4/4 | Complete | 2026-09-06 |
 | 85. Pre-registered decision bars | v3.7.0 | 0/TBD | Not started | - |
 | 86. Recorded baseline | v3.7.0 | 0/TBD | Not started | - |

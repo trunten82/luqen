@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v3.7.0
 milestone_name: AI output quality — eval harness + labelled reference sets
-current_phase: 83
-current_phase_name: Labelled reference sets
-status: Phase 83 COMPLETE and verified (4/4 success criteria) — Phase 84 (Scoring harness) ready to plan
-stopped_at: "Phase 83 complete: all 3 plans merged and verified; 83-VERIFICATION.md status=passed. Next: /gsd-plan-phase 84"
-last_updated: "2026-09-05T22:50:00.000Z"
-last_activity: 2026-09-05
-last_activity_desc: Phase 83 wave 2 (83-02 WCAG-fix set, 83-03 image set) merged, verified 4/4, EVALSET-01..05 all Complete
-state_head: 0272957c  # last CODE commit of phase 83 (the 83-03 merge). Deliberately NOT "latest commit": planning-only commits land after it, so this names a re-checkable thing — `git diff --stat 0272957c..HEAD` must list nothing outside .planning/ and .gitignore.
+current_phase: 84
+current_phase_name: Scoring harness
+status: Phase 84 COMPLETE and verified 6/6 — Phase 85 (Pre-registered decision bars) ready to plan
+stopped_at: "Phase 84 complete and verified (84-VERIFICATION.md status=passed). Next: /gsd-plan-phase 85. Re-check what is done with: ls .planning/phases/8*/[0-9]*-SUMMARY.md"
+last_updated: "2026-09-06T06:37:35.660Z"
+last_activity: 2026-09-06
+last_activity_desc: Phase 84 all 4 plans merged, verified 6/6; HARNESS-01..06 Complete; two narrow-predicate guards found by breaking and repaired
+state_head: 682ad829  # last CODE commit of phase 84. NOT "latest commit" — D-53 tooling overwrites this with the newest SHA; re-checkable: `git diff --name-only 682ad829..HEAD` must list nothing outside .planning/ and .gitignore.
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 25
+  completed_phases: 2
+  total_plans: 7
+  completed_plans: 7
+  percent: 50
 ---
 
 # Project State
@@ -42,7 +42,6 @@ happened to be right; that is an observation about this run, not about the tool.
 returning `{"advanced": false}` while mutating the file anyway. Do not try to fix gsd-tools; it is
 not this repo's code. Correct by hand and name the cause in the commit.
 
-
 ## Known intermittent — NOT a regression, cause diagnosed 2026-09-04
 
 `packages/dashboard/tests/vpat-identity-render.test.ts` — the case
@@ -67,16 +66,16 @@ real fix is a longer timeout on the browser-launching cases, and it is NOT done.
 See: .planning/PROJECT.md (updated 2026-09-05 — v3.7.0 AI output quality opened)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** Phase 83 — Labelled reference sets
+**Current focus:** Phase 84 — Scoring harness
 
 ## Current Position
 
-Phase: 83 (Labelled reference sets) — COMPLETE, verified 4/4
-Plan: 3 of 3
-Status: Phase 83 verified and merged to master. Next: /gsd-plan-phase 84 (Scoring harness)
-Last activity: 2026-09-05 — 83-02 + 83-03 executed in parallel worktrees, merged, full suite green, verified
+Phase: 84 (Scoring harness) — COMPLETE, verified 6/6
+Plan: 4 of 4
+Status: Phase 84 verified and merged to master. Next: /gsd-plan-phase 85 (Pre-registered decision bars)
+Last activity: 2026-09-06 — Phase 84 harness shipped; break-test evidence committed BEFORE the first full-set green
 
-Progress: [██░░░░░░░░] 25%
+Progress: [█████░░░░░] 50%
 
 ## Phase Map (v3.7.0 — AI output quality)
 
