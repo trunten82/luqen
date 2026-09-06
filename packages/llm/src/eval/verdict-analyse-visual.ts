@@ -48,7 +48,13 @@ import {
   assertNoFailedItems,
   treatmentFieldsThatDiffered,
 } from './verdict-comparability.js';
-import { computeNonInferiorityClause, pairItemsByGoodness, scoresByItemId } from './verdict.js';
+import {
+  computeNonInferiorityClause,
+  pairItemsByGoodness,
+  scoresByItemId,
+  InvalidVerdictJsonError,
+  VerdictPassPowerContradictionError,
+} from './verdict.js';
 import type {
   GatingAxisReport,
   NonGatingAxisDelta,
@@ -195,11 +201,19 @@ export type AnalyseVisualVerdict =
  * Computes the `analyse-visual` verdict for a baseline/candidate report pair
  * against a loaded decision bar. Pure function — no db, no adapter, no
  * clock, no network, matching `compareGenerateFix`'s discipline (verdict.ts).
+ *
+ * `runToRunInstability` is a REQUIRED fourth parameter (86-01, D-85-5) —
+ * the identical requirement `compareGenerateFix` now carries, checked here
+ * independently rather than assumed inherited: no default value, so the
+ * caller must say what the instability is (`{ state: 'not-yet-measured' }`
+ * or `{ state: 'measured', value }`, see instability.ts) instead of the
+ * comparator supplying a silent default.
  */
 export function compareAnalyseVisual(
   bar: LoadedDecisionBars,
   baseline: AnalyseVisualReport,
   candidate: AnalyseVisualReport,
+  runToRunInstability: RunToRunInstability,
 ): AnalyseVisualVerdict {
   assertBarAppliesTo(bar, baseline.runFunction);
   assertBarAppliesTo(bar, candidate.runFunction);
@@ -240,7 +254,6 @@ export function compareAnalyseVisual(
     candidateGoodByItemId,
   );
 
-  const runToRunInstability: RunToRunInstability = { state: 'not-yet-measured' };
   const clauseComputation = computeNonInferiorityClause(
     clauseCounterName,
     baselineBetterCount,
@@ -375,4 +388,54 @@ export function compareAnalyseVisual(
  */
 export function serialiseAnalyseVisualVerdict(verdict: AnalyseVisualVerdict): string {
   return JSON.stringify(verdict, null, 2);
+}
+
+/**
+ * The ONLY supported path for reading an `analyse-visual` verdict back from
+ * JSON — mirrors `verdict.ts`'s `parseVerdict` exactly: the same shape check
+ * on the top-level value, and the same runtime re-assertion of the
+ * invariant the discriminated union enforces at compile time (D-85-6): an
+ * `overallVerdict.outcome` of `'PASS'` demands
+ * `nonInferiorityClause.power.sufficient === true`.
+ *
+ * This is the second path this repository's own standing lesson warns
+ * about: `generate-fix` has carried this guarantee since 85-02;
+ * `analyse-visual` never had a parse counterpart at all — only
+ * `serialiseAnalyseVisualVerdict` existed. Phase 86 makes the instability
+ * arrive from outside the comparator and 86-02 makes it decide outcomes; the
+ * moment a measured instability can force UNDERPOWERED, a verdict artifact
+ * read back off disk becomes a thing a person can hand-edit into a PASS.
+ * `generate-fix` was guarded at that boundary and `analyse-visual` was not
+ * — closed here, before the artifact it protects starts to exist.
+ *
+ * Reuses `InvalidVerdictJsonError` and `VerdictPassPowerContradictionError`
+ * from `verdict.ts` by importing them — the SAME shape-level and
+ * contradiction errors both capabilities' parsers throw, never a second,
+ * parallel error class for the identical failure.
+ */
+export function parseAnalyseVisualVerdict(json: string): AnalyseVisualVerdict {
+  const parsed: unknown = JSON.parse(json);
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new InvalidVerdictJsonError('top-level value is not an object');
+  }
+  const record = parsed as Record<string, unknown>;
+
+  const overallVerdictRaw = record['overallVerdict'];
+  const outcome =
+    overallVerdictRaw !== null && typeof overallVerdictRaw === 'object'
+      ? (overallVerdictRaw as Record<string, unknown>)['outcome']
+      : undefined;
+
+  const nonInferiorityClauseRaw = record['nonInferiorityClause'];
+  const powerRaw =
+    nonInferiorityClauseRaw !== null && typeof nonInferiorityClauseRaw === 'object'
+      ? (nonInferiorityClauseRaw as Record<string, unknown>)['power']
+      : undefined;
+  const sufficient =
+    powerRaw !== null && typeof powerRaw === 'object' && (powerRaw as Record<string, unknown>)['sufficient'];
+
+  if (outcome === 'PASS' && sufficient !== true) {
+    throw new VerdictPassPowerContradictionError();
+  }
+  return parsed as AnalyseVisualVerdict;
 }

@@ -13,7 +13,7 @@ import { createAdapter } from './providers/registry.js';
 import type { ProviderType } from './types.js';
 import { loadDecisionBars } from './eval/decision-bars.js';
 import { compareGenerateFix, serialiseVerdict } from './eval/verdict.js';
-import type { GenerateFixVerdict, PowerAssessment } from './eval/verdict-types.js';
+import type { GenerateFixVerdict, PowerAssessment, RunToRunInstability } from './eval/verdict-types.js';
 import { compareAnalyseVisual, serialiseAnalyseVisualVerdict, type AnalyseVisualVerdict } from './eval/verdict-analyse-visual.js';
 import type { GenerateFixReport, AnalyseVisualReport } from './eval/report.js';
 
@@ -580,10 +580,17 @@ export function createProgram(): Command {
       try {
         const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
 
+        // The CLI has no replication artifact to read yet (86-03 wires the
+        // measured value in) -- an explicit honest literal at the call site
+        // is the point of this required parameter: the fact that no
+        // instability has been measured now has to be written down by
+        // whoever calls, instead of being supplied silently by the callee.
+        const runToRunInstability: RunToRunInstability = { state: 'not-yet-measured' };
+
         if (capability === 'generate-fix') {
           const baseline = JSON.parse(readFileSync(opts.baseline, 'utf-8')) as GenerateFixReport;
           const candidate = JSON.parse(readFileSync(opts.candidate, 'utf-8')) as GenerateFixReport;
-          const verdict = compareGenerateFix(bar, baseline, candidate);
+          const verdict = compareGenerateFix(bar, baseline, candidate, runToRunInstability);
           printGenerateFixVerdictSummary(verdict);
           if (opts.out) {
             writeFileSync(opts.out, serialiseVerdict(verdict));
@@ -593,7 +600,7 @@ export function createProgram(): Command {
         } else if (capability === 'analyse-visual') {
           const baseline = JSON.parse(readFileSync(opts.baseline, 'utf-8')) as AnalyseVisualReport;
           const candidate = JSON.parse(readFileSync(opts.candidate, 'utf-8')) as AnalyseVisualReport;
-          const verdict = compareAnalyseVisual(bar, baseline, candidate);
+          const verdict = compareAnalyseVisual(bar, baseline, candidate, runToRunInstability);
           printAnalyseVisualVerdictSummary(verdict);
           if (opts.out) {
             writeFileSync(opts.out, serialiseAnalyseVisualVerdict(verdict));
