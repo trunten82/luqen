@@ -53,6 +53,7 @@ import type {
   NonGatingAxisDelta,
   PowerAssessment,
   RunToRunInstability,
+  SufficientPower,
   TreatmentFieldsDiffered,
   VerdictOutcome,
 } from './verdict-types.js';
@@ -120,18 +121,74 @@ export interface OverallVerdictSummary {
   readonly licence: string;
 }
 
-export interface AnalyseVisualVerdict {
+interface AnalyseVisualVerdictCommon {
   readonly capability: 'analyse-visual';
   readonly baselineRunFunction: RunFunction;
   readonly candidateRunFunction: RunFunction;
   readonly falsePassGate: FalsePassGateResult;
-  readonly nonInferiorityClause: NonInferiorityClauseResult;
   readonly nonGatingAxisDeltas: readonly NonGatingAxisDelta[];
   readonly treatmentFieldsDiffered: TreatmentFieldsDiffered;
   readonly decisionBarsVersion: string;
   readonly decisionBarsDigestSha256: string;
-  readonly overallVerdict: OverallVerdictSummary;
 }
+
+/**
+ * The non-inferiority clause, narrowed to the SUFFICIENT power shape — the
+ * only clause shape an overall PASS may carry (D-85-6).
+ */
+export interface NonInferiorityClausePassResult extends NonInferiorityClauseResult {
+  readonly power: SufficientPower;
+}
+
+/**
+ * D-85-6 / BARS-03, ENFORCED STRUCTURALLY FOR THIS CAPABILITY TOO.
+ *
+ * `generate-fix` already made PASS unconstructible with a failed power
+ * assessment (`GenerateFixPassVerdict` narrows `power` to `SufficientPower`).
+ * `analyse-visual` is a SECOND PATH through the same requirement, and it was
+ * shipped as a flat interface whose `overallVerdict.outcome` and
+ * `nonInferiorityClause.power.sufficient` were independent fields with no
+ * type-level link — so `{ outcome: 'PASS', power: { sufficient: false } }`
+ * COMPILED CLEANLY. Found by phase verification, which tried to construct one
+ * for both capabilities rather than for the one that was known to be guarded.
+ *
+ * The live path never produced it — `compareAnalyseVisual` composes the
+ * outcome correctly — so this was a latent type-system gap, not an observed
+ * defect. That is exactly why it is worth closing: the requirement says the
+ * block is a property of the TYPE ("not 'should not' — cannot"), and a rule
+ * that holds only because the one current call site happens to be correct is
+ * a convention, not a structure.
+ *
+ * The general shape, which this repo has hit before: WHEN YOU ADD A SECOND
+ * PATH TO AN EXISTING OPERATION, RE-PROVE THE INVARIANTS THE FIRST PATH
+ * ENFORCED. Both paths were written from the same requirement; only one
+ * carried the guarantee.
+ *
+ * To BREAK IT: construct an `AnalyseVisualVerdict` with
+ * `overallVerdict.outcome: 'PASS'` and a `nonInferiorityClause.power` whose
+ * `sufficient` is `false`, then run `npx tsc --noEmit`. It must fail HERE, at
+ * the assignment, not somewhere earlier.
+ */
+export interface AnalyseVisualPassVerdict extends AnalyseVisualVerdictCommon {
+  readonly nonInferiorityClause: NonInferiorityClausePassResult;
+  readonly overallVerdict: OverallVerdictSummary & { readonly outcome: 'PASS' };
+}
+
+export interface AnalyseVisualFailVerdict extends AnalyseVisualVerdictCommon {
+  /** Either shape — an observed regression does not need power to be believed. */
+  readonly nonInferiorityClause: NonInferiorityClauseResult;
+  readonly overallVerdict: OverallVerdictSummary & { readonly outcome: 'FAIL' };
+}
+
+export interface AnalyseVisualUnderpoweredVerdict extends AnalyseVisualVerdictCommon {
+  readonly nonInferiorityClause: NonInferiorityClauseResult;
+  readonly overallVerdict: OverallVerdictSummary & { readonly outcome: 'UNDERPOWERED' };
+}
+
+export type AnalyseVisualVerdict =
+  | AnalyseVisualPassVerdict
+  | AnalyseVisualFailVerdict
+  | AnalyseVisualUnderpoweredVerdict;
 
 /**
  * Computes the `analyse-visual` verdict for a baseline/candidate report pair
@@ -270,18 +327,40 @@ export function compareAnalyseVisual(
 
   const treatmentFieldsDiffered = treatmentFieldsThatDiffered(baseline.runFunction, candidate.runFunction);
 
-  return {
+  const common = {
     capability: 'analyse-visual',
     baselineRunFunction: baseline.runFunction,
     candidateRunFunction: candidate.runFunction,
     falsePassGate,
-    nonInferiorityClause,
     nonGatingAxisDeltas,
     treatmentFieldsDiffered,
     decisionBarsVersion: bar.barsVersion,
     decisionBarsDigestSha256: bar.digestSha256,
-    overallVerdict,
-  };
+  } as const;
+
+  // Narrow into the discriminated union (D-85-6). The PASS branch is the point:
+  // it can only be constructed once `nonInferiorityClause.power` is proven
+  // `sufficient: true`, so an overall PASS carrying a failed power assessment is
+  // a COMPILE error rather than a convention this one function happens to keep.
+  if (overallOutcome === 'PASS') {
+    const power = nonInferiorityClause.power;
+    if (!power.sufficient) {
+      // Unreachable via the composition above; a runtime backstop so a future
+      // edit to the outcome logic fails loudly rather than reaching for a cast.
+      throw new Error(
+        'Refusing to emit an analyse-visual PASS with an insufficient power assessment (D-85-6/BARS-03).',
+      );
+    }
+    return {
+      ...common,
+      nonInferiorityClause: { ...nonInferiorityClause, power },
+      overallVerdict: { ...overallVerdict, outcome: 'PASS' },
+    };
+  }
+  if (overallOutcome === 'FAIL') {
+    return { ...common, nonInferiorityClause, overallVerdict: { ...overallVerdict, outcome: 'FAIL' } };
+  }
+  return { ...common, nonInferiorityClause, overallVerdict: { ...overallVerdict, outcome: 'UNDERPOWERED' } };
 }
 
 /**
