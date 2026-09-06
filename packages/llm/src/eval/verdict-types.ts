@@ -139,6 +139,56 @@ export interface InsufficientPower {
 export type PowerAssessment = SufficientPower | InsufficientPower;
 
 // ---------------------------------------------------------------------------
+// Licence qualifier (Phase 86 Task 2, T-86-07)
+// ---------------------------------------------------------------------------
+
+/**
+ * One bar-file licence clause `buildLicenceQualifier` (licence-qualifier.ts)
+ * found to declare run-to-run instability unmeasured. `path` is the DOTTED
+ * path into the loaded bar's `licenceStrings` object (e.g.
+ * `"licenceStrings.falsePassGate.pass.additionalCaveatRequiredOnEveryPass"`)
+ * — collected by walking the loaded bar's data, never hand-written, so a
+ * fourth such clause added to the bar file tomorrow is found automatically.
+ */
+export interface SupersededLicenceClause {
+  readonly path: string;
+  readonly clauseText: string;
+}
+
+/**
+ * Every PASS licence Phase 85 pre-registered asserts, verbatim, that
+ * run-to-run instability was NOT measured for the comparison — true when
+ * written, false the moment this phase measures the quantity. The bar file
+ * cannot be edited to fix this (it is pre-registered and digest-pinned), so
+ * the verdict carries the correction instead: a REQUIRED field on BOTH
+ * verdict types (never optional on one and not the other — the exact defect
+ * family this milestone keeps producing), constructed ONLY by
+ * `buildLicenceQualifier` (licence-qualifier.ts).
+ *
+ * States mirror `RunToRunInstability`'s own vocabulary deliberately, so the
+ * parse-time cross-check (`parseVerdict` / `parseAnalyseVisualVerdict`) is a
+ * single string-equality comparison: `licenceQualifier.state` must equal
+ * `power.runToRunInstability.state`. A document claiming one state for the
+ * measurement and a different state for the qualifier is refused on
+ * read-back by both parsers.
+ */
+export type LicenceQualifier =
+  | {
+      readonly state: 'not-yet-measured';
+      /** States, as data, that the bar file's licence clauses stand as written — nothing is superseded. */
+      readonly note: string;
+    }
+  | {
+      readonly state: 'measured';
+      readonly observedRunToRunInstability: number;
+      readonly assumedCeiling: number;
+      /** Non-empty — `buildLicenceQualifier` THROWS rather than construct a measured qualifier that supersedes nothing (a search that finds nothing and a search that cannot match print the same zero). */
+      readonly supersededClauses: readonly [SupersededLicenceClause, ...SupersededLicenceClause[]];
+      /** One sentence: which clauses are superseded for THIS verdict, and what the measured value was. */
+      readonly note: string;
+    };
+
+// ---------------------------------------------------------------------------
 // Gating axis / non-gating context
 // ---------------------------------------------------------------------------
 
@@ -193,6 +243,8 @@ interface GenerateFixVerdictCommon {
   readonly decisionBarsVersion: string;
   readonly decisionBarsDigestSha256: string;
   readonly licence: string;
+  /** REQUIRED (Phase 86 Task 2, T-86-07) — see `LicenceQualifier`'s doc comment. */
+  readonly licenceQualifier: LicenceQualifier;
 }
 
 export interface GenerateFixPassVerdict extends GenerateFixVerdictCommon {

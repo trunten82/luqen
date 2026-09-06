@@ -20,7 +20,13 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadDecisionBars } from '../../src/eval/decision-bars.js';
-import { compareGenerateFix, serialiseVerdict, parseVerdict, VerdictPassPowerContradictionError } from '../../src/eval/verdict.js';
+import {
+  compareGenerateFix,
+  serialiseVerdict,
+  parseVerdict,
+  VerdictPassPowerContradictionError,
+  VerdictLicenceQualifierStateMismatchError,
+} from '../../src/eval/verdict.js';
 import {
   compareAnalyseVisual,
   serialiseAnalyseVisualVerdict,
@@ -149,6 +155,35 @@ describe('generate-fix — parseVerdict round-trips all three outcomes (positive
     }
     expect(caught).toBeInstanceOf(InvalidVerdictJsonError);
   });
+
+  // Phase 86 Task 2 (T-86-07): the licence-qualifier/instability-state
+  // cross-check. Take a real, well-formed PASS document and hand-edit ONLY
+  // licenceQualifier.state to disagree with power.runToRunInstability.state
+  // -- exactly the shape a maintainer editing an artifact by hand could
+  // produce.
+  it('refuses a licenceQualifier.state that disagrees with power.runToRunInstability.state, naming the error class', () => {
+    const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
+    const fixture = loadGenerateFixFixture();
+    const verdict = compareGenerateFix(bar, fixture.baseline, fixture.candidates.identical, {
+      state: 'not-yet-measured',
+    });
+    const tampered = JSON.parse(serialiseVerdict(verdict)) as Record<string, unknown>;
+    tampered['licenceQualifier'] = {
+      state: 'measured',
+      observedRunToRunInstability: 0.9,
+      assumedCeiling: 0.25,
+      supersededClauses: [{ path: 'scratch.tampered.path', clauseText: 'scratch tampered clause' }],
+      note: 'hand-edited to disagree with power.runToRunInstability.state',
+    };
+
+    let caught: unknown;
+    try {
+      parseVerdict(JSON.stringify(tampered));
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(VerdictLicenceQualifierStateMismatchError);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -252,5 +287,33 @@ describe('analyse-visual — parseAnalyseVisualVerdict round-trips all three out
     expect(verdict.overallVerdict.outcome).toBe('PASS');
     const json = serialiseAnalyseVisualVerdict(verdict);
     expect(() => parseAnalyseVisualVerdict(json)).not.toThrow();
+  });
+
+  // Phase 86 Task 2 (T-86-07): the SAME cross-check, checked independently
+  // for THIS capability (power sits nested one level deeper, inside
+  // nonInferiorityClause, which is exactly why assertLicenceQualifierMatch
+  // esInstabilityState takes the already-extracted power value).
+  it('refuses a licenceQualifier.state that disagrees with nonInferiorityClause.power.runToRunInstability.state, naming the SAME error class generate-fix refuses with', () => {
+    const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
+    const fixture = loadAnalyseVisualFixture();
+    const verdict = compareAnalyseVisual(bar, fixture.baseline, fixture.candidates.identical, {
+      state: 'not-yet-measured',
+    });
+    const tampered = JSON.parse(serialiseAnalyseVisualVerdict(verdict)) as Record<string, unknown>;
+    tampered['licenceQualifier'] = {
+      state: 'measured',
+      observedRunToRunInstability: 0.9,
+      assumedCeiling: 0.25,
+      supersededClauses: [{ path: 'scratch.tampered.path', clauseText: 'scratch tampered clause' }],
+      note: 'hand-edited to disagree with nonInferiorityClause.power.runToRunInstability.state',
+    };
+
+    let caught: unknown;
+    try {
+      parseAnalyseVisualVerdict(JSON.stringify(tampered));
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(VerdictLicenceQualifierStateMismatchError);
   });
 });
