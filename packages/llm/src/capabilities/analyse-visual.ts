@@ -7,6 +7,14 @@ import { recordCompletion } from './record-usage.js';
 
 export type { VisualCheck };
 
+/**
+ * The temperature this capability passes to `adapter.complete()`. Exported
+ * as the single source of truth (Phase 84, HARNESS-04): the run-manifest
+ * reads this constant rather than re-typing the literal, so the recorded
+ * run-function can never silently drift from the call site below.
+ */
+export const ANALYSE_VISUAL_TEMPERATURE = 0.1;
+
 export interface AnalyseVisualInput {
   readonly check: VisualCheck;
   readonly image: ImageInput;
@@ -129,7 +137,7 @@ export async function executeAnalyseVisual(
           },
           () => adapter.complete(prompt, {
             model: model.modelId,
-            temperature: 0.1,
+            temperature: ANALYSE_VISUAL_TEMPERATURE,
             timeout: provider.timeout,
             images: [input.image],
           }),
