@@ -1,0 +1,1777 @@
+{
+  "_synthetic": true,
+  "syntheticNote": "Hand-written fixture data. NOT model output. No live provider call, no harness run against a model, and no calibration run of any kind produced this file (Phase 85 non-negotiable: nothing in this phase may produce, read, or be informed by a measurement). See 85-02-PLAN.md Task 1 and 85-02-SUMMARY.md.",
+  "capability": "generate-fix",
+  "baseline": {
+    "reportSchemaVersion": "1",
+    "runFunction": {
+      "harnessVersion": "1+synthetic-fixture-not-a-real-package-version",
+      "capability": "generate-fix",
+      "mode": "replay",
+      "modelId": "synthetic-baseline-model",
+      "modelDisplayName": "Synthetic Baseline Model",
+      "providerType": "ollama",
+      "endpointFingerprint": "synthetic-baseline-endpoint-fp",
+      "temperature": 0,
+      "promptVersion": "synthetic-prompt-v1",
+      "promptSource": "default",
+      "setName": "wcag-fixes",
+      "setVersion": "v1",
+      "itemCount": 17,
+      "timestamp": "2026-09-06T00:00:00.000Z"
+    },
+    "items": [
+      {
+        "itemId": "gf-synth-01",
+        "outcome": "scored",
+        "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": false
+        },
+        "score": {
+          "exactMatch": true,
+          "unchangedFromInput": false,
+          "emptyFix": false,
+          "missingMentions": [],
+          "effortMatch": true,
+          "filenameShapedAlt": false
+        }
+      },
+      {
+        "itemId": "gf-synth-02",
+        "outcome": "scored",
+        "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": false
+        },
+        "score": {
+          "exactMatch": true,
+          "unchangedFromInput": false,
+          "emptyFix": false,
+          "missingMentions": [],
+          "effortMatch": true,
+          "filenameShapedAlt": false
+        }
+      },
+      {
+        "itemId": "gf-synth-03",
+        "outcome": "scored",
+        "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": false
+        },
+        "score": {
+          "exactMatch": true,
+          "unchangedFromInput": false,
+          "emptyFix": false,
+          "missingMentions": [],
+          "effortMatch": true,
+          "filenameShapedAlt": false
+        }
+      },
+      {
+        "itemId": "gf-synth-04",
+        "outcome": "scored",
+        "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": false
+        },
+        "score": {
+          "exactMatch": true,
+          "unchangedFromInput": false,
+          "emptyFix": false,
+          "missingMentions": [],
+          "effortMatch": true,
+          "filenameShapedAlt": false
+        }
+      },
+      {
+        "itemId": "gf-synth-05",
+        "outcome": "scored",
+        "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": false
+        },
+        "score": {
+          "exactMatch": true,
+          "unchangedFromInput": false,
+          "emptyFix": false,
+          "missingMentions": [],
+          "effortMatch": true,
+          "filenameShapedAlt": false
+        }
+      },
+      {
+        "itemId": "gf-synth-06",
+        "outcome": "scored",
+        "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": false
+        },
+        "score": {
+          "exactMatch": true,
+          "unchangedFromInput": false,
+          "emptyFix": false,
+          "missingMentions": [],
+          "effortMatch": true,
+          "filenameShapedAlt": false
+        }
+      },
+      {
+        "itemId": "gf-synth-07",
+        "outcome": "scored",
+        "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": false
+        },
+        "score": {
+          "exactMatch": true,
+          "unchangedFromInput": false,
+          "emptyFix": false,
+          "missingMentions": [],
+          "effortMatch": true,
+          "filenameShapedAlt": false
+        }
+      },
+      {
+        "itemId": "gf-synth-08",
+        "outcome": "scored",
+        "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": false
+        },
+        "score": {
+          "exactMatch": true,
+          "unchangedFromInput": false,
+          "emptyFix": false,
+          "missingMentions": [],
+          "effortMatch": true,
+          "filenameShapedAlt": false
+        }
+      },
+      {
+        "itemId": "gf-synth-09",
+        "outcome": "scored",
+        "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": false
+        },
+        "score": {
+          "exactMatch": true,
+          "unchangedFromInput": false,
+          "emptyFix": false,
+          "missingMentions": [],
+          "effortMatch": true,
+          "filenameShapedAlt": false
+        }
+      },
+      {
+        "itemId": "gf-synth-10",
+        "outcome": "scored",
+        "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": false
+        },
+        "score": {
+          "exactMatch": true,
+          "unchangedFromInput": false,
+          "emptyFix": false,
+          "missingMentions": [],
+          "effortMatch": true,
+          "filenameShapedAlt": false
+        }
+      },
+      {
+        "itemId": "gf-synth-11",
+        "outcome": "scored",
+        "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": false
+        },
+        "score": {
+          "exactMatch": false,
+          "unchangedFromInput": false,
+          "emptyFix": false,
+          "missingMentions": [],
+          "effortMatch": true,
+          "filenameShapedAlt": false
+        }
+      },
+      {
+        "itemId": "gf-synth-12",
+        "outcome": "scored",
+        "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": false
+        },
+        "score": {
+          "exactMatch": false,
+          "unchangedFromInput": false,
+          "emptyFix": false,
+          "missingMentions": [],
+          "effortMatch": true,
+          "filenameShapedAlt": false
+        }
+      },
+      {
+        "itemId": "gf-synth-13",
+        "outcome": "scored",
+        "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": false
+        },
+        "score": {
+          "exactMatch": false,
+          "unchangedFromInput": false,
+          "emptyFix": false,
+          "missingMentions": [],
+          "effortMatch": true,
+          "filenameShapedAlt": false
+        }
+      },
+      {
+        "itemId": "gf-synth-14",
+        "outcome": "scored",
+        "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": false
+        },
+        "score": {
+          "exactMatch": false,
+          "unchangedFromInput": false,
+          "emptyFix": false,
+          "missingMentions": [],
+          "effortMatch": true,
+          "filenameShapedAlt": false
+        }
+      },
+      {
+        "itemId": "gf-synth-15",
+        "outcome": "scored",
+        "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": false
+        },
+        "score": {
+          "exactMatch": false,
+          "unchangedFromInput": false,
+          "emptyFix": false,
+          "missingMentions": [],
+          "effortMatch": true,
+          "filenameShapedAlt": false
+        }
+      },
+      {
+        "itemId": "gf-synth-16",
+        "outcome": "scored",
+        "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": false
+        },
+        "score": {
+          "exactMatch": false,
+          "unchangedFromInput": false,
+          "emptyFix": false,
+          "missingMentions": [],
+          "effortMatch": true,
+          "filenameShapedAlt": false
+        }
+      },
+      {
+        "itemId": "gf-synth-17",
+        "outcome": "scored",
+        "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+        "diagnosis": {
+          "present": true,
+          "nonEmpty": true,
+          "parseable": true,
+          "verdictAsserted": false
+        },
+        "score": {
+          "exactMatch": false,
+          "unchangedFromInput": false,
+          "emptyFix": false,
+          "missingMentions": [],
+          "effortMatch": true,
+          "filenameShapedAlt": false
+        }
+      }
+    ],
+    "aggregate": {
+      "total": 17,
+      "exactMatchCount": 10,
+      "unchangedFromInputCount": 0,
+      "emptyFixCount": 0,
+      "missingMentionsCount": 0,
+      "effortMatchCount": 17,
+      "filenameShapedAltCount": 0
+    },
+    "failedCount": 0
+  },
+  "candidates": {
+    "identical": {
+      "reportSchemaVersion": "1",
+      "runFunction": {
+        "harnessVersion": "1+synthetic-fixture-not-a-real-package-version",
+        "capability": "generate-fix",
+        "mode": "replay",
+        "modelId": "synthetic-candidate-model",
+        "modelDisplayName": "Synthetic Candidate Model",
+        "providerType": "ollama",
+        "endpointFingerprint": "synthetic-candidate-endpoint-fp",
+        "temperature": 0,
+        "promptVersion": "synthetic-prompt-v1",
+        "promptSource": "default",
+        "setName": "wcag-fixes",
+        "setVersion": "v1",
+        "itemCount": 17,
+        "timestamp": "2026-09-06T00:01:00.000Z"
+      },
+      "items": [
+        {
+          "itemId": "gf-synth-01",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-02",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-03",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-04",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-05",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-06",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-07",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-08",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-09",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-10",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-11",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-12",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-13",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-14",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-15",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-16",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-17",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        }
+      ],
+      "aggregate": {
+        "total": 17,
+        "exactMatchCount": 10,
+        "unchangedFromInputCount": 0,
+        "emptyFixCount": 0,
+        "missingMentionsCount": 0,
+        "effortMatchCount": 17,
+        "filenameShapedAltCount": 0
+      },
+      "failedCount": 0
+    },
+    "regressedBeyondMargin": {
+      "reportSchemaVersion": "1",
+      "runFunction": {
+        "harnessVersion": "1+synthetic-fixture-not-a-real-package-version",
+        "capability": "generate-fix",
+        "mode": "replay",
+        "modelId": "synthetic-candidate-model",
+        "modelDisplayName": "Synthetic Candidate Model",
+        "providerType": "ollama",
+        "endpointFingerprint": "synthetic-candidate-endpoint-fp",
+        "temperature": 0,
+        "promptVersion": "synthetic-prompt-v1",
+        "promptSource": "default",
+        "setName": "wcag-fixes",
+        "setVersion": "v1",
+        "itemCount": 17,
+        "timestamp": "2026-09-06T00:02:00.000Z"
+      },
+      "items": [
+        {
+          "itemId": "gf-synth-01",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-02",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-03",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-04",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-05",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-06",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-07",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-08",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-09",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-10",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-11",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-12",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-13",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-14",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-15",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-16",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-17",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        }
+      ],
+      "aggregate": {
+        "total": 17,
+        "exactMatchCount": 6,
+        "unchangedFromInputCount": 0,
+        "emptyFixCount": 0,
+        "missingMentionsCount": 0,
+        "effortMatchCount": 17,
+        "filenameShapedAltCount": 0
+      },
+      "failedCount": 0
+    },
+    "discordanceExceedsAssumption": {
+      "reportSchemaVersion": "1",
+      "runFunction": {
+        "harnessVersion": "1+synthetic-fixture-not-a-real-package-version",
+        "capability": "generate-fix",
+        "mode": "replay",
+        "modelId": "synthetic-candidate-model",
+        "modelDisplayName": "Synthetic Candidate Model",
+        "providerType": "ollama",
+        "endpointFingerprint": "synthetic-candidate-endpoint-fp",
+        "temperature": 0,
+        "promptVersion": "synthetic-prompt-v1",
+        "promptSource": "default",
+        "setName": "wcag-fixes",
+        "setVersion": "v1",
+        "itemCount": 17,
+        "timestamp": "2026-09-06T00:03:00.000Z"
+      },
+      "items": [
+        {
+          "itemId": "gf-synth-01",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-02",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-03",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-04",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-05",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-06",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-07",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-08",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-09",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-10",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-11",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-12",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-13",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-14",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-15",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-16",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-17",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        }
+      ],
+      "aggregate": {
+        "total": 17,
+        "exactMatchCount": 15,
+        "unchangedFromInputCount": 0,
+        "emptyFixCount": 0,
+        "missingMentionsCount": 0,
+        "effortMatchCount": 17,
+        "filenameShapedAltCount": 0
+      },
+      "failedCount": 0
+    },
+    "boundDoesNotClearMargin": {
+      "reportSchemaVersion": "1",
+      "runFunction": {
+        "harnessVersion": "1+synthetic-fixture-not-a-real-package-version",
+        "capability": "generate-fix",
+        "mode": "replay",
+        "modelId": "synthetic-candidate-model",
+        "modelDisplayName": "Synthetic Candidate Model",
+        "providerType": "ollama",
+        "endpointFingerprint": "synthetic-candidate-endpoint-fp",
+        "temperature": 0,
+        "promptVersion": "synthetic-prompt-v1",
+        "promptSource": "default",
+        "setName": "wcag-fixes",
+        "setVersion": "v1",
+        "itemCount": 17,
+        "timestamp": "2026-09-06T00:04:00.000Z"
+      },
+      "items": [
+        {
+          "itemId": "gf-synth-01",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-02",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-03",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-04",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-05",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-06",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-07",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-08",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-09",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-10",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-11",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-12",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": true,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-13",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-14",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-15",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-16",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        },
+        {
+          "itemId": "gf-synth-17",
+          "outcome": "scored",
+          "rawText": "{\"fixedHtml\": \"<synthetic/>\", \"explanation\": \"synthetic\", \"effort\": \"low\"}",
+          "diagnosis": {
+            "present": true,
+            "nonEmpty": true,
+            "parseable": true,
+            "verdictAsserted": false
+          },
+          "score": {
+            "exactMatch": false,
+            "unchangedFromInput": false,
+            "emptyFix": false,
+            "missingMentions": [],
+            "effortMatch": true,
+            "filenameShapedAlt": false
+          }
+        }
+      ],
+      "aggregate": {
+        "total": 17,
+        "exactMatchCount": 10,
+        "unchangedFromInputCount": 0,
+        "emptyFixCount": 0,
+        "missingMentionsCount": 0,
+        "effortMatchCount": 17,
+        "filenameShapedAltCount": 0
+      },
+      "failedCount": 0
+    }
+  }
+}
