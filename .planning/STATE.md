@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v3.7.0
 milestone_name: AI output quality — eval harness + labelled reference sets
-current_phase: 85
-current_phase_name: Pre-registered decision bars
-status: Phase 85 COMPLETE, merged via PR #73 and DEPLOYED (prod 8324e58) — Phase 86 (Recorded baseline) is the last phase of v3.7.0
-stopped_at: "Phase 85 complete and deployed. Next: /gsd-plan-phase 86 (Recorded baseline) — the LAST phase of v3.7.0. Re-check what is done with: ls .planning/phases/8*/[0-9]*-SUMMARY.md"
+current_phase: 86
+current_phase_name: Recorded baseline
+status: v3.7.0 COMPLETE — all 4 phases shipped, pushed and DEPLOYED (prod c77c12ef). Milestone ready to close.
+stopped_at: "v3.7.0 complete and deployed. Next: /gsd-complete-milestone, then propose v3.8.0. Re-check with: ls .planning/phases/8*/[0-9]*-SUMMARY.md"
 last_updated: "2026-09-06T06:37:35.660Z"
-last_activity: 2026-09-06
-last_activity_desc: Phase 85 shipped via PR #73; BARS-01..03 Complete; three second-path defects found by breaking guards and closed
-state_head: 8324e583  # last CODE commit (PR #73 merge). NOT "latest commit" — D-53 tooling overwrites this; re-checkable: `git diff --name-only 8324e583..HEAD` must list nothing outside .planning/.
+last_activity: 2026-09-07
+last_activity_desc: Phase 86 baselines recorded live against production pins and deployed; BASELINE-01/02 Complete
+state_head: c77c12ef  # last CODE commit (the baselines merge). Re-checkable: `git diff --name-only c77c12ef..HEAD` must list nothing outside .planning/.
 progress:
   total_phases: 4
-  completed_phases: 3
-  total_plans: 10
-  completed_plans: 10
-  percent: 75
+  completed_phases: 4
+  total_plans: 15
+  completed_plans: 15
+  percent: 100
 ---
 
 # Project State
@@ -70,12 +70,12 @@ See: .planning/PROJECT.md (updated 2026-09-05 — v3.7.0 AI output quality opene
 
 ## Current Position
 
-Phase: 85 (Pre-registered decision bars) — COMPLETE, deployed
-Plan: 3 of 3
-Status: Phase 85 shipped via PR #73 (prod 8324e58). Next: /gsd-plan-phase 86
+Phase: 86 (Recorded baseline) — COMPLETE, deployed
+Plan: 5 of 5
+Status: v3.7.0 COMPLETE — shipped, pushed and deployed (prod c77c12ef)
 Last activity: 2026-09-06 — Phase 84 harness shipped; break-test evidence committed BEFORE the first full-set green
 
-Progress: [████████░░] 75%
+Progress: [██████████] 100%
 
 ## Phase Map (v3.7.0 — AI output quality)
 
