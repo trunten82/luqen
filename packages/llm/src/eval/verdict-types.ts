@@ -28,9 +28,21 @@ import type { RunFunction } from './run-manifest.js';
 // ---------------------------------------------------------------------------
 
 /**
- * Two INDEPENDENT reasons a power assessment can be insufficient (D-85-5).
- * Both are checked independently and BOTH can appear in one insufficient
- * assessment's `reasons` list — they are not mutually exclusive.
+ * The exact wording REQUIRED (coordinator ruling, 2026-09-06) on every
+ * surface that renders the run-to-run instability ceiling below — verbatim,
+ * never a paraphrase, so no reader concludes a real instability bar was
+ * pre-registered when none was. Exported so `describeInsufficiencyReason`
+ * (verdict.ts) and `buildLicenceQualifier` (licence-qualifier.ts) both quote
+ * this SAME string rather than each writing their own approximation of it.
+ */
+export const RUN_TO_RUN_INSTABILITY_CEILING_NOTE =
+  "This ceiling is a REUSE of a differently-named quantity's number, adopted because it can only tighten — NOT a pre-registered instability threshold. If a future milestone wants a real instability bar, it pre-registers one; this is a conservative stand-in until then.";
+
+/**
+ * THREE INDEPENDENT reasons a power assessment can be insufficient (D-85-5,
+ * Phase 86 BASELINE-02/SC4/SC5). All three are checked independently and ANY
+ * subset can appear together in one insufficient assessment's `reasons` list
+ * — they are not mutually exclusive.
  */
 export type PowerInsufficiencyReason =
   | {
@@ -44,6 +56,49 @@ export type PowerInsufficiencyReason =
       readonly kind: 'bound-does-not-clear-margin';
       readonly upperBound: number;
       readonly marginProportion: number;
+    }
+  | {
+      /**
+       * Phase 86 BASELINE-02: the measured run-to-run score instability — a
+       * DIFFERENT quantity from the discordant-pair rate above (D-85-5,
+       * 85-RESEARCH.md Open Question 1); it measures the SAME model/prompt
+       * run repeated, not baseline-vs-candidate disagreement — exceeded the
+       * pre-registered discordant-pair-rate assumption, REUSED here as a
+       * ceiling.
+       *
+       * WHY REUSE THAT NUMBER (a judgement, not a derivation): the
+       * pre-registered sample size was chosen under an assumption that
+       * budgets 0.25 total disagreement between the two runs being
+       * compared. If the instrument's own noise floor — the same
+       * model/prompt disagreeing with itself — already exceeds that entire
+       * budget, then the pre-registered `n` cannot detect the margin,
+       * whatever the discordance turns out to be.
+       *
+       * DIRECTION, which is what licenses the reuse without a new
+       * pre-registration: this check can only ever ADD an insufficiency
+       * reason and never remove one, so it can only make a verdict MORE
+       * conservative. A correction that STRENGTHENS a bar needs no
+       * re-consent; one that WEAKENS it does. This sits on the safe side of
+       * that line.
+       *
+       * {@link RUN_TO_RUN_INSTABILITY_CEILING_NOTE} — REQUIRED WORDING,
+       * ruled by the coordinator 2026-09-06, reproduced on every rendering
+       * surface: this ceiling is a REUSE of a differently-named quantity's
+       * number, adopted because it can only tighten — NOT a pre-registered
+       * instability threshold. No separate instability threshold was
+       * pre-registered, because Phase 85 correctly declined to invent a
+       * number for a quantity nobody had measured, and inventing one now —
+       * after this phase exists to produce the first measurement — would be
+       * exactly the fitting the milestone forbids.
+       *
+       * `observedRunToRunInstability` / `assumedCeiling` are DISTINCT field
+       * names from `observedDiscordantPairRate` / `assumedDiscordantPairRate`
+       * above — never reused, never overloaded, so a reader can tell which
+       * of the two quantities moved.
+       */
+      readonly kind: 'run-to-run-instability-exceeds-ceiling';
+      readonly observedRunToRunInstability: number;
+      readonly assumedCeiling: number;
     };
 
 /**
@@ -82,6 +137,56 @@ export interface InsufficientPower {
 }
 
 export type PowerAssessment = SufficientPower | InsufficientPower;
+
+// ---------------------------------------------------------------------------
+// Licence qualifier (Phase 86 Task 2, T-86-07)
+// ---------------------------------------------------------------------------
+
+/**
+ * One bar-file licence clause `buildLicenceQualifier` (licence-qualifier.ts)
+ * found to declare run-to-run instability unmeasured. `path` is the DOTTED
+ * path into the loaded bar's `licenceStrings` object (e.g.
+ * `"licenceStrings.falsePassGate.pass.additionalCaveatRequiredOnEveryPass"`)
+ * — collected by walking the loaded bar's data, never hand-written, so a
+ * fourth such clause added to the bar file tomorrow is found automatically.
+ */
+export interface SupersededLicenceClause {
+  readonly path: string;
+  readonly clauseText: string;
+}
+
+/**
+ * Every PASS licence Phase 85 pre-registered asserts, verbatim, that
+ * run-to-run instability was NOT measured for the comparison — true when
+ * written, false the moment this phase measures the quantity. The bar file
+ * cannot be edited to fix this (it is pre-registered and digest-pinned), so
+ * the verdict carries the correction instead: a REQUIRED field on BOTH
+ * verdict types (never optional on one and not the other — the exact defect
+ * family this milestone keeps producing), constructed ONLY by
+ * `buildLicenceQualifier` (licence-qualifier.ts).
+ *
+ * States mirror `RunToRunInstability`'s own vocabulary deliberately, so the
+ * parse-time cross-check (`parseVerdict` / `parseAnalyseVisualVerdict`) is a
+ * single string-equality comparison: `licenceQualifier.state` must equal
+ * `power.runToRunInstability.state`. A document claiming one state for the
+ * measurement and a different state for the qualifier is refused on
+ * read-back by both parsers.
+ */
+export type LicenceQualifier =
+  | {
+      readonly state: 'not-yet-measured';
+      /** States, as data, that the bar file's licence clauses stand as written — nothing is superseded. */
+      readonly note: string;
+    }
+  | {
+      readonly state: 'measured';
+      readonly observedRunToRunInstability: number;
+      readonly assumedCeiling: number;
+      /** Non-empty — `buildLicenceQualifier` THROWS rather than construct a measured qualifier that supersedes nothing (a search that finds nothing and a search that cannot match print the same zero). */
+      readonly supersededClauses: readonly [SupersededLicenceClause, ...SupersededLicenceClause[]];
+      /** One sentence: which clauses are superseded for THIS verdict, and what the measured value was. */
+      readonly note: string;
+    };
 
 // ---------------------------------------------------------------------------
 // Gating axis / non-gating context
@@ -138,6 +243,8 @@ interface GenerateFixVerdictCommon {
   readonly decisionBarsVersion: string;
   readonly decisionBarsDigestSha256: string;
   readonly licence: string;
+  /** REQUIRED (Phase 86 Task 2, T-86-07) — see `LicenceQualifier`'s doc comment. */
+  readonly licenceQualifier: LicenceQualifier;
 }
 
 export interface GenerateFixPassVerdict extends GenerateFixVerdictCommon {
