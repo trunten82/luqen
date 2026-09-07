@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.7.0
-milestone_name: AI output quality — eval harness + labelled reference sets
-current_phase: 86
-current_phase_name: Recorded baseline
-status: v3.7.0 COMPLETE — all 4 phases shipped, pushed and DEPLOYED (prod c77c12ef). Milestone ready to close.
+milestone: none
+milestone_name: "DORMANT BY CHOICE — v3.7.0 shipped, pushed and deployed at fc0559a; rested by the orchestrator under the rotation on 2026-09-07. Not a defect state: dormant-by-choice is distinguishable from an unnoticed gap ONLY by carrying its reason, so this field carries it."
+current_phase: none
+current_phase_name: none
+status: DORMANT — v3.7.0 complete and deployed (prod fc0559a, verified by reading prod). No active milestone by choice, not by omission.
 stopped_at: "v3.7.0 complete and deployed. Next: /gsd-complete-milestone, then propose v3.8.0. Re-check with: ls .planning/phases/8*/[0-9]*-SUMMARY.md"
 last_updated: "2026-09-06T06:37:35.660Z"
 last_activity: 2026-09-07
@@ -60,6 +60,27 @@ tests need 90s+ timeouts and that local green is not CI green.
 **If you see this red, do not start from zero and do not assume it is whatever you just
 changed.** Re-run the file alone first; if it passes in isolation, this is that race. The
 real fix is a longer timeout on the browser-launching cases, and it is NOT done.
+
+## Open item carried out of v3.7.0 — NOT closed
+
+**Phase 86 has no `86-VERIFICATION.md`.** Phases 83, 84 and 85 each got an independent verifier
+pass; Phase 86 did not. I reported the milestone as "verified" without checking that every phase
+carried a verification record — the claim was true of the phases I remembered and untrue of the set.
+Found by the milestone-close artifact audit, not by me.
+
+What this does and does not mean, stated separately:
+- MEASURED: all 5 of Phase 86's plans have SUMMARY.md files; its code is deployed and green (827
+  tests, lint clean); SC5's break-test was observed flipping PASS to UNDERPOWERED by the
+  orchestrator directly; the live baselines exist with full provenance.
+- NOT MEASURED: no independent agent checked Phase 86 against its ROADMAP success criteria.
+- CONCLUDED: the phase is very likely sound, and "very likely sound" is not what a verification
+  record asserts. Whoever picks this repo up should run `/gsd-verify-work 86` before the milestone
+  is archived with `/gsd-complete-milestone`, which is the step that was NOT run.
+
+Also outstanding for that close: the artifact audit reports 8 open debug sessions, 13 UAT gaps and
+15 verification gaps, nearly all inherited from milestones v3.1.0-v3.3.0. They are pre-existing and
+unrelated to v3.7.0, but `/gsd-complete-milestone` will require each to be resolved or explicitly
+acknowledged.
 
 ## Project Reference
 
