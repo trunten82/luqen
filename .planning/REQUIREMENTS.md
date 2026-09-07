@@ -33,8 +33,8 @@ rewritten once one does.** A bar edited after its result is not a bar.
 
 ### Baseline — what a candidate is measured against
 
-- [ ] **BASELINE-01**: A recorded baseline for the CURRENT production pins of both capabilities exists and is committed BEFORE any candidate model is measured
-- [ ] **BASELINE-02**: A maintainer can re-run the baseline unchanged and read the harness's own run-to-run variance, so a candidate's delta can be judged against noise rather than against zero
+- [x] **BASELINE-01**: A recorded baseline for the CURRENT production pins of both capabilities exists and is committed BEFORE any candidate model is measured
+- [x] **BASELINE-02**: A maintainer can re-run the baseline unchanged and read the harness's own run-to-run variance, so a candidate's delta can be judged against noise rather than against zero
 
 ### Decision bars — pre-registered, encoded, and enforced
 
@@ -78,8 +78,8 @@ Deferred, tracked, not in this roadmap.
 | BARS-01 | Phase 85 | Complete |
 | BARS-02 | Phase 85 | Complete |
 | BARS-03 | Phase 85 | Complete |
-| BASELINE-01 | Phase 86 | Pending |
-| BASELINE-02 | Phase 86 | Pending |
+| BASELINE-01 | Phase 86 | Complete |
+| BASELINE-02 | Phase 86 | Complete |
 
 > **EVALSET-04 and -05: RESOLVED to Complete on 2026-09-05, after 83-02 and 83-03 merged.**
 > The correction below is kept rather than deleted — it is the evidence for why the check exists,
