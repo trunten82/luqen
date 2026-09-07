@@ -1,0 +1,391 @@
+{
+  "reportSchemaVersion": "1",
+  "runFunction": {
+    "harnessVersion": "1+3.6.0",
+    "capability": "generate-fix",
+    "mode": "live",
+    "modelId": "gemini-2.5-flash",
+    "modelDisplayName": "Eval Harness Fixture Model",
+    "providerType": "gemini",
+    "endpointFingerprint": "53765dab58a9bac6",
+    "temperature": 0.2,
+    "promptVersion": "a7058bfb8787ba3c",
+    "promptSource": "default",
+    "setName": "wcag-fixes",
+    "setVersion": "v1",
+    "itemCount": 17,
+    "timestamp": "2026-09-07T07:40:36.699Z"
+  },
+  "items": [
+    {
+      "itemId": "wcag-autocomplete-wrong-token",
+      "outcome": "scored",
+      "rawText": "{\n  \"fixedHtml\": \"<input autocomplete=\\\"bday\\\" id=\\\"ubirthday\\\" type=\\\"text\\\">\",\n  \"explanation\": \"Changed the `autocomplete` attribute for the birthday input from the invalid token 'birthday' to the correct HTML specification token 'bday'. This allows the input's purpose to be programmatically determined, resolving WCAG 1.3.5.\",\n  \"effort\": \"low\"\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": false
+      },
+      "score": {
+        "exactMatch": false,
+        "unchangedFromInput": false,
+        "emptyFix": false,
+        "missingMentions": [],
+        "effortMatch": true,
+        "filenameShapedAlt": false
+      }
+    },
+    {
+      "itemId": "wcag-css-background-image-info",
+      "outcome": "scored",
+      "rawText": "```json\n{\n  \"fixedHtml\": \"<p id=\\\"bestinterest\\\">Top Rate! Where else would you find a better interest rate?</p>\",\n  \"explanation\": \"The background image 'TopRate.png' is identified as conveying text-bearing information (implied to be 'Top Rate' based on the filename and context). To ensure this information is available to assistive technologies and meets WCAG 1.1.1, the text 'Top Rate!' has been added directly into the paragraph content. This makes the information accessible without relying solely on the CSS background image, which is inaccessible to screen readers.\",\n  \"effort\": \"low\"\n}\n```",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": false
+      },
+      "score": {
+        "exactMatch": false,
+        "unchangedFromInput": false,
+        "emptyFix": false,
+        "missingMentions": [
+          "alt attribute",
+          "background-image"
+        ],
+        "effortMatch": false,
+        "filenameShapedAlt": false
+      }
+    },
+    {
+      "itemId": "wcag-decorative-img-no-null-alt",
+      "outcome": "scored",
+      "rawText": "{\n  \"fixedHtml\": \"<img src=\\\"squiggle.gif\\\" height=\\\"20\\\" width=\\\"20\\\" alt=\\\"\\\">\",\n  \"explanation\": \"Added an empty `alt` attribute (`alt=\\\"\\\"`) to the `<img>` element. This signals to assistive technologies, such as screen readers, that the image is decorative and conveys no meaningful information, thus it should be ignored. This resolves the WCAG 1.1.1 violation by ensuring that non-text content that is purely decorative is properly handled.\",\n  \"effort\": \"low\"\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": false
+      },
+      "score": {
+        "exactMatch": false,
+        "unchangedFromInput": false,
+        "emptyFix": false,
+        "missingMentions": [
+          "null alt"
+        ],
+        "effortMatch": true,
+        "filenameShapedAlt": false
+      }
+    },
+    {
+      "itemId": "wcag-decorative-img-spacer-alt",
+      "outcome": "scored",
+      "rawText": "{\n  \"fixedHtml\": \"<div>\\n  Tree type: <img src=\\\"spacer.gif\\\" width=\\\"100\\\" height=\\\"1\\\" alt=\\\"\\\">\\n  Cedrus deodara\\n</div>\",\n  \"explanation\": \"The `alt` attribute for an image that is purely decorative or used for spacing should be empty (`alt=\\\"\\\"`). This signals to screen readers that the image conveys no meaningful information and should be ignored, preventing unnecessary announcements like \\\"spacer\\\". This satisfies WCAG 1.1.1 by ensuring non-text content has an appropriate text alternative (in this case, an empty one for decorative content).\",\n  \"effort\": \"low\"\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": false
+      },
+      "score": {
+        "exactMatch": true,
+        "unchangedFromInput": false,
+        "emptyFix": false,
+        "missingMentions": [
+          "null alt"
+        ],
+        "effortMatch": true,
+        "filenameShapedAlt": false
+      }
+    },
+    {
+      "itemId": "wcag-derived-heading-css-class-only",
+      "outcome": "scored",
+      "rawText": "{\n  \"fixedHtml\": \"<h2 class=\\\"title\\\">Big text</h2>\",\n  \"explanation\": \"Changed the `<p>` element to an `<h2>` element. This makes the section heading programmatically identifiable to assistive technologies, fulfilling WCAG 2.4.10. The `class=\\\"title\\\"` was retained to preserve existing visual styling.\",\n  \"effort\": \"low\"\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": false
+      },
+      "score": {
+        "exactMatch": true,
+        "unchangedFromInput": false,
+        "emptyFix": false,
+        "missingMentions": [
+          "heading element"
+        ],
+        "effortMatch": true,
+        "filenameShapedAlt": false
+      }
+    },
+    {
+      "itemId": "wcag-derived-input-missing-visible-label",
+      "outcome": "scored",
+      "rawText": "{\n  \"fixedHtml\": \"<label for=\\\"email-input\\\">Email address:</label>\\n<input type=\\\"text\\\" id=\\\"email-input\\\" name=\\\"email\\\">\",\n  \"explanation\": \"A `<label>` element was added with descriptive text 'Email address:' and its `for` attribute was set to 'email-input'. The `<input>` element was given an `id` of 'email-input' to programmatically associate it with the label. This ensures that users, especially those using assistive technologies, understand the purpose of the input field, addressing WCAG 3.3.2.\",\n  \"effort\": \"low\"\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": false
+      },
+      "score": {
+        "exactMatch": false,
+        "unchangedFromInput": false,
+        "emptyFix": false,
+        "missingMentions": [
+          "label element",
+          "visible"
+        ],
+        "effortMatch": true,
+        "filenameShapedAlt": false
+      }
+    },
+    {
+      "itemId": "wcag-div-checkbox-no-role",
+      "outcome": "scored",
+      "rawText": "```json\n{\n  \"fixedHtml\": \"<p>\\n  <span role=\\\"checkbox\\\" aria-checked=\\\"false\\\" tabindex=\\\"0\\\" onclick=\\\"toggleCheckbox('chkbox')\\\" onkeydown=\\\"handleCheckboxKey(event, 'chkbox')\\\">\\n    <img src=\\\"unchecked.gif\\\" id=\\\"chkbox\\\" alt=\\\"\\\"> Include Signature\\n  </span>\\n</p>\",\n  \"explanation\": \"Added `role=\\\"checkbox\\\"` to explicitly identify the element as a checkbox to assistive technologies, resolving the issue of the missing role. Added `aria-checked=\\\"false\\\"` to expose its initial state (unchecked), which should be dynamically updated by the `toggleCheckbox` function. Added `tabindex=\\\"0\\\"` to make the custom checkbox focusable via keyboard. Included an `onkeydown` handler to enable keyboard interaction (e.g., Space or Enter key) to toggle the checkbox, which is essential for interactive controls. The text \\\"Include Signature\\\" within the span will serve as the accessible name for the checkbox.\",\n  \"effort\": \"low\"\n}\n```",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": false
+      },
+      "score": {
+        "exactMatch": false,
+        "unchangedFromInput": false,
+        "emptyFix": false,
+        "missingMentions": [
+          "WAI-ARIA",
+          "4.1.2"
+        ],
+        "effortMatch": false,
+        "filenameShapedAlt": false
+      }
+    },
+    {
+      "itemId": "wcag-fake-heading-css-style",
+      "outcome": "scored",
+      "rawText": "{\n  \"fixedHtml\": \"<h1 class=\\\"heading1\\\">Introduction</h1>\",\n  \"explanation\": \"Changed the `p` element to an `h1` element. This provides the correct semantic markup for a heading, allowing assistive technologies to identify it as such and convey the page structure to users, thereby resolving the WCAG 1.3.1 violation. The CSS class was retained to maintain the visual styling.\",\n  \"effort\": \"low\"\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": false
+      },
+      "score": {
+        "exactMatch": false,
+        "unchangedFromInput": false,
+        "emptyFix": false,
+        "missingMentions": [
+          "heading element",
+          "H42"
+        ],
+        "effortMatch": true,
+        "filenameShapedAlt": false
+      }
+    },
+    {
+      "itemId": "wcag-form-control-no-label",
+      "outcome": "scored",
+      "rawText": "{\n  \"fixedHtml\": \"<form>\\n  <label for=\\\"firstname\\\">First name:</label>\\n  <input type=\\\"text\\\" id=\\\"firstname\\\" name=\\\"firstname\\\">\\n</form>\",\n  \"explanation\": \"The text \\\"First name:\\\" was wrapped in a <label> element, and its 'for' attribute was set to 'firstname'. The <input> element was given an 'id' attribute matching 'firstname'. This explicitly associates the label with the input, providing an accessible name for assistive technologies as required by WCAG 4.1.2.\",\n  \"effort\": \"low\"\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": false
+      },
+      "score": {
+        "exactMatch": false,
+        "unchangedFromInput": false,
+        "emptyFix": false,
+        "missingMentions": [
+          "label element",
+          "for attribute"
+        ],
+        "effortMatch": true,
+        "filenameShapedAlt": false
+      }
+    },
+    {
+      "itemId": "wcag-heading-visual-effect-only",
+      "outcome": "scored",
+      "rawText": "{\n  \"fixedHtml\": \"<p>Interested in learning more? Write to us at</p>\\n<p>3333 Third Avenue, Suite 300 &middot; New York City</p>\\n<p>And we'll send you the complete informational packet absolutely Free!</p>\",\n  \"explanation\": \"The `<h4>` element was replaced with a `<p>` element. The content, an address, does not introduce a new section and therefore should not be marked up as a heading. Using a heading for purely visual styling misrepresents the document structure, violating WCAG 1.3.1. Visual styling (e.g., large bold text) should be applied using CSS to the `<p>` element, not by misusing semantic heading tags.\",\n  \"effort\": \"medium\"\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": false
+      },
+      "score": {
+        "exactMatch": false,
+        "unchangedFromInput": false,
+        "emptyFix": false,
+        "missingMentions": [],
+        "effortMatch": false,
+        "filenameShapedAlt": false
+      }
+    },
+    {
+      "itemId": "wcag-image-only-link-no-name",
+      "outcome": "scored",
+      "rawText": "{\n  \"fixedHtml\": \"<a href=\\\"scores.html\\\">\\n  <img src=\\\"football.gif\\\" alt=\\\"Football Scoreboard\\\">\\n</a>\\n<a href=\\\"scores.html\\\">Football Scoreboard</a>\",\n  \"explanation\": \"The `alt` attribute of the image within the first link was updated to \\\"Football Scoreboard\\\". This provides a meaningful accessible name for the image link, ensuring that screen reader users can understand its purpose without having to guess from the filename. The text for the `alt` attribute was derived from the adjacent, duplicate text link, which clearly states the link's purpose. This resolves the WCAG 2.4.4 violation by making the link's purpose determinable.\",\n  \"effort\": \"low\"\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": false
+      },
+      "score": {
+        "exactMatch": false,
+        "unchangedFromInput": false,
+        "emptyFix": false,
+        "missingMentions": [
+          "alt attribute",
+          "link purpose"
+        ],
+        "effortMatch": true,
+        "filenameShapedAlt": false
+      }
+    },
+    {
+      "itemId": "wcag-img-missing-alt-01",
+      "outcome": "scored",
+      "rawText": "{\n  \"fixedHtml\": \"<img src=\\\"../images/animal.jpg\\\" alt=\\\"An animal\\\">\",\n  \"explanation\": \"Added an `alt` attribute to the `<img>` element with a descriptive text \\\"An animal\\\". This provides a text alternative for users of assistive technologies, fulfilling WCAG 1.1.1 by ensuring the image's purpose can be conveyed.\",\n  \"effort\": \"low\"\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": false
+      },
+      "score": {
+        "exactMatch": false,
+        "unchangedFromInput": false,
+        "emptyFix": false,
+        "missingMentions": [
+          "alt attribute"
+        ],
+        "effortMatch": true,
+        "filenameShapedAlt": false
+      }
+    },
+    {
+      "itemId": "wcag-justified-text",
+      "outcome": "scored",
+      "rawText": "{\n  \"fixedHtml\": \"<p style=\\\"text-align: left;\\\">\\n How much wood would a woodchuck chuck if a woodchuck could chuck wood?\\n He would chuck, he would, as much as he could, and chuck as much wood\\n As a woodchuck would if a woodchuck could chuck wood.\\n</p>\",\n  \"explanation\": \"The 'text-align: justify' CSS property, which was causing the issue, was overridden by adding an inline style 'text-align: left;' to the paragraph element. Fully justified text creates uneven word spacing between words, which can significantly hinder readability for users with cognitive disabilities, dyslexia, or low vision. Aligning text to the left (or right for right-to-left languages) ensures consistent word spacing, improving legibility and complying with WCAG 1.4.8 Visual Presentation (No justification).\",\n  \"effort\": \"low\"\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": false
+      },
+      "score": {
+        "exactMatch": true,
+        "unchangedFromInput": false,
+        "emptyFix": false,
+        "missingMentions": [],
+        "effortMatch": true,
+        "filenameShapedAlt": false
+      }
+    },
+    {
+      "itemId": "wcag-link-context-unrelated-paragraph",
+      "outcome": "scored",
+      "rawText": "{\n  \"fixedHtml\": \"<p>A British businessman has racked up 2 million flyer miles and plans to travel on the world's first commercial tourism flights to space.</p>\\n<p><a href=\\\"ff.html\\\" aria-label=\\\"Read More about the British businessman's space travel plans\\\">Read More...</a></p>\",\n  \"explanation\": \"The `aria-label` attribute was added to the `<a>` tag. This attribute provides a descriptive label for assistive technologies, clarifying the purpose of the \\\"Read More...\\\" link without changing its visible text. This ensures that the link's purpose can be determined programmatically, satisfying WCAG 2.4.4.\",\n  \"effort\": \"low\"\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": false
+      },
+      "score": {
+        "exactMatch": false,
+        "unchangedFromInput": false,
+        "emptyFix": false,
+        "missingMentions": [
+          "aria-labelledby",
+          "link purpose"
+        ],
+        "effortMatch": false,
+        "filenameShapedAlt": false
+      }
+    },
+    {
+      "itemId": "wcag-multipart-phone-no-names",
+      "outcome": "scored",
+      "rawText": "```json\n{\n  \"fixedHtml\": \"<label for=\\\"area\\\">Phone number:</label> (<input id=\\\"area\\\" type=\\\"text\\\" size=\\\"3\\\">)\\n<input type=\\\"text\\\" size=\\\"3\\\" aria-label=\\\"Phone number prefix\\\">-<input type=\\\"text\\\" size=\\\"4\\\" aria-label=\\\"Phone number line number\\\">\",\n  \"explanation\": \"Added `aria-label` attributes to the second and third input fields. This provides an accessible name for these components, ensuring that screen reader users can understand the purpose of each part of the phone number field, thus resolving the WCAG 4.1.2 violation.\",\n  \"effort\": \"low\"\n}\n```",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": false
+      },
+      "score": {
+        "exactMatch": false,
+        "unchangedFromInput": false,
+        "emptyFix": false,
+        "missingMentions": [
+          "label element",
+          "each field"
+        ],
+        "effortMatch": false,
+        "filenameShapedAlt": false
+      }
+    },
+    {
+      "itemId": "wcag-table-headers-not-marked-up",
+      "outcome": "scored",
+      "rawText": "{\n  \"fixedHtml\": \"<table>\\n  <tr>\\n    <th>Name</th>\\n    <th>Age</th>\\n    <th>Height (cm)</th>\\n    <th>Weight (kg)</th>\\n  </tr>\\n  <tr>\\n    <td>Linda</td>\\n    <td>33</td>\\n    <td>169</td>\\n    <td>59</td>\\n  </tr>\\n</table>\",\n  \"explanation\": \"Changed the `<td>` elements in the first row to `<th>` elements. This semantically identifies them as column headers, allowing assistive technologies like screen readers to correctly announce the header for each data cell, thus satisfying WCAG 1.3.1 (Info and Relationships).\",\n  \"effort\": \"medium\"\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": false
+      },
+      "score": {
+        "exactMatch": true,
+        "unchangedFromInput": false,
+        "emptyFix": false,
+        "missingMentions": [
+          "th element",
+          "table headers"
+        ],
+        "effortMatch": false,
+        "filenameShapedAlt": false
+      }
+    },
+    {
+      "itemId": "wcag-table-role-presentation",
+      "outcome": "scored",
+      "rawText": "{\n  \"fixedHtml\": \"<table>\\n  <caption>Fruits and their colors</caption>\\n  <tr>\\n    <th>Name</th>\\n    <th>Color</th>\\n  </tr>\\n  <tr>\\n    <td scope=\\\"row\\\">banana</td>\\n    <td>yellow</td>\\n  </tr>\\n</table>\",\n  \"explanation\": \"The `role=\\\"presentation\\\"` attribute was removed from the `<table>` element. Applying `role=\\\"presentation\\\"` to a data table suppresses its native semantic meaning, preventing assistive technologies from understanding the row and column relationships, which violates WCAG 1.3.1 (Info and Relationships). By removing this attribute, the table's inherent semantic structure is exposed to the accessibility tree, allowing screen readers to correctly interpret and convey the data relationships to users.\",\n  \"effort\": \"low\"\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": false
+      },
+      "score": {
+        "exactMatch": false,
+        "unchangedFromInput": false,
+        "emptyFix": false,
+        "missingMentions": [
+          "table semantics"
+        ],
+        "effortMatch": true,
+        "filenameShapedAlt": false
+      }
+    }
+  ],
+  "aggregate": {
+    "total": 17,
+    "exactMatchCount": 4,
+    "unchangedFromInputCount": 0,
+    "emptyFixCount": 0,
+    "missingMentionsCount": 14,
+    "effortMatchCount": 11,
+    "filenameShapedAltCount": 0
+  },
+  "failedCount": 0
+}

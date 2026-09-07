@@ -1,0 +1,118 @@
+{
+  "mode": "live",
+  "runFunction": {
+    "harnessVersion": "1+3.6.0",
+    "capability": "generate-fix",
+    "mode": "live",
+    "modelId": "gemini-2.5-flash",
+    "modelDisplayName": "Eval Harness Fixture Model",
+    "providerType": "gemini",
+    "endpointFingerprint": "53765dab58a9bac6",
+    "temperature": 0.2,
+    "promptVersion": "a7058bfb8787ba3c",
+    "promptSource": "default",
+    "setName": "wcag-fixes",
+    "setVersion": "v1",
+    "itemCount": 17,
+    "timestamp": "2026-09-07T07:40:36.699Z"
+  },
+  "instability": {
+    "modelId": "gemini-2.5-flash",
+    "setName": "wcag-fixes",
+    "setVersion": "v1",
+    "itemCount": 17,
+    "repeatCount": 3,
+    "repeatTimestamps": [
+      "2026-09-07T07:40:36.699Z",
+      "2026-09-07T07:42:13.112Z",
+      "2026-09-07T07:43:51.457Z"
+    ],
+    "gatingCountByRepeat": [
+      4,
+      4,
+      4
+    ],
+    "pairwiseRates": [
+      {
+        "repeatIndexA": 0,
+        "repeatIndexB": 1,
+        "disagreementCount": 0,
+        "rate": 0
+      },
+      {
+        "repeatIndexA": 0,
+        "repeatIndexB": 2,
+        "disagreementCount": 0,
+        "rate": 0
+      },
+      {
+        "repeatIndexA": 1,
+        "repeatIndexB": 2,
+        "disagreementCount": 0,
+        "rate": 0
+      }
+    ],
+    "maximum": 0,
+    "mean": 0,
+    "runToRunInstability": {
+      "state": "measured",
+      "value": 0
+    }
+  },
+  "repeats": [
+    {
+      "harnessVersion": "1+3.6.0",
+      "capability": "generate-fix",
+      "mode": "live",
+      "modelId": "gemini-2.5-flash",
+      "modelDisplayName": "Eval Harness Fixture Model",
+      "providerType": "gemini",
+      "endpointFingerprint": "53765dab58a9bac6",
+      "temperature": 0.2,
+      "promptVersion": "a7058bfb8787ba3c",
+      "promptSource": "default",
+      "setName": "wcag-fixes",
+      "setVersion": "v1",
+      "itemCount": 17,
+      "timestamp": "2026-09-07T07:40:36.699Z"
+    },
+    {
+      "harnessVersion": "1+3.6.0",
+      "capability": "generate-fix",
+      "mode": "live",
+      "modelId": "gemini-2.5-flash",
+      "modelDisplayName": "Eval Harness Fixture Model",
+      "providerType": "gemini",
+      "endpointFingerprint": "53765dab58a9bac6",
+      "temperature": 0.2,
+      "promptVersion": "a7058bfb8787ba3c",
+      "promptSource": "default",
+      "setName": "wcag-fixes",
+      "setVersion": "v1",
+      "itemCount": 17,
+      "timestamp": "2026-09-07T07:42:13.112Z"
+    },
+    {
+      "harnessVersion": "1+3.6.0",
+      "capability": "generate-fix",
+      "mode": "live",
+      "modelId": "gemini-2.5-flash",
+      "modelDisplayName": "Eval Harness Fixture Model",
+      "providerType": "gemini",
+      "endpointFingerprint": "53765dab58a9bac6",
+      "temperature": 0.2,
+      "promptVersion": "a7058bfb8787ba3c",
+      "promptSource": "default",
+      "setName": "wcag-fixes",
+      "setVersion": "v1",
+      "itemCount": 17,
+      "timestamp": "2026-09-07T07:43:51.457Z"
+    }
+  ],
+  "sampleSizeAssumptionCheck": {
+    "observedRunToRunInstability": 0,
+    "assumedDiscordantPairRateCeiling": 0.25,
+    "assumptionSurvives": true,
+    "consequence": "Measured quantity: run-to-run instability (NEVER the McNemar discordant-pair rate, D-85-5) -- observed 0 against the reused ceiling 0.25; the assumption SURVIVES. The pre-registered margin and sample size n are UNCHANGED by this result. This ceiling is a REUSE of a differently-named quantity's number, adopted because it can only tighten — NOT a pre-registered instability threshold. If a future milestone wants a real instability bar, it pre-registers one; this is a conservative stand-in until then."
+  }
+}
