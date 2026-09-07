@@ -1,0 +1,240 @@
+{
+  "reportSchemaVersion": "1",
+  "runFunction": {
+    "harnessVersion": "1+3.6.0",
+    "capability": "analyse-visual",
+    "mode": "live",
+    "modelId": "gemini-2.5-flash",
+    "modelDisplayName": "Eval Harness Fixture Model",
+    "providerType": "gemini",
+    "endpointFingerprint": "53765dab58a9bac6",
+    "temperature": 0.1,
+    "promptVersion": "556155db19a23ee1",
+    "promptSource": "default",
+    "setName": "image-alt",
+    "setVersion": "v1",
+    "itemCount": 13,
+    "timestamp": "2026-09-07T07:46:01.076Z"
+  },
+  "items": [
+    {
+      "itemId": "complex-energy-consumption",
+      "outcome": "scored",
+      "rawText": "```json\n{\n  \"verdict\": \"issue\",\n  \"altClassification\": \"informational\",\n  \"suggestedAlt\": \"U.S. delivered energy consumption in quadrillion Btu by sector for 2003 and projected 2025. All sectors show increased consumption, with Transportation and Industrial sectors having the highest consumption.\",\n  \"findings\": [\n    {\n      \"description\": \"The current alt text 'chart' is generic and does not convey the informational content of the bar chart, which illustrates U.S. energy consumption trends by sector over time. This fails to provide a text alternative that serves an equivalent purpose for users who cannot perceive the image.\",\n      \"wcagCriterion\": \"1.1.1\",\n      \"confidence\": \"high\"\n    }\n  ]\n}\n```",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": true
+      },
+      "score": {
+        "verdictOutcome": "correct",
+        "altClassificationMismatch": false,
+        "suggestedAltAxis": "ok"
+      }
+    },
+    {
+      "itemId": "complex-flowchart-goal",
+      "outcome": "scored",
+      "rawText": "```json\n{\n  \"verdict\": \"issue\",\n  \"altClassification\": \"informational\",\n  \"suggestedAlt\": \"Flowchart for driving: Keep driving forward. If a stoplight is ahead, stop if red, otherwise keep going. If no stoplight, check gas; if low, find a petrol station, otherwise keep driving forward.\",\n  \"findings\": [\n    {\n      \"description\": \"The provided `alt` attribute (`alt=\\\"Flowchart showing the steps to plan and achieve a personal goal, from setting the goal to reviewing the outcome\\\"`) describes content completely different from what is depicted in the image. The image shows a flowchart about driving decisions (stoplights, gas), not personal goal planning. This misleads screen reader users about the image's actual content and purpose.\",\n      \"wcagCriterion\": \"1.1.1\",\n      \"confidence\": \"high\"\n    }\n  ]\n}\n```",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": true
+      },
+      "score": {
+        "verdictOutcome": "false-issue",
+        "altClassificationMismatch": false,
+        "suggestedAltAxis": "ok"
+      }
+    },
+    {
+      "itemId": "complex-thyroid-incidence",
+      "outcome": "scored",
+      "rawText": "{\n  \"verdict\": \"issue\",\n  \"altClassification\": \"informational\",\n  \"suggestedAlt\": \"Pie chart showing types of thyroid cancer: Papillary 75%, Follicular 15%, Medullary 5%, Other 5%.\",\n  \"findings\": [\n    {\n      \"description\": \"The image is informational, conveying data about the prevalence of different thyroid cancer types. It requires a text alternative to provide equivalent information to users who cannot see the image. The provided HTML context only includes the <img> tag without an alt attribute, which means the information is not accessible to screen reader users.\",\n      \"wcagCriterion\": \"1.1.1\",\n      \"confidence\": \"high\"\n    }\n  ]\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": true
+      },
+      "score": {
+        "verdictOutcome": "correct",
+        "altClassificationMismatch": false,
+        "suggestedAltAxis": "ok"
+      }
+    },
+    {
+      "itemId": "decorative-floral-wallpaper",
+      "outcome": "scored",
+      "rawText": "{\n  \"verdict\": \"issue\",\n  \"altClassification\": \"decorative\",\n  \"suggestedAlt\": \"\",\n  \"findings\": [\n    {\n      \"description\": \"The image appears to be purely decorative, serving as a visual background or aesthetic element, as strongly suggested by its filename 'decorative-floral-wallpaper.jpg'. For purely decorative images that add no essential information to the page content, the alt attribute should be empty (`alt=\\\"\\\"`) to ensure screen readers skip them. The current alt text 'Floral wallpaper pattern' provides unnecessary information to screen reader users, potentially distracting them from meaningful content.\",\n      \"wcagCriterion\": \"1.1.1\",\n      \"confidence\": \"high\"\n    }\n  ]\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": true
+      },
+      "score": {
+        "verdictOutcome": "correct",
+        "altClassificationMismatch": false,
+        "suggestedAltAxis": "ok"
+      }
+    },
+    {
+      "itemId": "decorative-geometric-pattern",
+      "outcome": "scored",
+      "rawText": "{\n  \"verdict\": \"pass\",\n  \"altClassification\": \"decorative\",\n  \"suggestedAlt\": \"\",\n  \"findings\": []\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": true
+      },
+      "score": {
+        "verdictOutcome": "correct",
+        "altClassificationMismatch": false,
+        "suggestedAltAxis": "ok"
+      }
+    },
+    {
+      "itemId": "decorative-wallpaper-corner",
+      "outcome": "scored",
+      "rawText": "{\n  \"verdict\": \"pass\",\n  \"altClassification\": \"decorative\",\n  \"suggestedAlt\": \"\",\n  \"findings\": []\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": true
+      },
+      "score": {
+        "verdictOutcome": "correct",
+        "altClassificationMismatch": false,
+        "suggestedAltAxis": "ok"
+      }
+    },
+    {
+      "itemId": "functional-home-icon",
+      "outcome": "scored",
+      "rawText": "{\n  \"verdict\": \"issue\",\n  \"altClassification\": \"informational\",\n  \"suggestedAlt\": \"Home\",\n  \"findings\": [\n    {\n      \"description\": \"The image is a common 'home' icon, suggesting it functions as a link to the homepage. As an informational and likely functional image, it requires descriptive alt text to convey its purpose to screen reader users. The current HTML context shows an `<img>` tag without an `alt` attribute, which means the image's content or function is not programmatically determinable.\",\n      \"wcagCriterion\": \"1.1.1\",\n      \"confidence\": \"high\"\n    }\n  ]\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": true
+      },
+      "score": {
+        "verdictOutcome": "correct",
+        "altClassificationMismatch": false,
+        "suggestedAltAxis": "ok"
+      }
+    },
+    {
+      "itemId": "functional-print-icon",
+      "outcome": "scored",
+      "rawText": "{\n  \"verdict\": \"pass\",\n  \"altClassification\": \"informational\",\n  \"suggestedAlt\": \"Print this page\",\n  \"findings\": []\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": true
+      },
+      "score": {
+        "verdictOutcome": "correct",
+        "altClassificationMismatch": false,
+        "suggestedAltAxis": "ok"
+      }
+    },
+    {
+      "itemId": "functional-search-icon",
+      "outcome": "scored",
+      "rawText": "{\n  \"verdict\": \"issue\",\n  \"altClassification\": \"informational\",\n  \"suggestedAlt\": \"Search\",\n  \"findings\": [\n    {\n      \"description\": \"The alt text 'search-icon.png' describes the image file name rather than its function or content. As a functional icon representing a search action, it requires a concise, contextual text alternative that conveys its purpose to screen reader users.\",\n      \"wcagCriterion\": \"1.1.1\",\n      \"confidence\": \"high\"\n    }\n  ]\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": true
+      },
+      "score": {
+        "verdictOutcome": "correct",
+        "altClassificationMismatch": false,
+        "suggestedAltAxis": "ok"
+      }
+    },
+    {
+      "itemId": "img-informative-seed",
+      "outcome": "scored",
+      "rawText": "{\n  \"verdict\": \"issue\",\n  \"altClassification\": \"informational\",\n  \"suggestedAlt\": \"Golden retriever puppy resting paws on a wooden railing\",\n  \"findings\": [\n    {\n      \"description\": \"The image is informational, depicting a specific subject (a golden retriever puppy). Without surrounding text, it's assumed to be content-bearing. The provided HTML snippet `<img src=\\\"callie-puppy.jpg\\\">` does not include an `alt` attribute, meaning a screen reader user would not receive equivalent information about the image's content.\",\n      \"wcagCriterion\": \"1.1.1\",\n      \"confidence\": \"high\"\n    }\n  ]\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": true
+      },
+      "score": {
+        "verdictOutcome": "correct",
+        "altClassificationMismatch": false,
+        "suggestedAltAxis": "ok"
+      }
+    },
+    {
+      "itemId": "informative-bicycle-photo",
+      "outcome": "scored",
+      "rawText": "{\n  \"verdict\": \"issue\",\n  \"altClassification\": \"informational\",\n  \"suggestedAlt\": \"Bicycles parked against a grey wall in dappled spring sunlight\",\n  \"findings\": [\n    {\n      \"description\": \"The existing alt text describes a 'brick wall', but the wall in the image is a plain grey/concrete wall. While the overall context is conveyed, the description is not fully accurate, which can slightly diminish the equivalence of the text alternative.\",\n      \"wcagCriterion\": \"1.1.1\",\n      \"confidence\": \"high\"\n    }\n  ]\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": true
+      },
+      "score": {
+        "verdictOutcome": "false-issue",
+        "altClassificationMismatch": false,
+        "suggestedAltAxis": "ok"
+      }
+    },
+    {
+      "itemId": "informative-fax-icon",
+      "outcome": "scored",
+      "rawText": "{\n  \"verdict\": \"pass\",\n  \"altClassification\": \"informational\",\n  \"suggestedAlt\": \"Fax\",\n  \"findings\": []\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": true
+      },
+      "score": {
+        "verdictOutcome": "correct",
+        "altClassificationMismatch": false,
+        "suggestedAltAxis": "ok"
+      }
+    },
+    {
+      "itemId": "informative-telephone-icon",
+      "outcome": "scored",
+      "rawText": "{\n  \"verdict\": \"issue\",\n  \"altClassification\": \"informational\",\n  \"suggestedAlt\": \"Phone\",\n  \"findings\": [\n    {\n      \"description\": \"The image filename 'informative-telephone-icon.png' strongly suggests the icon conveys information (e.g., indicating a phone number or a call-to-action). As such, it requires descriptive alt text. The provided HTML snippet is missing an `alt` attribute, which means screen reader users would not receive the information conveyed by the icon.\",\n      \"wcagCriterion\": \"1.1.1\",\n      \"confidence\": \"high\"\n    }\n  ]\n}",
+      "diagnosis": {
+        "present": true,
+        "nonEmpty": true,
+        "parseable": true,
+        "verdictAsserted": true
+      },
+      "score": {
+        "verdictOutcome": "correct",
+        "altClassificationMismatch": false,
+        "suggestedAltAxis": "ok"
+      }
+    }
+  ],
+  "aggregate": {
+    "total": 13,
+    "correct": 11,
+    "falsePass": 0,
+    "falseIssue": 2,
+    "uncertain": 0,
+    "altClassificationMismatchCount": 0,
+    "suggestedAltFilenameShapedCount": 0,
+    "suggestedAltEmptyDespiteInformationalCount": 0
+  },
+  "failedCount": 0
+}
