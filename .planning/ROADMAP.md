@@ -262,7 +262,13 @@ milestone protects the ones already shipped and relied upon.
   3. A maintainer can re-run the baseline unchanged and read the harness's own run-to-run variance, so a future candidate's delta is judged against noise rather than against zero
   4. The observed run-to-run variance is checked against the variance ASSUMPTION Phase 85 recorded its sample size from, and the harness OUTPUTS the power verdict as a required field of every report — not as prose a future reader is trusted to remember — without altering the margin
   5. The power check is BROKEN and watched to fail: feed the harness an observed variance above the assumption and confirm the report flips to UNDERPOWERED and refuses PASS. A guard nobody has watched fire measures nothing
-**Plans**: TBD
+**Split into two parts, because a live baseline run needs MONEY and a CREDENTIAL and both are the product owner's to grant.** PART A (86-01..86-04) is everything that needs neither — the mechanism, the variance computation, the required power field, SC5 in full, and the docs. It ships whether or not the authorisation ever arrives. PART B (86-05) is the live run alone, behind a blocking authorisation checkpoint, and it must never silently degrade into a replay run: 86-03 makes a replay replication structurally unwritable as a production baseline (`_synthetic` envelope, no top-level `runFunction`, refused at the type AND at the serialisation boundary). SC1 and the measured value of SC3 need Part B; SC4 and SC5 are fully met by Part A.
+**Plans**: 5 plans (5 waves, strictly sequential — each consumes the previous plan's interface, the same ordering shape Phase 85 had and for the same reason)
+- [ ] 86-01-PLAN.md — PART A. Tracer: the run-to-run instability quantity end to end on synthetic repeats, threaded as a REQUIRED parameter through both comparators, plus the analyse-visual round-trip re-check its sibling never got
+- [ ] 86-02-PLAN.md — PART A. **SC5.** The instability made load-bearing (a third insufficiency reason + the licence qualifier the locked bar file cannot carry), then broken in BOTH directions and watched to flip PASS to UNDERPOWERED
+- [ ] 86-03-PLAN.md — PART A. The committable replication artifact with its REQUIRED assumption check, the `eval baseline` command, the structural refusal that a replay run is not a baseline, and the pre-registration ancestry check (plus a CI checkout deep enough to answer it)
+- [ ] 86-04-PLAN.md — PART A. The guide made to stand alone: both variance quantities distinguishable, the shared-ceiling judgement with its direction and its limitation, and a standing statement that is true whether or not Part B ever runs
+- [ ] 86-05-PLAN.md — PART B. The live baseline of the current production pins, behind a blocking spend/credential checkpoint (`autonomous: false`). If authorisation never arrives, nothing is produced and BASELINE-01 is reported outstanding with the request, the date and the channel
 
 ## Progress
 
@@ -280,4 +286,4 @@ Phases execute in numeric order: 83 → 84 → 85 → 86
 | 83. Labelled reference sets | v3.7.0 | 3/3 | Complete | 2026-09-05 |
 | 84. Scoring harness | v3.7.0 | 4/4 | Complete | 2026-09-06 |
 | 85. Pre-registered decision bars | v3.7.0 | 3/3 | Complete | 2026-09-06 |
-| 86. Recorded baseline | v3.7.0 | 0/TBD | Not started | - |
+| 86. Recorded baseline | v3.7.0 | 0/5 | Planned (4 plans autonomous; 86-05 gated on owner spend + credential) | - |
