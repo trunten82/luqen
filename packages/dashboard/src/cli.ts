@@ -216,7 +216,7 @@ async function withPluginManager(
   const manager = new PluginManager({
     db: rawDb,
     pluginsDir: config.pluginsDir,
-    encryptionKey: config.sessionSecret,
+    encryptionKey: config.encryptionKey,
     registryEntries,
   });
 
