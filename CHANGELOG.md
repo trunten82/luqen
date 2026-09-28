@@ -26,7 +26,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   independent of `DASHBOARD_SESSION_SECRET`. Defaults to the session secret
   when unset (backward compatible). Encrypts OAuth signing keys,
   service-connection secrets, git credentials, and plugin secrets.
-- `luqen-dashboard rekey-at-rest`: a new CLI command to re-encrypt every
+- `node packages/dashboard/dist/cli.js rekey-at-rest` (the dashboard CLI; not on PATH by default): a new CLI command to re-encrypt every
   at-rest value from an old key to a new one. Supports `--dry-run` (default,
   read-only, safe while the dashboard is running), `--apply` (refuses while
   the dashboard holds the database open; makes an atomic 0600 backup first;
