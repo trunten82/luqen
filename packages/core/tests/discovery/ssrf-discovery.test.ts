@@ -25,7 +25,7 @@ import {
   type TestServer,
 } from './ssrf-fixtures.js';
 
-const LAN_HOST = '192.168.3.50';
+const LAN_HOST = '192.168.100.50';
 const LOOPBACK_4000 = '127.0.0.1:4000';
 
 let victim: TestServer;

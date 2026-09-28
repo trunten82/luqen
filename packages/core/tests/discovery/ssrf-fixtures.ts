@@ -43,7 +43,7 @@ export const PUBLIC_TEST_ADDRESS = '93.184.216.34';
 export const FAKE_PUBLIC_RESOLVER: HostResolver = async (hostname) => {
   if (hostname === 'rebind.test') return ['127.0.0.1'];
   if (hostname === 'metadata.test') return ['169.254.169.254'];
-  if (hostname === 'lan.test') return ['192.168.3.50'];
+  if (hostname === 'lan.test') return ['192.168.100.50'];
   return [PUBLIC_TEST_ADDRESS];
 };
 

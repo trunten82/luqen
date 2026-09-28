@@ -26,7 +26,7 @@ function fakeRequest(url: string) {
 describe('browser-discovery request guard', () => {
   it.each([
     'http://127.0.0.1:4000/',
-    'http://192.168.3.50/img.png',
+    'http://192.168.100.50/img.png',
     'http://169.254.169.254/latest/meta-data/',
     'http://rebind.test/',
     'file:///etc/passwd',
