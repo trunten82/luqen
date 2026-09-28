@@ -191,6 +191,26 @@ describe('checkPreRegistrationAncestry -- shallow clone: THROWS, never skips, ne
   });
 });
 
+describe('DIAG timing (throwaway branch, never merged)', () => {
+  it('times each git step', () => {
+    const cwd = repoRoot();
+    const t = (label: string, args: string[]) => {
+      const s = Date.now();
+      const out = execFileSync('git', args, { cwd, encoding: 'utf-8' });
+      console.error(`DIAG ${Date.now() - s}ms git ${args.join(' ')} -> ${out.length} bytes`);
+      return out;
+    };
+    t('ver', ['version']);
+    t('cfg', ['config', '--list', '--show-origin']);
+    t('st1', ['status', '--short']);
+    t('st2', ['status', '--short']);
+    t('stu', ['status', '--short', '--untracked-files=no']);
+    t('log', ['log', '--diff-filter=A', '--format=%H', '--reverse', '--', 'packages/llm/src/eval/instability.ts']);
+    t('cnt', ['count-objects', '-v']);
+    console.error('DIAG status sample:\n' + t('st3', ['status', '--short']).split('\n').slice(0, 40).join('\n'));
+  }, 120000);
+});
+
 describe('checkPreRegistrationAncestry -- never mutates, never writes', () => {
   it('leaves HEAD and the working tree unchanged after a real (non-injected-shallow) run', () => {
     const cwd = repoRoot();
