@@ -65,6 +65,7 @@ services:
       - "${DASHBOARD_PORT:-5000}:5000"
     environment:
       - DASHBOARD_SESSION_SECRET=${SESSION_SECRET:-changeme-generate-a-real-secret}
+      - DASHBOARD_ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
       - DASHBOARD_COMPLIANCE_URL=http://compliance:4000
       - DASHBOARD_BRANDING_URL=http://branding:4100
       - DASHBOARD_LLM_URL=http://llm:4200

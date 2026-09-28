@@ -40,6 +40,7 @@ services:
       - DASHBOARD_REPORTS_DIR=/app/reports
       - DASHBOARD_DB_PATH=/app/data/dashboard.db
       - DASHBOARD_SESSION_SECRET=${DASHBOARD_SESSION_SECRET}
+      - DASHBOARD_ENCRYPTION_KEY=${DASHBOARD_ENCRYPTION_KEY:-}
     depends_on:
       compliance:
         condition: service_healthy
