@@ -4,6 +4,10 @@ verified: 2026-04-26T07:25:00Z
 status: gaps_found
 score: 4/5 must-haves verified
 overrides_applied: 0
+audit_acknowledged:
+  milestone: v3.7.0
+  at: 2026-09-28
+  status: gaps_found
 ---
 
 # Phase 41: OpenAPI Schema Backfill — Verification Report
@@ -141,6 +145,7 @@ One partial, blocking truth #1 (and reflected in artifact `dashboard.json` + req
 
 ```yaml
 gaps:
+
   - truth: "Every Fastify route in compliance/branding/llm/dashboard declares a schema (body where applicable + response) using TypeBox or JSON Schema"
     status: partial
     reason: "Dashboard non-MCP service ships TypeBox infrastructure + coverage gate but only 2 of ~58 route files carry per-route schema: blocks. ~245 routes emit 'Default Response' in dashboard.json. Documented as deliberate scope reality in 41-04 SUMMARY."
@@ -152,6 +157,7 @@ gaps:
     missing:
       - "Per-route TypeBox schema: { body, response } blocks across the remaining ~245 dashboard routes"
       - "Promote 41-04b (or Phase 42) for the mechanical backfill"
+
 ```
 
 ---

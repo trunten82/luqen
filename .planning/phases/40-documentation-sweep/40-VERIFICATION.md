@@ -5,6 +5,7 @@ status: human_needed
 score: 6/7 requirements VERIFIED, 1 PARTIAL
 overrides_applied: 0
 gaps:
+
   - truth: "DOC-02 — Every shipped route appears in OpenAPI specs (SC #2)"
     status: partial
     reason: "Plan 40-01 Task 2 (route schema backfill) was DEFERRED and never completed. Static evidence: zero routes across all 4 services have schema: {} blocks. mcp.json snapshot only contains a single stub `/api/v1/mcp` POST entry — none of the 23–38 MCP tool schemas advertised by DOC-07 RBAC matrix surface in the spec. The `/docs` UIs are wired and the CI drift gate exists, but the per-service route-vs-spec coverage tests were intentionally written to fail until Task 2 lands (\"documented RED-phase contract\" per 40-01-SUMMARY)."
@@ -19,7 +20,9 @@ gaps:
       - "Follow-up plan 40-01b to add minimal Fastify route schemas (summary, tags, response) across all route files in compliance/branding/llm/dashboard and packages/dashboard/src/mcp/tools/"
       - "Re-run `npm run docs:openapi` after backfill and re-commit the 5 JSON snapshots"
       - "Confirm route-vs-spec coverage tests pass GREEN"
+
 human_verification:
+
   - test: "DOC-03 SC #3 — Fresh-container install dry-run"
     expected: "Run `bash install.sh --non-interactive --mode bare-metal` in a clean Ubuntu 22.04 container (or LXC); after install, all four /health endpoints respond, dashboard /admin/login succeeds with seeded creds, /admin/audit and /admin/oauth-keys return 200, and `mcp.use` permission is queryable on every role. Migration `SELECT MAX(version) FROM migrations` returns `'061'`."
     why_human: "Plan 40-07 returned DEFERRED — the GSD agent worktree (lxc-claude) has no docker/lxc/podman/sudo and cannot provision a container. Static-substitute audit (40-07-DRYRUN.md) confirms zero installer-script defects; runtime confirmation requires a Docker- or LXC-capable host. Procedure documented in 40-07-SUMMARY.md `## User Setup Required`."
@@ -29,6 +32,10 @@ human_verification:
   - test: "openapi-drift and rbac-drift CI workflows green on push"
     expected: "Both workflows run against PR or master push and exit 0; route-vs-spec tests pass GREEN."
     why_human: "Local master is 42 commits ahead of origin/master; workflows have not yet executed on GitHub. rbac-drift will pass (matrix is deterministic, 332 rows); openapi-drift will FAIL until route-schema backfill lands (see DOC-02 gap)."
+audit_acknowledged:
+  milestone: v3.7.0
+  at: 2026-09-28
+  status: human_needed
 ---
 
 # Phase 40: Documentation Sweep & Installer Refresh — Verification Report

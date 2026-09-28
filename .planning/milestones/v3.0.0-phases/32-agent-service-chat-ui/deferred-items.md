@@ -11,3 +11,4 @@ These tests are unrelated to Plan 32-04 changes and affect pre-existing MCP tool
 - tests/e2e/auth-flow-e2e.test.ts (2 failures): 'GET /home without auth redirects to /login' and 'session is invalid after logout'. Tests assert `location === '/login'` but the auth middleware now emits `'/login?returnTo=%2Fhome'` (GET-only returnTo preservation added in Phase 31.1 Plan 02 Task 3). Tests need updating to match current behavior, not a Plan 32-04 regression.
 
 Total pre-existing failures confirmed on clean master (before Plan 32-04 edits): 8.
+  status: acknowledged
