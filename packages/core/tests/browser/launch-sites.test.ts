@@ -83,8 +83,23 @@ function stripComments(source: string): string {
 
 const LAUNCH_SITE_PATTERN = /\.launch\(|\bexecutablePath\b|\bchromePath\b/;
 
+/**
+ * Files that legitimately mention `executablePath`/`chromePath` as a plain
+ * word (tripping the crude word-match heuristic above) WITHOUT being a
+ * launch site: they only read an already-resolved {@link ChromiumProbe}
+ * value passed in via dependency injection (e.g. for logging), never launch
+ * a browser or call the resolver themselves. Keep this list short and each
+ * entry justified — anything launching a browser must NOT be exempted here.
+ */
+const KNOWN_NON_LAUNCH_FILES: readonly string[] = [
+  // logBrowserResolution logs probe.executablePath for observability; the
+  // probe itself was already resolved elsewhere (server.ts's startup call).
+  join('packages', 'dashboard', 'src', 'routes', 'health.ts'),
+];
+
 function isLaunchSite(relPath: string): boolean {
   if (relPath.startsWith(BROWSER_MODULE_PREFIX)) return false;
+  if (KNOWN_NON_LAUNCH_FILES.includes(relPath)) return false;
   const source = readFileSync(join(REPO_ROOT, relPath), 'utf8');
   const code = stripComments(source);
   return LAUNCH_SITE_PATTERN.test(code);
