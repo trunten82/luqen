@@ -1,11 +1,6 @@
 import * as cheerio from 'cheerio';
 import { computeDiscoveryScope, isInDiscoveryScope } from './scope.js';
-
-const NON_HTML_EXTENSIONS = new Set([
-  '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.ico',
-  '.pdf', '.zip', '.tar', '.gz', '.css', '.js', '.json', '.xml',
-  '.mp3', '.mp4', '.avi', '.mov', '.wmv', '.woff', '.woff2', '.ttf', '.eot',
-]);
+import { isHtmlUrl, normalizeUrl } from './link-filters.js';
 
 const WAF_SIGNATURES = [
   '_Incapsula_Resource',
@@ -27,22 +22,6 @@ interface CrawlOptions {
   readonly maxDepth: number;
   readonly isAllowed: (url: string) => boolean;
   readonly headers?: Record<string, string>;
-}
-
-function isHtmlUrl(url: string): boolean {
-  const pathname = new URL(url).pathname;
-  const ext = pathname.slice(pathname.lastIndexOf('.'));
-  return !NON_HTML_EXTENSIONS.has(ext.toLowerCase());
-}
-
-function normalizeUrl(href: string, baseUrl: string): string | null {
-  try {
-    const parsed = new URL(href, baseUrl);
-    parsed.hash = '';
-    return parsed.href;
-  } catch {
-    return null;
-  }
 }
 
 export interface CrawlResult {

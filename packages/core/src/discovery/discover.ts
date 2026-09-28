@@ -3,6 +3,7 @@ import { fetchRobots } from './robots.js';
 import { parseSitemap } from './sitemap.js';
 import { crawlSite } from './crawler.js';
 import { computeDiscoveryScope, isInDiscoveryScope } from './scope.js';
+import { browserCrawlSite } from './browser-crawler.js';
 
 interface DiscoverOptions {
   readonly maxPages: number;
@@ -11,9 +12,20 @@ interface DiscoverOptions {
   readonly headers?: Record<string, string>;
 }
 
+/** Set only when the browser-based fallback (WAF-BROWSER-2) found pages beyond the start URL. */
+export type DiscoveryFallback = 'browser';
+
+/**
+ * `wafWarning` present means discovery was blocked: the fetch-based crawl hit
+ * a bot-protection challenge AND the browser fallback either found nothing
+ * beyond the start URL, or itself failed. `discoveryFallback: 'browser'`
+ * means a challenge was detected and the browser fallback found pages beyond
+ * the start URL. The two never co-occur.
+ */
 export interface DiscoverResult {
   readonly urls: DiscoveredUrl[];
   readonly wafWarning?: string;
+  readonly discoveryFallback?: DiscoveryFallback;
 }
 
 export async function discoverUrls(baseUrl: string, options: DiscoverOptions): Promise<DiscoveredUrl[]>;
@@ -50,6 +62,37 @@ export async function discoverUrls(baseUrl: string, options: DiscoverOptions, re
       wafWarning = rawResult.wafWarning;
     }
   }
+
+  // WAF-BROWSER-2: only when the fetch-based crawl flagged a challenge, try
+  // the rendered-DOM browser fallback. browserCrawlSite never throws by
+  // contract; the try/catch is belt-and-braces so a bug there can never turn
+  // into a thrown discovery.
+  let discoveryFallback: DiscoveryFallback | undefined;
+  if (wafWarning) {
+    try {
+      const browserResult = await browserCrawlSite(baseUrl, {
+        maxPages,
+        maxDepth: crawlDepth,
+        isAllowed: robots.isAllowed,
+        headers: options.headers,
+      });
+      // Re-filtered by isInDiscoveryScope here too — a second application of
+      // the predicate, independent of the browser crawler's own filtering.
+      const scopedBrowserUrls = browserResult.urls.filter((url) => isInDiscoveryScope(url, scope));
+      const foundBeyondStart = scopedBrowserUrls.some((url) => url !== scope.startHref);
+      if (foundBeyondStart) {
+        crawledUrls = scopedBrowserUrls;
+        wafWarning = undefined;
+        discoveryFallback = 'browser';
+      }
+      // Otherwise: only the start URL (or nothing) was found — leave today's
+      // blocked result (start URL + wafWarning) untouched.
+    } catch {
+      // Keep the blocked result — a browser-fallback bug is not evidence the
+      // site was actually reachable.
+    }
+  }
+
   // Defence at the merge point too, independent of the crawler's own
   // filtering — a second predicate application at the second entry point.
   crawledUrls = crawledUrls.filter((url) => isInDiscoveryScope(url, scope));
@@ -64,6 +107,12 @@ export async function discoverUrls(baseUrl: string, options: DiscoverOptions, re
   }
   const slicedUrls = urls.slice(0, maxPages);
 
-  if (returnResult) return { urls: slicedUrls, wafWarning };
+  if (returnResult) {
+    return {
+      urls: slicedUrls,
+      wafWarning,
+      ...(discoveryFallback !== undefined ? { discoveryFallback } : {}),
+    };
+  }
   return slicedUrls;
 }

@@ -392,4 +392,23 @@ describe('report-detail.hbs — discovery-blocked banner (WAF-SURFACE-1)', () =>
     );
     expect(html).not.toContain('site discovery was blocked');
   });
+
+  it('V1: report shows the browser discovery note for a browser discovered scan', () => {
+    const html = renderReportDetailWithScan(
+      { status: 'completed', pagesScanned: 12, discoveryWarning: 'waf-browser-discovery' },
+      null,
+    );
+    expect(html).toContain('alert alert--info');
+    expect(html).toContain(
+      'Scanned 12 page(s). Bot protection blocked standard site discovery, so these pages were found by opening the site in a headless browser and following its links. Pages not reachable that way within the crawl limits were not discovered.',
+    );
+  });
+
+  it('V2: report does not show the blocked warning for a browser discovered scan', () => {
+    const html = renderReportDetailWithScan(
+      { status: 'completed', pagesScanned: 12, discoveryWarning: 'waf-browser-discovery' },
+      null,
+    );
+    expect(html).not.toContain('site discovery was blocked');
+  });
 });

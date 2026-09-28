@@ -3,14 +3,17 @@ import { discoverUrls } from '../../src/discovery/discover.js';
 import * as robotsModule from '../../src/discovery/robots.js';
 import * as sitemapModule from '../../src/discovery/sitemap.js';
 import * as crawlerModule from '../../src/discovery/crawler.js';
+import * as browserCrawlerModule from '../../src/discovery/browser-crawler.js';
 
 vi.mock('../../src/discovery/robots.js');
 vi.mock('../../src/discovery/sitemap.js');
 vi.mock('../../src/discovery/crawler.js');
+vi.mock('../../src/discovery/browser-crawler.js');
 
 const mockFetchRobots = vi.mocked(robotsModule.fetchRobots);
 const mockParseSitemap = vi.mocked(sitemapModule.parseSitemap);
 const mockCrawlSite = vi.mocked(crawlerModule.crawlSite);
+const mockBrowserCrawlSite = vi.mocked(browserCrawlerModule.browserCrawlSite);
 
 describe('discoverUrls', () => {
   beforeEach(() => {
@@ -18,6 +21,7 @@ describe('discoverUrls', () => {
     mockFetchRobots.mockResolvedValue({ sitemapUrls: [], isAllowed: () => true });
     mockParseSitemap.mockResolvedValue([]);
     mockCrawlSite.mockResolvedValue([]);
+    mockBrowserCrawlSite.mockResolvedValue({ urls: [] });
   });
 
   it('uses sitemap from robots.txt when available', async () => {
@@ -111,6 +115,79 @@ describe('discoverUrls', () => {
       const urls = result.map((r) => r.url);
       expect(urls).toContain('https://example.com/');
       expect(urls).toContain('https://example.com/about');
+    });
+  });
+
+  describe('browser fallback (WAF-BROWSER-2)', () => {
+    const START = 'https://example.com/dev/en-us/';
+
+    it('DB1: a site without a waf challenge never starts the browser crawl', async () => {
+      mockCrawlSite.mockResolvedValue([START]);
+      await discoverUrls(START, { maxPages: 50, crawlDepth: 2, alsoCrawl: true }, true);
+      expect(mockBrowserCrawlSite).not.toHaveBeenCalled();
+    });
+
+    it('DB1b: a site without a waf challenge (legacy array return) never starts the browser crawl', async () => {
+      mockCrawlSite.mockResolvedValue({ urls: [START] } as never);
+      await discoverUrls(START, { maxPages: 50, crawlDepth: 2, alsoCrawl: true }, true);
+      expect(mockBrowserCrawlSite).not.toHaveBeenCalled();
+    });
+
+    it('DB2: a waf challenge starts the browser crawl with the discovery limits and robots', async () => {
+      const isAllowed = () => true;
+      mockFetchRobots.mockResolvedValue({ sitemapUrls: [], isAllowed });
+      mockCrawlSite.mockResolvedValue({ urls: [START], wafWarning: 'W' } as never);
+      await discoverUrls(START, { maxPages: 50, crawlDepth: 2, alsoCrawl: true, headers: { 'X-H': '1' } }, true);
+      expect(mockBrowserCrawlSite).toHaveBeenCalledTimes(1);
+      expect(mockBrowserCrawlSite).toHaveBeenCalledWith(START, {
+        maxPages: 50,
+        maxDepth: 2,
+        isAllowed,
+        headers: { 'X-H': '1' },
+      });
+    });
+
+    it('DB3: browser found pages replace the blocked result and clear the waf warning', async () => {
+      mockCrawlSite.mockResolvedValue({ urls: [START], wafWarning: 'W' } as never);
+      mockBrowserCrawlSite.mockResolvedValue({ urls: [START, `${START}a`, `${START}b`] });
+      const result = await discoverUrls(START, { maxPages: 50, crawlDepth: 2, alsoCrawl: true }, true);
+      const urls = result.urls.map((u) => u.url);
+      expect(urls).toEqual(expect.arrayContaining([START, `${START}a`, `${START}b`]));
+      expect(result.urls.every((u) => u.discoveryMethod === 'crawl')).toBe(true);
+      expect(result.wafWarning).toBeUndefined();
+      expect(result.discoveryFallback).toBe('browser');
+    });
+
+    it('DB4: browser found pages are scope filtered at the merge', async () => {
+      mockCrawlSite.mockResolvedValue({ urls: [START], wafWarning: 'W' } as never);
+      mockBrowserCrawlSite.mockResolvedValue({ urls: [START, `${START}a`, 'https://example.com/dev/fr-fr/x'] });
+      const result = await discoverUrls(START, { maxPages: 50, crawlDepth: 2, alsoCrawl: true }, true);
+      const urls = result.urls.map((u) => u.url);
+      expect(urls).not.toContain('https://example.com/dev/fr-fr/x');
+    });
+
+    it('DB5: a browser crawl that finds only the start URL keeps the waf warning', async () => {
+      mockCrawlSite.mockResolvedValue({ urls: [START], wafWarning: 'W' } as never);
+      mockBrowserCrawlSite.mockResolvedValue({ urls: [START] });
+      const result = await discoverUrls(START, { maxPages: 50, crawlDepth: 2, alsoCrawl: true }, true);
+      expect(result.wafWarning).toBe('W');
+      expect('discoveryFallback' in result).toBe(false);
+    });
+
+    it('DB6: a rejecting browser crawl keeps the waf warning and does not throw', async () => {
+      mockCrawlSite.mockResolvedValue({ urls: [START], wafWarning: 'W' } as never);
+      mockBrowserCrawlSite.mockRejectedValue(new Error('boom'));
+      const result = await discoverUrls(START, { maxPages: 50, crawlDepth: 2, alsoCrawl: true }, true);
+      expect(result.wafWarning).toBe('W');
+      expect('discoveryFallback' in result).toBe(false);
+    });
+
+    it('DB7: browser found pages respect maxPages', async () => {
+      mockCrawlSite.mockResolvedValue({ urls: [START], wafWarning: 'W' } as never);
+      const many = Array.from({ length: 10 }, (_, i) => `${START}p${i}`);
+      mockBrowserCrawlSite.mockResolvedValue({ urls: [START, ...many] });
+      const result = await discoverUrls(START, { maxPages: 5, crawlDepth: 2, alsoCrawl: true }, true);
+      expect(result.urls.length).toBeLessThanOrEqual(5);
     });
   });
 });

@@ -11,6 +11,18 @@ export { scanUrls, type ScanOptions, type ScanResults } from './scanner/scanner.
 export { WebserviceClient, WebservicePool } from './scanner/webservice-client.js';
 export { DirectScanner } from './scanner/direct-scanner.js';
 export { discoverUrls } from './discovery/discover.js';
+export type { DiscoveryFallback } from './discovery/discover.js';
+export {
+  resolveChromium,
+  probeChromium,
+  ChromiumNotFoundError,
+} from './browser/resolve.js';
+export type {
+  ChromiumSource,
+  ResolvedChromium,
+  ChromiumProbe,
+} from './browser/resolve.js';
+export { launchChromium, safeCloseBrowser, CHROMIUM_LAUNCH_ARGS } from './browser/launch.js';
 export { buildAnnotatedPages } from './reporter/html-reporter.js';
 export { computeContentHash, computeContentHashes } from './scanner/content-hash.js';
 export { runBehavioralChecks } from './behavioral/index.js';
@@ -170,6 +182,13 @@ export interface Scanner {
      * the start URL, so the returned page list is not a whole-site discovery.
      */
     wafWarning?: string;
+    /**
+     * Set only in site mode when discovery hit a bot-protection challenge on
+     * the start URL AND the headless-browser fallback found pages beyond it
+     * (WAF-BROWSER-2) — the returned page list IS a whole-site discovery,
+     * just not a fetch-based one.
+     */
+    discoveryFallback?: 'browser';
   }>;
 }
 
@@ -223,6 +242,7 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
       // Discover pages (or use single page in single-page mode)
       let urls: DiscoveredUrl[];
       let wafWarning: string | undefined;
+      let discoveryFallback: 'browser' | undefined;
       if (opts.singlePage) {
         urls = [{ url, discoveryMethod: 'crawl' as const }];
       } else {
@@ -239,6 +259,7 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
           }, true);
           urls = result.urls;
           wafWarning = result.wafWarning;
+          discoveryFallback = result.discoveryFallback;
         } catch {
           // A thrown discovery is not evidence of a WAF challenge — do not claim one.
           urls = [{ url, discoveryMethod: 'crawl' as const }];
@@ -314,6 +335,7 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
           },
         },
         ...(wafWarning !== undefined ? { wafWarning } : {}),
+        ...(discoveryFallback !== undefined ? { discoveryFallback } : {}),
       };
     },
   };

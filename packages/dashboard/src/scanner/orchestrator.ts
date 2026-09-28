@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import type { StorageAdapter } from '../db/index.js';
 import type { PageHashEntry, DiscoveryWarning } from '../db/types.js';
 import { checkCompliance, dispatchWebhookEvent } from '../compliance-client.js';
+import { discoveryWarningFrom } from './discovery-warning.js';
 import type { SsePublisher, RedisScanQueue } from '../cache/redis.js';
 import type { PluginManager } from '../plugins/manager.js';
 import type { LuqenEvent } from '../plugins/types.js';
@@ -312,7 +313,7 @@ export class ScanOrchestrator {
         /* webpackIgnore: true */ '@luqen/core'
       ).catch(() => null) as null | {
         createScanner: (opts: unknown) => unknown;
-        discoverUrls: (url: string, opts: unknown, returnResult: true) => Promise<{ urls: Array<{ url: string; discoveryMethod: string }>; wafWarning?: string }>;
+        discoverUrls: (url: string, opts: unknown, returnResult: true) => Promise<{ urls: Array<{ url: string; discoveryMethod: string }>; wafWarning?: string; discoveryFallback?: string }>;
         scanUrls: (urls: unknown[], client: unknown, opts: unknown) => Promise<{ pages: Array<{ url: string; discoveryMethod: string; issueCount: number; issues: Array<{ type: string; code: string; message: string; selector: string; context: string }> }>; errors: unknown[] }>;
         WebserviceClient: new (url: string, headers: Record<string, string>) => unknown;
         WebservicePool: new (urls: readonly string[], headers: Record<string, string>) => unknown;
@@ -531,11 +532,9 @@ export class ScanOrchestrator {
             },
           } as Parameters<typeof createScanner>[0]);
 
-          const result = await (scanner as { scan: (url: string) => Promise<{ pages: Array<{ url: string; issueCount: number; issues: Array<{ type: string; code: string; message: string; selector: string; context: string }> }>; summary: { pagesScanned: number; byLevel: { error: number; warning: number; notice: number } }; wafWarning?: string }> }).scan(config.siteUrl);
+          const result = await (scanner as { scan: (url: string) => Promise<{ pages: Array<{ url: string; issueCount: number; issues: Array<{ type: string; code: string; message: string; selector: string; context: string }> }>; summary: { pagesScanned: number; byLevel: { error: number; warning: number; notice: number } }; wafWarning?: string; discoveryFallback?: string }> }).scan(config.siteUrl);
 
-          if (typeof result.wafWarning === 'string' && result.wafWarning.length > 0) {
-            discoveryWarning = 'waf-blocked';
-          }
+          discoveryWarning = discoveryWarningFrom(result);
 
           pagesScanned = result.summary.pagesScanned;
           errors = result.summary.byLevel.error;
