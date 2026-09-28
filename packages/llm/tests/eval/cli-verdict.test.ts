@@ -86,7 +86,7 @@ describe('luqen-llm eval verdict CLI', () => {
   // ---------------------------------------------------------------------
   // Structural pin (D-85-7): the subcommand never reaches a provider.
   // ---------------------------------------------------------------------
-  it('exposes a verdict subcommand under eval with EXACTLY --baseline/--candidate/--out -- no provider, endpoint, model, live-mode, spend or db option anywhere', () => {
+  it('exposes a verdict subcommand under eval with EXACTLY --baseline/--candidate/--out/--replication -- no provider, endpoint, model, live-mode, spend or db option anywhere', () => {
     const program = createProgram();
     const evalCmd = program.commands.find((c) => c.name() === 'eval');
     expect(evalCmd).toBeDefined();
@@ -94,7 +94,11 @@ describe('luqen-llm eval verdict CLI', () => {
     expect(verdictCmd).toBeDefined();
 
     const optionFlags = verdictCmd!.options.map((o) => o.long);
-    expect(new Set(optionFlags)).toEqual(new Set(['--baseline', '--candidate', '--out']));
+    // Phase 86-gap-1 quick (260928-863) adds --replication -- a local file
+    // read that supplies a measured run-to-run instability (D-85-7's "never
+    // reaches a provider" purpose is unchanged: see the forbidden-flag list
+    // below, left untouched).
+    expect(new Set(optionFlags)).toEqual(new Set(['--baseline', '--candidate', '--out', '--replication']));
 
     // Positive-set equality above already excludes every forbidden flag, but
     // name them explicitly too -- a reader should not have to infer the
