@@ -1,8 +1,16 @@
+---
+audit_acknowledged:
+  milestone: v3.7.0
+  at: 2026-09-28
+  gap_snapshot: "unknown::scenarios=0"
+---
+
 # Phase 42 — Windows UAT Checklist (`install.ps1`)
 
 **Status:** PARTIAL acceptance per locked user answer #4 (verification budget = Phase 40 precedent). **Operator-run on a real Windows host.** Phase 42 closes without this completed; this document is the evidence pointer for INST-05 (install.ps1 parity) and INST-03 / INST-06 (cross-OS) PARTIAL verdicts.
 
 **Why PARTIAL:** No Windows host is available to claude-code. Static review of `install.ps1` is green:
+
 - `pwsh -NoProfile -Command "[scriptblock]::Create((Get-Content install.ps1 -Raw)) | Out-Null"` — last green run captured in Plan 40-07 S15 (after fix `4ad69ef` for the `${hint}:` parser bug)
 - Phase 42's install.ps1 rewrite (commits `35aa38a`, `368eb2f`) re-confirmed during 42-02 plan execution
 - `Get-Content install.ps1 -Raw` is a 1k+ line file with the 4-profile menu (lines 427-440), the `-WithMonitor requires compliance` guard (line 321-323), and the `dashboard.config.json` parity fix (lines 1017-1029)
@@ -62,6 +70,7 @@ pwsh .\install.ps1
 ```
 
 **Expected — wizard prompts:**
+
 - 4-profile menu, mirroring install.sh:
   1. Scanner CLI
   2. API services (headless)
@@ -84,6 +93,7 @@ pwsh .\install.ps1 -Profile dashboard -WithMonitor `
 ```
 
 **Expected:**
+
 - exit code 0
 - Install dir at `C:\Program Files\Luqen` (or `$env:USERPROFILE\.luqen` for non-admin)
 - 5 NSSM services registered:
@@ -106,6 +116,7 @@ Test-NetConnection -ComputerName localhost -Port 4200   # llm — separate proce
 ```
 
 **Expected:**
+
 - `:4300` `TcpTestSucceeded : True`
 - `:4200` also `True` (llm), but verify the listening process on 4200 is **not** the monitor.
 

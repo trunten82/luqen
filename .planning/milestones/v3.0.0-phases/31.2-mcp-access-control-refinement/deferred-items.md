@@ -12,6 +12,7 @@ running the same test files. They are NOT caused by 31.2-01 and are out of
 scope for this plan (scope boundary rule).
 
 ### `tests/e2e/auth-flow-e2e.test.ts` — 2 failures
+
 - `GET /home without auth redirects to /login` — expects `/login`, gets `/login?returnTo=%2Fhome`.
 - `session is invalid after logout` — same `returnTo` query-string mismatch.
 
@@ -22,6 +23,7 @@ test assertions were not updated.
 
 **Disposition:** Defer to Phase 31.1 smoke/verification follow-up or a dedicated
 housekeeping commit. Not related to 31.2 scope.
+  status: acknowledged
 
 ### `tests/routes/oauth/authorize.test.ts` — RESOLVED by Plan 31.2-02
 

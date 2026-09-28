@@ -3,6 +3,10 @@ quick_id: 260418-lg8
 description: "Strip jsonReport/jsonReportPath from dashboard_list_reports MCP response"
 commit: 910a3de
 completed_at: 2026-04-18
+audit_acknowledged:
+  milestone: v3.7.0
+  at: 2026-09-28
+  status: unknown
 ---
 
 # Quick Task 260418-lg8 Summary
