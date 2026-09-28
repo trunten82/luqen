@@ -4,7 +4,7 @@
  * Asserts each capability records exactly one usage row per provider
  * call attempt, success or error.
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { unlinkSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -241,6 +241,24 @@ describe('agent-conversation records usage', () => {
 });
 
 describe('discover-branding records usage', () => {
+  // The capability fetches the URL for brand signals. This test used to hit the REAL
+  // https://example.com, so it measured the internet: on 2026-09-28 example.com began serving a
+  // 713-byte page with no <link rel=stylesheet>, which looksLikeTinyChallengePage() treats as a
+  // bot challenge, so the capability returned before the LLM call and wrote no usage row. Stub
+  // fetch with an ordinary page so the test measures usage recording, not a third-party site.
+  const ordinaryPage =
+    '<!doctype html><html><head><title>Test</title><link rel="stylesheet" href="/s.css">' +
+    '<style>body{color:#123456;font-family:Inter,sans-serif}</style></head><body>' +
+    '<h1>Test brand</h1>' + '<p>content</p>'.repeat(400) + '</body></html>';
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn(async (input: unknown) => {
+      const u = String(input);
+      if (u.endsWith('.css')) return new Response('body{color:#123456}', { status: 200, headers: { 'content-type': 'text/css' } });
+      return new Response(ordinaryPage, { status: 200, headers: { 'content-type': 'text/html' } });
+    }));
+  });
+  afterEach(() => { vi.unstubAllGlobals(); });
+
   it('writes one ok row', async () => {
     const fakeAdapter = makeProviderAdapter({
       text: '{"brandName":"Test","colors":[],"fonts":[],"voice":""}',
