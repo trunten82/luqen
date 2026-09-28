@@ -2261,4 +2261,13 @@ SELECT id, 'digest.manage' FROM roles
 WHERE org_id != 'system' AND name IN ('Owner', 'Admin');
     `,
   },
+  {
+    id: '089',
+    name: 'add-scan-discovery-warning',
+    sql: `
+-- WAF-SURFACE-1. Nullable: NULL means discovery was not blocked (or the row
+-- predates this migration). The only value written today is 'waf-blocked'.
+ALTER TABLE scan_records ADD COLUMN discovery_warning TEXT;
+    `,
+  },
 ];

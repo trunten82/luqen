@@ -75,6 +75,12 @@
   </div>
 </section>
 
+{{#if scan.discoveryWarning}}
+<div class="alert alert--warning" role="status">
+  {{t "reportDetail.discoveryBlocked" pages=scan.pagesScanned}}
+</div>
+{{/if}}
+
 {{> share-panel scan=scan liveBadgeId=liveBadgeId t=t}}
 
 {{! ── Legal Exposure Indicator (Phase 81) ─────────────────────────────── }}

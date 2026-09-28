@@ -165,6 +165,11 @@ export interface Scanner {
       pagesScanned: number;
       byLevel: { error: number; warning: number; notice: number };
     };
+    /**
+     * Set only in site mode when discovery hit a bot-protection challenge on
+     * the start URL, so the returned page list is not a whole-site discovery.
+     */
+    wafWarning?: string;
   }>;
 }
 
@@ -217,6 +222,7 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
     async scan(url: string) {
       // Discover pages (or use single page in single-page mode)
       let urls: DiscoveredUrl[];
+      let wafWarning: string | undefined;
       if (opts.singlePage) {
         urls = [{ url, discoveryMethod: 'crawl' as const }];
       } else {
@@ -232,7 +238,9 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
             headers: opts.headers,
           }, true);
           urls = result.urls;
+          wafWarning = result.wafWarning;
         } catch {
+          // A thrown discovery is not evidence of a WAF challenge — do not claim one.
           urls = [{ url, discoveryMethod: 'crawl' as const }];
         }
       }
@@ -305,6 +313,7 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
             notice: noticeCount,
           },
         },
+        ...(wafWarning !== undefined ? { wafWarning } : {}),
       };
     },
   };
