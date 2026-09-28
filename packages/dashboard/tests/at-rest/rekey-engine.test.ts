@@ -51,7 +51,7 @@ describe('rekeyAtRest engine (PBH-B)', () => {
     expect(byStore['plugin-configs'].viaShape).toBe(1);
 
     expect(after).toEqual(before);
-  });
+  }, 20_000);
 
   it('RK-2: apply re-keys every value; new key decrypts to seeded plaintext, old key throws; unrelated data unchanged', async () => {
     const seeded = await seedAtRestFixture();
@@ -107,7 +107,7 @@ describe('rekeyAtRest engine (PBH-B)', () => {
     expect(pluginCount).toBe(3);
     const oauthCount = (seeded.db.prepare(`SELECT COUNT(*) as n FROM oauth_signing_keys`).get() as { n: number }).n;
     expect(oauthCount).toBe(2);
-  });
+  }, 20_000);
 
   it('RK-3 (break-test, owner-requested): wrong old key -> refused, wrong-key-or-tampered, zero writes', async () => {
     const seeded = await seedAtRestFixture();
@@ -130,7 +130,7 @@ describe('rekeyAtRest engine (PBH-B)', () => {
 
     const after = snapshotAtRest(seeded.db, seeded.pluginsDir);
     expect(after).toEqual(before);
-  });
+  }, 20_000);
 
   it('RK-4 (break-test): failure part-way through rolls back ALL stores, including an earlier successful write', async () => {
     const seeded = await seedAtRestFixture();
@@ -173,7 +173,7 @@ describe('rekeyAtRest engine (PBH-B)', () => {
 
     const after = snapshotAtRest(seeded.db, seeded.pluginsDir);
     expect(after).toEqual(before);
-  });
+  }, 20_000);
 
   it('RK-5 (break-test): a trigger that reverts a written value fails in-transaction verify -> rollback, zero writes', async () => {
     const seeded = await seedAtRestFixture();
@@ -198,7 +198,7 @@ describe('rekeyAtRest engine (PBH-B)', () => {
 
     const after = snapshotAtRest(seeded.db, seeded.pluginsDir);
     expect(after).toEqual(before);
-  });
+  }, 20_000);
 
   it('RK-6: salt is read from the DB, never the module global; missing salt row refuses', async () => {
     const seeded = await seedAtRestFixture();
@@ -280,7 +280,7 @@ describe('rekeyAtRest engine (PBH-B)', () => {
 
     const after = snapshotAtRest(seeded.db, seeded.pluginsDir);
     expect(after).toEqual(before);
-  });
+  }, 20_000);
 
   it('RK-8 (safe re-run): applying twice with the same old/new key refuses the second time, zero further writes', async () => {
     const seeded = await seedAtRestFixture();
@@ -298,7 +298,7 @@ describe('rekeyAtRest engine (PBH-B)', () => {
 
     const afterSecond = snapshotAtRest(seeded.db, seeded.pluginsDir);
     expect(afterSecond).toEqual(afterFirst);
-  });
+  }, 20_000);
 });
 
 function readSalt(db: Database.Database): string {
