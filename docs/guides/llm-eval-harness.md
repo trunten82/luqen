@@ -1,9 +1,9 @@
 # LLM scoring harness — `luqen-llm eval`
 
-Status: **BUILT AND SEAM-TESTED, NEVER DIALLED AGAINST A REAL PROVIDER.** Shipped Phase 84
+Status: **BUILT, SEAM-TESTED, AND DIALLED AGAINST THE PRODUCTION PINS ONCE.** Shipped Phase 84
 (scoring harness) and Phase 85 (pre-registered decision bars — the verdict layer, see below).
-No trusted measurement of any model exists yet from this tool — that starts at Phase 86's
-baseline, which is also the first real exercise of the verdict layer against real data.
+Phase 86 Part B recorded live baselines of the production pins (3b7e8301, 2026-09-07) — see
+"Standing statement" below; no candidate model has been measured.
 
 ## What this measures, and what it does not
 
@@ -182,7 +182,11 @@ first, because it is the one fact that makes every other number in this section 
 The FAIL direction works unconditionally: a candidate that is genuinely worse pushes the
 statistical bound past the margin, or clears one more real violation on the false-PASS gate,
 and is caught — the false-PASS count gate in particular is **deterministic and completely
-unaffected by power**, because it is a count comparison, not a test. What this instrument
+unaffected by power**, because it is a count comparison, not a test. **It is deterministic in
+its arithmetic, not in its outcome** — the arithmetic (a strict count comparison) never varies,
+but the production pin's own run-to-run noise moves the COUNT it compares, so the same model can
+PASS or FAIL the gate on different, equally faithful runs (see the false-PASS noise disclosure
+below "UNDERPOWERED is the EXPECTED verdict"). What this instrument
 **declines** to do is certify that a candidate is near-parity with baseline, and **that
 refusal is correct behaviour, not a failed run.** A reader who learns to treat `UNDERPOWERED`
 as noise has lost the only thing standing between a green tick and a claim it cannot support.
@@ -198,6 +202,11 @@ luqen-llm eval verdict --baseline baseline-report.json --candidate candidate-rep
 # write the full JSON verdict alongside the printed summary
 luqen-llm eval verdict --baseline baseline-report.json --candidate candidate-report.json \
   --out verdict.json
+
+# supply a MEASURED run-to-run instability from a live replication artifact
+# (quick 260928-863, closing 86-VERIFICATION gap 1)
+luqen-llm eval verdict --baseline baseline-report.json --candidate candidate-report.json \
+  --replication packages/llm/tests/eval/baselines/generate-fix.baseline.v1.json
 ```
 
 `--baseline` and `--candidate` are two report files a maintainer already has (produced by
@@ -207,6 +216,26 @@ power assessment, and every clause's licence text, and exits non-zero on FAIL. I
 provider, no endpoint, no model, no live mode, no spend acknowledgement, and no database
 option** — pinned by a committed test over its own option list — because judging two files
 that already exist never needs to dial anything.
+
+**`--replication <path>`** supplies the MEASURED run-to-run instability a `*.baseline.v1.json`
+artifact recorded, instead of the honest `not-yet-measured` default:
+
+- It must be the **LIVE** artifact written by `eval baseline --mode live`. A synthetic/replay
+  artifact is refused — its zero is zero by construction (a fixture adapter returns the same
+  string every time), never a measurement of a model.
+- Its `runFunction` must match the `--baseline` report's on every field but `timestamp`
+  (`assertComparable`) — and **only** the `--baseline` report, never the `--candidate`, which
+  differs on `modelId` by design.
+- A non-comparable, synthetic, unreadable or malformed artifact is refused with a non-zero exit
+  before any verdict is printed or written.
+- Without the flag, nothing changes: the power line reads `not-yet-measured`, the licence
+  qualifier's state is `not-yet-measured`, and no `Licence qualifier:` line is printed.
+- With it, the power line reads `measured`, a `Licence qualifier:` line names the ONE superseded
+  bar clause (the verdict capability's own non-inferiority PASS clause, and NEVER a false-PASS
+  clause — see "The licence qualifier" below), and an instability above the `0.25` ceiling turns
+  a PASS into UNDERPOWERED (`run-to-run-instability-exceeds-ceiling`).
+- The option list is still pinned by the committed structural test, and `--replication` is a
+  **local file read**, never a provider option — the command still dials nothing.
 
 ### The three outcomes, and what each licenses
 
@@ -260,6 +289,36 @@ the only one.** Phase 86's baseline returning `UNDERPOWERED` is the **expected**
 must not be read as something having gone wrong. The milestone's core value was never "certify
 parity"; it was "do not let a model swap silently degrade output" — detection is that job, and
 it works. Certification was always the ambitious half, and 17, 13, and 7 items cannot buy it.
+
+### The false-PASS count gate sits inside the production pin's own run-to-run noise
+
+**MEASURED**, from the three committed identical live production runs of `analyse-visual`
+(`repeat-01`/`repeat-02`/`repeat-03` — the same `RunFunction` apart from `timestamp`): the exact
+token sequence `falsePass = 0, 1, 2`. Running the shipped CLI (no provider, local files only) on
+all 6 ordered self-comparisons of these three repeats against each other gives `generate-fix`
+6/6 PASS, and `analyse-visual` **3 FAIL** (the false-PASS gate) / **2 PASS** / **1 UNDERPOWERED**.
+
+**CONCLUDED:** the pre-registered "zero increase in false-PASS" count gate (Phase 85, locked)
+sits INSIDE the production pin's own run-to-run noise, so a candidate that is byte-for-byte
+identical to production can FAIL the gate on noise alone — half of the ordered self-comparisons
+above did. Three repeats measure that the effect EXISTS; they cannot estimate its FREQUENCY
+(three distinct values make exactly half of the six ordered pairs fail by construction, whatever
+the true rate is).
+
+**The bar is NOT changed.** `decision-bars.v1.json` is pre-registered, locked in commit
+`bf7ea66d` (its only commit ever), and digest-pinned — editing it after seeing this result would
+destroy the guarantee the whole milestone exists to provide.
+
+**Whether a future milestone pre-registers a v2 false-PASS gate that accounts for run-to-run
+noise is an owner decision, not made here.**
+
+**Scope, and its limit.** The run-to-run instability quantity — and therefore `--replication` —
+measures ONLY the non-inferiority clause's gating boolean (`verdictOutcome === 'correct'`), never
+this false-PASS count. Consequently the licence qualifier **never supersedes a false-PASS clause**
+(narrowed by quick 260928-863 on 2026-09-28 — see "The licence qualifier" below): the false-PASS
+gate's "not measured" caveat stays in force on EVERY verdict, measured replication or not, because
+it is literally true of the count. This disclosure makes no claim about `generate-fix`, whose
+measured self-discordance is 0 (an identical candidate PASSed all 6 ordered self-comparisons).
 
 ### The margin is not a budget
 
@@ -361,7 +420,25 @@ Every PASS licence Phase 85 pre-registered still asserts, verbatim and as origin
 that instability was not measured for a given comparison — that sentence remains literally true
 of every verdict produced without a measured `RunToRunInstability` supplied to it. The licence
 qualifier is how a FUTURE verdict, once instability IS measured for it, corrects that sentence
-without ever editing the pre-registration itself.
+without ever editing the pre-registration itself. `luqen-llm eval verdict --replication
+<artifact>` is how the CLI supplies one — the path was wired on 2026-09-28 (quick 260928-863)
+after 86-VERIFICATION found the CLI hardcoded `not-yet-measured`, so the measured instability
+committed beside the live baselines was never consumed.
+
+### A production prompt override the baseline did not run
+
+A read-only `GET /api/v1/prompts` against production on 2026-09-28 found a `system`-org prompt
+override for `generate-fix`, which applies to requests resolving to org `'system'`. **This is a
+RELAYED observation, not re-measured by this commit, and is labelled that way.**
+
+The baseline ran at org `''` with no override: **MEASURED** — every committed `RunFunction`
+carries `promptSource: "default"`, and the harness seeds a fresh in-memory database per run, so
+it structurally cannot see a production prompt override even if one exists.
+
+Whether that override's template equals the default template is **UNMEASURED** (this document
+does not know, and does not guess). So the baseline is a baseline of the DEFAULT-prompt path and
+is not evidence about requests that resolve to org `'system'`. This disclosure makes NO claim
+about `analyse-visual` overrides either way — that surface was not checked.
 
 ### Run-to-run instability — the second variance quantity, defined in observed terms
 
@@ -439,14 +516,22 @@ exists to provide. So the correction travels on the VERDICT instead:
 
 - **`state: 'not-yet-measured'`** — the default, whenever the caller has not supplied a measured
   instability. The bar file's licence clauses stand as written; nothing is superseded.
-- **`state: 'measured'`** — walks the loaded bar's `licenceStrings` object for every string
-  containing the fragment `"Run-to-run instability was not measured for this comparison"`,
-  ENUMERATED from the bar's own data rather than a hand-written list of three, so a fourth such
-  clause added to the bar file tomorrow is found automatically. Records which clauses are
-  SUPERSEDED, the observed value, and the ceiling it was checked against. Throws
-  `LicenceQualifierNoSupersededClausesFoundError` if the walk finds zero clauses — a search that
-  finds nothing and a search that cannot match print the same zero, and this module refuses to
-  let that ambiguity stand for a field whose whole job is declaring what changed.
+- **`state: 'measured'`** — walks ONLY the verdict capability's own subtree,
+  `licenceStrings.nonInferiorityClause.generateFix` or `.analyseVisualCorrect`, for every string
+  containing the fragment `"Run-to-run instability was not measured for this comparison"`. This
+  is an ALLOW-LIST scoped by capability, narrowed by quick 260928-863 (AMD-1) after wiring
+  `--replication` made a wider walk reachable: the replication measures only the non-inferiority
+  clause's own gating boolean (`exactMatch` / `verdictOutcome === 'correct'`), never the
+  false-PASS count (which varies run to run — see "The false-PASS count gate sits inside the
+  production pin's own run-to-run noise" above). The walk inside the allowed subtree is still
+  ENUMERATED from the bar's own data, never a hand-written list, so a new fragment-bearing clause
+  added there is found automatically. `falsePassGate` and `overallVerdict` are NEVER superseded,
+  for the same reason: their "not measured" caveat stays literally true regardless of a measured
+  replication. Records which clause(s) are SUPERSEDED, the observed value, and the ceiling it was
+  checked against. Throws `LicenceQualifierNoSupersededClausesFoundError` if the walk finds zero
+  clauses — a search that finds nothing and a search that cannot match print the same zero, and
+  this module refuses to let that ambiguity stand for a field whose whole job is declaring what
+  changed.
 
 A verdict's `licenceQualifier.state` is cross-checked against its own
 `power.runToRunInstability.state` on every parse (`assertLicenceQualifierMatchesInstabilityState`)
@@ -529,9 +614,9 @@ green PASS and assuming it means more than it does.
 
 ## Standing statement
 
-**No trusted measurement of any model's actual performance exists anywhere in this milestone.**
-This is true independent of whether Phase 86 Part B (86-05) ever runs — check the re-checkable
-invariant below rather than trusting this sentence to still be accurate by the time you read it.
+**Trusted baselines of the current production pins exist (3b7e8301, 2026-09-07); no candidate
+model has been measured.** Check the re-checkable invariant below rather than trusting this
+sentence to still be accurate by the time you read it.
 
 **What Part A (86-01 through 86-04) delivered, and its limit.** The second variance quantity, its
 assumption check, the licence qualifier, the discriminated-union replication artifact, `eval
@@ -542,26 +627,29 @@ including the worked example above, is evidence about any model. This is not a d
 instrument: it is the honest state of a mechanism proven correct on inputs it controls, and not
 yet pointed at a real one.
 
-**What is missing, and whose decision it is.** The live baseline run of the CURRENT production
+**What Part B required, and that it ran.** The live baseline run of the CURRENT production
 pins (BASELINE-01) requires a provider credential (`EVAL_HARNESS_API_KEY`, read only from the
 environment, never from a file or CLI argument) and a deliberate, authorised decision to spend
 money against a real provider — both the product owner's to grant, and neither is something an
-automated task can supply for itself. Phase 86 Part B (86-05) is that run; as of this commit it
-has not been authorised. This is stated as neither a defect of the instrument nor as done — it is
-simply what has, and has not, happened yet.
+automated task can supply for itself. Phase 86 Part B (86-05) is that run, and it **ran live on
+2026-09-07** against the production pins, three repeats per capability, recorded in commit
+`3b7e8301`. `packages/llm/tests/eval/baselines/README.md` is the in-repo record of what it found.
 
 **The re-checkable invariant, so this section cannot go stale silently.** A snapshot like "the
-live run has not happened yet" is a DISTANCE, not a STATE — it decays with the very next commit
-that makes it false. Check the fact directly instead of trusting this prose:
+live run happened on this date" is a DISTANCE, not a STATE — it says nothing about whether a
+LATER, different measurement has since superseded it. Check the fact directly instead of trusting
+this prose:
 
 ```bash
-# If this returns any commits, the live baseline has been recorded. Read
+# If this returns any commits, a live baseline has been recorded. Read
 # packages/llm/tests/eval/baselines/README.md before trusting anything else
 # in this document about whether a measurement of a model exists.
 git log --oneline -- packages/llm/tests/eval/baselines/
 ```
 
-An empty result means no live measurement of any model exists yet under this milestone, whatever
-the prose above says by the time you read it. A non-empty result means Part B ran; 86-05's own
-SUMMARY.md and the narrowed (never deleted) revision of this section it is required to write are
-the record of what it found.
+An empty result means no live measurement of any model exists under this milestone, whatever the
+prose above says by the time you read it. A non-empty result means Part B ran; 86-05's own
+SUMMARY.md (not published — `.planning/` is gitignored in this repo) and the narrowed (never
+deleted) revision of this section it is required to write are the planning-history record of what
+it found, but `packages/llm/tests/eval/baselines/README.md` is the IN-REPO record anyone can read
+without access to `.planning/`.
