@@ -1584,6 +1584,12 @@ function Invoke-DockerInstall {
 COMPLIANCE_PORT=$($script:CompliancePort)
 DASHBOARD_PORT=$($script:DashboardPort)
 DASHBOARD_SESSION_SECRET=$($script:SessionSecret)
+# OPTIONAL -- at-rest AES key, independent of DASHBOARD_SESSION_SECRET above.
+# This installer documents this variable but never generates a value for it
+# (rotating it requires re-keying existing encrypted data first -- see the
+# runbook). Defaults to DASHBOARD_SESSION_SECRET when left unset:
+# docs/guides/security-administration.md#rotating-the-session-secret-and-the-at-rest-encryption-key
+# DASHBOARD_ENCRYPTION_KEY=
 LUQEN_WEBSERVICE_URL=
 
 # Public URLs (Phase 30/31.1) -- override for production

@@ -469,7 +469,7 @@ program
   )
   .option('--old-key-env <name>', 'Environment variable NAME holding the CURRENT encryption key (never the key value itself)')
   .option('--new-key-env <name>', 'Environment variable NAME holding the NEW encryption key (never the key value itself)')
-  .option('--apply', 'Write the re-keyed values (stops the dashboard must already be stopped — see the runbook)')
+  .option('--apply', 'Write the re-keyed values (the dashboard must already be stopped — see the runbook)')
   .option('--dry-run', 'Report what would change without writing (this is the default)')
   .option('--rollback <path>', 'Restore the database, byte-exact, from a backup file created by a prior --apply')
   .option('--db-path <path>', 'Path to the SQLite database file (overrides config)')

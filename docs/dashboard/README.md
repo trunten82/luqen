@@ -228,6 +228,7 @@ The dashboard looks for `dashboard.config.json` in the current working directory
 | `reportsDir` | `string` | `./reports` | Directory where JSON and HTML scan reports are written. Created automatically if missing. |
 | `dbPath` | `string` | `./dashboard.db` | Path to the SQLite database file |
 | `sessionSecret` | `string` | — | Secret used to sign session cookies. **Required at startup. Minimum 32 bytes.** |
+| `encryptionKey` | `string` | Defaults to `sessionSecret` | At-rest AES key (OAuth signing keys, service-connection secrets, git credentials, plugin secrets). Independent of `sessionSecret` — see [the rotation runbook](../guides/security-administration.md#rotating-the-session-secret-and-the-at-rest-encryption-key). |
 | `maxConcurrentScans` | `number` | `2` | Maximum number of scans that may run simultaneously |
 | `complianceClientId` | `string` | — | OAuth2 client ID registered in the compliance service |
 | `complianceClientSecret` | `string` | — | OAuth2 client secret |
@@ -246,6 +247,7 @@ Environment variables override the config file. They take the highest precedence
 | `DASHBOARD_REPORTS_DIR` | `reportsDir` | Report storage directory |
 | `DASHBOARD_DB_PATH` | `dbPath` | SQLite database path |
 | `DASHBOARD_SESSION_SECRET` | `sessionSecret` | Cookie signing secret (min 32 bytes) |
+| `DASHBOARD_ENCRYPTION_KEY` | `encryptionKey` | At-rest AES key (min 32 bytes; empty treated as unset; defaults to `DASHBOARD_SESSION_SECRET`) |
 | `DASHBOARD_MAX_CONCURRENT_SCANS` | `maxConcurrentScans` | Max parallel scan limit |
 | `DASHBOARD_COMPLIANCE_CLIENT_ID` | `complianceClientId` | OAuth2 client ID |
 | `DASHBOARD_COMPLIANCE_CLIENT_SECRET` | `complianceClientSecret` | OAuth2 client secret |

@@ -123,11 +123,11 @@ On first startup with a fresh database, Luqen generates a master API key and pri
 
 ### Per-installation encryption salt
 
-Each dashboard installation generates a unique 32-byte random salt on first startup, stored in the `dashboard_settings` database table. This salt is combined with the `sessionSecret` when encrypting plugin configuration secrets (AES-256-GCM). Even if two installations share the same session secret, their encrypted data cannot be decrypted by the other installation.
+Each dashboard installation generates a unique 32-byte random salt on first startup, stored in the `dashboard_settings` database table. This salt is combined with `DASHBOARD_ENCRYPTION_KEY` (the at-rest encryption key — see [Rotating the session secret and the at-rest encryption key](#rotating-the-session-secret-and-the-at-rest-encryption-key) below) when encrypting plugin configuration secrets and the other at-rest stores (AES-256-GCM). Even if two installations share the same encryption key, their encrypted data cannot be decrypted by the other installation.
 
 ### Plugin configuration security
 
-Plugin configuration secrets (API keys, OAuth client secrets, SMTP passwords) are encrypted with **AES-256-GCM** using a key derived from the dashboard's `sessionSecret` combined with the per-installation encryption salt. Secret values are masked in the UI and API responses.
+Plugin configuration secrets (API keys, OAuth client secrets, SMTP passwords) are encrypted with **AES-256-GCM** using a key derived from the dashboard's `DASHBOARD_ENCRYPTION_KEY` (which defaults to `DASHBOARD_SESSION_SECRET` when unset — see the rotation runbook below) combined with the per-installation encryption salt. Secret values are masked in the UI and API responses.
 
 **Org isolation:** Plugin configurations are scoped per organisation. Org admins can only view and modify their own org's plugin settings — they cannot see configuration values belonging to other organisations. Global admins can see which organisations have activated each plugin and view activation status, but org-specific secret values remain encrypted and masked.
 
@@ -149,6 +149,7 @@ Scan target URLs are validated before being submitted to the pa11y webservice. P
 | Setting | Value | Purpose |
 |---------|-------|---------|
 | `DASHBOARD_SESSION_SECRET` | Min 32 bytes | Encrypts session cookies (AES-256-GCM) |
+| `DASHBOARD_ENCRYPTION_KEY` | Min 32 bytes; defaults to `DASHBOARD_SESSION_SECRET` when unset | At-rest AES key for OAuth signing keys, service-connection secrets, git credentials, and plugin secrets — independent of the session secret so one can rotate without the other. See [Rotating the session secret and the at-rest encryption key](#rotating-the-session-secret-and-the-at-rest-encryption-key) below. |
 | Session storage | Encrypted cookie (`@fastify/secure-session`) | No client-readable session data |
 | Cookie flags | `httpOnly`, `SameSite=Strict` | Prevents XSS and CSRF via cookie theft |
 | Encryption salt | Per-installation random 32 bytes | Unique encryption per deployment |
@@ -163,6 +164,190 @@ Scan target URLs are validated before being submitted to the pa11y webservice. P
 - Store in environment variables, not config files checked into source control
 - Rotate when staff with access leave the project
 - Use different secrets per environment
+
+---
+
+## Rotating the session secret and the at-rest encryption key
+
+**Audience: an agent operator.** Every step below is a fenced command block with its expected
+output and an explicit STOP condition — this document is written to be executed cold by an
+agent, not read by a person. Substitute `<env-file>`, `<unit>`, `<install-dir>` and `<port>` for
+your deployment's real values (this document never names an internal host). No block records a
+"pass" without first observing the output that justifies it.
+
+**Background:** on 2026-09-28, rotating `DASHBOARD_SESSION_SECRET` alone crash-looped a live
+dashboard for 48 seconds with `Failed to start server: Unsupported state or unable to
+authenticate data`, because the session secret doubled as the AES key for four at-rest stores. As
+of this plan, that is no longer true — but only if `DASHBOARD_ENCRYPTION_KEY` is pinned
+**before** the session secret is rotated (Procedure A, step 0).
+
+### What each secret protects
+
+| Secret | Protects | Rotation consequence |
+|--------|----------|----------------------|
+| `DASHBOARD_SESSION_SECRET` | Session cookies (`@fastify/secure-session`) | Every logged-in user is logged out. Nothing else. |
+| `DASHBOARD_ENCRYPTION_KEY` | The four at-rest stores by name: `oauth_signing_keys.encrypted_private_key_pem`, `service_connections.client_secret_encrypted`, `developer_credentials.encrypted_token`, `plugins.config` secret fields | Existing encrypted values become unreadable UNLESS re-keyed first with `rekey-at-rest --apply` (below). This is the crash this runbook exists to prevent. |
+| `UNSUBSCRIBE_SECRET` | Outstanding unsubscribe links already sent to recipients | Rotating it invalidates every unsubscribe link already in an inbox. It is NOT tied to either dashboard key (by design — F-1: if `UNSUBSCRIBE_SECRET` and `SESSION_SECRET` are both unset, the installer's `DASHBOARD_SESSION_SECRET`-only env does not satisfy it, and minting an unsubscribe link throws; this is a reported, unfixed finding, not addressed by either procedure below). |
+| The installation salt (`dashboard_settings.encryption_salt`) | Combined with `DASHBOARD_ENCRYPTION_KEY` to derive the actual AES key | **Never rotate by hand.** It is generated once, automatically, on first start, and every at-rest value is tied to it. There is no supported salt-rotation procedure — rotating the salt without re-encrypting every value is equivalent to losing the data. |
+
+### Procedure A — rotate the session secret only (logout only, no re-keying)
+
+**Step 0 (mandatory precondition):** if `DASHBOARD_ENCRYPTION_KEY` is unset in `<env-file>`, pin
+it to the CURRENT `DASHBOARD_SESSION_SECRET` value first, restart, and verify — so the at-rest
+key does not silently move when you change the session secret next.
+
+```bash
+grep -q '^DASHBOARD_ENCRYPTION_KEY=' <env-file> && echo "already pinned" || \
+  echo "DASHBOARD_ENCRYPTION_KEY=$(grep '^DASHBOARD_SESSION_SECRET=' <env-file> | cut -d= -f2-)" >> <env-file>
+```
+Expected output: `already pinned`, or nothing (the `echo >>` line succeeds silently). **STOP** if
+`DASHBOARD_SESSION_SECRET` cannot be read from `<env-file>` — do not invent a value.
+
+Restart `<unit>` and run the [verification window](#verification-window) below before continuing.
+**STOP** if verification fails — do not proceed to rotate the session secret over a broken pin.
+
+**Announce the logout to users first** — every active session ends the moment the new secret is
+live.
+
+1. Generate the new value:
+   ```bash
+   umask 077; openssl rand -base64 32 > /tmp/new-session-secret
+   ```
+   Expected output: none (file created, mode 600). **STOP** if `openssl` is unavailable.
+2. Replace `DASHBOARD_SESSION_SECRET` in `<env-file>` atomically:
+   ```bash
+   NEW=$(cat /tmp/new-session-secret); TMP=$(mktemp); \
+   awk -v v="$NEW" '/^DASHBOARD_SESSION_SECRET=/{print "DASHBOARD_SESSION_SECRET="v; next}{print}' <env-file> > "$TMP" && \
+   mv "$TMP" <env-file>
+   ```
+   Expected output: none. **STOP** if the file does not contain exactly one
+   `DASHBOARD_SESSION_SECRET=` line afterward — an `awk` count check before trusting the write:
+   ```bash
+   test "$(grep -c '^DASHBOARD_SESSION_SECRET=' <env-file>)" = "1" && echo "one line, ok" || echo "STOP: wrong count"
+   ```
+3. Restart `<unit>` and run the [verification window](#verification-window) below.
+4. Delete the temp file: `rm -f /tmp/new-session-secret`.
+
+### Procedure B — rotate the at-rest encryption key
+
+This is the procedure the 2026-09-28 incident needed and did not have. It re-encrypts every
+stored at-rest value under a new key before the new key becomes the one the running dashboard
+reads.
+
+1. Generate the new key into a 0600 file, never echoed:
+   ```bash
+   umask 077; openssl rand -base64 32 > /tmp/new-encryption-key
+   ```
+   Expected output: none. **STOP** if `openssl` is unavailable.
+2. Load the current and new values into the shell environment (never into argv):
+   ```bash
+   set -a; source <env-file>; NEW_DASHBOARD_ENCRYPTION_KEY=$(cat /tmp/new-encryption-key); set +a
+   ```
+   Expected output: none. **STOP** if `<env-file>` does not define `DASHBOARD_ENCRYPTION_KEY` —
+   run Procedure A's step 0 first.
+3. Dry-run (read-only; safe to run WHILE the dashboard is still up — DEC-3):
+   ```bash
+   luqen-dashboard rekey-at-rest --config <install-dir>/dashboard.config.json \
+     --old-key-env DASHBOARD_ENCRYPTION_KEY --new-key-env NEW_DASHBOARD_ENCRYPTION_KEY
+   ```
+   Expected output: `mode: dry-run`, `ok: true`, per-store `count=`/`skipped=` lines, exit code 0.
+   **STOP** on any non-zero exit code and read the printed `failures:` lines. A `default-salt`
+   classification (F-3: a CLI-configured plugin secret) is an OWNER DECISION — do not proceed
+   past it without a decision from the owner. A `wrong-key-or-tampered` or `malformed` failure
+   means `DASHBOARD_ENCRYPTION_KEY` in `<env-file>` does not match what is actually stored — stop
+   and investigate before generating a new key on top of an already-wrong one.
+4. **Announce the downtime**, then stop the dashboard:
+   ```bash
+   systemctl stop <unit>
+   ```
+   Expected output: none. Confirm with `systemctl is-active <unit>` — expect `inactive` or
+   `failed`. **STOP** if it still reports `active`.
+5. Apply:
+   ```bash
+   luqen-dashboard rekey-at-rest --config <install-dir>/dashboard.config.json \
+     --old-key-env DASHBOARD_ENCRYPTION_KEY --new-key-env NEW_DASHBOARD_ENCRYPTION_KEY --apply
+   ```
+   Expected output: `mode: apply`, `ok: true`, `wrote: true`, a `Backup written to: <path>` line,
+   exit code 0. **Record `<path>` — it is needed for rollback.** STOP on any non-zero exit code;
+   the command writes nothing on failure (verify-after-write, single transaction) — it is safe to
+   re-run the dry-run to diagnose before trying again.
+6. Set `DASHBOARD_ENCRYPTION_KEY` to the new value in `<env-file>`, atomically (same
+   temp-file-then-rename pattern as Procedure A step 2, substituting
+   `DASHBOARD_ENCRYPTION_KEY=$NEW_DASHBOARD_ENCRYPTION_KEY`).
+7. Start the unit:
+   ```bash
+   systemctl start <unit>
+   ```
+8. Run the [verification window](#verification-window) below. **STOP** and roll back (see
+   [Rollback](#rollback) below) if verification fails.
+9. Only after verification passes, delete the backup — it holds every at-rest value encrypted
+   under the OLD (now-retired) key:
+   ```bash
+   rm -f "<path from step 5>"; rm -f /tmp/new-encryption-key
+   ```
+
+### Procedure C — rotate both at once (an exposed secret)
+
+Use this when the session secret AND the encryption key must both change in one maintenance
+window (e.g. a suspected leak of both). Run Procedure B steps 1-6 first (dry-run, stop, apply,
+pin the new encryption key), then ALSO update `DASHBOARD_SESSION_SECRET` in the same edit to
+`<env-file>` before starting the unit — one stop/apply/start cycle, both new values live
+together. Run the [verification window](#verification-window) once, at the end.
+
+### Verification window
+
+Run ALL of the following. **STOP and roll back** if any check fails — do not proceed to delete
+a backup or announce success on a partial pass.
+
+1. Record the restart count before touching anything further:
+   ```bash
+   systemctl show -p NRestarts <unit>
+   ```
+2. Wait at least 60 seconds, then confirm it did not crash-loop:
+   ```bash
+   sleep 60; systemctl show -p NRestarts <unit>
+   ```
+   Expected: identical to the value recorded before. **STOP** if it increased.
+3. Query `/health` — this is the decrypt-dependent check (PBH-D): it decrypts every stored
+   at-rest value once at startup, so a wrong key shows up here even if the process itself stayed
+   up.
+   ```bash
+   curl -fsS http://127.0.0.1:<port>/health
+   ```
+   Expected: `"status":"ok"` and `"checks":{"atRestEncryption":{"status":"ok"}, ...}`. **STOP** if
+   `atRestEncryption.status` is `"failed"` — that is the signal this whole runbook exists to
+   surface. (`"empty"` is fine on a brand-new installation with no at-rest data yet.)
+4. Confirm login still works:
+   ```bash
+   curl -fsS -o /dev/null -w '%{http_code}' http://127.0.0.1:<port>/login
+   ```
+   Expected: `200`. **STOP** otherwise.
+
+### Rollback
+
+Only for Procedure B/C, and only if verification failed above.
+
+1. Stop the unit: `systemctl stop <unit>`.
+2. Restore the at-rest data from the backup taken in Procedure B step 5:
+   ```bash
+   luqen-dashboard rekey-at-rest --config <install-dir>/dashboard.config.json --rollback "<backup path>"
+   ```
+   Expected: `Rollback complete: the database has been restored from the backup.`, exit code 0.
+   **STOP** if it exits 3 (database still in use — confirm the unit is really stopped) or exits 1
+   (bad backup path or corrupt header — do not proceed; escalate).
+3. Restore the OLD values of `DASHBOARD_ENCRYPTION_KEY` (and `DASHBOARD_SESSION_SECRET`, for
+   Procedure C) in `<env-file>`.
+4. Start the unit and re-run the [verification window](#verification-window).
+
+### `rekey-at-rest` exit codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success (dry-run reported cleanly, or apply/rollback wrote successfully) |
+| 1 | Usage or argument error — nothing was touched (bad env var name/value, missing backup path, corrupt backup header) |
+| 2 | Decrypt failures — refused before any write (wrong old key, missing salt row, malformed or default-salt values) |
+| 3 | Database in use — another connection (the dashboard, a shell, another CLI invocation) holds the database open; `--apply`/`--rollback` refuse, `--dry-run` reports it and continues read-only |
+| 4 | Apply passed the pre-flight check but failed during write and rolled back — zero writes landed |
 
 ---
 

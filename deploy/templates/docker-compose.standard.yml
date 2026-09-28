@@ -79,6 +79,7 @@ services:
       - DASHBOARD_REPORTS_DIR=/app/reports
       - DASHBOARD_DB_PATH=/app/data/dashboard.db
       - DASHBOARD_SESSION_SECRET=${DASHBOARD_SESSION_SECRET}
+      - DASHBOARD_ENCRYPTION_KEY=${DASHBOARD_ENCRYPTION_KEY:-}
       - DASHBOARD_REDIS_URL=redis://redis:6379
     depends_on:
       compliance:

@@ -122,6 +122,18 @@ secrets:
     -----END PUBLIC KEY-----
 ```
 
+**At-rest encryption key (`DASHBOARD_ENCRYPTION_KEY`):** the Helm chart does not yet expose a
+dedicated `dashboard.encryptionKey` value — `helm` is not available in this environment to add
+and render a chart change, so this is documented rather than templated (measured: `helm` is not
+installed here). To pin it independently of `dashboard.sessionSecret`, add
+`DASHBOARD_ENCRYPTION_KEY` to the Secret the chart creates (`k8s/helm/luqen/templates/secrets.yaml`)
+and reference it as an extra env var on the dashboard Deployment
+(`k8s/helm/luqen/templates/dashboard-deployment.yaml`), the same way `DASHBOARD_SESSION_SECRET` is
+wired today. If left unset, it defaults to `dashboard.sessionSecret` (backward compatible), but
+then rotating `dashboard.sessionSecret` breaks at-rest data exactly as described in
+[the rotation runbook](../guides/security-administration.md#rotating-the-session-secret-and-the-at-rest-encryption-key)
+— pin it explicitly before rotating the session secret in production.
+
 Deploy:
 
 ```bash

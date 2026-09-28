@@ -69,6 +69,7 @@ import { ScanOrchestrator } from './scanner/orchestrator.js';
 import { ScanService } from './services/scan-service.js';
 import { DirectScanner, probeChromium } from '@luqen/core';
 import { registerHealthRoute, logBrowserResolution } from './routes/health.js';
+import { checkAtRestDecryption, logAtRestCheck, logAtRestKeyPosture } from './at-rest/startup-check.js';
 import { createRedisClient, RedisScanQueue, SsePublisher } from './cache/redis.js';
 import { dashboardUserRoutes } from './routes/admin/dashboard-users.js';
 import { apiKeyRoutes } from './routes/admin/api-keys.js';
@@ -277,6 +278,19 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   const storage = await resolveStorageAdapter({ type: 'sqlite', sqlite: { dbPath: config.dbPath } });
   // For consumers that still need raw DB (PluginManager, AuthService):
   const rawDb = (storage as SqliteStorageAdapter).getRawDatabase();
+
+  // ── At-rest decryption check (PBH-D, DEC-4) ─────────────────────────────
+  // Runs ONCE, immediately after migrations and BEFORE `new PluginManager` —
+  // the earliest point, preceding every at-rest consumer, so this ERROR line
+  // appears in the log before the boot-time signer crash (R9, oauth-signer.ts)
+  // if the key is wrong. The precomputed result is passed to
+  // registerHealthRoute below; GET /health never re-runs the check.
+  const atRestCheckResult = checkAtRestDecryption(rawDb, {
+    encryptionKey: config.encryptionKey,
+    pluginsDir: serverPluginsDir(config),
+  });
+  logAtRestCheck(server.log, atRestCheckResult);
+  logAtRestKeyPosture(server.log, config);
 
   // Seed system notification templates (Phase 47 NOTIF-01) — idempotent.
   // 4 events × 3 channels = 12 system rows; org-scoped overrides come later
@@ -1399,7 +1413,11 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   // ── Health endpoint ───────────────────────────────────────────────────────
-  await registerHealthRoute(server, { version: VERSION, probe: probeChromium });
+  await registerHealthRoute(server, {
+    version: VERSION,
+    probe: probeChromium,
+    atRest: { status: atRestCheckResult.status },
+  });
 
   // ── Scheduler — start after server is ready ────────────────────────────
   server.addHook('onReady', async () => {

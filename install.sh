@@ -2004,6 +2004,12 @@ run_docker_install() {
 COMPLIANCE_PORT=${COMPLIANCE_PORT}
 DASHBOARD_PORT=${DASHBOARD_PORT}
 DASHBOARD_SESSION_SECRET=${SESSION_SECRET}
+# OPTIONAL — at-rest AES key, independent of DASHBOARD_SESSION_SECRET above.
+# This installer documents this variable but never generates a value for it
+# (rotating it requires re-keying existing encrypted data first — see the
+# runbook). Defaults to DASHBOARD_SESSION_SECRET when left unset:
+# docs/guides/security-administration.md#rotating-the-session-secret-and-the-at-rest-encryption-key
+# DASHBOARD_ENCRYPTION_KEY=
 LUQEN_WEBSERVICE_URL=
 
 # ── Public URLs (Phase 30/31.1) ──

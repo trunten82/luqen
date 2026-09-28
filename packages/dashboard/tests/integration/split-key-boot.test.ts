@@ -150,4 +150,31 @@ describe('split-key boot (PBH-A, E2E)', () => {
       if (app2 !== undefined) await app2.close();
     }
   }, 120_000);
+
+  it('E2E-5 (PBH-D): a real boot on an existing DB with split keys -> GET /health reports checks.atRestEncryption.status === "ok"', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'luqen-e2e5-'));
+    const dbPath = join(root, 'dashboard.db');
+    const reportsDir = join(root, 'reports');
+    const A = 'a'.repeat(32);
+    const B = 'b'.repeat(32);
+
+    // Bootstrap the DB with split keys, same as E2E-2.
+    await bootAndClose(buildConfig({ dbPath, reportsDir, sessionSecret: A, encryptionKey: B }));
+
+    // Reboot on the SAME (now-existing) DB with the same split keys.
+    let app2: FastifyInstance | undefined;
+    try {
+      app2 = (await createServer(
+        buildConfig({ dbPath, reportsDir, sessionSecret: A, encryptionKey: B }) as never,
+      )) as FastifyInstance;
+      await app2.ready();
+      const response = await app2.inject({ method: 'GET', url: '/health' });
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.checks.atRestEncryption.status).toBe('ok');
+      expect(body.status).toBe('ok');
+    } finally {
+      if (app2 !== undefined) await app2.close();
+    }
+  }, 120_000);
 });
