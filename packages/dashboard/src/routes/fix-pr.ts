@@ -302,7 +302,7 @@ export async function fixPrRoutes(
       // 7. Decrypt token
       let token: string;
       try {
-        token = decryptSecret(credential.encryptedToken, config.sessionSecret);
+        token = decryptSecret(credential.encryptedToken, config.encryptionKey);
       } catch {
         const msg = 'Failed to decrypt git credentials. Please re-save your token.';
         return isHtmx

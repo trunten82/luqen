@@ -29,7 +29,7 @@ export async function gitCredentialRoutes(
   storage: StorageAdapter,
   config: DashboardConfig,
 ): Promise<void> {
-  const encryptionKey = config.sessionSecret;
+  const encryptionKey = config.encryptionKey;
 
   // ── GET /account/git-credentials — list stored credentials ────────────
 

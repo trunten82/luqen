@@ -34,16 +34,16 @@ interface ServiceConnectionRow {
  * (per-service fallback per phase 06 D-14).
  *
  * Secrets are encrypted with the existing `encryptSecret` / `decryptSecret`
- * helpers keyed on `sessionSecret` (D-05). An empty `client_secret_encrypted`
- * column is treated as "no secret configured" and is NEVER passed to the
- * decrypt function (D-06).
+ * helpers keyed on `config.encryptionKey` (PBH-A; formerly sessionSecret,
+ * D-05). An empty `client_secret_encrypted` column is treated as "no secret
+ * configured" and is NEVER passed to the decrypt function (D-06).
  */
 export class SqliteServiceConnectionsRepository
   implements ServiceConnectionsRepository
 {
   constructor(
     private readonly db: Database.Database,
-    private readonly sessionSecret: string,
+    private readonly encryptionKey: string,
   ) {}
 
   async list(): Promise<ServiceConnection[]> {
@@ -100,7 +100,7 @@ export class SqliteServiceConnectionsRepository
       // Explicit write: empty string clears the secret without invoking the
       // cipher; a non-empty string is encrypted before being stored.
       const encrypted =
-        clientSecret === '' ? '' : encryptSecret(clientSecret, this.sessionSecret);
+        clientSecret === '' ? '' : encryptSecret(clientSecret, this.encryptionKey);
 
       this.db
         .prepare(
@@ -152,7 +152,7 @@ export class SqliteServiceConnectionsRepository
     const clientSecret =
       row.client_secret_encrypted === ''
         ? ''
-        : decryptSecret(row.client_secret_encrypted, this.sessionSecret);
+        : decryptSecret(row.client_secret_encrypted, this.encryptionKey);
 
     return {
       serviceId: row.service_id as ServiceId,
