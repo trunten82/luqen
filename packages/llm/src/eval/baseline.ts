@@ -374,27 +374,51 @@ export class InvalidBaselineReplicationArtifactError extends Error {
 }
 
 /**
+ * Refuses when `actual` does not strictly equal `expected` -- shared by the
+ * two self-consistency checks below (`instability.maximum` against the
+ * measured value; `sampleSizeAssumptionCheck.observedRunToRunInstability`
+ * against the same value). Both fields are set FROM the measured value by
+ * `computeRunToRunInstability` / `buildSampleSizeAssumptionCheck`, so any
+ * disagreement means the document was hand-edited after being written.
+ */
+function assertFieldAgreesWithMeasuredValue(actual: unknown, expected: number, fieldName: string): void {
+  if (actual !== expected) {
+    throw new InvalidBaselineReplicationArtifactError(
+      `${fieldName} (${JSON.stringify(actual)}) disagrees with instability.runToRunInstability.value (${expected}) -- this field is always SET FROM the measured value, so disagreement means a hand-edited document`,
+    );
+  }
+}
+
+/**
  * THE ONLY SUPPORTED PATH for reading a replication artifact back off disk.
  * Takes a JSON string, never a path -- this module stays pure (no file
  * reads of its own; the CLI reads the file and hands this function the
  * string).
  *
  * Refuses, in order:
- *   (a) input that does not parse as JSON;
+ *   (a) input that does not parse as JSON, or whose top-level value is not a
+ *       non-null, non-array object;
  *   (b) the synthetic/replay shape (`_synthetic === true`), a top-level
  *       `mode` other than `'live'`, or a `runFunction` that is not a
  *       non-null object -- reusing this module's own phrase that a replay
  *       run is not a baseline: its instability measures a fixture adapter,
  *       never a model;
+ *   (b2) a `runFunction.mode` other than `'live'` -- the EXISTING
+ *        `BaselineArtifactRuntimeModeMismatchError` the writer already
+ *        throws for this identical self-contradiction (top-level `mode`
+ *        claims 'live', the embedded run function's own mode says
+ *        otherwise) -- reused, not a second class;
  *   (c) an `instability.runToRunInstability.state` that is not `'measured'`
- *       with a numeric `value`.
- *
- * Further self-consistency and comparability hardening (a non-object
- * top-level value, a non-'live' `runFunction.mode`, an out-of-range or
- * non-finite measured value, a `maximum`/`sampleSizeAssumptionCheck`
- * disagreeing with the measured value, and non-comparable `repeats`) is
- * added test-first in quick 260928-863 Task 3 -- functionality additions to
- * this SAME function, never an architectural change or a second parser.
+ *       with a `value` that is not `Number.isFinite` and within `[0, 1]`;
+ *   (d) `instability.maximum` or `sampleSizeAssumptionCheck.
+ *       observedRunToRunInstability` disagreeing with that measured value
+ *       (DISC-6: no second `value > ceiling` comparison -- these are plain
+ *       equality checks against the ONE measured value, never a re-derived
+ *       predicate);
+ *   (e) fewer than 2 `repeats`, or any repeat not accepted by
+ *       `assertComparable` against the artifact's own `runFunction` --
+ *       `RunFunctionMismatchError` propagates un-wrapped (DISC-6: the ONE
+ *       existing field classification, never a second list).
  */
 export function parseLiveBaselineReplicationArtifact(json: string): LiveBaselineReplicationArtifact {
   let parsed: unknown;
@@ -406,7 +430,11 @@ export function parseLiveBaselineReplicationArtifact(json: string): LiveBaseline
     );
   }
 
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new InvalidBaselineReplicationArtifactError('top-level value is not an object');
+  }
   const record = parsed as Record<string, unknown>;
+
   const runFunctionCandidate = record['runFunction'];
   const isSynthetic = record['_synthetic'] === true;
   const isNonLiveMode = record['mode'] !== 'live';
@@ -417,15 +445,43 @@ export function parseLiveBaselineReplicationArtifact(json: string): LiveBaseline
       'not a baseline -- a synthetic/replay replication artifact\'s instability measures the determinism of a fixture adapter, never a model, and can never be supplied to a verdict as a measurement',
     );
   }
+  const runFunction = runFunctionCandidate as Record<string, unknown>;
+  if (runFunction['mode'] !== 'live') {
+    throw new BaselineArtifactRuntimeModeMismatchError(String(runFunction['mode']));
+  }
 
   const instability = record['instability'] as Record<string, unknown> | undefined;
   const runToRunInstability = instability?.['runToRunInstability'] as Record<string, unknown> | undefined;
   const state = runToRunInstability?.['state'];
   const value = runToRunInstability?.['value'];
-  if (state !== 'measured' || typeof value !== 'number') {
+  if (
+    state !== 'measured' ||
+    typeof value !== 'number' ||
+    !Number.isFinite(value) ||
+    value < 0 ||
+    value > 1
+  ) {
     throw new InvalidBaselineReplicationArtifactError(
-      `instability.runToRunInstability.state must be "measured" with a numeric value -- found state ${JSON.stringify(state)}`,
+      `instability.runToRunInstability must be a measured state with a finite value in [0, 1] -- found state ${JSON.stringify(state)}, value ${JSON.stringify(value)}`,
     );
+  }
+
+  assertFieldAgreesWithMeasuredValue(instability?.['maximum'], value, 'instability.maximum');
+  const sampleSizeAssumptionCheck = record['sampleSizeAssumptionCheck'] as Record<string, unknown> | undefined;
+  assertFieldAgreesWithMeasuredValue(
+    sampleSizeAssumptionCheck?.['observedRunToRunInstability'],
+    value,
+    'sampleSizeAssumptionCheck.observedRunToRunInstability',
+  );
+
+  const repeats = record['repeats'];
+  if (!Array.isArray(repeats) || repeats.length < 2) {
+    throw new InvalidBaselineReplicationArtifactError(
+      `repeats must be an array of at least 2 run functions -- found ${Array.isArray(repeats) ? repeats.length : typeof repeats}`,
+    );
+  }
+  for (const repeat of repeats) {
+    assertComparable(runFunction as unknown as RunFunction, repeat as RunFunction);
   }
 
   return parsed as LiveBaselineReplicationArtifact;
