@@ -5,6 +5,7 @@ import {
   type DiscoveryBrowser,
   type DiscoveryPage,
 } from '../../src/discovery/browser-crawler.js';
+import { PUBLIC_TEST_POLICY } from './ssrf-fixtures.js';
 
 const START = 'https://example.com/dev/en-us/';
 
@@ -90,7 +91,7 @@ function makeRecorder(): Recorder {
   };
 }
 
-const baseOptions = { maxPages: 100, maxDepth: 3, isAllowed: () => true };
+const baseOptions = { guard: PUBLIC_TEST_POLICY, maxPages: 100, maxDepth: 3, isAllowed: () => true };
 
 describe('browserCrawlSite', () => {
   it('B1: discovers in-scope links from the rendered start page', async () => {

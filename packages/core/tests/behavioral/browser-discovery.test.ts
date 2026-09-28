@@ -36,8 +36,18 @@ function challengeBody(setsCookie: boolean, port: number): string {
 let server: Server;
 let baseUrl: string;
 let port: number;
+// DISCOVERY-SSRF-1: a second loopback server the "public" fixture tries to
+// reach through the browser (subresource, iframe, fetch, redirect). Every
+// request that arrives is recorded; the guard must keep this list empty.
+let victim: Server;
+let victimOrigin: string;
+const victimHits: string[] = [];
 
 beforeAll(async () => {
+  victim = createServer((req, res) => { victimHits.push(req.url ?? '/'); res.end('internal'); });
+  await new Promise<void>((resolve) => victim.listen(0, '127.0.0.1', resolve));
+  victimOrigin = `http://127.0.0.1:${(victim.address() as AddressInfo).port}`;
+
   server = createServer((req, res) => {
     const pathname = (req.url ?? '/').split('?')[0];
     const cookieHeader = req.headers.cookie ?? '';
@@ -46,6 +56,13 @@ beforeAll(async () => {
     if (pathname === '/robots.txt' || pathname === '/sitemap.xml') {
       res.statusCode = 404;
       res.end('not found');
+      return;
+    }
+
+    if (pathname === '/section/r') {
+      res.statusCode = 302;
+      res.setHeader('location', `${victimOrigin}/redirected`);
+      res.end();
       return;
     }
 
@@ -69,10 +86,15 @@ beforeAll(async () => {
           `<a href="http://localhost:${port}/section/z">z</a>` +
           '<a href="/section/file.pdf">pdf</a>' +
           '<a href="/section/a#top">a-hash</a>' +
+          '<a href="/section/r">redirects-to-victim</a>' +
           '<script>var el=document.createElement("a"); el.href="/section/js-only"; el.textContent="js"; document.body.appendChild(el);</script>',
         ),
-        '/section/a': pageHtml('<a href="/section/c">c</a>'),
-        '/section/b': pageHtml('no further links'),
+        '/section/a': pageHtml(
+          '<a href="/section/c">c</a>' +
+          `<img src="${victimOrigin}/pixel.png" alt="">` +
+          `<iframe src="${victimOrigin}/frame"></iframe>`,
+        ),
+        '/section/b': pageHtml(`no further links<script>fetch('${victimOrigin}/xhr').catch(function(){});</script>`),
         '/section/c': pageHtml('leaf'),
         '/section/js-only': pageHtml('leaf js-only'),
       };
@@ -98,6 +120,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
+  await new Promise<void>((resolve) => victim.close(() => resolve()));
 });
 
 describe('WAF-BROWSER-2 browser discovery tracer', () => {
@@ -106,7 +129,7 @@ describe('WAF-BROWSER-2 browser discovery tracer', () => {
     async () => {
       const result = await discoverUrls(
         `${baseUrl}/section/`,
-        { maxPages: 20, crawlDepth: 2, alsoCrawl: true },
+        { maxPages: 20, crawlDepth: 2, alsoCrawl: true, guard: { trustedOrigins: [baseUrl] } },
         true,
       );
       expect(result.discoveryFallback).toBe('browser');
@@ -119,8 +142,12 @@ describe('WAF-BROWSER-2 browser discovery tracer', () => {
           `${baseUrl}/section/b`,
           `${baseUrl}/section/js-only`,
           `${baseUrl}/section/c`,
+          `${baseUrl}/section/r`,
         ]),
       );
+      // DISCOVERY-SSRF-1: nothing the fixture pointed at the victim got through
+      // — not the redirect hop, the <img>, the <iframe>, nor the fetch().
+      expect(victimHits).toEqual([]);
     },
     TEST_TIMEOUT,
   );
@@ -130,7 +157,7 @@ describe('WAF-BROWSER-2 browser discovery tracer', () => {
     async () => {
       const result = await discoverUrls(
         `${baseUrl}/never/`,
-        { maxPages: 20, crawlDepth: 2, alsoCrawl: true },
+        { maxPages: 20, crawlDepth: 2, alsoCrawl: true, guard: { trustedOrigins: [baseUrl] } },
         true,
       );
       expect(result.wafWarning).toBeTruthy();
