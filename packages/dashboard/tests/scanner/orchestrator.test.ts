@@ -1540,5 +1540,267 @@ describe('ScanOrchestrator', () => {
       const scanCompleteEvents = events.filter((e) => e.type === 'scan_complete');
       expect(scanCompleteEvents.length).toBeGreaterThan(0);
     });
+
+    // ── discoveryWarning (WAF-SURFACE-1) — the incremental path is the
+    // SECOND path (feedback_second_path_invariants): its own test, own
+    // break-test (M6), never inherited from the standard branch's wiring.
+
+    it('incremental scan persists discoveryWarning when discovery was blocked', async () => {
+      mockDiscoverUrls.mockResolvedValue({
+        urls: [{ url: 'https://example.com', discoveryMethod: 'crawl' }],
+        wafWarning: 'W',
+      });
+      mockComputeContentHashes.mockResolvedValue(new Map());
+      (storage.pageHashes.getPageHashes as ReturnType<typeof vi.fn>).mockResolvedValue(new Map());
+      mockScanUrls.mockResolvedValue({
+        pages: [{ url: 'https://example.com', issueCount: 0, issues: [] }],
+        errors: [],
+      });
+
+      const config = baseScanConfig({ scanMode: 'site', incremental: true });
+      const eventsPromise = waitForScan(orchestrator, 'scan-inc-waf');
+      orchestrator.startScan('scan-inc-waf', config);
+      await eventsPromise;
+
+      expect(storage.scans.updateScan).toHaveBeenCalledWith('scan-inc-waf', expect.objectContaining({
+        status: 'completed',
+        discoveryWarning: 'waf-blocked',
+      }));
+    });
+
+    it('incremental scan without a challenge sends no discoveryWarning', async () => {
+      mockDiscoverUrls.mockResolvedValue({
+        urls: [{ url: 'https://example.com', discoveryMethod: 'crawl' }],
+      });
+      mockComputeContentHashes.mockResolvedValue(new Map());
+      (storage.pageHashes.getPageHashes as ReturnType<typeof vi.fn>).mockResolvedValue(new Map());
+      mockScanUrls.mockResolvedValue({
+        pages: [{ url: 'https://example.com', issueCount: 0, issues: [] }],
+        errors: [],
+      });
+
+      const config = baseScanConfig({ scanMode: 'site', incremental: true });
+      const eventsPromise = waitForScan(orchestrator, 'scan-inc-clean');
+      orchestrator.startScan('scan-inc-clean', config);
+      const events = await eventsPromise;
+
+      const completedCall = (storage.scans.updateScan as ReturnType<typeof vi.fn>).mock.calls
+        .find((call) => (call[1] as { status?: string }).status === 'completed');
+      expect(completedCall).toBeDefined();
+      expect('discoveryWarning' in (completedCall![1] as object)).toBe(false);
+
+      const completeEvent = events.find((e) => e.type === 'complete')!;
+      expect('discoveryWarning' in completeEvent.data).toBe(false);
+    });
+
+    it('complete event carries discoveryWarning on the standard path', async () => {
+      const scanResult = { ...makeScanResult([{ url: 'https://example.com', issues: [] }]), wafWarning: 'W' };
+      const mockScanner = { scan: vi.fn().mockResolvedValue(scanResult) };
+      mockCreateScanner.mockReturnValue(mockScanner);
+
+      const config = baseScanConfig();
+      const eventsPromise = waitForScan(orchestrator, 'scan-std-waf');
+      orchestrator.startScan('scan-std-waf', config);
+      const events = await eventsPromise;
+
+      const completeEvent = events.find((e) => e.type === 'complete')!;
+      expect(completeEvent.data.discoveryWarning).toBe('waf-blocked');
+    });
+
+    it('complete event carries discoveryWarning on the incremental path', async () => {
+      mockDiscoverUrls.mockResolvedValue({
+        urls: [{ url: 'https://example.com', discoveryMethod: 'crawl' }],
+        wafWarning: 'W',
+      });
+      mockComputeContentHashes.mockResolvedValue(new Map());
+      (storage.pageHashes.getPageHashes as ReturnType<typeof vi.fn>).mockResolvedValue(new Map());
+      mockScanUrls.mockResolvedValue({
+        pages: [{ url: 'https://example.com', issueCount: 0, issues: [] }],
+        errors: [],
+      });
+
+      const config = baseScanConfig({ scanMode: 'site', incremental: true });
+      const eventsPromise = waitForScan(orchestrator, 'scan-inc-waf-evt');
+      orchestrator.startScan('scan-inc-waf-evt', config);
+      const events = await eventsPromise;
+
+      const completeEvent = events.find((e) => e.type === 'complete')!;
+      expect(completeEvent.data.discoveryWarning).toBe('waf-blocked');
+    });
+
+    // ── waf-browser-discovery (WAF-BROWSER-2) — same discoveryWarningFrom
+    // helper as the standard branch; the incremental path also skips content
+    // hashing entirely for a flagged discovery (a WAF-blocked or
+    // browser-discovered site).
+
+    it('O1: incremental scan persists waf-browser-discovery when the browser found pages', async () => {
+      mockDiscoverUrls.mockResolvedValue({
+        urls: [
+          { url: 'https://example.com', discoveryMethod: 'crawl' },
+          { url: 'https://example.com/a', discoveryMethod: 'crawl' },
+        ],
+        discoveryFallback: 'browser',
+      });
+      mockScanUrls.mockResolvedValue({
+        pages: [
+          { url: 'https://example.com', issueCount: 0, issues: [] },
+          { url: 'https://example.com/a', issueCount: 0, issues: [] },
+        ],
+        errors: [],
+      });
+
+      const config = baseScanConfig({ scanMode: 'site', incremental: true });
+      const eventsPromise = waitForScan(orchestrator, 'scan-inc-browser');
+      orchestrator.startScan('scan-inc-browser', config);
+      await eventsPromise;
+
+      expect(storage.scans.updateScan).toHaveBeenCalledWith('scan-inc-browser', expect.objectContaining({
+        status: 'completed',
+        discoveryWarning: 'waf-browser-discovery',
+      }));
+    });
+
+    it('O2: complete event carries waf-browser-discovery on the incremental path', async () => {
+      mockDiscoverUrls.mockResolvedValue({
+        urls: [{ url: 'https://example.com', discoveryMethod: 'crawl' }],
+        discoveryFallback: 'browser',
+      });
+      mockScanUrls.mockResolvedValue({
+        pages: [{ url: 'https://example.com', issueCount: 0, issues: [] }],
+        errors: [],
+      });
+
+      const config = baseScanConfig({ scanMode: 'site', incremental: true });
+      const eventsPromise = waitForScan(orchestrator, 'scan-inc-browser-evt');
+      orchestrator.startScan('scan-inc-browser-evt', config);
+      const events = await eventsPromise;
+
+      const completeEvent = events.find((e) => e.type === 'complete')!;
+      expect(completeEvent.data.discoveryWarning).toBe('waf-browser-discovery');
+    });
+
+    it('O3: complete event carries waf-browser-discovery on the standard path', async () => {
+      const scanResult = { ...makeScanResult([{ url: 'https://example.com', issues: [] }]), discoveryFallback: 'browser' };
+      const mockScanner = { scan: vi.fn().mockResolvedValue(scanResult) };
+      mockCreateScanner.mockReturnValue(mockScanner);
+
+      const config = baseScanConfig();
+      const eventsPromise = waitForScan(orchestrator, 'scan-std-browser');
+      orchestrator.startScan('scan-std-browser', config);
+      const events = await eventsPromise;
+
+      const completeEvent = events.find((e) => e.type === 'complete')!;
+      expect(completeEvent.data.discoveryWarning).toBe('waf-browser-discovery');
+    });
+
+    it('O4: incremental scan of a browser discovered site scans every page and writes no page hashes', async () => {
+      mockDiscoverUrls.mockResolvedValue({
+        urls: [
+          { url: 'https://example.com', discoveryMethod: 'crawl' },
+          { url: 'https://example.com/a', discoveryMethod: 'crawl' },
+        ],
+        discoveryFallback: 'browser',
+      });
+      // Stored hashes exist for both pages — if computeContentHashes were
+      // called and its result matched these, the pages would be skipped as
+      // unchanged. The guard must never call computeContentHashes at all.
+      (storage.pageHashes.getPageHashes as ReturnType<typeof vi.fn>).mockResolvedValue(new Map([
+        ['https://example.com', 'hash-a'],
+        ['https://example.com/a', 'hash-b'],
+      ]));
+      mockComputeContentHashes.mockResolvedValue(new Map([
+        ['https://example.com', 'hash-a'],
+        ['https://example.com/a', 'hash-b'],
+      ]));
+      mockScanUrls.mockResolvedValue({
+        pages: [
+          { url: 'https://example.com', issueCount: 0, issues: [] },
+          { url: 'https://example.com/a', issueCount: 0, issues: [] },
+        ],
+        errors: [],
+      });
+
+      const config = baseScanConfig({ scanMode: 'site', incremental: true });
+      const eventsPromise = waitForScan(orchestrator, 'scan-inc-browser-hash');
+      orchestrator.startScan('scan-inc-browser-hash', config);
+      const events = await eventsPromise;
+
+      expect(mockComputeContentHashes).not.toHaveBeenCalled();
+      expect(mockScanUrls).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ url: 'https://example.com' }),
+          expect.objectContaining({ url: 'https://example.com/a' }),
+        ]),
+        expect.anything(),
+        expect.anything(),
+      );
+      const completeEvent = events.find((e) => e.type === 'complete')!;
+      expect('pagesSkipped' in completeEvent.data).toBe(false);
+      expect(storage.pageHashes.upsertPageHashes).not.toHaveBeenCalled();
+    });
+
+    it('O5: incremental scan of a blocked site scans the start page and writes no page hash', async () => {
+      mockDiscoverUrls.mockResolvedValue({
+        urls: [{ url: 'https://example.com', discoveryMethod: 'crawl' }],
+        wafWarning: 'W',
+      });
+      (storage.pageHashes.getPageHashes as ReturnType<typeof vi.fn>).mockResolvedValue(new Map([
+        ['https://example.com', 'hash-start'],
+      ]));
+      mockComputeContentHashes.mockResolvedValue(new Map([
+        ['https://example.com', 'hash-start'],
+      ]));
+      mockScanUrls.mockResolvedValue({
+        pages: [{ url: 'https://example.com', issueCount: 0, issues: [] }],
+        errors: [],
+      });
+
+      const config = baseScanConfig({ scanMode: 'site', incremental: true });
+      const eventsPromise = waitForScan(orchestrator, 'scan-inc-blocked-hash');
+      orchestrator.startScan('scan-inc-blocked-hash', config);
+      const events = await eventsPromise;
+
+      expect(mockComputeContentHashes).not.toHaveBeenCalled();
+      expect(mockScanUrls).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.objectContaining({ url: 'https://example.com' })]),
+        expect.anything(),
+        expect.anything(),
+      );
+      const completeEvent = events.find((e) => e.type === 'complete')!;
+      expect('pagesSkipped' in completeEvent.data).toBe(false);
+      expect(storage.pageHashes.upsertPageHashes).not.toHaveBeenCalled();
+    });
+
+    it('O6: incremental scan of a clean site still skips unchanged pages', async () => {
+      mockDiscoverUrls.mockResolvedValue({
+        urls: [
+          { url: 'https://example.com', discoveryMethod: 'crawl' },
+          { url: 'https://example.com/a', discoveryMethod: 'crawl' },
+        ],
+      });
+      (storage.pageHashes.getPageHashes as ReturnType<typeof vi.fn>).mockResolvedValue(new Map([
+        ['https://example.com', 'hash-a'],
+      ]));
+      mockComputeContentHashes.mockResolvedValue(new Map([
+        ['https://example.com', 'hash-a'],
+        ['https://example.com/a', 'hash-b-new'],
+      ]));
+      mockScanUrls.mockResolvedValue({
+        pages: [{ url: 'https://example.com/a', issueCount: 0, issues: [] }],
+        errors: [],
+      });
+
+      const config = baseScanConfig({ scanMode: 'site', incremental: true });
+      const eventsPromise = waitForScan(orchestrator, 'scan-inc-clean-skip');
+      orchestrator.startScan('scan-inc-clean-skip', config);
+      await eventsPromise;
+
+      expect(mockComputeContentHashes).toHaveBeenCalled();
+      expect(mockScanUrls).toHaveBeenCalledWith(
+        [expect.objectContaining({ url: 'https://example.com/a' })],
+        expect.anything(),
+        expect.anything(),
+      );
+    });
   });
 });

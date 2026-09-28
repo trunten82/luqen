@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3';
 import type { ScanRepository } from '../../interfaces/scan-repository.js';
 import type { ScanRecord, ScanFilters, ScanUpdateData, CreateScanInput } from '../../types.js';
+import { isDiscoveryWarning } from '../../types.js';
 import type { ScoreResult } from '../../../services/scoring/types.js';
 import { brandScoreRowToResult, type BrandScoreRowLike } from './brand-score-row-mapper.js';
 
@@ -34,6 +35,7 @@ interface ScanRow {
   public_share_enabled: number | null;
   public_share_enabled_at: string | null;
   public_share_enabled_by: string | null;
+  discovery_warning: string | null;
 }
 
 function parseJsonArraySafe(raw: string | null | undefined): string[] {
@@ -78,6 +80,10 @@ function rowToRecord(row: ScanRow): ScanRecord {
     publicShareEnabled: row.public_share_enabled === 1,
     publicShareEnabledAt: row.public_share_enabled_at,
     publicShareEnabledBy: row.public_share_enabled_by,
+    // Read-boundary validation (T1i, extended WAF-BROWSER-2): only a known
+    // literal is surfaced, so an unexpected stored value never reaches
+    // templates or callers.
+    ...(isDiscoveryWarning(row.discovery_warning) ? { discoveryWarning: row.discovery_warning } : {}),
   };
 }
 
@@ -127,7 +133,8 @@ const LIST_COLUMNS =
   'created_at, completed_at, pages_scanned, total_issues, errors, warnings, ' +
   'notices, confirmed_violations, json_report_path, error, org_id, ' +
   'branding_guideline_id, branding_guideline_version, brand_related_count, ' +
-  'public_share_enabled, public_share_enabled_at, public_share_enabled_by';
+  'public_share_enabled, public_share_enabled_at, public_share_enabled_by, ' +
+  'discovery_warning';
 
 // ---------------------------------------------------------------------------
 // SqliteScanRepository
@@ -232,6 +239,7 @@ export class SqliteScanRepository implements ScanRepository {
       brandingGuidelineId: 'branding_guideline_id',
       brandingGuidelineVersion: 'branding_guideline_version',
       brandRelatedCount: 'brand_related_count',
+      discoveryWarning: 'discovery_warning',
     };
 
     const setClauses: string[] = [];

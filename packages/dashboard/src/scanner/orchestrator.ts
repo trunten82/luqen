@@ -2,8 +2,9 @@ import { EventEmitter } from 'node:events';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { StorageAdapter } from '../db/index.js';
-import type { PageHashEntry } from '../db/types.js';
+import type { PageHashEntry, DiscoveryWarning } from '../db/types.js';
 import { checkCompliance, dispatchWebhookEvent } from '../compliance-client.js';
+import { discoveryWarningFrom } from './discovery-warning.js';
 import type { SsePublisher, RedisScanQueue } from '../cache/redis.js';
 import type { PluginManager } from '../plugins/manager.js';
 import type { LuqenEvent } from '../plugins/types.js';
@@ -30,6 +31,7 @@ export interface ScanProgressEvent {
     readonly confirmedViolations?: number;
     readonly reportUrl?: string;
     readonly error?: string;
+    readonly discoveryWarning?: DiscoveryWarning;
   };
 }
 
@@ -311,7 +313,7 @@ export class ScanOrchestrator {
         /* webpackIgnore: true */ '@luqen/core'
       ).catch(() => null) as null | {
         createScanner: (opts: unknown) => unknown;
-        discoverUrls: (url: string, opts: unknown, returnResult: true) => Promise<{ urls: Array<{ url: string; discoveryMethod: string }> }>;
+        discoverUrls: (url: string, opts: unknown, returnResult: true) => Promise<{ urls: Array<{ url: string; discoveryMethod: string }>; wafWarning?: string; discoveryFallback?: string }>;
         scanUrls: (urls: unknown[], client: unknown, opts: unknown) => Promise<{ pages: Array<{ url: string; discoveryMethod: string; issueCount: number; issues: Array<{ type: string; code: string; message: string; selector: string; context: string }> }>; errors: unknown[] }>;
         WebserviceClient: new (url: string, headers: Record<string, string>) => unknown;
         WebservicePool: new (urls: readonly string[], headers: Record<string, string>) => unknown;
@@ -321,6 +323,10 @@ export class ScanOrchestrator {
 
       let pagesScanned = 0;
       let pagesSkipped = 0;
+      // WAF-SURFACE-1: written by whichever branch below ran (standard or
+      // incremental) so the final updateScan/complete-event below stay a
+      // single write site regardless of which discovery path was taken.
+      let discoveryWarning: DiscoveryWarning | undefined;
       let errors = 0;
       let warnings = 0;
       let notices = 0;
@@ -349,7 +355,9 @@ export class ScanOrchestrator {
               headers: config.headers,
             }, true);
             discoveredUrls = result.urls;
+            discoveryWarning = discoveryWarningFrom(result);
           } catch {
+            // A thrown discovery is not evidence of a WAF challenge — do not claim one.
             discoveredUrls = [{ url: config.siteUrl, discoveryMethod: 'crawl' }];
           }
 
@@ -359,11 +367,20 @@ export class ScanOrchestrator {
             data: { pagesDiscovered: discoveredUrls.length },
           });
 
-          // 2. Compute content hashes for all discovered URLs in parallel
-          const currentHashes = await computeContentHashes(
-            discoveredUrls.map((u) => u.url),
-            config.concurrency,
-          );
+          // 2. Compute content hashes for all discovered URLs in parallel —
+          // SKIPPED when discovery flagged a challenge (WAF-BROWSER-2): a
+          // Node-fetch hash of a WAF site hashes the bot-protection challenge
+          // body (possibly identical across pages and runs), which would mark
+          // every page unchanged on the next run and skip it forever — a
+          // coverage loss in the reassuring direction. Treat every discovered
+          // URL as changed instead (pagesSkipped stays 0) and write no page
+          // hashes for this run. Clean sites are unaffected.
+          const currentHashes = discoveryWarning === undefined
+            ? await computeContentHashes(
+                discoveredUrls.map((u) => u.url),
+                config.concurrency,
+              )
+            : new Map<string, string>();
 
           // 3. Compare with stored hashes to find changed/new pages
           const storedHashes = await this.storage.pageHashes.getPageHashes(config.siteUrl, orgId);
@@ -522,7 +539,9 @@ export class ScanOrchestrator {
             },
           } as Parameters<typeof createScanner>[0]);
 
-          const result = await (scanner as { scan: (url: string) => Promise<{ pages: Array<{ url: string; issueCount: number; issues: Array<{ type: string; code: string; message: string; selector: string; context: string }> }>; summary: { pagesScanned: number; byLevel: { error: number; warning: number; notice: number } } }> }).scan(config.siteUrl);
+          const result = await (scanner as { scan: (url: string) => Promise<{ pages: Array<{ url: string; issueCount: number; issues: Array<{ type: string; code: string; message: string; selector: string; context: string }> }>; summary: { pagesScanned: number; byLevel: { error: number; warning: number; notice: number } }; wafWarning?: string; discoveryFallback?: string }> }).scan(config.siteUrl);
+
+          discoveryWarning = discoveryWarningFrom(result);
 
           pagesScanned = result.summary.pagesScanned;
           errors = result.summary.byLevel.error;
@@ -844,6 +863,7 @@ export class ScanOrchestrator {
         ...(brandingGuidelineId !== undefined ? { brandingGuidelineId, brandingGuidelineVersion, brandRelatedCount } : {}),
         jsonReport: reportJson,
         jsonReportPath: jsonPath,
+        ...(discoveryWarning !== undefined ? { discoveryWarning } : {}),
       });
 
       // Best-effort filesystem write for backward compatibility
@@ -863,6 +883,7 @@ export class ScanOrchestrator {
           issues: { errors, warnings, notices },
           confirmedViolations,
           reportUrl: `/reports/${scanId}`,
+          ...(discoveryWarning !== undefined ? { discoveryWarning } : {}),
         },
       });
 

@@ -207,7 +207,7 @@ SSE event types:
 | `discovery` | Pages discovered, count available |
 | `scan_complete` | A page was scanned (includes pagesScanned, totalPages, currentUrl) |
 | `compliance` | Running compliance check |
-| `complete` | Scan finished, report URL available |
+| `complete` | Scan finished, report URL available. Carries `discoveryWarning: 'waf-blocked'` when discovery was blocked by bot protection (see [WAF and bot protection](#waf-and-bot-protection)) |
 | `failed` | Scan failed with error message |
 
 ---
@@ -225,6 +225,29 @@ When running a Full Site scan, luqen discovers pages in two phases:
 By default, luqen uses the sitemap if available and only crawls if no sitemap is found. Use `--also-crawl` (CLI) or Full Site mode (dashboard) to combine both methods — useful when the sitemap is incomplete.
 
 All discovered URLs are deduplicated. The total is capped at `maxPages` (default 100).
+
+### Discovery scope
+
+Both sitemap and crawl discovery keep only URLs that match the start URL's **exact origin**
+(scheme, host, port — never a string prefix, so a userinfo trick like
+`https://example.com@127.0.0.1/`, a lookalike host like `https://example.com.evil.test/`, or
+another port like `https://example.com:8443/` are never followed) **and** whose path starts
+with the start URL's **directory prefix**:
+
+- A start URL ending in `/` uses that path as-is: `https://example.com/dev/en-us/` scopes
+  discovery to `/dev/en-us/...` only — sibling sections like `/dev/fr-fr/` are excluded.
+- A start URL that looks like a document uses its parent directory:
+  `https://example.com/dev/en-us/index.html` scopes to `/dev/en-us/`.
+- A start URL with no trailing slash and no file extension uses its parent directory too
+  (wider than the last segment, on purpose — see below): `https://example.com/dev/en-us`
+  scopes to `/dev/`. Add a trailing slash if you want the narrower `/dev/en-us/` scope.
+- A root start URL (`https://example.com` or `https://example.com/`) scopes to the whole
+  origin, exactly as before.
+
+If a sitemap's entries are **all** out of scope, it is treated as no sitemap and the crawl
+fallback still runs. One known consequence: a start URL on one host whose declared sitemap
+lists a different host (e.g. apex vs `www`) now yields no sitemap URLs at all and relies
+entirely on the crawl, since same-origin is enforced literally.
 
 ### Discovery method in reports
 
@@ -256,12 +279,98 @@ Luqen-agent detects common WAF responses during crawling and reports a warning:
 WARNING: Possible WAF/bot protection detected on https://example.com
 ```
 
-**Workarounds:**
+Detection happens on the **start page only**, at the discovery step (a Node `fetch` request — no
+JavaScript execution, so a challenge page that only a browser can pass always looks like a WAF hit
+to the fetch-based crawler and sitemap fetch). When the dashboard's Full Site scan hits this, the
+scan is not silently reduced to a normal-looking 1-page site.
+
+### Browser-based discovery fallback (WAF-BROWSER-2)
+
+The FIRST thing that happens on a detected challenge is a **browser-based discovery fallback**: Luqen
+opens the site in one headless Chromium (launched through the shared resolver — see
+[Browser resolution](#browser-resolution) below), navigates to the start URL, waits one navigation
+if the initial load itself is a challenge page, then reads every `a[href]` from the RENDERED DOM.
+Those links go through the same scope, robots, extension-filtering, hash-stripping, depth and
+maxPages rules as the normal fetch-based crawler — the only difference is the DOM is real (JavaScript
+already ran) instead of parsed HTML. Discovered pages keep `discoveryMethod: 'crawl'` — there is no
+separate "browser-discovered" method value, only a separate flag on the scan record (below).
+
+The fallback runs ONLY when a challenge was detected, is bounded by a 20-second-per-page timeout and
+a 120-second total budget, always closes the browser it opened (success, page failure, launch
+failure, or budget exhaustion), and never throws — a bug in the fallback degrades to today's blocked
+result rather than crashing discovery.
+
+Two outcomes:
+
+- **The fallback finds pages beyond the start URL.** The scan record carries
+  `discovery_warning: 'waf-browser-discovery'` (NOT `'waf-blocked'`) and `pagesScanned` reflects the
+  whole site the fallback found. Both the live progress page and the finished report page show an
+  informational note (not a warning) explaining that bot protection blocked *standard* discovery and
+  these pages were found by opening the site in a headless browser — pages not reachable that way
+  within the crawl limits were not discovered. This is neither "blocked" nor a whole-site guarantee.
+- **The fallback finds nothing beyond the start URL, or itself fails to launch a browser.** The scan
+  record keeps `discovery_warning: 'waf-blocked'` exactly as before, and both pages show the original
+  "discovery was blocked" warning.
+
+**Incremental scans of a flagged site** (either code) scan **every discovered page and write no page
+hashes** for that run. A Node-fetch content hash of a WAF/challenge page hashes the bot-protection
+challenge body — not the page — which would otherwise mark every page "unchanged" on the next run and
+skip it forever (a coverage loss that fails silently, in the reassuring direction). This guard never
+affects a clean (non-flagged) site's incremental behaviour.
+
+**Time cost:** REASONED, not yet measured against a live WAF site — a browser launch of a few seconds
+plus one DOMContentLoaded page load per crawled page below `crawlDepth` until `maxPages` URLs are
+known, each bounded by the 20 s per-page timeout, worst case around budget (120 s) plus one in-flight
+page timeout plus launch time. Zero added cost for sites without a detected challenge — the browser
+is never launched at all in that case.
+
+**Workarounds** (still apply when the browser fallback also cannot get past the challenge):
 
 - Add custom headers to bypass WAF rules: `--headers '{"Authorization": "Bearer xxx"}'`
 - Use the `wait` option to add a delay after page load: configure `"wait": 2000` in `.luqen.json`
 - Allowlist the scanner's IP address in your WAF configuration
 - Use the `hideElements` option to ignore WAF-injected challenge elements
+
+---
+
+## Browser resolution
+
+Every Chromium-launching code path in Luqen — the pa11y-based scanner, the behavioral / Lighthouse /
+IBM / reflow / accessibility-tree deep-scan engines, the browser-based discovery fallback above, and
+the dashboard's ACR PDF rendering — resolves its browser through ONE shared resolver
+(`packages/core/src/browser/resolve.ts`). Resolution order, each candidate accepted only when its
+FILE actually exists on disk:
+
+1. `PUPPETEER_EXECUTABLE_PATH`, when set.
+2. Known system binaries, in order: `/usr/bin/chromium`, `/usr/bin/chromium-browser`,
+   `/usr/bin/google-chrome`, `/usr/bin/google-chrome-stable`.
+3. The puppeteer download cache (`PUPPETEER_CACHE_DIR`, else `~/.cache/puppeteer`), newest version
+   directory first — an EMPTY download directory (a partial/failed install) is skipped rather than
+   accepted.
+4. A playwright chromium install (`~/.cache/ms-playwright`), newest first.
+5. puppeteer's own `executablePath()` resolver, accepted only if that file exists.
+
+Nothing found throws `ChromiumNotFoundError`, naming every path it tried. No caller falls through to
+puppeteer's own bare `.launch()` default resolver — the resolver is the only place that decides.
+
+**Startup + `/health`:** the dashboard probes this resolver once at startup and logs the outcome —
+an ERROR naming every tried path (and the features that will fail: scans, the browser discovery
+fallback, ACR PDFs) when nothing resolves, or an INFO line with the resolved path and its source when
+something does. `GET /health` (public, unauthenticated) probes again on every request and reports
+`{ status: 'ok' | 'degraded', checks: { browser: { status, source? } } }` — HTTP 200 either way, never
+503, because a missing browser only affects scan-shaped features and a 503 would make uptime monitors
+treat the whole dashboard as down. The health body never includes filesystem paths (a public,
+unauthenticated surface) — those go to the server log only.
+
+**Measured root cause (live server, 2026-09-28, by the orchestrator):** puppeteer 25.1.0 (the root
+workspace dependency) expects Chrome `149.0.7827.22`; the live server's
+`/root/.cache/puppeteer/chrome/linux-149.0.7827.22` directory EXISTS but is EMPTY (created
+2026-05-31 — a download that never completed), while `linux-131` and `linux-146` directories hold
+real binaries; `/usr/bin/chromium` is a real, working `154.0.8037.57` install; the service runs as
+root with `WorkingDirectory=/root/luqen` and no `PUPPETEER_*` environment variable set. A bare
+`puppeteer.launch()` (puppeteer's own default resolver) picks the empty 149 directory and fails with
+`Could not find Chrome (ver. 149...)`. The shared resolver above skips that empty directory by
+construction and resolves `/usr/bin/chromium` (step 2) on that host.
 
 ---
 

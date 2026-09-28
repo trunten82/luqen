@@ -278,7 +278,11 @@ v3.0.0 (2026-04-24) shipped Streamable HTTP MCP endpoints + OAuth 2.1 + PKCE + D
 
 For the per-version installer changelog see [deployment/installer-changelog.md](deployment/installer-changelog.md). For the full history see [CHANGELOG.md](../CHANGELOG.md).
 
-> **Note:** Chromium is only required for the pa11y scanner (installed automatically by pa11y). The dashboard itself does not require Chromium.
+> **Note:** Chromium is required for scanning, the browser-based WAF discovery fallback, and ACR PDF
+> rendering — every launch site resolves it through one shared resolver (see
+> [Browser resolution](guides/scanning.md#browser-resolution)). The dashboard itself still STARTS
+> without a resolvable Chromium; it reports `degraded` at `GET /health` and logs an ERROR naming
+> every path it tried, so a missing browser is loud rather than silently breaking the first scan.
 
 ---
 

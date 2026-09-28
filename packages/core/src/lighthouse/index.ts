@@ -9,16 +9,18 @@
  * Mirrors the behavioral engine's contract: NEVER throws. On launch / load
  * failure the result has `pagesChecked: 0` and a single error entry.
  *
- * Chrome discovery reuses the same strategy as the pa11y direct scanner and the
- * behavioral browser helper: prefer an explicit env override / known system
- * binary, then puppeteer's (pa11y-bundled) cache, then a playwright cache.
- * The discovered binary is passed to chrome-launcher via `chromePath`.
+ * Chrome discovery goes through the ONE shared resolver in
+ * packages/core/src/browser/ (CHROMIUM-RESOLVE-1). Unlike the other engines
+ * (which launch puppeteer directly), this engine hands the resolved path to
+ * chrome-launcher via `chromePath` — a resolution failure now PROPAGATES as a
+ * typed error instead of silently falling through to chrome-launcher's own
+ * (different) discovery, per the owner's explicit requirement.
  */
 
-import { existsSync, readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { join } from 'node:path';
 import type { Issue } from '../types.js';
+import { resolveChromium } from '../browser/resolve.js';
+import { CHROMIUM_LAUNCH_ARGS } from '../browser/launch.js';
 import type { LighthouseOptions, LighthouseResult } from './types.js';
 import { mapLighthouseAudits, type LhAudit } from './map.js';
 
@@ -26,58 +28,6 @@ export type { LighthouseOptions, LighthouseResult } from './types.js';
 export { mapLighthouseAudits, AUDIT_WCAG_MAP, MAX_NODES_PER_AUDIT } from './map.js';
 
 const DEFAULT_TIMEOUT = 60_000;
-
-/** Scan a puppeteer-style chrome cache dir for an installed chrome binary. */
-function findChromeInCache(cacheRoot: string): string | undefined {
-  try {
-    const chromeDir = join(cacheRoot, 'chrome');
-    if (!existsSync(chromeDir)) return undefined;
-    for (const entry of readdirSync(chromeDir)) {
-      const candidate = join(chromeDir, entry, 'chrome-linux64', 'chrome');
-      if (existsSync(candidate)) return candidate;
-    }
-  } catch {
-    // Ignore — fall through to other discovery strategies.
-  }
-  return undefined;
-}
-
-/** Scan a playwright cache dir for an installed chromium binary. */
-function findPlaywrightChromium(): string | undefined {
-  const root = join(process.env['HOME'] ?? '/root', '.cache', 'ms-playwright');
-  try {
-    if (!existsSync(root)) return undefined;
-    for (const entry of readdirSync(root)) {
-      if (!entry.startsWith('chromium')) continue;
-      const candidate = join(root, entry, 'chrome-linux64', 'chrome');
-      if (existsSync(candidate)) return candidate;
-    }
-  } catch {
-    // Ignore.
-  }
-  return undefined;
-}
-
-/**
- * Find a Chromium/Chrome executable. Prefers an explicit env override and
- * system binaries (mirrors the pa11y scanner + behavioral engine), then falls
- * back to puppeteer's own download cache and finally a playwright chromium.
- * Returns undefined to let chrome-launcher use its own discovery.
- */
-function findChromiumExecutable(): string | undefined {
-  const explicit = [
-    process.env['PUPPETEER_EXECUTABLE_PATH'],
-    '/usr/bin/chromium',
-    '/usr/bin/chromium-browser',
-    '/usr/bin/google-chrome',
-    '/usr/bin/google-chrome-stable',
-  ];
-  for (const p of explicit) {
-    if (p && existsSync(p)) return p;
-  }
-  const home = process.env['HOME'] ?? '/root';
-  return findChromeInCache(join(home, '.cache', 'puppeteer')) ?? findPlaywrightChromium();
-}
 
 /** Minimal shape of the chrome-launcher module we depend on. */
 interface ChromeLauncherModule {
@@ -134,11 +84,10 @@ async function loadChromeLauncher(): Promise<ChromeLauncherModule> {
 }
 
 /** Build chrome-launcher options, merging caller overrides last. */
-function buildLaunchOptions(opts: LighthouseOptions): Record<string, unknown> {
-  const chromePath = findChromiumExecutable();
+function buildLaunchOptions(opts: LighthouseOptions, chromePath: string): Record<string, unknown> {
   return {
-    chromeFlags: ['--headless=new', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-    ...(chromePath ? { chromePath } : {}),
+    chromeFlags: ['--headless=new', ...CHROMIUM_LAUNCH_ARGS],
+    chromePath,
     ...(opts.chromeLaunchConfig ?? {}),
   };
 }
@@ -155,8 +104,14 @@ export async function runLighthouseChecks(
 ): Promise<LighthouseResult> {
   let chrome: { port: number; kill(): Promise<void> } | undefined;
   try {
+    // Resolve BEFORE loading chrome-launcher: a resolution failure must
+    // surface as our own typed error rather than silently falling through
+    // to chrome-launcher's own (different) discovery.
+    const configuredChromePath = (opts.chromeLaunchConfig?.['chromePath'] as string | undefined);
+    const executablePath = configuredChromePath ?? (await resolveChromium()).executablePath;
+
     const launcher = await loadChromeLauncher();
-    chrome = await launcher.launch(buildLaunchOptions(opts));
+    chrome = await launcher.launch(buildLaunchOptions(opts, executablePath));
 
     const lighthouse = await loadLighthouse();
     const flags: Record<string, unknown> = {

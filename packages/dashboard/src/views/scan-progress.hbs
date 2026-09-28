@@ -85,6 +85,20 @@
     </div>
 
     <div
+      id="discovery-blocked"
+      class="alert alert--warning{{#unless (eq scan.discoveryWarning 'waf-blocked')}} is-hidden{{/unless}}"
+      role="status"
+      data-template="{{t "scanProgress.discoveryBlocked"}}"
+    >{{#if (eq scan.discoveryWarning 'waf-blocked')}}{{t "scanProgress.discoveryBlocked" pages=scan.pagesScanned}}{{/if}}</div>
+
+    <div
+      id="discovery-browser"
+      class="alert alert--info{{#unless (eq scan.discoveryWarning 'waf-browser-discovery')}} is-hidden{{/unless}}"
+      role="status"
+      data-template="{{t "scanProgress.discoveryBrowser"}}"
+    >{{#if (eq scan.discoveryWarning 'waf-browser-discovery')}}{{t "scanProgress.discoveryBrowser" pages=scan.pagesScanned}}{{/if}}</div>
+
+    <div
       id="progress-bar-container"
       class="progress-bar-container"
       role="progressbar"
@@ -139,6 +153,36 @@
   var pagesDiscoveredEl = document.getElementById('pages-discovered');
   var pagesSkippedEl = document.getElementById('pages-skipped');
   var pagesSkippedStat = document.getElementById('pages-skipped-stat');
+  var discoveryBlockedEl = document.getElementById('discovery-blocked');
+  var discoveryBrowserEl = document.getElementById('discovery-browser');
+  // WAF-BROWSER-2: one shared reveal routine, driven by a map from the
+  // persisted discovery code to its element id, so the two codes cannot
+  // diverge in how they are revealed.
+  var discoveryElementsByCode = {
+    'waf-blocked': discoveryBlockedEl,
+    'waf-browser-discovery': discoveryBrowserEl,
+  };
+  // Built from separate string pieces (never a literal double-brace) so the
+  // server-side Handlebars compile pass -- which scans the WHOLE template
+  // source, including inline script text, for mustache-tag-shaped substrings
+  // -- cannot mistake this placeholder search string for one of its own tags
+  // and silently strip it to an empty string (a pre-existing bug this fixes).
+  function bracePlaceholder(name) {
+    var open = '{' + '{';
+    var close = '}' + '}';
+    return open + name + close;
+  }
+  var PAGES_PLACEHOLDER = bracePlaceholder('pages');
+  function revealDiscoveryNotice(code, pagesScanned) {
+    var el = discoveryElementsByCode[code];
+    if (!el) return null;
+    var template = el.getAttribute('data-template') || '';
+    var count = (pagesScanned !== undefined) ? pagesScanned : '';
+    var msg = template.replace(PAGES_PLACEHOLDER, String(count));
+    el.textContent = msg;
+    el.classList.remove('is-hidden');
+    return msg;
+  }
   var skippedCount = 0;
 
   function addLog(msg) {
@@ -233,6 +277,16 @@
         if (pagesScannedEl && evt.data.pagesScanned) {
           pagesScannedEl.textContent = evt.data.pagesScanned;
         }
+      }
+      // WAF-SURFACE-1 / WAF-BROWSER-2: reveal the discovery notice from the
+      // event via the ONE shared routine above. The translated sentence is
+      // read out of the data-template ATTRIBUTE (never embedded in this
+      // script as a string literal) — Handlebars HTML-escapes t() output, so
+      // an apostrophe in fr/it would print as the literal entity via
+      // textContent; getAttribute() decodes it.
+      if (evt.data && evt.data.discoveryWarning) {
+        var discoveryMsg = revealDiscoveryNotice(evt.data.discoveryWarning, evt.data.pagesScanned);
+        if (discoveryMsg) addLog(discoveryMsg);
       }
       addLog(completeMsg);
       // Longer delay so user can see the results before redirect

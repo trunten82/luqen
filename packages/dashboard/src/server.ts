@@ -67,7 +67,8 @@ import { PluginManager } from './plugins/manager.js';
 import { loadRegistry } from './plugins/registry.js';
 import { ScanOrchestrator } from './scanner/orchestrator.js';
 import { ScanService } from './services/scan-service.js';
-import { DirectScanner } from '@luqen/core';
+import { DirectScanner, probeChromium } from '@luqen/core';
+import { registerHealthRoute, logBrowserResolution } from './routes/health.js';
 import { createRedisClient, RedisScanQueue, SsePublisher } from './cache/redis.js';
 import { dashboardUserRoutes } from './routes/admin/dashboard-users.js';
 import { apiKeyRoutes } from './routes/admin/api-keys.js';
@@ -262,6 +263,10 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     value: __collectedRoutes,
     enumerable: false,
   });
+
+  // ── Chromium resolution (CHROMIUM-RESOLVE-1 / BROWSER-HEALTH-1) ─────────
+  // probeChromium never throws — a missing browser must never crash startup.
+  logBrowserResolution(server.log, await probeChromium());
 
   // ── Database ──────────────────────────────────────────────────────────────
   const storage = await resolveStorageAdapter({ type: 'sqlite', sqlite: { dbPath: config.dbPath } });
@@ -1389,9 +1394,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   // ── Health endpoint ───────────────────────────────────────────────────────
-  server.get('/health', async (_request, _reply) => {
-    return { status: 'ok', version: VERSION };
-  });
+  await registerHealthRoute(server, { version: VERSION, probe: probeChromium });
 
   // ── Scheduler — start after server is ready ────────────────────────────
   server.addHook('onReady', async () => {
