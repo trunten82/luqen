@@ -1,6 +1,6 @@
 /**
  * `licence-qualifier.ts` — the SOLE constructor of `LicenceQualifier`
- * (Phase 86 Task 2, T-86-07).
+ * (Phase 86 Task 2, T-86-07; narrowed by quick 260928-863 Task 2, AMD-1).
  *
  * THE PROBLEM THIS MODULE CLOSES: every PASS licence Phase 85 pre-registered
  * asserts, verbatim, that run-to-run instability was NOT measured for the
@@ -12,13 +12,30 @@
  * `<working_rules>` in 86-02-PLAN.md), so the verdict carries the correction
  * instead.
  *
- * `buildLicenceQualifier` walks the loaded bar's `licenceStrings` object and
- * collects every string containing `UNMEASURED_INSTABILITY_CLAUSE_FRAGMENT`
- * — ENUMERATED from the bar's own data, never a hand-written list of three,
- * so a fourth such clause added to the bar file tomorrow would be found
- * automatically. Throws if the walk finds ZERO clauses in the measured case
- * (a search that finds nothing and a search that cannot match print the
- * same zero).
+ * The fragment still occurs in three bar leaves (a fact about the bar):
+ * `licenceStrings.falsePassGate.pass.additionalCaveatRequiredOnEveryPass`,
+ * `licenceStrings.nonInferiorityClause.generateFix.pass.text`, and
+ * `licenceStrings.nonInferiorityClause.analyseVisualCorrect.pass.text`. But
+ * `--replication` (quick 260928-863) measures ONLY the verdict capability's
+ * own non-inferiority clause's gating boolean (`exactMatch` for
+ * generate-fix; `verdictOutcome === 'correct'` for analyse-visual) — never
+ * the false-PASS count, which varied 0/1/2 across three identical
+ * production runs and is therefore NOT covered by this measurement. So a
+ * measured qualifier supersedes ONLY the verdict capability's own
+ * `nonInferiorityClause` subtree, never `falsePassGate` or `overallVerdict`.
+ * This is an ALLOW-LIST scoped by capability (DISC-7), deliberately not a
+ * deny-list excluding `falsePassGate`: a deny-list would silently admit the
+ * next false-PASS-shaped or overall clause a future bar adds — the same
+ * "blocklist is the wrong shape" lesson `cli-verdict.test.ts`'s own label
+ * pin records. The walk INSIDE the allowed subtree is still enumerated from
+ * the bar's own data, never a hand-written list, so a new fragment-bearing
+ * clause added there is found automatically.
+ *
+ * `buildLicenceQualifier` walks the loaded bar's
+ * `licenceStrings.nonInferiorityClause[<capability key>]` subtree and
+ * collects every string containing `UNMEASURED_INSTABILITY_CLAUSE_FRAGMENT`.
+ * Throws if the walk finds ZERO clauses in the measured case (a search that
+ * finds nothing and a search that cannot match print the same zero).
  */
 import type { LoadedDecisionBars } from './decision-bars.js';
 import type { LicenceQualifier, RunToRunInstability, SupersededLicenceClause } from './verdict-types.js';
@@ -32,13 +49,26 @@ import type { LicenceQualifier, RunToRunInstability, SupersededLicenceClause } f
  * `licenceStrings.nonInferiorityClause.generateFix.pass.text`, and
  * `licenceStrings.nonInferiorityClause.analyseVisualCorrect.pass.text` — the
  * committed pin test (`licence-qualifier.test.ts`) asserts exactly these
- * three paths and exactly this count against the loaded bar.
+ * three paths against the loaded bar. `buildLicenceQualifier` no longer
+ * supersedes all three for a single verdict (AMD-1) — see this module's
+ * header comment for which one it does.
  *
  * The fragment deliberately stops short of trailing punctuation: the three
  * surfaces punctuate it differently (". A PASS" vs "; a PASS"), so the
  * longest substring common to all three ends right after "comparison".
  */
 export const UNMEASURED_INSTABILITY_CLAUSE_FRAGMENT = 'Run-to-run instability was not measured for this comparison';
+
+/**
+ * Capability -> its own non-inferiority licence key, `as const` with a
+ * `satisfies` clause against the loaded bar's own key set (DISC-7) — so a
+ * renamed bar key is a COMPILE error here, not a silent empty walk at
+ * runtime.
+ */
+const NON_INFERIORITY_LICENCE_KEY = {
+  'generate-fix': 'generateFix',
+  'analyse-visual': 'analyseVisualCorrect',
+} as const satisfies Record<'generate-fix' | 'analyse-visual', keyof LoadedDecisionBars['licenceStrings']['nonInferiorityClause']>;
 
 /** Thrown when `buildLicenceQualifier` is asked to build the MEASURED shape but the walk over the loaded bar's `licenceStrings` finds zero clauses containing {@link UNMEASURED_INSTABILITY_CLAUSE_FRAGMENT}. A zero-clause measured qualifier would supersede nothing while still claiming to supersede something -- refused rather than silently constructed. */
 export class LicenceQualifierNoSupersededClausesFoundError extends Error {
@@ -88,9 +118,16 @@ function collectClausesContainingFragment(
  * NOT-MEASURED: returns the not-measured shape, asserting as data that the
  * bar file's licence clauses stand as written -- no walk is performed.
  *
- * MEASURED: walks `bar.licenceStrings` for every clause containing
- * {@link UNMEASURED_INSTABILITY_CLAUSE_FRAGMENT}, reads the ceiling from
- * `bar.varianceAssumption[capability].assumedValue` -- the SAME reused
+ * MEASURED (narrowed by AMD-1, quick 260928-863): walks ONLY
+ * `bar.licenceStrings.nonInferiorityClause[<capability's own key>]` for
+ * every clause containing {@link UNMEASURED_INSTABILITY_CLAUSE_FRAGMENT} --
+ * an ALLOW-LIST scoped to the one subtree whose gating boolean the
+ * replication actually measured (DISC-7). `falsePassGate` and
+ * `overallVerdict` are NEVER superseded: the false-PASS count's own
+ * run-to-run variation (0/1/2 across three identical production runs) is a
+ * different quantity, not covered by this measurement, so its "not
+ * measured" caveat stays literally true on every verdict. Reads the ceiling
+ * from `bar.varianceAssumption[capability].assumedValue` -- the SAME reused
  * number `assessPower` (verdict.ts) checks the measurement against, read
  * from the SAME loaded bar rather than re-derived -- and returns the
  * measured shape. THROWS `LicenceQualifierNoSupersededClausesFoundError` if
@@ -109,7 +146,12 @@ export function buildLicenceQualifier(
     };
   }
 
-  const found = collectClausesContainingFragment(bar.licenceStrings, UNMEASURED_INSTABILITY_CLAUSE_FRAGMENT, 'licenceStrings');
+  const licenceKey = NON_INFERIORITY_LICENCE_KEY[capability];
+  const pathPrefix = `licenceStrings.nonInferiorityClause.${licenceKey}`;
+  // Optional chaining: a scratch bar lacking this subtree yields an empty
+  // walk, not a TypeError.
+  const subtree = bar.licenceStrings?.nonInferiorityClause?.[licenceKey];
+  const found = collectClausesContainingFragment(subtree, UNMEASURED_INSTABILITY_CLAUSE_FRAGMENT, pathPrefix);
   if (found.length === 0) {
     throw new LicenceQualifierNoSupersededClausesFoundError(UNMEASURED_INSTABILITY_CLAUSE_FRAGMENT);
   }

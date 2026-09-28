@@ -40,6 +40,7 @@
 import { computeRunToRunInstability } from './instability.js';
 import { assessPower } from './verdict.js';
 import { RUN_TO_RUN_INSTABILITY_CEILING_NOTE } from './verdict-types.js';
+import { assertComparable } from './run-manifest.js';
 import type { DifferenceUpperBoundResult } from './power.js';
 import type { LoadedDecisionBars } from './decision-bars.js';
 import type { RunFunction } from './run-manifest.js';
@@ -342,4 +343,170 @@ export function serialiseBaselineReplicationArtifact(artifact: BaselineReplicati
   return isLiveBaselineReplicationArtifact(artifact)
     ? serialiseLiveBaselineReplicationArtifact(artifact)
     : serialiseSyntheticBaselineReplicationArtifact(artifact as SyntheticBaselineReplicationArtifact);
+}
+
+// ---------------------------------------------------------------------------
+// The reader — the only supported path for reading a replication artifact
+// back off disk (86-VERIFICATION gap 1, quick 260928-863).
+//
+// Wiring `eval verdict --replication` makes reachable, for the first time,
+// a maintainer-supplied JSON file that cannot be trusted to be well-formed,
+// self-consistent, live, or about the SAME experiment as the --baseline
+// report it is meant to supply the noise floor for. This is the single
+// checked path onto that surface: no other function in this module reads a
+// replication artifact back from a string.
+// ---------------------------------------------------------------------------
+
+/**
+ * Thrown by `parseLiveBaselineReplicationArtifact` for every refusal this
+ * reader makes, except a runtime `runFunction.mode` mismatch (which reuses
+ * the EXISTING `BaselineArtifactRuntimeModeMismatchError` the writer already
+ * throws for the identical fact -- never a second class for one condition).
+ * Carries `reason` as a separate field, following this module's
+ * named-error-subclass convention, so a caller can branch on the field
+ * without parsing the message string.
+ */
+export class InvalidBaselineReplicationArtifactError extends Error {
+  constructor(public readonly reason: string) {
+    super(`Invalid baseline replication artifact: ${reason}`);
+    this.name = 'InvalidBaselineReplicationArtifactError';
+  }
+}
+
+/**
+ * Refuses when `actual` does not strictly equal `expected` -- shared by the
+ * two self-consistency checks below (`instability.maximum` against the
+ * measured value; `sampleSizeAssumptionCheck.observedRunToRunInstability`
+ * against the same value). Both fields are set FROM the measured value by
+ * `computeRunToRunInstability` / `buildSampleSizeAssumptionCheck`, so any
+ * disagreement means the document was hand-edited after being written.
+ */
+function assertFieldAgreesWithMeasuredValue(actual: unknown, expected: number, fieldName: string): void {
+  if (actual !== expected) {
+    throw new InvalidBaselineReplicationArtifactError(
+      `${fieldName} (${JSON.stringify(actual)}) disagrees with instability.runToRunInstability.value (${expected}) -- this field is always SET FROM the measured value, so disagreement means a hand-edited document`,
+    );
+  }
+}
+
+/**
+ * THE ONLY SUPPORTED PATH for reading a replication artifact back off disk.
+ * Takes a JSON string, never a path -- this module stays pure (no file
+ * reads of its own; the CLI reads the file and hands this function the
+ * string).
+ *
+ * Refuses, in order:
+ *   (a) input that does not parse as JSON, or whose top-level value is not a
+ *       non-null, non-array object;
+ *   (b) the synthetic/replay shape (`_synthetic === true`), a top-level
+ *       `mode` other than `'live'`, or a `runFunction` that is not a
+ *       non-null object -- reusing this module's own phrase that a replay
+ *       run is not a baseline: its instability measures a fixture adapter,
+ *       never a model;
+ *   (b2) a `runFunction.mode` other than `'live'` -- the EXISTING
+ *        `BaselineArtifactRuntimeModeMismatchError` the writer already
+ *        throws for this identical self-contradiction (top-level `mode`
+ *        claims 'live', the embedded run function's own mode says
+ *        otherwise) -- reused, not a second class;
+ *   (c) an `instability.runToRunInstability.state` that is not `'measured'`
+ *       with a `value` that is not `Number.isFinite` and within `[0, 1]`;
+ *   (d) `instability.maximum` or `sampleSizeAssumptionCheck.
+ *       observedRunToRunInstability` disagreeing with that measured value
+ *       (DISC-6: no second `value > ceiling` comparison -- these are plain
+ *       equality checks against the ONE measured value, never a re-derived
+ *       predicate);
+ *   (e) fewer than 2 `repeats`, or any repeat not accepted by
+ *       `assertComparable` against the artifact's own `runFunction` --
+ *       `RunFunctionMismatchError` propagates un-wrapped (DISC-6: the ONE
+ *       existing field classification, never a second list).
+ */
+export function parseLiveBaselineReplicationArtifact(json: string): LiveBaselineReplicationArtifact {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch (err) {
+    throw new InvalidBaselineReplicationArtifactError(
+      `not valid JSON: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new InvalidBaselineReplicationArtifactError('top-level value is not an object');
+  }
+  const record = parsed as Record<string, unknown>;
+
+  const runFunctionCandidate = record['runFunction'];
+  const isSynthetic = record['_synthetic'] === true;
+  const isNonLiveMode = record['mode'] !== 'live';
+  const runFunctionIsObject =
+    runFunctionCandidate !== null && typeof runFunctionCandidate === 'object' && !Array.isArray(runFunctionCandidate);
+  if (isSynthetic || isNonLiveMode || !runFunctionIsObject) {
+    throw new InvalidBaselineReplicationArtifactError(
+      'not a baseline -- a synthetic/replay replication artifact\'s instability measures the determinism of a fixture adapter, never a model, and can never be supplied to a verdict as a measurement',
+    );
+  }
+  const runFunction = runFunctionCandidate as Record<string, unknown>;
+  if (runFunction['mode'] !== 'live') {
+    throw new BaselineArtifactRuntimeModeMismatchError(String(runFunction['mode']));
+  }
+
+  const instability = record['instability'] as Record<string, unknown> | undefined;
+  const runToRunInstability = instability?.['runToRunInstability'] as Record<string, unknown> | undefined;
+  const state = runToRunInstability?.['state'];
+  const value = runToRunInstability?.['value'];
+  if (
+    state !== 'measured' ||
+    typeof value !== 'number' ||
+    !Number.isFinite(value) ||
+    value < 0 ||
+    value > 1
+  ) {
+    throw new InvalidBaselineReplicationArtifactError(
+      `instability.runToRunInstability must be a measured state with a finite value in [0, 1] -- found state ${JSON.stringify(state)}, value ${JSON.stringify(value)}`,
+    );
+  }
+
+  assertFieldAgreesWithMeasuredValue(instability?.['maximum'], value, 'instability.maximum');
+  const sampleSizeAssumptionCheck = record['sampleSizeAssumptionCheck'] as Record<string, unknown> | undefined;
+  assertFieldAgreesWithMeasuredValue(
+    sampleSizeAssumptionCheck?.['observedRunToRunInstability'],
+    value,
+    'sampleSizeAssumptionCheck.observedRunToRunInstability',
+  );
+
+  const repeats = record['repeats'];
+  if (!Array.isArray(repeats) || repeats.length < 2) {
+    throw new InvalidBaselineReplicationArtifactError(
+      `repeats must be an array of at least 2 run functions -- found ${Array.isArray(repeats) ? repeats.length : typeof repeats}`,
+    );
+  }
+  for (const repeat of repeats) {
+    assertComparable(runFunction as unknown as RunFunction, repeat as RunFunction);
+  }
+
+  return parsed as LiveBaselineReplicationArtifact;
+}
+
+/**
+ * Resolves the `RunToRunInstability` a validated live replication artifact
+ * supplies for a `--baseline` report's `RunFunction`.
+ *
+ * PREMISE CORRECTION 2: comparability is checked against the BASELINE report
+ * ONLY, never the candidate. `verdict-comparability.ts`'s own doc comment
+ * records that calling `assertComparable` baseline-vs-candidate "would
+ * refuse EVERY real use" -- the candidate differs on `modelId` BY DESIGN.
+ * The replication is a noise measurement OF THE BASELINE PIN, so it must be
+ * the same experiment as the baseline report, and only that.
+ *
+ * DISC-6: no second field list and no second comparison here.
+ * `assertComparable` (run-manifest.ts) is the ONE existing field
+ * classification; `RunFunctionMismatchError` propagates un-wrapped, never
+ * re-wrapped, so its `differingFields` reach the caller intact.
+ */
+export function measuredInstabilityForBaseline(
+  artifact: LiveBaselineReplicationArtifact,
+  baselineRunFunction: RunFunction,
+): RunToRunInstability {
+  assertComparable(artifact.runFunction, baselineRunFunction);
+  return artifact.instability.runToRunInstability;
 }
