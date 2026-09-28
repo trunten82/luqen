@@ -47,3 +47,28 @@ describe('discovery-blocked locale coverage (WAF-SURFACE-1)', () => {
     });
   }
 });
+
+const BROWSER_KEYS = ['reportDetail.discoveryBrowser', 'scanProgress.discoveryBrowser'] as const;
+
+describe('browser discovery locale coverage (WAF-BROWSER-2)', () => {
+  for (const locale of LOCALES) {
+    it(`L-${locale}: ${locale} defines both browser discovery strings with one pages placeholder`, () => {
+      const dict = loadLocale(locale);
+      for (const key of BROWSER_KEYS) {
+        const value = getKeyValue(dict, key);
+        expect(value, `${locale}: missing ${key}`).toBeDefined();
+        expect(typeof value).toBe('string');
+        const str = value as string;
+        const occurrences = str.split(PAGES_PLACEHOLDER).length - 1;
+        expect(occurrences, `${locale}: ${key} placeholder count`).toBe(1);
+        const withoutDouble = str.split(PAGES_PLACEHOLDER).join('');
+        expect(withoutDouble.includes(PAGES_SINGLE_BRACE), `${locale}: ${key} single-brace variant`).toBe(false);
+
+        if (locale !== 'en') {
+          const enValue = getKeyValue(enDict, key);
+          expect(str, `${locale}: ${key} must differ from en`).not.toBe(enValue);
+        }
+      }
+    });
+  }
+});

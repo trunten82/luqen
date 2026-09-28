@@ -904,6 +904,7 @@
   },
   "scanProgress": {
     "discoveryBlocked": "{{pages}} Seite(n) gescannt; die Website-Erkennung wurde durch Bot-Schutz blockiert, sodass nur die im Bericht aufgeführte(n) Seite(n) gescannt wurden. Dies ist kein Ergebnis für die gesamte Website.",
+    "discoveryBrowser": "{{pages}} Seite(n) gescannt. Der Bot-Schutz hat die normale Website-Erkennung blockiert, daher wurden die Seiten gefunden, indem die Website in einem Headless-Browser geöffnet und den Links gefolgt wurde. Seiten, die auf diese Weise innerhalb der Crawl-Grenzen nicht erreichbar waren, wurden nicht erkannt.",
     "scanDetails": "Scan-Details",
     "siteUrl": "Website-URL",
     "standard": "Standard",
@@ -944,6 +945,7 @@
   },
   "reportDetail": {
     "discoveryBlocked": "{{pages}} Seite(n) gescannt; die Website-Erkennung wurde durch Bot-Schutz blockiert, sodass nur die in diesem Bericht aufgeführte(n) Seite(n) gescannt wurden. Dies ist kein Ergebnis für die gesamte Website.",
+    "discoveryBrowser": "{{pages}} Seite(n) gescannt. Der Bot-Schutz hat die normale Website-Erkennung blockiert, daher wurden diese Seiten gefunden, indem die Website in einem Headless-Browser geöffnet und den Links gefolgt wurde. Seiten, die auf diese Weise innerhalb der Crawl-Grenzen nicht erreichbar waren, wurden nicht erkannt.",
     "siteUrl": "Website-URL",
     "standard": "Standard",
     "status": "Status",

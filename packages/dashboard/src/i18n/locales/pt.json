@@ -904,6 +904,7 @@
   },
   "scanProgress": {
     "discoveryBlocked": "{{pages}} página(s) verificada(s); a descoberta do site foi bloqueada por proteção antibot, então apenas a(s) página(s) listada(s) no relatório foram verificadas. Este não é um resultado do site inteiro.",
+    "discoveryBrowser": "{{pages}} página(s) verificada(s). A proteção antibot bloqueou a descoberta padrão do site, então as páginas foram encontradas abrindo o site em um navegador headless e seguindo seus links. Páginas não alcançáveis dessa forma dentro dos limites de rastreamento não foram descobertas.",
     "scanDetails": "Detalhes da Varredura",
     "siteUrl": "URL do Site",
     "standard": "Padrão",
@@ -944,6 +945,7 @@
   },
   "reportDetail": {
     "discoveryBlocked": "{{pages}} página(s) verificada(s); a descoberta do site foi bloqueada por proteção antibot, então apenas a(s) página(s) listada(s) neste relatório foram verificadas. Este não é um resultado do site inteiro.",
+    "discoveryBrowser": "{{pages}} página(s) verificada(s). A proteção antibot bloqueou a descoberta padrão do site, então estas páginas foram encontradas abrindo o site em um navegador headless e seguindo seus links. Páginas não alcançáveis dessa forma dentro dos limites de rastreamento não foram descobertas.",
     "siteUrl": "URL do Site",
     "standard": "Padrão",
     "status": "Status",

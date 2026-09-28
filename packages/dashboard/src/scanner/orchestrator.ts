@@ -355,9 +355,7 @@ export class ScanOrchestrator {
               headers: config.headers,
             }, true);
             discoveredUrls = result.urls;
-            if (typeof result.wafWarning === 'string' && result.wafWarning.length > 0) {
-              discoveryWarning = 'waf-blocked';
-            }
+            discoveryWarning = discoveryWarningFrom(result);
           } catch {
             // A thrown discovery is not evidence of a WAF challenge — do not claim one.
             discoveredUrls = [{ url: config.siteUrl, discoveryMethod: 'crawl' }];
@@ -369,11 +367,20 @@ export class ScanOrchestrator {
             data: { pagesDiscovered: discoveredUrls.length },
           });
 
-          // 2. Compute content hashes for all discovered URLs in parallel
-          const currentHashes = await computeContentHashes(
-            discoveredUrls.map((u) => u.url),
-            config.concurrency,
-          );
+          // 2. Compute content hashes for all discovered URLs in parallel —
+          // SKIPPED when discovery flagged a challenge (WAF-BROWSER-2): a
+          // Node-fetch hash of a WAF site hashes the bot-protection challenge
+          // body (possibly identical across pages and runs), which would mark
+          // every page unchanged on the next run and skip it forever — a
+          // coverage loss in the reassuring direction. Treat every discovered
+          // URL as changed instead (pagesSkipped stays 0) and write no page
+          // hashes for this run. Clean sites are unaffected.
+          const currentHashes = discoveryWarning === undefined
+            ? await computeContentHashes(
+                discoveredUrls.map((u) => u.url),
+                config.concurrency,
+              )
+            : new Map<string, string>();
 
           // 3. Compare with stored hashes to find changed/new pages
           const storedHashes = await this.storage.pageHashes.getPageHashes(config.siteUrl, orgId);

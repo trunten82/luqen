@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import { loadConfig } from './config.js';
 import { discoverUrls, type DiscoverResult } from './discovery/discover.js';
+import { discoveryNotice } from './discovery/notice.js';
 import { WebserviceClient } from './scanner/webservice-client.js';
 import { DirectScanner } from './scanner/direct-scanner.js';
 import { scanUrls } from './scanner/scanner.js';
@@ -199,8 +200,9 @@ program
       }, true);
       const discoveredUrls = discoverResult.urls;
 
-      if (discoverResult.wafWarning) {
-        console.warn(discoverResult.wafWarning);
+      const discoveryMsg = discoveryNotice(discoverResult, url);
+      if (discoveryMsg) {
+        console.warn(discoveryMsg);
       }
 
       console.log(`Found ${discoveredUrls.length} URLs to scan`);
@@ -425,8 +427,9 @@ program
         }, true);
         const discoveredUrls = fixDiscoverResult.urls;
 
-        if (fixDiscoverResult.wafWarning) {
-          console.warn(fixDiscoverResult.wafWarning);
+        const fixDiscoveryMsg = discoveryNotice(fixDiscoverResult, url);
+        if (fixDiscoveryMsg) {
+          console.warn(fixDiscoveryMsg);
         }
 
         console.log(`Found ${discoveredUrls.length} URLs to scan`);
