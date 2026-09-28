@@ -39,9 +39,9 @@ describe('guardedFetch (DISCOVERY-SSRF-1)', () => {
   });
 
   it('[redirect] refuses a redirect to an RFC1918 host at the hop', async () => {
-    routes['/go'] = redirectTo('http://192.168.3.50/');
-    await expect(guardedFetch(`${site.origin}/go`, {}, policy())).rejects.toThrow(/192\.168\.3\.50/);
-    expect(fetchSpy.requested.filter((u) => u.includes('192.168.3.50'))).toEqual([]);
+    routes['/go'] = redirectTo('http://192.168.100.50/');
+    await expect(guardedFetch(`${site.origin}/go`, {}, policy())).rejects.toThrow(/192\.168\.100\.50/);
+    expect(fetchSpy.requested.filter((u) => u.includes('192.168.100.50'))).toEqual([]);
   });
 
   it('[redirect] refuses a redirect to the cloud metadata address', async () => {
