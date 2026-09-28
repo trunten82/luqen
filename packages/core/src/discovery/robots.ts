@@ -1,4 +1,6 @@
 import { createRequire } from 'node:module';
+import { guardedFetch } from '../net/guarded-fetch.js';
+import type { NetworkGuardPolicy } from '../net/ssrf-guard.js';
 
 const require = createRequire(import.meta.url);
 
@@ -18,10 +20,14 @@ function createPermissiveResult(): RobotsResult {
   return { sitemapUrls: [], isAllowed: () => true };
 }
 
-export async function fetchRobots(baseUrl: string): Promise<RobotsResult> {
+/**
+ * Fetches robots.txt through the SSRF guard (DISCOVERY-SSRF-1). A refused
+ * target degrades exactly like a network error: permissive, no sitemaps.
+ */
+export async function fetchRobots(baseUrl: string, guard: NetworkGuardPolicy = {}): Promise<RobotsResult> {
   const robotsUrl = new URL('/robots.txt', baseUrl).href;
   try {
-    const response = await fetch(robotsUrl);
+    const response = await guardedFetch(robotsUrl, {}, guard);
     if (!response.ok) return createPermissiveResult();
     const body = await response.text();
     const robots = robotsParser(robotsUrl, body);

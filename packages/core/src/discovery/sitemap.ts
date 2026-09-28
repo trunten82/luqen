@@ -1,4 +1,6 @@
 import { parseStringPromise } from 'xml2js';
+import { guardedFetch } from '../net/guarded-fetch.js';
+import type { NetworkGuardPolicy } from '../net/ssrf-guard.js';
 
 interface SitemapUrlset {
   urlset?: { url?: Array<{ loc?: string[] }> };
@@ -8,9 +10,9 @@ interface SitemapIndex {
   sitemapindex?: { sitemap?: Array<{ loc?: string[] }> };
 }
 
-async function fetchXml(url: string): Promise<string | null> {
+async function fetchXml(url: string, guard: NetworkGuardPolicy): Promise<string | null> {
   try {
-    const response = await fetch(url);
+    const response = await guardedFetch(url, {}, guard);
     if (!response.ok) return null;
     return await response.text();
   } catch {
@@ -20,7 +22,11 @@ async function fetchXml(url: string): Promise<string | null> {
 
 const MAX_SITEMAP_DEPTH = 3;
 
-export async function parseSitemap(sitemapUrl: string): Promise<string[]> {
+/**
+ * Every sitemap and sitemap-index child is fetched through the SSRF guard
+ * (DISCOVERY-SSRF-1); a refused child is skipped like an unreachable one.
+ */
+export async function parseSitemap(sitemapUrl: string, guard: NetworkGuardPolicy = {}): Promise<string[]> {
   const urls = new Set<string>();
   const visited = new Set<string>();
 
@@ -29,7 +35,7 @@ export async function parseSitemap(sitemapUrl: string): Promise<string[]> {
     if (visited.has(url)) return;
     visited.add(url);
 
-    const xml = await fetchXml(url);
+    const xml = await fetchXml(url, guard);
     if (!xml) return;
 
     let parsed: SitemapUrlset & SitemapIndex;

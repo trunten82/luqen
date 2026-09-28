@@ -28,15 +28,26 @@ describe('discoverUrls', () => {
     mockFetchRobots.mockResolvedValue({ sitemapUrls: ['https://example.com/custom-sitemap.xml'], isAllowed: () => true });
     mockParseSitemap.mockResolvedValue(['https://example.com/', 'https://example.com/about']);
     const result = await discoverUrls('https://example.com', { maxPages: 100, crawlDepth: 3, alsoCrawl: false });
-    expect(mockParseSitemap).toHaveBeenCalledWith('https://example.com/custom-sitemap.xml');
+    expect(mockParseSitemap).toHaveBeenCalledWith('https://example.com/custom-sitemap.xml', {});
     expect(result).toHaveLength(2);
     expect(result[0].discoveryMethod).toBe('sitemap');
+  });
+
+  it('DISCOVERY-SSRF-1: threads the SAME guard policy to robots, sitemap, crawler and browser fallback', async () => {
+    const guard = { trustedOrigins: ['https://example.com'] };
+    mockFetchRobots.mockResolvedValue({ sitemapUrls: ['https://example.com/s.xml'], isAllowed: () => true });
+    mockCrawlSite.mockResolvedValue({ urls: ['https://example.com/'], wafWarning: 'W' } as never);
+    await discoverUrls('https://example.com/', { maxPages: 10, crawlDepth: 2, alsoCrawl: true, guard }, true);
+    expect(mockFetchRobots).toHaveBeenCalledWith('https://example.com/', guard);
+    expect(mockParseSitemap).toHaveBeenCalledWith('https://example.com/s.xml', guard);
+    expect(mockCrawlSite.mock.calls[0][1]).toMatchObject({ guard });
+    expect(mockBrowserCrawlSite.mock.calls[0][1]).toMatchObject({ guard });
   });
 
   it('falls back to /sitemap.xml when robots has no sitemap', async () => {
     mockParseSitemap.mockResolvedValue(['https://example.com/']);
     const result = await discoverUrls('https://example.com', { maxPages: 100, crawlDepth: 3, alsoCrawl: false });
-    expect(mockParseSitemap).toHaveBeenCalledWith('https://example.com/sitemap.xml');
+    expect(mockParseSitemap).toHaveBeenCalledWith('https://example.com/sitemap.xml', {});
     expect(result).toHaveLength(1);
   });
 
@@ -144,6 +155,7 @@ describe('discoverUrls', () => {
         maxDepth: 2,
         isAllowed,
         headers: { 'X-H': '1' },
+        guard: {},
       });
     });
 
