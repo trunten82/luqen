@@ -8,6 +8,9 @@ const KEY_LENGTH = 32;
 const DEFAULT_SALT = 'luqen-plugin-config-salt';
 let _installationSalt: string = DEFAULT_SALT;
 
+/** The historical default salt, exported for at-rest re-key classification (PBH-B). */
+export const LEGACY_DEFAULT_SALT = DEFAULT_SALT;
+
 /**
  * Set a per-installation salt for key derivation.
  * Call this at startup with a value persisted in the bootstrap DB.
@@ -16,19 +19,18 @@ export function setEncryptionSalt(salt: string): void {
   _installationSalt = salt;
 }
 
-function deriveKey(key: string): Buffer {
-  return scryptSync(key, _installationSalt, KEY_LENGTH, { N: 65536, r: 8, p: 1, maxmem: 128 * 1024 * 1024 });
+function deriveKey(key: string, salt: string): Buffer {
+  return scryptSync(key, salt, KEY_LENGTH, { N: 65536, r: 8, p: 1, maxmem: 128 * 1024 * 1024 });
 }
 
 /**
- * Encrypt a plaintext string using AES-256-GCM with a random IV.
- * Returns a string in the format `iv:ciphertext:tag` (all base64-encoded).
+ * Encrypt a plaintext string using AES-256-GCM with a random IV and an
+ * already-derived key. Returns a string in the format `iv:ciphertext:tag`
+ * (all base64-encoded). The single AES-GCM implementation shared by
+ * `encryptSecret` (module-global salt, derives per call) and
+ * `createAtRestCipher` (explicit salt, derives once).
  */
-export function encryptSecret(value: string, key: string): string {
-  if (_installationSalt === DEFAULT_SALT) {
-    console.warn('[security] encryptSecret called with default salt — call setEncryptionSalt() first');
-  }
-  const derivedKey = deriveKey(key);
+function encryptWithDerivedKey(value: string, derivedKey: Buffer): string {
   const iv = randomBytes(IV_LENGTH);
   const cipher = createCipheriv(ALGORITHM, derivedKey, iv, { authTagLength: TAG_LENGTH });
 
@@ -43,11 +45,11 @@ export function encryptSecret(value: string, key: string): string {
 }
 
 /**
- * Decrypt a string produced by `encryptSecret`.
- * Throws if the key is wrong or data has been tampered with.
+ * Decrypt a string produced by {@link encryptWithDerivedKey}.
+ * Throws if the key is wrong, the format is malformed, or data has been
+ * tampered with.
  */
-export function decryptSecret(encrypted: string, key: string): string {
-  const derivedKey = deriveKey(key);
+function decryptWithDerivedKey(encrypted: string, derivedKey: Buffer): string {
   const parts = encrypted.split(':');
 
   if (parts.length !== 3) {
@@ -63,6 +65,69 @@ export function decryptSecret(encrypted: string, key: string): string {
 
   const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
   return decrypted.toString('utf8');
+}
+
+/**
+ * Encrypt a plaintext string using AES-256-GCM with a random IV.
+ * Returns a string in the format `iv:ciphertext:tag` (all base64-encoded).
+ */
+export function encryptSecret(value: string, key: string): string {
+  if (_installationSalt === DEFAULT_SALT) {
+    console.warn('[security] encryptSecret called with default salt — call setEncryptionSalt() first');
+  }
+  return encryptWithDerivedKey(value, deriveKey(key, _installationSalt));
+}
+
+/**
+ * Decrypt a string produced by `encryptSecret`.
+ * Throws if the key is wrong or data has been tampered with.
+ */
+export function decryptSecret(encrypted: string, key: string): string {
+  return decryptWithDerivedKey(encrypted, deriveKey(key, _installationSalt));
+}
+
+export interface AtRestCipher {
+  readonly encrypt: (value: string) => string;
+  readonly decrypt: (encrypted: string) => string;
+}
+
+/**
+ * PBH-B — derive the scrypt key ONCE (not per value) and return an
+ * `{ encrypt, decrypt }` pair producing/consuming the identical
+ * `iv:ciphertext:tag` format as `encryptSecret`/`decryptSecret`, so
+ * ciphertext is interchangeable between the two. Used by the re-key engine
+ * and startup check, which each touch many values under a fixed key+salt —
+ * re-deriving per value would multiply the ~244ms scrypt cost by the row
+ * count.
+ */
+export function createAtRestCipher(options: { readonly key: string; readonly salt: string }): AtRestCipher {
+  const derivedKey = deriveKey(options.key, options.salt);
+  return {
+    encrypt: (value: string) => encryptWithDerivedKey(value, derivedKey),
+    decrypt: (encrypted: string) => decryptWithDerivedKey(encrypted, derivedKey),
+  };
+}
+
+/**
+ * True when `value` has the shape produced by `encryptSecret` /
+ * `createAtRestCipher().encrypt` — three colon-separated base64 parts, an
+ * IV that decodes to 12 bytes and a tag that decodes to 16 bytes. Does NOT
+ * verify the value decrypts under any particular key. Used by the at-rest
+ * store registry's shape-fallback path (PBH-B) for plugin config values
+ * whose manifest cannot be resolved.
+ */
+export function isEncryptedShape(value: unknown): boolean {
+  if (typeof value !== 'string') return false;
+  const parts = value.split(':');
+  if (parts.length !== 3) return false;
+  const [ivPart, , tagPart] = parts;
+  try {
+    const iv = Buffer.from(ivPart, 'base64');
+    const tag = Buffer.from(tagPart, 'base64');
+    return iv.length === IV_LENGTH && tag.length === TAG_LENGTH;
+  } catch {
+    return false;
+  }
 }
 
 /**
