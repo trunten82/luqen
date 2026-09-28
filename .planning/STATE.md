@@ -1,21 +1,21 @@
 ---
 gsd_state_version: 1.0
 milestone: none
-milestone_name: "DORMANT BY CHOICE — v3.7.0 shipped, pushed and deployed at fc0559a; rested by the orchestrator under the rotation on 2026-09-07. Not a defect state: dormant-by-choice is distinguishable from an unnoticed gap ONLY by carrying its reason, so this field carries it."
+milestone_name: "DORMANT BY CHOICE — awaiting a new milestone. v3.7.0 shipped 2026-09-07, gap-closed and deployed 2026-09-28 (prod f3d1043c), archived 2026-09-28. The owner said on 2026-09-28 (relayed by the orchestrator) that no agent starts a new milestone yet — this field carries the reason so dormant-by-choice is distinguishable from an unnoticed gap."
 current_phase: none
 current_phase_name: none
-status: DORMANT — v3.7.0 complete and deployed (prod fc0559a, verified by reading prod). No active milestone by choice, not by omission.
-stopped_at: "v3.7.0 complete and deployed. Next: /gsd-complete-milestone, then propose v3.8.0. Re-check with: ls .planning/phases/8*/[0-9]*-SUMMARY.md"
-last_updated: "2026-09-06T06:37:35.660Z"
-last_activity: 2026-09-07
-last_activity_desc: Phase 86 baselines recorded live against production pins and deployed; BASELINE-01/02 Complete
-state_head: c77c12ef  # last CODE commit (the baselines merge). Re-checkable: `git diff --name-only c77c12ef..HEAD` must list nothing outside .planning/.
+status: DORMANT — awaiting new milestone (no active milestone by instruction, not by omission)
+stopped_at: "v3.7.0 archived (milestones/v3.7.0-*). Nothing in flight. Re-check with: git status --short (clean) and a2a pending list (two luqen items, asked)."
+last_updated: "2026-09-28T07:40:00Z"
+last_activity: 2026-09-28
+last_activity_desc: Phase 86 verification gap closed (PR #81, deployed f3d1043c); v3.7.0 archived with 47 inherited audit items acknowledged
+state_head: f3d1043c  # last CODE commit. Re-checkable: `git diff --name-only f3d1043c..HEAD` must list nothing outside .planning/.
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 15
-  completed_plans: 15
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -61,42 +61,56 @@ tests need 90s+ timeouts and that local green is not CI green.
 changed.** Re-run the file alone first; if it passes in isolation, this is that race. The
 real fix is a longer timeout on the browser-launching cases, and it is NOT done.
 
-## Open item carried out of v3.7.0 — NOT closed
+## v3.7.0 close-out record (2026-09-28)
 
-**Phase 86 has no `86-VERIFICATION.md`.** Phases 83, 84 and 85 each got an independent verifier
-pass; Phase 86 did not. I reported the milestone as "verified" without checking that every phase
-carried a verification record — the claim was true of the phases I remembered and untrue of the set.
-Found by the milestone-close artifact audit, not by me.
+The item previously carried here ("Phase 86 has no 86-VERIFICATION.md") is RESOLVED, and what it found
+is recorded rather than smoothed over:
+- An independent verifier wrote 86-VERIFICATION.md: status `gaps_found` (verdict kept, not overwritten;
+  a re-verification section is appended in that file).
+- Gap 1 (SC3: `eval verdict` never consumed the measured instability) — FIXED, PR #81, merged f3d1043c,
+  CI green, auto-deployed; prod read back at f3d1043, luqen-llm restarted 07:19:30Z, /health 200.
+- Gap 2 (analyse-visual false-PASS count 0/1/2 across identical runs) — disclosed in the guide, bar NOT
+  moved; owner decision asked: register 01M3K97VY409DDC376SWQ2YK09.
+- Production pins MEASURED read-only 2026-09-28: both primaries gemini-2.5-flash, matching the baseline.
+  NEW: a `system`-org generate-fix prompt override exists; equality to the baselined default is
+  UNMEASURED (classifier blocked the read, not routed around) — register 01M3K983JBYGWTHNWAW9JRGJ8M.
 
-What this does and does not mean, stated separately:
-- MEASURED: all 5 of Phase 86's plans have SUMMARY.md files; its code is deployed and green (827
-  tests, lint clean); SC5's break-test was observed flipping PASS to UNDERPOWERED by the
-  orchestrator directly; the live baselines exist with full provenance.
-- NOT MEASURED: no independent agent checked Phase 86 against its ROADMAP success criteria.
-- CONCLUDED: the phase is very likely sound, and "very likely sound" is not what a verification
-  record asserts. Whoever picks this repo up should run `/gsd-verify-work 86` before the milestone
-  is archived with `/gsd-complete-milestone`, which is the step that was NOT run.
+**Trap found during the close, worth keeping:** `gsd-sdk query audit-open acknowledge ...` does NOT have
+the acknowledge verb — it silently re-runs the plain audit and exits 0, so 29 "successful" acks
+suppressed nothing. Use `node ~/.claude/gsd-core/bin/gsd-tools.cjs query audit-open acknowledge` and
+check `.acknowledged == true` in its JSON, then RE-SCAN. The two scanners also disagree: gsd-sdk hides
+archived-milestone items (no `archived_milestone` field) and lists quick tasks as `missing` whose
+SUMMARY says complete; gsd-tools saw 24 items gsd-sdk never showed.
 
-Also outstanding for that close: the artifact audit reports 8 open debug sessions, 13 UAT gaps and
-15 verification gaps, nearly all inherited from milestones v3.1.0-v3.3.0. They are pre-existing and
-unrelated to v3.7.0, but `/gsd-complete-milestone` will require each to be resolved or explicitly
-acknowledged.
+## Deferred Items
+
+Items acknowledged and deferred at the v3.7.0 close, 2026-09-28 (via the gsd-tools writer; totals from
+its own re-scan: 0 open, 47 acknowledged). All inherited from v3.0.0-v3.6.0 except Phase 86.
+
+| Category | Count | Items |
+|----------|-------|-------|
+| debug_sessions | 8 | agent-chat-ui-cluster, agent-conversation-leak-cross-user, agent-mcp-surface-parity, agent-uat-residuals, ollama-400-still-after-fix, ollama-tool-call-id-mismatch, regulations-fake-and-stuck-queue (all awaiting_human_verify, 2026-04-27); scan-stuck-running (fixing) |
+| quick_tasks | 5 | as counted by gsd-tools (gsd-sdk listed 11 as `missing`, including a task whose SUMMARY is complete — scanner defect, see above) |
+| uat_gaps | 13 | phases 42 (MACOS, WINDOWS), 43, 45, 46, 47, 48, 49, 52, 54 — status `unknown`, 0 pending scenarios, mostly in archived milestone v3.3.0 |
+| verification_gaps | 15 | human_needed: 30.1, 31.2, 32, 35, 40, 43, 50; gaps_found: 41; gaps_found: 86 (closed/registered above) |
+| deferred_items | 6 | deferred-items.md in phases 37 (x4), 31.2, 32 |
+
+`deferred_items` acknowledgement rewrites that entry's own status; every other category keeps its
+verdict and resurfaces automatically if its file changes.
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-05 — v3.7.0 AI output quality opened)
+See: .planning/PROJECT.md (updated 2026-09-28 — v3.7.0 archived)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** Phase 84 — Scoring harness
+**Current focus:** none — dormant by choice, awaiting a new milestone (owner instruction 2026-09-28)
 
 ## Current Position
 
-Phase: 86 (Recorded baseline) — COMPLETE, deployed
-Plan: 5 of 5
-Status: v3.7.0 COMPLETE — shipped, pushed and deployed (prod c77c12ef)
-Last activity: 2026-09-06 — Phase 84 harness shipped; break-test evidence committed BEFORE the first full-set green
-
-Progress: [██████████] 100%
+Phase: Milestone v3.7.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-09-28 — Milestone v3.7.0 completed and archived
 
 ## Phase Map (v3.7.0 — AI output quality)
 
@@ -167,15 +181,16 @@ measures a candidate model — that is explicitly next-milestone work.
 | 260715-pg9 | Live AI failures: Ollama Cloud retired ministral-3:3b (HTTP 410) → typed ProviderHttpError + res.ok/shape guards (ollama/openai/gemini complete()), isNonRetryable() breaks retry loops, discover-branding fetchDiagnostics + bot-protection detection (marker∧no-signals — marker alone false-positives on passive cdn-cgi/challenge-platform), never-blank fix partial, htmlContext now passed from report-detail to generate-fix (root cause of "AI fix never shows"); live routing → gemini-2.5-flash primary + gpt-oss:120b-cloud fallback, retired model deleted; 2-persona live UAT green | 2026-07-15 | 5338510c..78c1f606 | [260715-pg9-fix-live-ai-failures-generate-fix-minist](./quick/260715-pg9-fix-live-ai-failures-generate-fix-minist/) |
 | 260716-fast | Compliance-created users locked out of login: /login skipped compliance OAuth when complianceUrl was the default localhost:4000 (live's value) while /admin/users creates users in the compliance service; OAuth now attempted for any configured URL with local fall-through + 5s token-request bound; verified live (compliance user 302, testadmin fall-through 302). Also deleted duplicate system-org "Camparigroup" guideline 2426f11c per user decision (org copy 0f3f12c6 intact) | 2026-07-16 | 211dadcd | (fast task — no directory) |
 | 260718-sse | Blank agent-companion turns + image refusals on live, found via automated companion UAT (v3.6.0 residual): (1) Gemini SSE uses CRLF frame delimiters, readSsePayloads split on \n\n only → completeStream yielded 0 tokens then done (latent since adapter shipped; exposed when 07-15 rerouting made gemini-2.5-flash the agent-conversation primary) — fixed 601548cf with \r?\n\r?\n reader + CRLF wire test; (2) agent system prompt's tool-manifest rule predates Phase 83 multimodal → model refused attached images ("I cannot directly analyze images") — fixed 927f2fd0 with LOCKED:multimodal fence declaring attached images native input. Final live UAT 8/8 (login, drawer, TTS toggle+speak-on-done, text turn, image staging, vision answer "Red"). Planning bookkeeping synced (de049e52) | 2026-07-18 | 601548cf + 927f2fd0 | (fast task — no directory) |
+| 260928-863 | Phase 86 gap closure: `eval verdict --replication` consumes measured instability; licence qualifier narrowed to never supersede a false-PASS clause; replication parser hardened; docs relabel/disclosures; +28 tests (855), break-tests A-F (E exposed an unwatched clause, watcher added) | 2026-09-28 | f3d1043c (PR #81) | [260928-863-close-phase-86-gap-1-wire-measured-insta](./quick/260928-863-close-phase-86-gap-1-wire-measured-insta/) |
 
 ## Session Continuity
 
-Last session: 2026-09-05T09:36:52.873Z
-Stopped at: Completed 83-01-PLAN.md (labelled reference-set spine: types/schema/loader/set-paths + seed sets + refusal tests)
-Resume file: None
-Next action: `/gsd-discuss-phase 83` (Labelled reference sets) or `/gsd-plan-phase 83`
+Last session: 2026-09-28
+Stopped at: v3.7.0 archived; tree clean; nothing in flight.
+Resume file: .planning/HANDOFF.json (untracked; see its own note on durability)
+Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
 ## Operator Next Steps
 
-- Review the v3.7.0 roadmap in .planning/ROADMAP.md
-- Start phase work with `/gsd-discuss-phase 83` or `/gsd-plan-phase 83`
+- Two owner decisions are asked and on the register (a2a pending list): v2 false-PASS gate; prod prompt-override read.
+- Next-milestone candidates recorded (NOT started): grow the reference sets (the lever on power); behavioral a11y testing beyond Pa11y.

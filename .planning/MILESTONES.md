@@ -22,6 +22,23 @@ the archive step never wrote it).
   generate-fix instability 0 (three distinct responses, same 4/17), analyse-visual 0.2308 against
   a 0.25 ceiling. Cost ~$0.0607 vs $0.1501 predicted.
 
+**Archived 2026-09-28** (`milestone.complete`, 4 phases / 15 plans / 40 tasks; the tool's own entry was
+dated 2026-09-28 and duplicated this row — merged here, ship date kept as the code's).
+
+**Closed at archive time, 2026-09-28:** an independent Phase 86 verifier found `eval verdict` never
+consumed the measured instability (SC3 partial) — fixed and deployed in PR #81 (f3d1043c): new
+`--replication`, licence qualifier narrowed so it never supersedes a false-PASS clause, llm 855/855.
+
+**Known gaps, registered not hidden:** (1) analyse-visual false-PASS count was 0/1/2 across three
+identical production runs, so the pre-registered gate sits inside the pin's own noise — bar unchanged,
+v2-gate decision on the owner register 01M3K97VY409DDC376SWQ2YK09; (2) a production `system`-org
+generate-fix prompt override exists and its equality to the default template the baseline used is
+unmeasured — register 01M3K983JBYGWTHNWAW9JRGJ8M.
+
+**Known verification overrides:** 47 newly acknowledged, 0 carried forward (see STATE.md Deferred
+Items) — all inherited from v3.0.0-v3.6.0 except Phase 86's own `gaps_found` record, whose gaps are
+closed or registered as above. closeout_type = override_closeout.
+
 **Honest headline:** a REGRESSION DETECTOR, not a parity certifier — measured power 0.103 (n=17)
 and 0.176 (n=13), so UNDERPOWERED is the expected verdict for most real comparisons.
 
