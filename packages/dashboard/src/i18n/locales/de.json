@@ -903,6 +903,7 @@
     "req3": "Pop-up-Blocker müssen möglicherweise Pop-ups von der gescannten Website zulassen."
   },
   "scanProgress": {
+    "discoveryBlocked": "{{pages}} Seite(n) gescannt; die Website-Erkennung wurde durch Bot-Schutz blockiert, sodass nur die im Bericht aufgeführte(n) Seite(n) gescannt wurden. Dies ist kein Ergebnis für die gesamte Website.",
     "scanDetails": "Scan-Details",
     "siteUrl": "Website-URL",
     "standard": "Standard",
@@ -942,6 +943,7 @@
     "logReconnecting": "Verbindung unterbrochen. Verbindung wird wiederhergestellt…"
   },
   "reportDetail": {
+    "discoveryBlocked": "{{pages}} Seite(n) gescannt; die Website-Erkennung wurde durch Bot-Schutz blockiert, sodass nur die in diesem Bericht aufgeführte(n) Seite(n) gescannt wurden. Dies ist kein Ergebnis für die gesamte Website.",
     "siteUrl": "Website-URL",
     "standard": "Standard",
     "status": "Status",

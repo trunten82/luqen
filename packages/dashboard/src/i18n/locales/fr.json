@@ -903,6 +903,7 @@
     "req3": "Les bloqueurs de fenêtres contextuelles peuvent nécessiter d'autoriser les fenêtres contextuelles du site que vous analysez."
   },
   "scanProgress": {
+    "discoveryBlocked": "{{pages}} page(s) analysée(s) ; la découverte du site a été bloquée par une protection anti-robots, donc seule(s) la/les page(s) listée(s) dans le rapport ont été analysées. Ce n'est pas un résultat pour l'ensemble du site.",
     "scanDetails": "Détails de l'Analyse",
     "siteUrl": "URL du Site",
     "standard": "Standard",
@@ -942,6 +943,7 @@
     "logReconnecting": "Connexion interrompue. Reconnexion en cours…"
   },
   "reportDetail": {
+    "discoveryBlocked": "{{pages}} page(s) analysée(s) ; la découverte du site a été bloquée par une protection anti-robots, donc seule(s) la/les page(s) listée(s) dans ce rapport ont été analysées. Ce n'est pas un résultat pour l'ensemble du site.",
     "siteUrl": "URL du Site",
     "standard": "Standard",
     "status": "Statut",

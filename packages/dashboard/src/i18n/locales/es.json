@@ -903,6 +903,7 @@
     "req3": "Es posible que los bloqueadores de ventanas emergentes deban permitir ventanas emergentes del sitio que estás escaneando."
   },
   "scanProgress": {
+    "discoveryBlocked": "Se escanearon {{pages}} página(s); la detección del sitio fue bloqueada por protección antibots, por lo que solo se escanearon la(s) página(s) indicada(s) en el informe. Esto no es un resultado del sitio completo.",
     "scanDetails": "Detalles del Escaneo",
     "siteUrl": "URL del Sitio",
     "standard": "Estándar",
@@ -942,6 +943,7 @@
     "logReconnecting": "Conexión interrumpida. Reconectando…"
   },
   "reportDetail": {
+    "discoveryBlocked": "Se escanearon {{pages}} página(s); la detección del sitio fue bloqueada por protección antibots, por lo que solo se escanearon la(s) página(s) indicada(s) en este informe. Esto no es un resultado del sitio completo.",
     "siteUrl": "URL del Sitio",
     "standard": "Estándar",
     "status": "Estado",

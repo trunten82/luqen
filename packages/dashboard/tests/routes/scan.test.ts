@@ -741,6 +741,23 @@ describe('Scan Routes', () => {
       expect(body.error).toBe('Scan not found');
     });
 
+    it('progress page receives discoveryWarning for a flagged scan', async () => {
+      const scanId = await makeScan(ctx);
+      await ctx.storage.scans.updateScan(scanId, {
+        status: 'completed',
+        pagesScanned: 1,
+        discoveryWarning: 'waf-blocked',
+      });
+
+      const response = await ctx.server.inject({
+        method: 'GET',
+        url: `/scan/${scanId}/progress`,
+      });
+
+      const body = response.json() as { data: { scan: { discoveryWarning?: string } } };
+      expect(body.data.scan.discoveryWarning).toBe('waf-blocked');
+    });
+
     it('returns 404 when scan belongs to a different org', async () => {
       const scanId = await makeScan(ctx, 'other-org');
 
