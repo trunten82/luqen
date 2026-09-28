@@ -130,6 +130,37 @@ describe('config: encryptionKey (PBH-A)', () => {
     expect(sharesSessionSecret(pinnedEqual)).toBe(true);
   });
 
+  it('CFG-8 (plan-check addition): applyEnvOverrides\' own empty-string guard, isolated from withEncryptionKeyDefault\'s', () => {
+    // Task 1's BT-3 found that CFG-4 alone cannot distinguish
+    // applyEnvOverrides' empty-string guard from withEncryptionKeyDefault's:
+    // both DEFAULTS.encryptionKey and an env override of '' land on the same
+    // value ('', which is also DEFAULTS.encryptionKey), so removing the
+    // FIRST guard is silently masked by the SECOND. This test forces them
+    // apart: a config FILE sets a real, non-sessionSecret encryptionKey, and
+    // the env var is set to ''. If applyEnvOverrides' guard is in place, the
+    // file value survives untouched (env='' is treated as "no override").
+    // If it is removed, '' briefly overwrites config.encryptionKey inside
+    // applyEnvOverrides, and withEncryptionKeyDefault then defaults THAT to
+    // sessionSecret — losing the file-set value. The two guards produce
+    // different observable results here, where CFG-4 alone could not.
+    cleanEnv();
+    const dir = mkdtempSync(join(tmpdir(), 'luqen-cfg8-'));
+    try {
+      const filePath = join(dir, 'dashboard.config.json');
+      const sessionSecret = 'a'.repeat(32);
+      const fileEncryptionKey = 'f'.repeat(40);
+      writeFileSync(filePath, JSON.stringify({ sessionSecret, encryptionKey: fileEncryptionKey }));
+
+      process.env['DASHBOARD_ENCRYPTION_KEY'] = '';
+      const config = loadConfig(filePath);
+
+      expect(config.encryptionKey).toBe(fileEncryptionKey);
+      expect(config.encryptionKey).not.toBe(sessionSecret);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('serverPluginsDir derives reportsDir/../plugins (matches the server.ts derivation it replaces)', () => {
     const config = { reportsDir: '/tmp/luqen-foo/reports' } as DashboardConfig;
     expect(serverPluginsDir(config)).toBe(resolve('/tmp/luqen-foo/reports', '..', 'plugins'));

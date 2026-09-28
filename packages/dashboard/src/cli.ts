@@ -456,4 +456,50 @@ program
     }
   });
 
+// ── At-rest encryption key rotation (PBH-B Task 3) ────────────────────────
+
+program
+  .command('rekey-at-rest')
+  .description(
+    'Re-key at-rest encrypted data (OAuth signing keys, service-connection secrets, ' +
+    'git credentials, plugin secrets) from an old DASHBOARD_ENCRYPTION_KEY to a new one. ' +
+    'Defaults to a dry-run. See docs/guides/security-administration.md for the full runbook. ' +
+    'Exit codes: 0 ok, 1 usage error, 2 decrypt failures/refused, 3 database in use, ' +
+    '4 apply failed and rolled back (zero writes).',
+  )
+  .option('--old-key-env <name>', 'Environment variable NAME holding the CURRENT encryption key (never the key value itself)')
+  .option('--new-key-env <name>', 'Environment variable NAME holding the NEW encryption key (never the key value itself)')
+  .option('--apply', 'Write the re-keyed values (stops the dashboard must already be stopped — see the runbook)')
+  .option('--dry-run', 'Report what would change without writing (this is the default)')
+  .option('--rollback <path>', 'Restore the database, byte-exact, from a backup file created by a prior --apply')
+  .option('--db-path <path>', 'Path to the SQLite database file (overrides config)')
+  .option('-c, --config <path>', 'Path to config file', 'dashboard.config.json')
+  .option('--plugins-dir <path>', "Path to the plugins directory (overrides the config-derived default)")
+  .action(async (options: {
+    oldKeyEnv?: string;
+    newKeyEnv?: string;
+    apply?: boolean;
+    dryRun?: boolean;
+    rollback?: string;
+    dbPath?: string;
+    config: string;
+    pluginsDir?: string;
+  }) => {
+    const { runRekeyCommand } = await import('./at-rest/rekey-command.js');
+    const code = await runRekeyCommand(
+      {
+        configPath: options.config,
+        dbPath: options.dbPath,
+        pluginsDir: options.pluginsDir,
+        oldKeyEnv: options.oldKeyEnv,
+        newKeyEnv: options.newKeyEnv,
+        apply: options.apply === true,
+        rollback: options.rollback,
+      },
+      process.env,
+      (line: string) => console.log(line),
+    );
+    process.exit(code);
+  });
+
 program.parse(process.argv);
