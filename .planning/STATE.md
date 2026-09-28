@@ -182,6 +182,8 @@ measures a candidate model — that is explicitly next-milestone work.
 | 260716-fast | Compliance-created users locked out of login: /login skipped compliance OAuth when complianceUrl was the default localhost:4000 (live's value) while /admin/users creates users in the compliance service; OAuth now attempted for any configured URL with local fall-through + 5s token-request bound; verified live (compliance user 302, testadmin fall-through 302). Also deleted duplicate system-org "Fabrikamgroup" guideline 2426f11c per user decision (org copy 0f3f12c6 intact) | 2026-07-16 | 211dadcd | (fast task — no directory) |
 | 260718-sse | Blank agent-companion turns + image refusals on live, found via automated companion UAT (v3.6.0 residual): (1) Gemini SSE uses CRLF frame delimiters, readSsePayloads split on \n\n only → completeStream yielded 0 tokens then done (latent since adapter shipped; exposed when 07-15 rerouting made gemini-2.5-flash the agent-conversation primary) — fixed 601548cf with \r?\n\r?\n reader + CRLF wire test; (2) agent system prompt's tool-manifest rule predates Phase 83 multimodal → model refused attached images ("I cannot directly analyze images") — fixed 927f2fd0 with LOCKED:multimodal fence declaring attached images native input. Final live UAT 8/8 (login, drawer, TTS toggle+speak-on-done, text turn, image staging, vision answer "Red"). Planning bookkeeping synced (de049e52) | 2026-07-18 | 601548cf + 927f2fd0 | (fast task — no directory) |
 | 260928-863 | Phase 86 gap closure: `eval verdict --replication` consumes measured instability; licence qualifier narrowed to never supersede a false-PASS clause; replication parser hardened; docs relabel/disclosures; +28 tests (855), break-tests A-F (E exposed an unwatched clause, watcher added) | 2026-09-28 | f3d1043c (PR #81) | [260928-863-close-phase-86-gap-1-wire-measured-insta](./quick/260928-863-close-phase-86-gap-1-wire-measured-insta/) |
+| 260928-g6k | Owner-approved (relayed via the orchestrator, 2026-09-28): WAF-blocked discovery surfaced as scan_records.discovery_warning (migration 089) on both orchestrator paths + report/progress UI (6 locales); sitemap+crawl scoped to start URL origin + path prefix (shared scope.ts; closed userinfo/lookalike-host/port origin-check hole) | 2026-09-28 | b8b85fc2..a92108c2 (PR pending) | [260928-g6k-waf-discovery-blocked-and-path-prefix-sc](./quick/260928-g6k-waf-discovery-blocked-and-path-prefix-sc/) |
+| 260928-hkw | Owner-approved: headless-Chromium link discovery when fetch discovery hits a WAF challenge ('waf-browser-discovery'); ONE shared Chromium resolver for every launch site (7 bare sites -> 2 that take a resolved path); startup ERROR log + /health browser check (degraded, no paths exposed) | 2026-09-28 | 3af369db..ae899495 (PR pending) | [260928-hkw-browser-based-discovery-fallback-on-waf](./quick/260928-hkw-browser-based-discovery-fallback-on-waf/) |
 
 ## Session Continuity
 
@@ -200,4 +202,15 @@ Next action: none until the owner opens a new milestone. If woken with one, star
   candidate un-judgeable against them. Therefore v3.7.0 was NOT tagged and packages were NOT bumped
   (config has no git.create_tag). Decouple harnessVersion from the package version (scoring-semantics
   version only) before any bump; watch it fail first.
+- **Owner rulings 2026-09-28 (relayed via Allanon, option cards):** (a) pre-register a noise-aware v2
+  false-PASS gate as the FIRST item of the next eval milestone — not started; (b) one read-only
+  comparison of prod's `system`-org generate-fix prompt override — allow rule in
+  .claude/settings.local.json, takes effect at next session start.
+- **Session secret still exposed** (transcript, 2026-09-28): rotation crash-looped the dashboard 48 s
+  because DASHBOARD_SESSION_SECRET is also the at-rest AES key; rolled back. Compliance client secret
+  WAS rotated (old rejected 401). Follow-up (separate encryption key + re-encryption script) asked:
+  register 01M3M66864K7Y9M42JF91Q6TVQ.
+- **Security follow-up, not scoped:** sitemap.ts fetches child sitemaps / robots `Sitemap:` URLs on any
+  host (blind SSRF via Node fetch; after 260928-g6k their page URLs are scope-filtered, the fetch itself
+  is not). Needs its own decision.
 - Next-milestone candidates recorded (NOT started): grow the reference sets (the lever on power); behavioral a11y testing beyond Pa11y.
