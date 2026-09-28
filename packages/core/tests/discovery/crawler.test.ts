@@ -97,6 +97,42 @@ describe('crawlSite', () => {
   });
 });
 
+describe('crawlSite — discovery scope (DISCOVERY-SCOPE-3)', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('crawler follows links inside the start section only', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, headers: new Headers({ 'content-type': 'text/html' }), text: async () => htmlPage(['/dev/en-us/about', '/dev/fr-fr/', '/']) })
+      .mockResolvedValueOnce({ ok: true, headers: new Headers({ 'content-type': 'text/html' }), text: async () => htmlPage([]) });
+    const urls = await crawlSite('https://example.com/dev/en-us/', { maxPages: 100, maxDepth: 3, isAllowed: () => true });
+    expect(urls).toContain('https://example.com/dev/en-us/');
+    expect(urls).toContain('https://example.com/dev/en-us/about');
+    expect(urls).not.toContain('https://example.com/dev/fr-fr/');
+    expect(urls).not.toContain('https://example.com/');
+  });
+
+  it('crawler never follows a userinfo link to another host', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, headers: new Headers({ 'content-type': 'text/html' }), text: async () => htmlPage(['https://example.com@127.0.0.1/dev/en-us/']) });
+    const urls = await crawlSite('https://example.com/dev/en-us/', { maxPages: 100, maxDepth: 3, isAllowed: () => true });
+    expect(urls.some((u) => u.includes('127.0.0.1'))).toBe(false);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('crawler never follows a lookalike host', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, headers: new Headers({ 'content-type': 'text/html' }), text: async () => htmlPage(['https://example.com.evil.test/page']) });
+    const urls = await crawlSite('https://example.com/dev/en-us/', { maxPages: 100, maxDepth: 3, isAllowed: () => true });
+    expect(urls.some((u) => u.includes('evil.test'))).toBe(false);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('crawler never follows another port', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, headers: new Headers({ 'content-type': 'text/html' }), text: async () => htmlPage(['https://example.com:8443/x']) });
+    const urls = await crawlSite('https://example.com/dev/en-us/', { maxPages: 100, maxDepth: 3, isAllowed: () => true });
+    expect(urls.some((u) => u.includes(':8443'))).toBe(false);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('isWafChallenge', () => {
   it('returns true for short pages with Incapsula signature', () => {
     expect(isWafChallenge('<html><body>_Incapsula_Resource</body></html>')).toBe(true);

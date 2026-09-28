@@ -8,6 +8,45 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Browser-based discovery fallback: when a full-site scan's fetch-based
+  discovery detects bot protection, Luqen re-discovers the site by rendering
+  it in one headless Chromium and following the DOM's links, applying the
+  same scope/robots/extension/depth/maxPages rules as the normal crawler. A
+  scan whose fallback found pages beyond the start URL is marked
+  `waf-browser-discovery` (not `waf-blocked`) and shows an informational
+  note — not a warning — on the report and live progress pages, in all 6
+  locales.
+- `GET /health` reports Chromium resolution status
+  (`{ status, checks: { browser } }`, never a filesystem path) and the
+  dashboard logs an ERROR naming every tried path at startup when no
+  browser resolves.
+
+### Changed
+
+- Every Chromium-launching code path (the scanner, the deep-scan engines,
+  the new discovery fallback, and ACR PDF rendering) now resolves its
+  browser through one shared resolver instead of five independent copies. A
+  missing browser is now a typed, loud `ChromiumNotFoundError` naming every
+  path it tried, rather than silently falling through to puppeteer's own
+  (frequently wrong) default lookup.
+- Incremental scans of a WAF-flagged site (blocked or browser-discovered) no
+  longer trust Node-fetch content hashes of the discovered pages — a
+  bot-protection challenge body is not the page it stands in front of, and
+  hashing it would mark every page "unchanged" and skip it forever. Every
+  page is scanned and no page hash is written for that run; clean sites are
+  unaffected.
+
+### Fixed
+
+- Full-site scans blocked by bot protection are now marked on the scan record
+  and flagged on the progress and report pages instead of reading as a
+  complete 1-page site.
+- Discovery (sitemap and crawl) now stays within the start URL's origin and
+  path prefix; crawled links to other hosts via userinfo, lookalike hosts, or
+  other ports are no longer followed.
+
 ## [3.6.0] - 2026-09-04
 
 This entry covers everything released since 3.4.0 — the v3.5.0 wave, its later

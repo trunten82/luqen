@@ -903,6 +903,8 @@
     "req3": "Es posible que los bloqueadores de ventanas emergentes deban permitir ventanas emergentes del sitio que estás escaneando."
   },
   "scanProgress": {
+    "discoveryBlocked": "Se escanearon {{pages}} página(s); la detección del sitio fue bloqueada por protección antibots, por lo que solo se escanearon la(s) página(s) indicada(s) en el informe. Esto no es un resultado del sitio completo.",
+    "discoveryBrowser": "Se escanearon {{pages}} página(s). La protección antibots bloqueó la detección estándar del sitio, por lo que las páginas se encontraron abriendo el sitio en un navegador headless y siguiendo sus enlaces. Las páginas no alcanzables de esa manera dentro de los límites de rastreo no fueron descubiertas.",
     "scanDetails": "Detalles del Escaneo",
     "siteUrl": "URL del Sitio",
     "standard": "Estándar",
@@ -942,6 +944,8 @@
     "logReconnecting": "Conexión interrumpida. Reconectando…"
   },
   "reportDetail": {
+    "discoveryBlocked": "Se escanearon {{pages}} página(s); la detección del sitio fue bloqueada por protección antibots, por lo que solo se escanearon la(s) página(s) indicada(s) en este informe. Esto no es un resultado del sitio completo.",
+    "discoveryBrowser": "Se escanearon {{pages}} página(s). La protección antibots bloqueó la detección estándar del sitio, por lo que estas páginas se encontraron abriendo el sitio en un navegador headless y siguiendo sus enlaces. Las páginas no alcanzables de esa manera dentro de los límites de rastreo no fueron descubiertas.",
     "siteUrl": "URL del Sitio",
     "standard": "Estándar",
     "status": "Estado",

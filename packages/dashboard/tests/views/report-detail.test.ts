@@ -171,6 +171,27 @@ function renderReportDetail(reportData: Record<string, unknown>): string {
   });
 }
 
+// `scan` reaches report-detail.hbs at the TOP LEVEL of the template context
+// (routes spread it in directly), separate from `reportData`. The
+// discovery-blocked banner is guarded on `scan.discoveryWarning`, outside
+// `{{#if reportData}}`, so it must render for status-only / no-report pages too.
+function renderReportDetailWithScan(
+  scan: Record<string, unknown>,
+  reportData: Record<string, unknown> | null,
+): string {
+  const source = readFileSync(join(VIEWS_DIR, 'report-detail.hbs'), 'utf8');
+  const template = handlebars.compile(source);
+  return template({
+    scan,
+    reportData,
+    locale: 'en',
+    perm: {},
+    brandingGuidelineActive: false,
+    llmEnabled: false,
+    assignedMap: {},
+  });
+}
+
 const baseReportData = {
   complianceMatrix: [],
   allIssueGroups: [],
@@ -349,5 +370,45 @@ describe('rpt-regulation-card.hbs — expandable requirements list', () => {
     });
 
     expect(html).not.toContain('<details');
+  });
+});
+
+describe('report-detail.hbs — discovery-blocked banner (WAF-SURFACE-1)', () => {
+  it('report shows the discovery-blocked warning for a flagged scan', () => {
+    const html = renderReportDetailWithScan(
+      { status: 'completed', pagesScanned: 1, discoveryWarning: 'waf-blocked' },
+      null,
+    );
+    expect(html).toContain('alert alert--warning');
+    expect(html).toContain(
+      'Scanned 1 page(s); site discovery was blocked by bot protection, so only the page(s) listed in this report were scanned. This is not a whole-site result.',
+    );
+  });
+
+  it('report has no discovery-blocked warning for an unflagged scan', () => {
+    const html = renderReportDetailWithScan(
+      { status: 'completed', pagesScanned: 1 },
+      null,
+    );
+    expect(html).not.toContain('site discovery was blocked');
+  });
+
+  it('V1: report shows the browser discovery note for a browser discovered scan', () => {
+    const html = renderReportDetailWithScan(
+      { status: 'completed', pagesScanned: 12, discoveryWarning: 'waf-browser-discovery' },
+      null,
+    );
+    expect(html).toContain('alert alert--info');
+    expect(html).toContain(
+      'Scanned 12 page(s). Bot protection blocked standard site discovery, so these pages were found by opening the site in a headless browser and following its links. Pages not reachable that way within the crawl limits were not discovered.',
+    );
+  });
+
+  it('V2: report does not show the blocked warning for a browser discovered scan', () => {
+    const html = renderReportDetailWithScan(
+      { status: 'completed', pagesScanned: 12, discoveryWarning: 'waf-browser-discovery' },
+      null,
+    );
+    expect(html).not.toContain('site discovery was blocked');
   });
 });

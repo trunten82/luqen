@@ -7,6 +7,7 @@ import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { ALL_PERMISSION_IDS } from '../../src/permissions.js';
 import { ScanOrchestrator } from '../../src/scanner/orchestrator.js';
 import { authRoutes } from '../../src/routes/auth.js';
+import { registerHealthRoute } from '../../src/routes/health.js';
 import { homeRoutes } from '../../src/routes/home.js';
 import { reportRoutes } from '../../src/routes/reports.js';
 import { compareRoutes } from '../../src/routes/compare.js';
@@ -189,7 +190,10 @@ export async function createTestServer(): Promise<TestContext> {
   await exportRoutes(server, storage);
   await setupRoutes(server, storage, authService);
 
-  server.get('/health', async () => ({ status: 'ok' }));
+  await registerHealthRoute(server, {
+    version: '0.0.0-test',
+    probe: async () => ({ ok: true, executablePath: '/fake/chrome', source: 'system' }),
+  });
 
   await server.ready();
 
