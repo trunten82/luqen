@@ -92,6 +92,22 @@ describe('parseLiveBaselineReplicationArtifact', () => {
     );
   });
 
+  // The test above cannot see the state clause alone: its fixture has no value, so the sibling
+  // `typeof value` clause refuses it too (break-test E, 2026-09-28, reddened nothing). This one
+  // carries a VALID value under a non-measured state, so only the state clause can refuse it.
+  it('refuses a non-measured state even when it carries a valid numeric value', () => {
+    const gf = loadCommittedArtifact(GENERATE_FIX_ARTIFACT_NAME);
+    const instability = gf.instability as Record<string, unknown>;
+    const mutated = {
+      ...gf,
+      instability: { ...instability, runToRunInstability: { state: 'not-yet-measured', value: 0 } },
+    };
+
+    expect(() => parseLiveBaselineReplicationArtifact(JSON.stringify(mutated))).toThrow(
+      InvalidBaselineReplicationArtifactError,
+    );
+  });
+
   it('refuses a measured value that is not a finite rate between 0 and 1', () => {
     const gf = loadCommittedArtifact(GENERATE_FIX_ARTIFACT_NAME);
     const instability = gf.instability as Record<string, unknown>;
