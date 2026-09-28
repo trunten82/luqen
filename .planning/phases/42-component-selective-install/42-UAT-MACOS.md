@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v3.7.0
+  at: 2026-09-28
+  gap_snapshot: "unknown::scenarios=0"
+---
+
 # Phase 42 — macOS UAT Checklist (`install.command`)
 
 **Status:** PARTIAL acceptance per locked user answer #4 (verification budget = Phase 40 precedent). **Operator-run on a real Mac.** Phase 42 closes without this completed; this document is the evidence pointer for INST-01 / INST-03 (cross-OS) / INST-05 / INST-06 PARTIAL verdicts.
@@ -39,6 +46,7 @@ git rev-parse --short HEAD
 In Finder: navigate to the cloned repo, double-click `install.command`. Terminal opens.
 
 **Expected — wizard prompts:**
+
 - 4-profile menu appears with options:
   1. Scanner CLI
   2. API services (headless)
@@ -57,14 +65,21 @@ Re-run `./install.command` from Terminal (not double-click) for stdin control:
 
 ```sh
 ./install.command
+
 # Wizard prompts:
+
 #   profile? -> 3 (dashboard)
+
 #   install monitor agent? -> y
+
 #   admin user? -> admin
+
 #   admin pass? -> changeme123
+
 ```
 
 **Expected:**
+
 - exit 0
 - Install dir at `~/Library/Application Support/Luqen` (or `/opt/luqen` if run as root)
 - launchd plists exist:
@@ -139,6 +154,7 @@ launchctl list | grep io.luqen
 ```
 
 **Expected:**
+
 - exit 0
 - Only 2 plist files (compliance, llm) — branding, dashboard, monitor absent
 - Only 2 launchctl entries
@@ -170,6 +186,7 @@ launchctl list | grep io.luqen.monitor
 ```
 
 **Expected:**
+
 - monitor plist gone (`No such file`)
 - `launchctl list` returns no matching line
 

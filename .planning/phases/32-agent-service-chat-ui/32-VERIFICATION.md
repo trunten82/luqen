@@ -5,6 +5,7 @@ status: human_needed
 score: 4/4 SCs PASS at code-evidence layer; live UAT 2026-04-23 surfaced 9 gaps closed by Phase 32.1; deferred-items.md present (pre-existing pre-32 failures)
 overrides_applied: 0
 requirements_coverage:
+
   - id: AGENT-01
     status: SATISFIED
   - id: AGENT-02
@@ -13,6 +14,10 @@ requirements_coverage:
     status: SATISFIED
   - id: APER-02
     status: SATISFIED
+audit_acknowledged:
+  milestone: v3.7.0
+  at: 2026-09-28
+  status: human_needed
 ---
 
 # Phase 32: Agent Service + Chat UI — Verification Report (Backfill)

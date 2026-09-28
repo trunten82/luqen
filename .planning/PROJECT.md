@@ -10,7 +10,17 @@ AI-powered accessibility compliance that adapts to each organization's jurisdict
 
 ## Current State
 
-v3.6.0 (package version 3.6.0, tagged `v3.6.0`, deployed to lxc-luqen 2026-09-04). Since v3.4.0 the
+**v3.7.0 AI output quality SHIPPED 2026-09-07, archived 2026-09-28** (prod f3d1043c after the Phase 86
+gap closure, PR #81). The platform now has an evaluation instrument for its two durable LLM capabilities:
+provenance-attributed reference sets (17 WCAG fixes, 13 images, with poison items), a breakable scoring
+harness (`luqen-llm eval run/compare/verdict/baseline`), pre-registered decision bars locked in bf7ea66d,
+and live baselines of the production pins (both gemini-2.5-flash). Honest reading: a REGRESSION DETECTOR,
+not a parity certifier — computed power 0.103/0.176 under the assumed variance, so UNDERPOWERED is the
+expected verdict. Known limits: analyse-visual's false-PASS count is noisy run-to-run (0/1/2), and a
+production `system`-org generate-fix prompt override's equality to the baselined default is unmeasured —
+both on the owner register. **No active milestone — dormant by choice, awaiting the owner (2026-09-28).**
+
+Before v3.7.0: v3.6.0 (package version 3.6.0, tagged `v3.6.0`, deployed to lxc-luqen 2026-09-04). Since v3.4.0 the
 platform shipped the **anti-overlay wedge** (v3.5.0: CI regression gate with `luqen scan --fail-on=new`
 + GitHub Action PR comments + WP scan-on-publish gate; MCP fix tools for coding agents; scheduled
 executive digest) and the **agent surface + semantic depth** milestone (v3.6.0: vision adapter +
@@ -30,7 +40,7 @@ is **dead** — its monetization spine (Pro/Agency feature gates, credit-metered
 reversed by the single-product decision ([[project_single_tier_decision]]). Only its Phase 78
 (anti-overlay positioning) shipped; v3.5.0 was redefined as the anti-overlay wedge and is complete.
 
-## Current Milestone: v3.7.0 AI output quality — eval harness + labelled reference sets
+## Last Milestone (shipped): v3.7.0 AI output quality — eval harness + labelled reference sets
 
 **Goal:** Build the evaluation instrument for the two LLM capabilities whose output is DURABLE —
 `generate-fix`, which ships into someone's source code, and `analyse-visual`, which feeds a VPAT/ACR
@@ -162,9 +172,15 @@ but it ADDS a capability while this milestone protects the ones already shipped 
 - ✓ Native-dialog confirmation for destructive tool calls with DB recovery (APER-02) — v3.0.0
 - ✓ Agent audit log (APER-03) + /admin/audit viewer with filter bar + CSV export (APER-04) — v3.0.0
 
+- ✓ Versioned, provenance-attributed reference sets with poison items; loader refuses unattributed items (EVALSET-01..05) — v3.7.0
+- ✓ Scoring harness with raw-response persistence, RunFunction + cross-run refusal, never-fused false-PASS/false-ISSUE, committed poison break-test (HARNESS-01..06) — v3.7.0
+- ✓ Pre-registered non-inferiority margin + analyse-visual zero-false-pass bar, verdict with a required power field (BARS-01..03) — v3.7.0
+- ✓ Live baselines of the production pins with measured run-to-run instability, consumable by `eval verdict --replication` (BASELINE-01..02) — v3.7.0
+
 ### Active
 
-(Defining requirements for v3.1.0 — see REQUIREMENTS.md)
+None — no active milestone (dormant by choice, 2026-09-28). Owner decision pending on a pre-registered,
+noise-aware v2 false-PASS gate (register 01M3K97VY409DDC376SWQ2YK09).
 
 ### Out of Scope
 
@@ -229,6 +245,7 @@ but it ADDS a capability while this milestone protects the ones already shipped 
 | Historical rescore always embedded, never remote | Avoids branding service dependency; consistent scoring | ✓ Good — v2.12.0 |
 | Native `<dialog>` for rescore confirmation | Consistent with drilldown modal pattern; no custom JS | ✓ Good — v2.12.0 |
 | RescoreService via getRawDatabase() escape hatch | Avoids modifying StorageAdapter interface for single-use repo | ✓ Good — v2.12.0 |
+| Decision bars pre-registered in their own commit (bf7ea66d) before any measurement, never moved after | A bar edited after its result is not a bar; ancestry is checkable | ✓ Good — v3.7.0 (the false-PASS gate turned out to sit inside run-to-run noise; disclosed, NOT moved) |
 
 ## Evolution
 
@@ -248,4 +265,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-05 — v3.7.0 opened (AI output quality: eval harness + labelled reference sets); Current State resynced past v3.5.0 and v3.6.0*
+*Last updated: 2026-09-28 after v3.7.0 milestone archived (dormant by choice, awaiting next milestone)*
