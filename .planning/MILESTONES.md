@@ -1,5 +1,42 @@
 # Milestones
 
+## v3.7.0 AI output quality — eval harness + labelled reference sets (Shipped: 2026-09-07)
+
+**Phases completed:** 4 phases (83-86), 15 plans. Requirements 16/16 Complete (EVALSET-01..05,
+HARNESS-01..06, BARS-01..03, BASELINE-01..02). Production at fc0559a9. Row reconstructed on
+2026-09-28 FROM THE PHASE SUMMARIES and VERIFICATION files, not from memory (fleet finding D-72:
+the archive step never wrote it).
+
+**Key accomplishments:**
+
+- Phase 83 — versioned, provenance-attributed reference sets: wcag-fixes.v1.json (17 items,
+  3 poison) and image-alt.v1.json (13 items, 4 poison incl. a false-PASS); the loader REFUSES an
+  item without attributed provenance.
+- Phase 84 — scoring harness + `luqen-llm eval` CLI: per-item raw response persisted beside the
+  parsed score (HARNESS-06), false-PASS and false-ISSUE never fused, RunFunction recorded and
+  cross-function comparison refused, poison break-test committed before any trusted green.
+- Phase 85 — pre-registered decision bars committed ALONE in bf7ea66d, an ancestor of every
+  commit that can judge against them; PASS/FAIL/UNDERPOWERED verdict with a structurally
+  required power field.
+- Phase 86 — live baselines of the production pins (both gemini-2.5-flash) on 2026-09-07:
+  generate-fix instability 0 (three distinct responses, same 4/17), analyse-visual 0.2308 against
+  a 0.25 ceiling. Cost ~$0.0607 vs $0.1501 predicted.
+
+**Honest headline:** a REGRESSION DETECTOR, not a parity certifier — measured power 0.103 (n=17)
+and 0.176 (n=13), so UNDERPOWERED is the expected verdict for most real comparisons.
+
+---
+
+## KNOWN GAP IN THIS INDEX (recorded 2026-09-28, not reconstructed)
+
+Tags v3.1.1, v3.1.2, v3.2.0, v3.2.1, v3.3.0, v3.4.0 and v3.6.0 exist in git but have NO row here
+(v3.1.0 and v3.3.0 do have phase archives under milestones/). They were not reconstructed in this
+pass: v3.6.0 shipped with no numbered phases, so there are no SUMMARYs to rebuild it from, and a
+row written from memory is exactly what D-72 warns against. Absence of a row here is NOT evidence a
+version did not ship — check `git tag` and the milestones/ directory.
+
+---
+
 ## v3.5.0 Anti-overlay wedge — dev + exec first wave (Shipped: 2026-06-15)
 
 **Phases completed:** 4 phases, 16 plans, 27 tasks
