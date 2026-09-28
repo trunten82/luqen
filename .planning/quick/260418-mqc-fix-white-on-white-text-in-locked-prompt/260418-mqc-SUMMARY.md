@@ -4,6 +4,10 @@ slug: fix-white-on-white-text-in-locked-prompt
 status: complete
 date: 2026-04-18
 description: Fix white-on-white text in locked prompt segments on /admin/llm?tab=prompts
+audit_acknowledged:
+  milestone: v3.7.0
+  at: 2026-09-28
+  status: complete
 ---
 
 # Quick Task 260418-mqc — Summary

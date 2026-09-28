@@ -206,7 +206,11 @@ describe('checkPreRegistrationAncestry -- never mutates, never writes', () => {
     const statusAfter = execFileSync('git', ['status', '--short'], { cwd, encoding: 'utf-8' });
     expect(headAfter).toBe(headBefore);
     expect(statusAfter).toBe(statusBefore);
-  });
+    // The first `git status` in a process is a cold index refresh whose cost is the RUNNER's I/O,
+    // not this code's: MEASURED in CI 2026-09-28 at 0.8-1.4s on green runs and 21-25s on two
+    // failing attempts of PR #82 (same tree, re-run). The property asserted here does not depend
+    // on duration, so the 5s default was a flake source, not a guard.
+  }, 60_000);
 });
 
 describe('checkPreRegistrationAncestry -- a genuine git execution failure propagates, never silently read as "does not hold"', () => {

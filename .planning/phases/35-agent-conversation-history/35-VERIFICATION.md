@@ -5,6 +5,7 @@ status: human_needed
 score: 5/5 must-haves verified
 overrides_applied: 0
 requirements_coverage:
+
   - id: AHIST-01
     status: SATISFIED
   - id: AHIST-02
@@ -16,6 +17,7 @@ requirements_coverage:
   - id: AHIST-05
     status: SATISFIED
 human_verification:
+
   - test: "Open agent drawer in a real browser and click the History button"
     expected: "Stacked panel slides in, focus moves to Back; list shows paginated past conversations (newest first) with title, timestamp, and message count; scroll to bottom triggers next 20 via IntersectionObserver"
     why_human: "Visual/motion behaviour (slide transition, skeleton pulse, prefers-reduced-motion honour) cannot be verified in JSDOM — no real layout engine"
@@ -31,6 +33,10 @@ human_verification:
   - test: "Verify AI title generation on first turn with a real LLM provider (Ollama or OpenAI)"
     expected: "After first assistant response, conversation row gains an AI-generated 3–5 word title; on provider failure, title falls back to first-user-message 50-char truncation; neither re-titles after subsequent turns"
     why_human: "Real-LLM title quality (3–5 word summary fidelity) is a subjective language-quality check; tests only stub the generator"
+audit_acknowledged:
+  milestone: v3.7.0
+  at: 2026-09-28
+  status: human_needed
 ---
 
 # Phase 35: Agent Conversation History — Verification Report
@@ -133,6 +139,7 @@ No blocker anti-patterns (TODO/FIXME/placeholder/stub data/console.log-only hand
 ### Human Verification Required
 
 See frontmatter `human_verification:` block. Summary:
+
 1. Visual panel slide + skeleton pulse + reduced-motion honour in a real browser
 2. Debounced search feel + SR-announcement clarity under a real screen reader
 3. Rename + Delete in-place swap ergonomics and destructive-copy clarity
