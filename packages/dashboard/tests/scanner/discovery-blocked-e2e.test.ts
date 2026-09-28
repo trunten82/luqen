@@ -46,11 +46,16 @@ function waitForScan(orchestrator: ScanOrchestrator, scanId: string, timeoutMs =
   });
 }
 
-async function makeScanResult(pages: Array<{ url: string; issues: unknown[] }>, wafWarning?: string) {
+async function makeScanResult(
+  pages: Array<{ url: string; issues: unknown[] }>,
+  wafWarning?: string,
+  discoveryFallback?: string,
+) {
   return {
     pages: pages.map((p) => ({ ...p, issueCount: p.issues.length })),
     summary: { pagesScanned: pages.length, byLevel: { error: 0, warning: 0, notice: 0 } },
     ...(wafWarning !== undefined ? { wafWarning } : {}),
+    ...(discoveryFallback !== undefined ? { discoveryFallback } : {}),
   };
 }
 
@@ -62,6 +67,7 @@ describe('discovery-blocked end-to-end (WAF-SURFACE-1)', () => {
   let server: FastifyInstance;
   let flaggedScanId: string;
   let unflaggedScanId: string;
+  let browserScanId: string;
 
   beforeAll(async () => {
     dbPath = join(tmpdir(), `test-waf-e2e-${randomUUID()}.db`);
@@ -146,6 +152,35 @@ describe('discovery-blocked end-to-end (WAF-SURFACE-1)', () => {
       webserviceUrl: 'http://localhost:4000',
     });
     await unflaggedEvents;
+
+    // Browser-discovered scan: mocked scanner resolves one page, flagged with
+    // discoveryFallback 'browser' (no wafWarning key) — the third code path.
+    browserScanId = randomUUID();
+    await storage.scans.createScan({
+      id: browserScanId,
+      siteUrl: 'https://browser-example.test',
+      standard: 'WCAG2AA',
+      jurisdictions: [],
+      createdBy: 'testuser',
+      createdAt: new Date().toISOString(),
+      orgId: 'system',
+    });
+    mockCreateScanner.mockReturnValueOnce({
+      scan: vi.fn().mockResolvedValue(
+        await makeScanResult([{ url: 'https://browser-example.test', issues: [] }], undefined, 'browser'),
+      ),
+    });
+    const browserEvents = waitForScan(orchestrator, browserScanId);
+    orchestrator.startScan(browserScanId, {
+      siteUrl: 'https://browser-example.test',
+      standard: 'WCAG2AA',
+      concurrency: 2,
+      jurisdictions: [],
+      regulations: [],
+      scanMode: 'site',
+      webserviceUrl: 'http://localhost:4000',
+    });
+    await browserEvents;
   }, 20000);
 
   afterAll(async () => {
@@ -186,5 +221,42 @@ describe('discovery-blocked end-to-end (WAF-SURFACE-1)', () => {
     await storage.scans.updateScan(unflaggedScanId, { discoveryWarning: 'bogus' } as never);
     const record = await storage.scans.getScan(unflaggedScanId);
     expect('discoveryWarning' in (record as object)).toBe(false);
+  });
+
+  it('ED1: browser discovered scan persists waf-browser-discovery on the record', async () => {
+    const record = await storage.scans.getScan(browserScanId);
+    expect(record?.discoveryWarning).toBe('waf-browser-discovery');
+    expect(record?.pagesScanned).toBe(1);
+    expect(record?.status).toBe('completed');
+  });
+
+  it('ED2: browser discovered scan keeps the code in list reads', async () => {
+    const rows = await storage.scans.listScans({ orgId: 'system' });
+    const row = rows.find((r) => r.id === browserScanId);
+    expect(row?.discoveryWarning).toBe('waf-browser-discovery');
+  });
+
+  it('ED3: report route hands the browser discovery code to the template', async () => {
+    const response = await server.inject({ method: 'GET', url: `/reports/${browserScanId}` });
+    expect(response.statusCode).toBe(200);
+    const body = response.json() as { template: string; data: { scan: { discoveryWarning?: string } } };
+    expect(body.template).toBe('report-detail.hbs');
+    expect(body.data.scan.discoveryWarning).toBe('waf-browser-discovery');
+  });
+
+  it('RR1: repository round trips the browser discovery code', async () => {
+    const scanId = randomUUID();
+    await storage.scans.createScan({
+      id: scanId,
+      siteUrl: 'https://rr1-example.test',
+      standard: 'WCAG2AA',
+      jurisdictions: [],
+      createdBy: 'testuser',
+      createdAt: new Date().toISOString(),
+      orgId: 'system',
+    });
+    await storage.scans.updateScan(scanId, { discoveryWarning: 'waf-browser-discovery' } as never);
+    const record = await storage.scans.getScan(scanId);
+    expect(record?.discoveryWarning).toBe('waf-browser-discovery');
   });
 });

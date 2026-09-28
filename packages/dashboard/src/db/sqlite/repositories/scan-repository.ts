@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3';
 import type { ScanRepository } from '../../interfaces/scan-repository.js';
 import type { ScanRecord, ScanFilters, ScanUpdateData, CreateScanInput } from '../../types.js';
+import { isDiscoveryWarning } from '../../types.js';
 import type { ScoreResult } from '../../../services/scoring/types.js';
 import { brandScoreRowToResult, type BrandScoreRowLike } from './brand-score-row-mapper.js';
 
@@ -79,9 +80,10 @@ function rowToRecord(row: ScanRow): ScanRecord {
     publicShareEnabled: row.public_share_enabled === 1,
     publicShareEnabledAt: row.public_share_enabled_at,
     publicShareEnabledBy: row.public_share_enabled_by,
-    // Read-boundary validation (T1i): only the known literal is surfaced, so
-    // an unexpected stored value never reaches templates or callers.
-    ...(row.discovery_warning === 'waf-blocked' ? { discoveryWarning: 'waf-blocked' as const } : {}),
+    // Read-boundary validation (T1i, extended WAF-BROWSER-2): only a known
+    // literal is surfaced, so an unexpected stored value never reaches
+    // templates or callers.
+    ...(isDiscoveryWarning(row.discovery_warning) ? { discoveryWarning: row.discovery_warning } : {}),
   };
 }
 

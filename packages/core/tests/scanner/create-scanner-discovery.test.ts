@@ -55,3 +55,33 @@ describe('createScanner().scan() — wafWarning surfacing', () => {
     expect('wafWarning' in result).toBe(false);
   });
 });
+
+describe('createScanner().scan() — discoveryFallback surfacing (WAF-BROWSER-2)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockScanUrls.mockResolvedValue({
+      pages: [{ url: START_URL, issues: [], discoveryMethod: 'crawl' } as never],
+      errors: [],
+    });
+  });
+
+  it('CS1: site mode surfaces the browser discovery fallback', async () => {
+    mockDiscoverUrls.mockResolvedValue({
+      urls: [{ url: START_URL, discoveryMethod: 'crawl' }, { url: `${START_URL}a`, discoveryMethod: 'crawl' }],
+      discoveryFallback: 'browser',
+    } as never);
+    const scanner = createScanner({});
+    const result = await scanner.scan(START_URL);
+    expect(result.discoveryFallback).toBe('browser');
+    expect('wafWarning' in result).toBe(false);
+  });
+
+  it('CS2: site mode without a fallback has no discoveryFallback key', async () => {
+    mockDiscoverUrls.mockResolvedValue({
+      urls: [{ url: START_URL, discoveryMethod: 'crawl' }],
+    });
+    const scanner = createScanner({});
+    const result = await scanner.scan(START_URL);
+    expect('discoveryFallback' in result).toBe(false);
+  });
+});

@@ -30,11 +30,24 @@ export type { ManualTestResult, ManualTestStatus } from '../manual-criteria.js';
 // ---------------------------------------------------------------------------
 
 /**
- * Migration 089 (WAF-SURFACE-1). Currently the only defined value is
- * 'waf-blocked': full-site discovery hit a bot-protection challenge on the
- * start URL, so the scan's page list is not a whole-site discovery result.
+ * Migration 089 (WAF-SURFACE-1), extended by WAF-BROWSER-2. Two values:
+ *  - 'waf-blocked': full-site discovery hit a bot-protection challenge on the
+ *    start URL and could not get past it (fetch AND the browser fallback both
+ *    found nothing beyond the start URL, or the browser fallback failed), so
+ *    the scan's page list is not a whole-site discovery result.
+ *  - 'waf-browser-discovery': full-site discovery hit a bot-protection
+ *    challenge on the start URL, but the headless-browser fallback found
+ *    pages beyond it by rendering the DOM and following its links — the
+ *    scan's page list IS a whole-site discovery result, just not a
+ *    fetch-based one.
  */
-export type DiscoveryWarning = 'waf-blocked';
+export const DISCOVERY_WARNINGS = ['waf-blocked', 'waf-browser-discovery'] as const;
+export type DiscoveryWarning = (typeof DISCOVERY_WARNINGS)[number];
+
+/** Read-boundary guard: narrows an unknown stored/wire value to a known {@link DiscoveryWarning}. */
+export function isDiscoveryWarning(value: unknown): value is DiscoveryWarning {
+  return typeof value === 'string' && (DISCOVERY_WARNINGS as readonly string[]).includes(value);
+}
 
 export interface ScanRecord {
   readonly id: string;

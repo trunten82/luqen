@@ -75,9 +75,15 @@
   </div>
 </section>
 
-{{#if scan.discoveryWarning}}
+{{#if (eq scan.discoveryWarning "waf-blocked")}}
 <div class="alert alert--warning" role="status">
   {{t "reportDetail.discoveryBlocked" pages=scan.pagesScanned}}
+</div>
+{{/if}}
+
+{{#if (eq scan.discoveryWarning "waf-browser-discovery")}}
+<div class="alert alert--info" role="status">
+  {{t "reportDetail.discoveryBrowser" pages=scan.pagesScanned}}
 </div>
 {{/if}}
 
