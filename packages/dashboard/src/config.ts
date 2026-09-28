@@ -70,6 +70,9 @@ export interface DashboardConfig {
    * Opt-in escape hatch: allow scanning loopback/private/internal targets.
    * Defaults to false (secure). Only enable in trusted test environments via
    * DASHBOARD_ALLOW_PRIVATE_SCAN_TARGETS=true or dashboard.config.json.
+   * Covers BOTH the start-URL check and the core discovery SSRF guard
+   * (robots, sitemaps, crawl, hashing, redirects, browser fallback) —
+   * DISCOVERY-SSRF-1.
    */
   readonly allowPrivateScanTargets?: boolean;
   /** Pa11y test runner: 'htmlcs' (default) or 'axe'. Requires the runner installed on the webservice. */
