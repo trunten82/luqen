@@ -539,6 +539,47 @@ describe('ScanOrchestrator', () => {
       }));
     });
 
+    it('DISCOVERY-SSRF-1: createScanner gets the strict discovery guard by default', async () => {
+      const mockScanner = { scan: vi.fn().mockResolvedValue(makeScanResult([{ url: 'https://example.com', issues: [] }])) };
+      mockCreateScanner.mockReturnValue(mockScanner);
+      const eventsPromise = waitForScan(orchestrator, 'scan-ssrf-default');
+      orchestrator.startScan('scan-ssrf-default', baseScanConfig({ scanMode: 'site' }));
+      await eventsPromise;
+      expect(mockCreateScanner).toHaveBeenCalledWith(expect.objectContaining({ allowPrivateTargets: false }));
+    });
+
+    it('DISCOVERY-SSRF-1: allowPrivateScanTargets reaches createScanner, incremental discovery and hashing', async () => {
+      const optedOut = new ScanOrchestrator(storage, '/tmp/reports', { maxConcurrent: 2, allowPrivateScanTargets: true });
+      const mockScanner = { scan: vi.fn().mockResolvedValue(makeScanResult([{ url: 'https://example.com', issues: [] }])) };
+      mockCreateScanner.mockReturnValue(mockScanner);
+      const first = waitForScan(optedOut, 'scan-ssrf-optout');
+      optedOut.startScan('scan-ssrf-optout', baseScanConfig({ scanMode: 'site' }));
+      await first;
+      expect(mockCreateScanner).toHaveBeenCalledWith(expect.objectContaining({ allowPrivateTargets: true }));
+
+      mockDiscoverUrls.mockResolvedValue({ urls: [{ url: 'https://example.com', discoveryMethod: 'crawl' }] });
+      mockComputeContentHashes.mockResolvedValue(new Map([['https://example.com', 'h']]));
+      (storage.pageHashes.getPageHashes as ReturnType<typeof vi.fn>).mockResolvedValue(new Map());
+      mockScanUrls.mockResolvedValue({ pages: [{ url: 'https://example.com', issueCount: 0, issues: [] }], errors: [] });
+      const second = waitForScan(optedOut, 'scan-ssrf-inc');
+      optedOut.startScan('scan-ssrf-inc', baseScanConfig({ scanMode: 'site', incremental: true, orgId: 'org-1' }));
+      await second;
+      expect(mockDiscoverUrls.mock.calls.at(-1)?.[1]).toMatchObject({ guard: { allowPrivate: true } });
+      expect(mockComputeContentHashes.mock.calls.at(-1)?.[3]).toEqual({ allowPrivate: true });
+    });
+
+    it('DISCOVERY-SSRF-1: incremental discovery and hashing are strict by default', async () => {
+      mockDiscoverUrls.mockResolvedValue({ urls: [{ url: 'https://example.com', discoveryMethod: 'crawl' }] });
+      mockComputeContentHashes.mockResolvedValue(new Map([['https://example.com', 'h']]));
+      (storage.pageHashes.getPageHashes as ReturnType<typeof vi.fn>).mockResolvedValue(new Map());
+      mockScanUrls.mockResolvedValue({ pages: [{ url: 'https://example.com', issueCount: 0, issues: [] }], errors: [] });
+      const done = waitForScan(orchestrator, 'scan-ssrf-inc-strict');
+      orchestrator.startScan('scan-ssrf-inc-strict', baseScanConfig({ scanMode: 'site', incremental: true, orgId: 'org-1' }));
+      await done;
+      expect(mockDiscoverUrls.mock.calls.at(-1)?.[1]).toMatchObject({ guard: { allowPrivate: false } });
+      expect(mockComputeContentHashes.mock.calls.at(-1)?.[3]).toEqual({ allowPrivate: false });
+    });
+
     it('passes runner option to createScanner when provided', async () => {
       const scanResult = makeScanResult([{ url: 'https://example.com', issues: [] }]);
       const mockScanner = { scan: vi.fn().mockResolvedValue(scanResult) };

@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto';
+import { guardedFetch } from '../net/guarded-fetch.js';
+import type { NetworkGuardPolicy } from '../net/ssrf-guard.js';
 
 /**
  * Fetches a page and computes a SHA-256 hash of its normalized content.
@@ -7,11 +9,13 @@ import { createHash } from 'node:crypto';
 export async function computeContentHash(
   url: string,
   headers?: Readonly<Record<string, string>>,
+  guard: NetworkGuardPolicy = {},
 ): Promise<string> {
-  const response = await fetch(url, {
+  // DISCOVERY-SSRF-1: a discovered page can redirect anywhere — guard every hop.
+  const response = await guardedFetch(url, {
     headers: headers as Record<string, string>,
     signal: AbortSignal.timeout(15_000),
-  });
+  }, guard);
   const text = await response.text();
 
   // Strip dynamic content for stable hashing
@@ -31,6 +35,7 @@ export async function computeContentHashes(
   urls: readonly string[],
   concurrency: number = 5,
   headers?: Readonly<Record<string, string>>,
+  guard: NetworkGuardPolicy = {},
 ): Promise<Map<string, string>> {
   const results = new Map<string, string>();
   const queue = [...urls];
@@ -43,7 +48,7 @@ export async function computeContentHashes(
       const url = queue[current];
 
       try {
-        const hash = await computeContentHash(url, headers);
+        const hash = await computeContentHash(url, headers, guard);
         results.set(url, hash);
       } catch {
         // If we can't hash a page, treat it as changed (no hash = will be scanned)

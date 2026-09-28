@@ -7,6 +7,7 @@ import { Command } from 'commander';
 import { loadConfig } from './config.js';
 import { discoverUrls, type DiscoverResult } from './discovery/discover.js';
 import { discoveryNotice } from './discovery/notice.js';
+import { operatorPolicyFor } from './net/ssrf-guard.js';
 import { WebserviceClient } from './scanner/webservice-client.js';
 import { DirectScanner } from './scanner/direct-scanner.js';
 import { scanUrls } from './scanner/scanner.js';
@@ -197,6 +198,7 @@ program
         maxPages: effectiveConfig.maxPages,
         crawlDepth: effectiveConfig.crawlDepth,
         alsoCrawl: effectiveConfig.alsoCrawl,
+        guard: operatorPolicyFor(url),
       }, true);
       const discoveredUrls = discoverResult.urls;
 
@@ -424,6 +426,7 @@ program
           maxPages: effectiveConfig.maxPages,
           crawlDepth: effectiveConfig.crawlDepth,
           alsoCrawl: effectiveConfig.alsoCrawl,
+          guard: operatorPolicyFor(url),
         }, true);
         const discoveredUrls = fixDiscoverResult.urls;
 

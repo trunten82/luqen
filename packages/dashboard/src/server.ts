@@ -419,6 +419,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // ── Orchestrator ──────────────────────────────────────────────────────────
   const orchestrator = new ScanOrchestrator(storage, config.reportsDir, {
     maxConcurrent: config.maxConcurrentScans,
+    allowPrivateScanTargets: config.allowPrivateScanTargets ?? false, // DISCOVERY-SSRF-1: discovery opt-out
     ssePublisher,
     redisQueue: redisScanQueue,
     pluginManager,

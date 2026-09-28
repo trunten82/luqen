@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { readFile } from 'node:fs/promises';
 import { loadConfig } from './config.js';
 import { discoverUrls } from './discovery/discover.js';
+import { operatorPolicyFor } from './net/ssrf-guard.js';
 import { WebserviceClient } from './scanner/webservice-client.js';
 import { DirectScanner } from './scanner/direct-scanner.js';
 import { scanUrls } from './scanner/scanner.js';
@@ -62,6 +63,7 @@ export function createServer(): LuqenMcpServer {
           maxPages: mergedConfig.maxPages,
           crawlDepth: mergedConfig.crawlDepth,
           alsoCrawl: mergedConfig.alsoCrawl,
+          guard: operatorPolicyFor(args.url),
         });
 
         const clientOrScanner = mergedConfig.webserviceUrl !== undefined

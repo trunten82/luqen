@@ -1,6 +1,8 @@
 import * as cheerio from 'cheerio';
 import { computeDiscoveryScope, isInDiscoveryScope } from './scope.js';
 import { isHtmlUrl, normalizeUrl } from './link-filters.js';
+import { guardedFetch } from '../net/guarded-fetch.js';
+import type { NetworkGuardPolicy } from '../net/ssrf-guard.js';
 
 const WAF_SIGNATURES = [
   '_Incapsula_Resource',
@@ -22,6 +24,8 @@ interface CrawlOptions {
   readonly maxDepth: number;
   readonly isAllowed: (url: string) => boolean;
   readonly headers?: Record<string, string>;
+  /** SSRF guard applied to every page fetch and redirect hop (DISCOVERY-SSRF-1). */
+  readonly guard?: NetworkGuardPolicy;
 }
 
 export interface CrawlResult {
@@ -51,7 +55,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions, returnR
     if (depth > maxDepth) continue;
 
     try {
-      const response = await fetch(url, options.headers ? { headers: options.headers } : {});
+      const response = await guardedFetch(url, options.headers ? { headers: options.headers } : {}, options.guard ?? {});
       if (!response.ok) continue;
       const contentType = response.headers.get('content-type') ?? '';
       if (!contentType.includes('text/html')) continue;

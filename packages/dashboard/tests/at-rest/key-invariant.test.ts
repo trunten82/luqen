@@ -125,7 +125,9 @@ describe('at-rest key-invariant (PBH-A)', () => {
     // Re-measured after Task 4 inserted the PBH-D startup-check block ahead
     // of `new PluginManager` in server.ts, shifting every site below it by
     // +14 lines (299->313, 341->355, 1101->1115, 1298->1312, 1299->1313,
-    // 1412->1430). The startup-check's own `encryptionKey: config.encryptionKey`
+    // 1412->1430). DISCOVERY-SSRF-1 then added one line (the orchestrator's
+    // allowPrivateScanTargets option) above R7, shifting R7-R10 by +1
+    // (1115->1116, 1312->1313, 1313->1314, 1430->1431). The startup-check's own `encryptionKey: config.encryptionKey`
     // reference (server.ts ~289) is NOT a new wiring site requiring a list
     // update — it is the read-only decrypt CHECK, not a write/consumer path,
     // and this test asserts an exact fixed-position list, not a generic scan.
@@ -133,10 +135,10 @@ describe('at-rest key-invariant (PBH-A)', () => {
     const EXPECTED_WIRING_SITES: readonly WiringSite[] = [
       { file: SERVER_TS, line: 313, label: 'R1 PluginManager options' },
       { file: SERVER_TS, line: 355, label: 'R3 SqliteServiceConnectionsRepository' },
-      { file: SERVER_TS, line: 1115, label: 'R7 registerOauthKeysRoutes' },
-      { file: SERVER_TS, line: 1312, label: 'R8 ensureInitialSigningKey' },
-      { file: SERVER_TS, line: 1313, label: 'R9 createDashboardSigner' },
-      { file: SERVER_TS, line: 1430, label: 'R10 startKeyHousekeeping' },
+      { file: SERVER_TS, line: 1116, label: 'R7 registerOauthKeysRoutes' },
+      { file: SERVER_TS, line: 1313, label: 'R8 ensureInitialSigningKey' },
+      { file: SERVER_TS, line: 1314, label: 'R9 createDashboardSigner' },
+      { file: SERVER_TS, line: 1431, label: 'R10 startKeyHousekeeping' },
       { file: REL('cli.ts'), line: 219, label: 'R2 cli.ts PluginManager options' },
       { file: REL('routes', 'git-credentials.ts'), line: 32, label: 'R4 git-credentials encryptionKey local' },
       { file: REL('routes', 'repos.ts'), line: 404, label: 'R5 repos.ts decryptSecret' },
