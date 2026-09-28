@@ -401,7 +401,7 @@ export async function repoRoutes(
             : null;
 
           if (gitHostConfig !== null && plugin !== undefined && credential !== null) {
-            const token = decryptSecret(credential.encryptedToken, config.sessionSecret);
+            const token = decryptSecret(credential.encryptedToken, config.encryptionKey);
             const remoteReader = new RemoteFileReader(plugin, {
               hostUrl: gitHostConfig.hostUrl,
               repo: connectedRepo.repoUrl,

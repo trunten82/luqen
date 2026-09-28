@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path';
 import { readFileSync, readdirSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { DashboardConfig } from './config.js';
+import { DashboardConfig, withEncryptionKeyDefault, serverPluginsDir } from './config.js';
 import { registerSession, getSessionExpiryMs, createSessionExpiryHook } from './auth/session.js';
 import { createAuthGuard } from './auth/middleware.js';
 import { AuthService } from './auth/auth-service.js';
@@ -69,6 +69,7 @@ import { ScanOrchestrator } from './scanner/orchestrator.js';
 import { ScanService } from './services/scan-service.js';
 import { DirectScanner, probeChromium } from '@luqen/core';
 import { registerHealthRoute, logBrowserResolution } from './routes/health.js';
+import { checkAtRestDecryption, logAtRestCheck, logAtRestKeyPosture } from './at-rest/startup-check.js';
 import { createRedisClient, RedisScanQueue, SsePublisher } from './cache/redis.js';
 import { dashboardUserRoutes } from './routes/admin/dashboard-users.js';
 import { apiKeyRoutes } from './routes/admin/api-keys.js';
@@ -235,6 +236,11 @@ function isCsrfExempt(path: string): boolean {
 }
 
 export async function createServer(config: DashboardConfig): Promise<FastifyInstance> {
+  // PBH-A: normalise programmatic callers (tests, scripts/snapshot-openapi.ts)
+  // that pass a config object without `encryptionKey` — defaults it to
+  // sessionSecret so at-rest wiring below always has a real key.
+  config = withEncryptionKeyDefault(config);
+
   // Phase 41-04: TypeBox type provider for schema-aware route registration.
   // Routes can declare TypeBox `schema:` blocks and Fastify's AJV runs them
   // at request time; @fastify/swagger collects them into the OpenAPI spec.
@@ -273,6 +279,19 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // For consumers that still need raw DB (PluginManager, AuthService):
   const rawDb = (storage as SqliteStorageAdapter).getRawDatabase();
 
+  // ── At-rest decryption check (PBH-D, DEC-4) ─────────────────────────────
+  // Runs ONCE, immediately after migrations and BEFORE `new PluginManager` —
+  // the earliest point, preceding every at-rest consumer, so this ERROR line
+  // appears in the log before the boot-time signer crash (R9, oauth-signer.ts)
+  // if the key is wrong. The precomputed result is passed to
+  // registerHealthRoute below; GET /health never re-runs the check.
+  const atRestCheckResult = checkAtRestDecryption(rawDb, {
+    encryptionKey: config.encryptionKey,
+    pluginsDir: serverPluginsDir(config),
+  });
+  logAtRestCheck(server.log, atRestCheckResult);
+  logAtRestKeyPosture(server.log, config);
+
   // Seed system notification templates (Phase 47 NOTIF-01) — idempotent.
   // 4 events × 3 channels = 12 system rows; org-scoped overrides come later
   // via the Phase 48 editor. Safe to call on every startup.
@@ -290,8 +309,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
   const pluginManager = new PluginManager({
     db: rawDb,
-    pluginsDir: resolve(config.reportsDir, '..', 'plugins'),
-    encryptionKey: config.sessionSecret,
+    pluginsDir: serverPluginsDir(config),
+    encryptionKey: config.encryptionKey,
     registryEntries,
   });
   await pluginManager.initializeOnStartup();
@@ -333,7 +352,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // (plan 06-03) is picked up without a restart.
   const serviceConnectionsRepo = new SqliteServiceConnectionsRepository(
     rawDb,
-    config.sessionSecret,
+    config.encryptionKey,
   );
   await importFromConfigIfEmpty(serviceConnectionsRepo, config, server.log);
   const serviceClientRegistry = await ServiceClientRegistry.create(
@@ -1093,7 +1112,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await userRoutes(server, config.complianceUrl);
   await clientRoutes(server, config.complianceUrl, storage, config.brandingUrl, getBrandingTokenManager, getLLMClient);
   // Phase 31.1 Plan 04 Task 2: admin surface for OAuth signing-key lifecycle.
-  await registerOauthKeysRoutes(server, storage, config.sessionSecret);
+  await registerOauthKeysRoutes(server, storage, config.encryptionKey);
   await registerServiceConnectionsRoutes(server, storage, config);
   await systemBrandGuidelineRoutes(server, storage, getLLMClient);
   await monitorRoutes(server, config.complianceUrl);
@@ -1290,8 +1309,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // DCR per D-16/D-17). These endpoints are orthogonal to the existing MCP
   // verifier swap — Plan 03 wires the JWKS-backed verifier; this plan ships
   // the AS side only so clients can complete end-to-end token exchange.
-  await ensureInitialSigningKey(storage, config.sessionSecret);
-  const dashboardSigner = await createDashboardSigner(storage, config.sessionSecret);
+  await ensureInitialSigningKey(storage, config.encryptionKey);
+  const dashboardSigner = await createDashboardSigner(storage, config.encryptionKey);
   await registerOauthRoutes(server, storage, dashboardSigner);
 
   // ── Phase 32 Plan 04: Agent service + /agent/* routes ───────────────────
@@ -1394,7 +1413,11 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   // ── Health endpoint ───────────────────────────────────────────────────────
-  await registerHealthRoute(server, { version: VERSION, probe: probeChromium });
+  await registerHealthRoute(server, {
+    version: VERSION,
+    probe: probeChromium,
+    atRest: { status: atRestCheckResult.status },
+  });
 
   // ── Scheduler — start after server is ready ────────────────────────────
   server.addHook('onReady', async () => {
@@ -1404,7 +1427,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     const digestTimer = startDigestScheduler(storage, pluginManager);
     const sourceMonitorTimer = startSourceMonitorScheduler(config, getComplianceTokenManager);
     // Phase 31.1 Plan 04 Task 1: nightly OAuth key housekeeping + auto-rotation.
-    const keyHousekeepingTimer = startKeyHousekeeping(storage, config.sessionSecret);
+    const keyHousekeepingTimer = startKeyHousekeeping(storage, config.encryptionKey);
     server.addHook('onClose', () => {
       clearInterval(timer);
       clearInterval(emailTimer);

@@ -193,6 +193,11 @@ export async function createTestServer(): Promise<TestContext> {
   await registerHealthRoute(server, {
     version: '0.0.0-test',
     probe: async () => ({ ok: true, executablePath: '/fake/chrome', source: 'system' }),
+    // PBH-D: this test helper builds its own minimal Fastify app rather than
+    // going through createServer (which computes the real check via
+    // checkAtRestDecryption) — a static 'ok' is correct here since this
+    // helper's DB is fresh (no at-rest data to fail decrypting).
+    atRest: { status: 'ok' },
   });
 
   await server.ready();

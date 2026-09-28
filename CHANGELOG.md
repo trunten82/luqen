@@ -22,6 +22,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   (`{ status, checks: { browser } }`, never a filesystem path) and the
   dashboard logs an ERROR naming every tried path at startup when no
   browser resolves.
+- `DASHBOARD_ENCRYPTION_KEY`: a new, optional at-rest AES encryption key,
+  independent of `DASHBOARD_SESSION_SECRET`. Defaults to the session secret
+  when unset (backward compatible). Encrypts OAuth signing keys,
+  service-connection secrets, git credentials, and plugin secrets.
+- `node packages/dashboard/dist/cli.js rekey-at-rest` (the dashboard CLI; not on PATH by default): a new CLI command to re-encrypt every
+  at-rest value from an old key to a new one. Supports `--dry-run` (default,
+  read-only, safe while the dashboard is running), `--apply` (refuses while
+  the dashboard holds the database open; makes an atomic 0600 backup first;
+  single-transaction with verify-after-write; zero writes on any failure),
+  and `--rollback <backup>` (byte-exact restore).
+- `GET /health` now also reports `checks.atRestEncryption.status`
+  (`ok`/`failed`/`empty`), computed once at startup by decrypting every
+  stored at-rest value — never per request, never exposing counts, store
+  names, keys or paths.
+- A new runbook, [Rotating the session secret and the at-rest encryption
+  key](docs/guides/security-administration.md#rotating-the-session-secret-and-the-at-rest-encryption-key),
+  covering independent rotation of both secrets with a verification window
+  and rollback procedure.
 
 ### Changed
 
@@ -46,6 +64,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Discovery (sitemap and crawl) now stays within the start URL's origin and
   path prefix; crawled links to other hosts via userinfo, lookalike hosts, or
   other ports are no longer followed.
+
+### Security
+
+- The session secret is now rotatable independently of at-rest encrypted
+  data. Previously, `DASHBOARD_SESSION_SECRET` doubled as the AES key for
+  four at-rest stores (OAuth signing keys, service-connection secrets, git
+  credentials, plugin secrets); rotating it alone crash-looped the server
+  (`Unsupported state or unable to authenticate data`) because the running
+  process could no longer decrypt its own OAuth signing key at boot. Setting
+  `DASHBOARD_ENCRYPTION_KEY` before rotating the session secret avoids this
+  entirely — see the new rotation runbook above.
 
 ## [3.6.0] - 2026-09-04
 

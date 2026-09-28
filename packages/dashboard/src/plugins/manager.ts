@@ -16,6 +16,7 @@ import type {
 import { encryptConfig, decryptConfig, maskSecrets } from './crypto.js';
 import { getByName, getByPackageName } from './registry.js';
 import { computeDirectoryChecksum } from './checksum.js';
+import { packageNameToPluginName, resolvePluginPackageDir, readPluginManifest, tryReadPluginManifest } from './manifest-path.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -66,13 +67,6 @@ function rowToRecord(row: PluginRow, config: Record<string, unknown>): PluginRec
     ...(row.error ? { error: row.error } : {}),
   };
   return record;
-}
-
-/** Convert @luqen/plugin-auth-entra → auth-entra */
-function packageNameToPluginName(packageName: string): string {
-  const parts = packageName.split('/');
-  const last = parts[parts.length - 1];
-  return last.replace(/^plugin-/, '');
 }
 
 /**
@@ -889,12 +883,7 @@ export class PluginManager {
    * Legacy: pluginsDir/node_modules/@scope/plugin-name/
    */
   private resolvePackageDir(packageName: string): string {
-    const name = packageNameToPluginName(packageName);
-    const newPath = join(this.pluginsDir, 'packages', name);
-    if (existsSync(newPath)) return newPath;
-
-    // Legacy layout (npm-installed plugins)
-    return join(this.pluginsDir, 'node_modules', ...packageName.split('/'));
+    return resolvePluginPackageDir(this.pluginsDir, packageName);
   }
 
   private resolvePluginPath(packageName: string): string {
@@ -914,17 +903,11 @@ export class PluginManager {
   }
 
   private readManifest(packageName: string): PluginManifest {
-    const manifestPath = join(this.resolvePackageDir(packageName), 'manifest.json');
-    const raw = readFileSync(manifestPath, 'utf-8');
-    return JSON.parse(raw) as PluginManifest;
+    return readPluginManifest(this.pluginsDir, packageName);
   }
 
   private tryReadManifest(packageName: string): PluginManifest | null {
-    try {
-      return this.readManifest(packageName);
-    } catch {
-      return null;
-    }
+    return tryReadPluginManifest(this.pluginsDir, packageName);
   }
 
 }

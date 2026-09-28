@@ -40,6 +40,7 @@ Place in the working directory where you run `luqen-dashboard serve`. All fields
 | `reportsDir` | `string` | `./reports` | Directory where JSON and HTML scan reports are written |
 | `dbPath` | `string` | `./dashboard.db` | Path to the SQLite database file (used by the SQLite storage adapter) |
 | `sessionSecret` | `string` | — | Secret used to sign session cookies. **Required. Minimum 32 bytes.** |
+| `encryptionKey` | `string` | Defaults to `sessionSecret` when unset | At-rest AES key for OAuth signing keys, service-connection secrets, git credentials, and plugin secrets. Independent of `sessionSecret`, so the session secret can be rotated without breaking encrypted data. **Minimum 32 bytes if set.** See [Rotating the session secret and the at-rest encryption key](../guides/security-administration.md#rotating-the-session-secret-and-the-at-rest-encryption-key). |
 | `maxConcurrentScans` | `number` | `2` | Maximum number of scans that may run simultaneously |
 | `maxPages` | `number` | `50` | Maximum pages to discover and scan in full-site mode (1–1000) |
 | `pluginsDir` | `string` | `./plugins` | Directory where plugin packages are installed |
@@ -69,6 +70,7 @@ Place in the working directory where you run `luqen-dashboard serve`. All fields
 | `DASHBOARD_REPORTS_DIR` | `reportsDir` | Report storage directory |
 | `DASHBOARD_DB_PATH` | `dbPath` | SQLite database path |
 | `DASHBOARD_SESSION_SECRET` | `sessionSecret` | Cookie signing secret (min 32 bytes) |
+| `DASHBOARD_ENCRYPTION_KEY` | `encryptionKey` | At-rest AES key (min 32 bytes). Empty string is treated as unset. Defaults to `DASHBOARD_SESSION_SECRET` when unset. |
 | `DASHBOARD_MAX_CONCURRENT_SCANS` | `maxConcurrentScans` | Max parallel scan limit |
 | `DASHBOARD_MAX_PAGES` | `maxPages` | Maximum pages per full-site scan (1–1000, default 50) |
 | `DASHBOARD_PLUGINS_DIR` | `pluginsDir` | Directory for plugin packages (default: `./plugins`) |
@@ -226,7 +228,10 @@ All templates use `perm.*` flags for authorization checks rather than hardcoded 
 
 ### Git Host Token Encryption
 
-Developer PATs are encrypted using the `sessionSecret` as the encryption key (same key used for plugin config encryption). For additional security, you can set a dedicated encryption key via the `GIT_TOKEN_ENCRYPTION_KEY` environment variable.
+Developer PATs are encrypted using `DASHBOARD_ENCRYPTION_KEY` (same key used for plugin config,
+service-connection, and OAuth signing key encryption — see the `encryptionKey` field above). There
+is no separate `GIT_TOKEN_ENCRYPTION_KEY` variable; no code reads one. (F-4, this line previously
+claimed one existed — corrected 2026-09-28.)
 
 ---
 

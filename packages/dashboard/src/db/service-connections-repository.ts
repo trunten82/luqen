@@ -4,7 +4,8 @@
  * Persistent storage for the three outbound service connections the dashboard
  * talks to: compliance, branding, and llm. Secrets are encrypted at rest via
  * the existing `encryptSecret` / `decryptSecret` helpers in `plugins/crypto.ts`,
- * keyed on `config.sessionSecret` — same pattern as git-credentials.
+ * keyed on `config.encryptionKey` (PBH-A; formerly sessionSecret) — same
+ * pattern as git-credentials.
  *
  * Precedence (see phase 06 CONTEXT D-12..D-14):
  *   - DB value wins over config when a row exists

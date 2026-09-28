@@ -9,6 +9,7 @@ const ConfigSchema = z.object({
   reportsDir: z.string().default('./reports'),
   dbPath: z.string().default('./dashboard.db'),
   sessionSecret: z.string().min(32),
+  encryptionKey: z.string().min(32),
   maxConcurrentScans: z.number().int().min(1).default(2),
   complianceClientId: z.string().default(''),
   complianceClientSecret: z.string().default(''),
@@ -39,6 +40,12 @@ export interface DashboardConfig {
   readonly reportsDir: string;
   readonly dbPath: string;
   readonly sessionSecret: string;
+  /**
+   * At-rest AES key for plugin secrets, service-connection secrets, git
+   * tokens and OAuth signing private keys. Defaults to sessionSecret when
+   * unset. See the rotation runbook (docs/guides/security-administration.md).
+   */
+  readonly encryptionKey: string;
   readonly maxConcurrentScans: number;
   readonly complianceClientId: string;
   readonly complianceClientSecret: string;
@@ -89,6 +96,7 @@ const DEFAULTS: DashboardConfig = {
   reportsDir: './reports',
   dbPath: './dashboard.db',
   sessionSecret: '',
+  encryptionKey: '',
   maxConcurrentScans: 2,
   complianceClientId: '',
   complianceClientSecret: '',
@@ -133,6 +141,14 @@ function applyEnvOverrides(config: DashboardConfig): DashboardConfig {
     reportsDir: process.env['DASHBOARD_REPORTS_DIR'] ?? config.reportsDir,
     dbPath: process.env['DASHBOARD_DB_PATH'] ?? config.dbPath,
     sessionSecret: process.env['DASHBOARD_SESSION_SECRET'] ?? config.sessionSecret,
+    // DEC-5: an empty DASHBOARD_ENCRYPTION_KEY (e.g. compose's
+    // ${DASHBOARD_ENCRYPTION_KEY:-} pass-through) is treated as unset, not
+    // as an explicit empty key — it must not crash-loop every docker
+    // upgrade. withEncryptionKeyDefault() fills it from sessionSecret below.
+    encryptionKey:
+      process.env['DASHBOARD_ENCRYPTION_KEY'] !== undefined && process.env['DASHBOARD_ENCRYPTION_KEY'] !== ''
+        ? process.env['DASHBOARD_ENCRYPTION_KEY']
+        : config.encryptionKey,
     maxConcurrentScans: process.env['DASHBOARD_MAX_CONCURRENT_SCANS'] !== undefined
       ? parseInt(process.env['DASHBOARD_MAX_CONCURRENT_SCANS'], 10)
       : config.maxConcurrentScans,
@@ -175,6 +191,12 @@ function applyEnvOverrides(config: DashboardConfig): DashboardConfig {
 export function validateConfig(config: DashboardConfig): void {
   if (config.sessionSecret.length < 32) {
     throw new Error('sessionSecret must be at least 32 bytes. Set DASHBOARD_SESSION_SECRET environment variable.');
+  }
+
+  if (config.encryptionKey.length < 32) {
+    throw new Error(
+      'encryptionKey must be at least 32 characters. Set DASHBOARD_ENCRYPTION_KEY (or leave it unset to use the session secret).',
+    );
   }
 
   if (isNaN(config.port) || config.port < 1 || config.port > 65535) {
@@ -233,10 +255,39 @@ export function loadConfig(configPath = 'dashboard.config.json'): DashboardConfi
   // the config file's directory.  This guarantees every process (systemd
   // service, CLI invocation, nohup background) opens the same DB file even
   // when their working directories differ.
-  return {
+  return withEncryptionKeyDefault({
     ...withEnv,
     dbPath: resolve(configDir, withEnv.dbPath),
     reportsDir: resolve(configDir, withEnv.reportsDir),
     pluginsDir: resolve(configDir, withEnv.pluginsDir),
-  };
+  });
+}
+
+/**
+ * Defaults `encryptionKey` to `sessionSecret` when the field is missing or
+ * empty (backward compatibility, PBH-A). Returns a NEW object — the input is
+ * never mutated. Applied at the end of {@link loadConfig} and again at the
+ * top of `createServer` so programmatic callers (tests, scripts) that build
+ * a config object without the field still boot correctly.
+ */
+export function withEncryptionKeyDefault(config: DashboardConfig): DashboardConfig {
+  if (config.encryptionKey !== undefined && config.encryptionKey !== '') {
+    return config;
+  }
+  return { ...config, encryptionKey: config.sessionSecret };
+}
+
+/** True when the at-rest encryption key is the same value as the session secret (defaulted or pinned-equal). */
+export function sharesSessionSecret(config: DashboardConfig): boolean {
+  return config.encryptionKey === config.sessionSecret;
+}
+
+/**
+ * The server's plugins directory derivation, shared with the re-key engine
+ * and startup check (PBH-B/D) so there is exactly one implementation of
+ * "where do plugin packages live". Matches server.ts's prior inline
+ * `resolve(config.reportsDir, '..', 'plugins')`.
+ */
+export function serverPluginsDir(config: DashboardConfig): string {
+  return resolve(config.reportsDir, '..', 'plugins');
 }
