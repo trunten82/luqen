@@ -13,7 +13,7 @@ import { createAdapter } from './providers/registry.js';
 import type { ProviderType } from './types.js';
 import { loadDecisionBars } from './eval/decision-bars.js';
 import { compareGenerateFix, serialiseVerdict, describeInsufficiencyReason } from './eval/verdict.js';
-import type { GenerateFixVerdict, PowerAssessment, RunToRunInstability } from './eval/verdict-types.js';
+import type { GenerateFixVerdict, LicenceQualifier, PowerAssessment, RunToRunInstability } from './eval/verdict-types.js';
 import { compareAnalyseVisual, serialiseAnalyseVisualVerdict, type AnalyseVisualVerdict } from './eval/verdict-analyse-visual.js';
 import type { GenerateFixReport, AnalyseVisualReport } from './eval/report.js';
 import {
@@ -21,6 +21,10 @@ import {
   buildAnalyseVisualBaselineReplicationArtifact,
   serialiseBaselineReplicationArtifact,
   isLiveBaselineReplicationArtifact,
+  parseLiveBaselineReplicationArtifact,
+  measuredInstabilityForBaseline,
+  InvalidBaselineReplicationArtifactError,
+  BaselineArtifactRuntimeModeMismatchError,
   type BaselineReplicationArtifact,
 } from './eval/baseline.js';
 
@@ -140,6 +144,22 @@ function printPowerAssessment(label: string, power: PowerAssessment): void {
   }
 }
 
+/**
+ * Prints the licence qualifier's note ONLY when a replication has measured
+ * run-to-run instability (DISC-3) -- so the no-flag path's printed output
+ * stays byte-identical (the existing label-set pin in cli-verdict.test.ts
+ * stays green unedited), and a printed `measured (x)` line is never left
+ * beside an unqualified "was not measured" licence sentence (premise
+ * correction 5). ONE shared function, called by BOTH capabilities' summary
+ * printers -- the "wired for one capability, not its sibling" defect family
+ * this milestone has shipped four times.
+ */
+function printLicenceQualifier(qualifier: LicenceQualifier): void {
+  if (qualifier.state === 'measured') {
+    console.log(`Licence qualifier: ${qualifier.note}`);
+  }
+}
+
 function printGenerateFixVerdictSummary(verdict: GenerateFixVerdict): void {
   console.log(`Capability: generate-fix`);
   console.log(`Outcome: ${verdict.outcome}`);
@@ -149,6 +169,7 @@ function printGenerateFixVerdictSummary(verdict: GenerateFixVerdict): void {
   console.log(`Margin items: ${verdict.gatingAxis.marginItems}`);
   printPowerAssessment('Non-inferiority clause', verdict.power);
   console.log(`Licence: ${verdict.licence}`);
+  printLicenceQualifier(verdict.licenceQualifier);
 }
 
 /**
@@ -169,6 +190,7 @@ function printAnalyseVisualVerdictSummary(verdict: AnalyseVisualVerdict): void {
   console.log(`Overall: ${verdict.overallVerdict.outcome}`);
   console.log(`Overall note: ${verdict.overallVerdict.derivedNote}`);
   console.log(`Overall licence: ${verdict.overallVerdict.licence}`);
+  printLicenceQualifier(verdict.licenceQualifier);
 }
 
 // ---------------------------------------------------------------------------
@@ -614,16 +636,22 @@ export function createProgram(): Command {
   evalGroup
     .command('verdict')
     .description(
-      'Judge two written eval reports against the Phase 85 pre-registered decision bar. Reads two files a maintainer already has -- never dials a provider, never spends, never accepts a live mode (D-85-7).',
+      'Judge two written eval reports against the Phase 85 pre-registered decision bar. Reads two files a maintainer already has, plus with --replication a replication artifact -- never dials a provider, never spends, never accepts a live mode (D-85-7).',
     )
     .requiredOption('--baseline <path>', 'Baseline report JSON path')
     .requiredOption('--candidate <path>', 'Candidate report JSON path')
     .option('--out <path>', 'Write the full JSON verdict to this path')
-    .action((opts: { baseline: string; candidate: string; out?: string }) => {
+    .option(
+      '--replication <path>',
+      'A replication artifact (*.baseline.v1.json written by `eval baseline --mode live`) whose MEASURED run-to-run instability is passed to the comparator. Must be comparable with the --baseline report on every run-function field but timestamp; refused otherwise. Omitting it judges with instability not-yet-measured. Local file read only -- no provider, endpoint, model, mode, spend or db.',
+    )
+    .action((opts: { baseline: string; candidate: string; out?: string; replication?: string }) => {
       let capability: string;
+      let baselineRunFunction: RunFunction | undefined;
       try {
-        const probe = JSON.parse(readFileSync(opts.baseline, 'utf-8')) as { runFunction?: { capability?: string } };
+        const probe = JSON.parse(readFileSync(opts.baseline, 'utf-8')) as { runFunction?: RunFunction };
         capability = probe.runFunction?.capability ?? '';
+        baselineRunFunction = probe.runFunction;
       } catch (err) {
         console.error(
           `error: could not read/parse --baseline "${opts.baseline}": ${err instanceof Error ? err.message : String(err)}`,
@@ -632,15 +660,74 @@ export function createProgram(): Command {
         return;
       }
 
+      // Hoisted above the branches (with the identical message an invalid
+      // --baseline has always produced): the replication step below must run
+      // ONLY for a valid capability, so an invalid --baseline still gets
+      // today's capability error unchanged.
+      if (capability !== 'generate-fix' && capability !== 'analyse-visual') {
+        console.error(
+          `error: --baseline report's runFunction.capability must be "generate-fix" or "analyse-visual" (found ${JSON.stringify(capability)})`,
+        );
+        process.exitCode = 1;
+        return;
+      }
+
       try {
         const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
 
-        // The CLI has no replication artifact to read yet (86-03 wires the
-        // measured value in) -- an explicit honest literal at the call site
-        // is the point of this required parameter: the fact that no
-        // instability has been measured now has to be written down by
-        // whoever calls, instead of being supplied silently by the callee.
-        const runToRunInstability: RunToRunInstability = { state: 'not-yet-measured' };
+        // Without --replication the caller writes the honest not-yet-measured
+        // literal at the call site -- the point of this required parameter is
+        // that the fact no instability has been measured has to be written
+        // down by whoever calls, instead of being supplied silently by the
+        // callee. With --replication, the measured value comes from a
+        // validated live replication artifact that must be the same
+        // experiment as --baseline. This closes 86-VERIFICATION gap 1 (quick
+        // 260928-863). Resolved ONCE, before the capability branches, so both
+        // comparators consume the SAME variable -- the "wired for one
+        // capability, not its sibling" defect family this milestone has
+        // shipped four times.
+        let runToRunInstability: RunToRunInstability = { state: 'not-yet-measured' };
+
+        if (opts.replication) {
+          let replicationJson: string;
+          try {
+            replicationJson = readFileSync(opts.replication, 'utf-8');
+          } catch (err) {
+            console.error(
+              `error: could not read --replication "${opts.replication}": ${err instanceof Error ? err.message : String(err)}`,
+            );
+            process.exitCode = 1;
+            return;
+          }
+
+          let artifact;
+          try {
+            artifact = parseLiveBaselineReplicationArtifact(replicationJson);
+          } catch (err) {
+            if (
+              err instanceof InvalidBaselineReplicationArtifactError ||
+              err instanceof BaselineArtifactRuntimeModeMismatchError
+            ) {
+              console.error(`error: --replication "${opts.replication}": ${err.message}`);
+              process.exitCode = 1;
+              return;
+            }
+            throw err;
+          }
+
+          try {
+            runToRunInstability = measuredInstabilityForBaseline(artifact, baselineRunFunction!);
+          } catch (err) {
+            if (err instanceof RunFunctionMismatchError) {
+              console.error(
+                `error: --replication artifact is not comparable with the --baseline report -- differing fields: ${err.differingFields.join(', ')}`,
+              );
+              process.exitCode = 1;
+              return;
+            }
+            throw err;
+          }
+        }
 
         if (capability === 'generate-fix') {
           const baseline = JSON.parse(readFileSync(opts.baseline, 'utf-8')) as GenerateFixReport;
@@ -652,7 +739,7 @@ export function createProgram(): Command {
             console.log(`Verdict written to ${opts.out}`);
           }
           if (verdict.outcome === 'FAIL') process.exitCode = 1;
-        } else if (capability === 'analyse-visual') {
+        } else {
           const baseline = JSON.parse(readFileSync(opts.baseline, 'utf-8')) as AnalyseVisualReport;
           const candidate = JSON.parse(readFileSync(opts.candidate, 'utf-8')) as AnalyseVisualReport;
           const verdict = compareAnalyseVisual(bar, baseline, candidate, runToRunInstability);
@@ -662,11 +749,6 @@ export function createProgram(): Command {
             console.log(`Verdict written to ${opts.out}`);
           }
           if (verdict.overallVerdict.outcome === 'FAIL') process.exitCode = 1;
-        } else {
-          console.error(
-            `error: --baseline report's runFunction.capability must be "generate-fix" or "analyse-visual" (found ${JSON.stringify(capability)})`,
-          );
-          process.exitCode = 1;
         }
       } catch (err) {
         console.error(`error: ${err instanceof Error ? err.message : String(err)}`);
