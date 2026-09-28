@@ -193,4 +193,11 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 ## Operator Next Steps
 
 - Two owner decisions are asked and on the register (a2a pending list): v2 false-PASS gate; prod prompt-override read.
+- **LATENT DEFECT, found at the v3.7.0 close — fix FIRST in the next milestone:** `RunFunction.harnessVersion`
+  = `${HARNESS_SCHEMA_VERSION}+${VERSION}` (run-manifest.ts:205) embeds the llm PACKAGE version, and
+  verdict-comparability.ts holds `harnessVersion` CONSTANT between baseline and candidate. The committed
+  baselines carry `1+3.6.0`; the first release that bumps packages/llm to 3.7.0 makes every future
+  candidate un-judgeable against them. Therefore v3.7.0 was NOT tagged and packages were NOT bumped
+  (config has no git.create_tag). Decouple harnessVersion from the package version (scoring-semantics
+  version only) before any bump; watch it fail first.
 - Next-milestone candidates recorded (NOT started): grow the reference sets (the lever on power); behavioral a11y testing beyond Pa11y.
