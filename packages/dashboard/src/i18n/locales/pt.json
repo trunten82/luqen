@@ -903,6 +903,7 @@
     "req3": "Bloqueadores de pop-up podem precisar permitir pop-ups do site que você está varrendo."
   },
   "scanProgress": {
+    "discoveryBlocked": "{{pages}} página(s) verificada(s); a descoberta do site foi bloqueada por proteção antibot, então apenas a(s) página(s) listada(s) no relatório foram verificadas. Este não é um resultado do site inteiro.",
     "scanDetails": "Detalhes da Varredura",
     "siteUrl": "URL do Site",
     "standard": "Padrão",
@@ -942,6 +943,7 @@
     "logReconnecting": "Conexão interrompida. Reconectando…"
   },
   "reportDetail": {
+    "discoveryBlocked": "{{pages}} página(s) verificada(s); a descoberta do site foi bloqueada por proteção antibot, então apenas a(s) página(s) listada(s) neste relatório foram verificadas. Este não é um resultado do site inteiro.",
     "siteUrl": "URL do Site",
     "standard": "Padrão",
     "status": "Status",

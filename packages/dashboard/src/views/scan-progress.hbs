@@ -85,6 +85,13 @@
     </div>
 
     <div
+      id="discovery-blocked"
+      class="alert alert--warning{{#unless scan.discoveryWarning}} is-hidden{{/unless}}"
+      role="status"
+      data-template="{{t "scanProgress.discoveryBlocked"}}"
+    >{{#if scan.discoveryWarning}}{{t "scanProgress.discoveryBlocked" pages=scan.pagesScanned}}{{/if}}</div>
+
+    <div
       id="progress-bar-container"
       class="progress-bar-container"
       role="progressbar"
@@ -139,6 +146,7 @@
   var pagesDiscoveredEl = document.getElementById('pages-discovered');
   var pagesSkippedEl = document.getElementById('pages-skipped');
   var pagesSkippedStat = document.getElementById('pages-skipped-stat');
+  var discoveryBlockedEl = document.getElementById('discovery-blocked');
   var skippedCount = 0;
 
   function addLog(msg) {
@@ -233,6 +241,19 @@
         if (pagesScannedEl && evt.data.pagesScanned) {
           pagesScannedEl.textContent = evt.data.pagesScanned;
         }
+      }
+      // WAF-SURFACE-1: reveal the discovery-blocked warning from the event.
+      // The translated sentence is read out of the data-template ATTRIBUTE
+      // (never embedded in this script as a string literal) — Handlebars
+      // HTML-escapes t() output, so an apostrophe in fr/it would print as
+      // the literal entity via textContent; getAttribute() decodes it.
+      if (evt.data && evt.data.discoveryWarning === 'waf-blocked' && discoveryBlockedEl) {
+        var discoveryTemplate = discoveryBlockedEl.getAttribute('data-template') || '';
+        var discoveryCount = (evt.data.pagesScanned !== undefined) ? evt.data.pagesScanned : '';
+        var discoveryMsg = discoveryTemplate.replace('{{pages}}', String(discoveryCount));
+        discoveryBlockedEl.textContent = discoveryMsg;
+        discoveryBlockedEl.classList.remove('is-hidden');
+        addLog(discoveryMsg);
       }
       addLog(completeMsg);
       // Longer delay so user can see the results before redirect

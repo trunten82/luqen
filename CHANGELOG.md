@@ -8,6 +8,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Full-site scans blocked by bot protection are now marked on the scan record
+  and flagged on the progress and report pages instead of reading as a
+  complete 1-page site.
+
 ## [3.6.0] - 2026-09-04
 
 This entry covers everything released since 3.4.0 — the v3.5.0 wave, its later

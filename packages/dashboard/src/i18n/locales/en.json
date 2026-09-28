@@ -1227,6 +1227,7 @@
     "req3": "Pop-up blockers may need to allow pop-ups from the site you are scanning."
   },
   "scanProgress": {
+    "discoveryBlocked": "Scanned {{pages}} page(s); site discovery was blocked by bot protection, so only the page(s) listed in the report were scanned. This is not a whole-site result.",
     "scanDetails": "Scan Details",
     "siteUrl": "Site URL",
     "standard": "Standard",

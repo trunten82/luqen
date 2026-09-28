@@ -30,6 +30,7 @@ export interface ScanProgressEvent {
     readonly confirmedViolations?: number;
     readonly reportUrl?: string;
     readonly error?: string;
+    readonly discoveryWarning?: DiscoveryWarning;
   };
 }
 
@@ -311,7 +312,7 @@ export class ScanOrchestrator {
         /* webpackIgnore: true */ '@luqen/core'
       ).catch(() => null) as null | {
         createScanner: (opts: unknown) => unknown;
-        discoverUrls: (url: string, opts: unknown, returnResult: true) => Promise<{ urls: Array<{ url: string; discoveryMethod: string }> }>;
+        discoverUrls: (url: string, opts: unknown, returnResult: true) => Promise<{ urls: Array<{ url: string; discoveryMethod: string }>; wafWarning?: string }>;
         scanUrls: (urls: unknown[], client: unknown, opts: unknown) => Promise<{ pages: Array<{ url: string; discoveryMethod: string; issueCount: number; issues: Array<{ type: string; code: string; message: string; selector: string; context: string }> }>; errors: unknown[] }>;
         WebserviceClient: new (url: string, headers: Record<string, string>) => unknown;
         WebservicePool: new (urls: readonly string[], headers: Record<string, string>) => unknown;
@@ -353,7 +354,11 @@ export class ScanOrchestrator {
               headers: config.headers,
             }, true);
             discoveredUrls = result.urls;
+            if (typeof result.wafWarning === 'string' && result.wafWarning.length > 0) {
+              discoveryWarning = 'waf-blocked';
+            }
           } catch {
+            // A thrown discovery is not evidence of a WAF challenge — do not claim one.
             discoveredUrls = [{ url: config.siteUrl, discoveryMethod: 'crawl' }];
           }
 
@@ -872,6 +877,7 @@ export class ScanOrchestrator {
           issues: { errors, warnings, notices },
           confirmedViolations,
           reportUrl: `/reports/${scanId}`,
+          ...(discoveryWarning !== undefined ? { discoveryWarning } : {}),
         },
       });
 

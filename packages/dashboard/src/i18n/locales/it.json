@@ -903,6 +903,7 @@
     "req3": "I blocchi popup potrebbero dover consentire i popup dal sito che stai scansionando."
   },
   "scanProgress": {
+    "discoveryBlocked": "Scansionate {{pages}} pagina/e; l'individuazione del sito è stata bloccata dalla protezione anti-bot, quindi sono state scansionate solo la/le pagina/e elencate nel report. Questo non è un risultato dell'intero sito.",
     "scanDetails": "Dettagli Scansione",
     "siteUrl": "URL del Sito",
     "standard": "Standard",
@@ -942,6 +943,7 @@
     "logReconnecting": "Connessione interrotta. Riconnessione in corso…"
   },
   "reportDetail": {
+    "discoveryBlocked": "Scansionate {{pages}} pagina/e; l'individuazione del sito è stata bloccata dalla protezione anti-bot, quindi sono state scansionate solo la/le pagina/e elencate in questo report. Questo non è un risultato dell'intero sito.",
     "siteUrl": "URL del Sito",
     "standard": "Standard",
     "status": "Stato",

@@ -207,7 +207,7 @@ SSE event types:
 | `discovery` | Pages discovered, count available |
 | `scan_complete` | A page was scanned (includes pagesScanned, totalPages, currentUrl) |
 | `compliance` | Running compliance check |
-| `complete` | Scan finished, report URL available |
+| `complete` | Scan finished, report URL available. Carries `discoveryWarning: 'waf-blocked'` when discovery was blocked by bot protection (see [WAF and bot protection](#waf-and-bot-protection)) |
 | `failed` | Scan failed with error message |
 
 ---
@@ -255,6 +255,14 @@ Luqen-agent detects common WAF responses during crawling and reports a warning:
 ```
 WARNING: Possible WAF/bot protection detected on https://example.com
 ```
+
+Detection happens on the **start page only**, at the discovery step. When the dashboard's Full Site
+scan hits this, the scan is not silently reduced to a normal-looking 1-page site: the scan record
+carries `discoveryWarning: 'waf-blocked'`, and both the live progress page and the finished report
+page show a warning explaining that discovery was blocked and the scan is not a whole-site result.
+Note that the challenge blocks the *crawler/sitemap fetch* only — the dashboard's own page scan
+(Chromium-based) can still pass the same challenge and successfully scan the start page, so you may
+still get real findings for that one page even though the warning is shown.
 
 **Workarounds:**
 

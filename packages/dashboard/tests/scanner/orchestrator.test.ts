@@ -1540,5 +1540,92 @@ describe('ScanOrchestrator', () => {
       const scanCompleteEvents = events.filter((e) => e.type === 'scan_complete');
       expect(scanCompleteEvents.length).toBeGreaterThan(0);
     });
+
+    // ── discoveryWarning (WAF-SURFACE-1) — the incremental path is the
+    // SECOND path (feedback_second_path_invariants): its own test, own
+    // break-test (M6), never inherited from the standard branch's wiring.
+
+    it('incremental scan persists discoveryWarning when discovery was blocked', async () => {
+      mockDiscoverUrls.mockResolvedValue({
+        urls: [{ url: 'https://example.com', discoveryMethod: 'crawl' }],
+        wafWarning: 'W',
+      });
+      mockComputeContentHashes.mockResolvedValue(new Map());
+      (storage.pageHashes.getPageHashes as ReturnType<typeof vi.fn>).mockResolvedValue(new Map());
+      mockScanUrls.mockResolvedValue({
+        pages: [{ url: 'https://example.com', issueCount: 0, issues: [] }],
+        errors: [],
+      });
+
+      const config = baseScanConfig({ scanMode: 'site', incremental: true });
+      const eventsPromise = waitForScan(orchestrator, 'scan-inc-waf');
+      orchestrator.startScan('scan-inc-waf', config);
+      await eventsPromise;
+
+      expect(storage.scans.updateScan).toHaveBeenCalledWith('scan-inc-waf', expect.objectContaining({
+        status: 'completed',
+        discoveryWarning: 'waf-blocked',
+      }));
+    });
+
+    it('incremental scan without a challenge sends no discoveryWarning', async () => {
+      mockDiscoverUrls.mockResolvedValue({
+        urls: [{ url: 'https://example.com', discoveryMethod: 'crawl' }],
+      });
+      mockComputeContentHashes.mockResolvedValue(new Map());
+      (storage.pageHashes.getPageHashes as ReturnType<typeof vi.fn>).mockResolvedValue(new Map());
+      mockScanUrls.mockResolvedValue({
+        pages: [{ url: 'https://example.com', issueCount: 0, issues: [] }],
+        errors: [],
+      });
+
+      const config = baseScanConfig({ scanMode: 'site', incremental: true });
+      const eventsPromise = waitForScan(orchestrator, 'scan-inc-clean');
+      orchestrator.startScan('scan-inc-clean', config);
+      const events = await eventsPromise;
+
+      const completedCall = (storage.scans.updateScan as ReturnType<typeof vi.fn>).mock.calls
+        .find((call) => (call[1] as { status?: string }).status === 'completed');
+      expect(completedCall).toBeDefined();
+      expect('discoveryWarning' in (completedCall![1] as object)).toBe(false);
+
+      const completeEvent = events.find((e) => e.type === 'complete')!;
+      expect('discoveryWarning' in completeEvent.data).toBe(false);
+    });
+
+    it('complete event carries discoveryWarning on the standard path', async () => {
+      const scanResult = { ...makeScanResult([{ url: 'https://example.com', issues: [] }]), wafWarning: 'W' };
+      const mockScanner = { scan: vi.fn().mockResolvedValue(scanResult) };
+      mockCreateScanner.mockReturnValue(mockScanner);
+
+      const config = baseScanConfig();
+      const eventsPromise = waitForScan(orchestrator, 'scan-std-waf');
+      orchestrator.startScan('scan-std-waf', config);
+      const events = await eventsPromise;
+
+      const completeEvent = events.find((e) => e.type === 'complete')!;
+      expect(completeEvent.data.discoveryWarning).toBe('waf-blocked');
+    });
+
+    it('complete event carries discoveryWarning on the incremental path', async () => {
+      mockDiscoverUrls.mockResolvedValue({
+        urls: [{ url: 'https://example.com', discoveryMethod: 'crawl' }],
+        wafWarning: 'W',
+      });
+      mockComputeContentHashes.mockResolvedValue(new Map());
+      (storage.pageHashes.getPageHashes as ReturnType<typeof vi.fn>).mockResolvedValue(new Map());
+      mockScanUrls.mockResolvedValue({
+        pages: [{ url: 'https://example.com', issueCount: 0, issues: [] }],
+        errors: [],
+      });
+
+      const config = baseScanConfig({ scanMode: 'site', incremental: true });
+      const eventsPromise = waitForScan(orchestrator, 'scan-inc-waf-evt');
+      orchestrator.startScan('scan-inc-waf-evt', config);
+      const events = await eventsPromise;
+
+      const completeEvent = events.find((e) => e.type === 'complete')!;
+      expect(completeEvent.data.discoveryWarning).toBe('waf-blocked');
+    });
   });
 });
