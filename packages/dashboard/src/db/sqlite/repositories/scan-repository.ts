@@ -34,6 +34,7 @@ interface ScanRow {
   public_share_enabled: number | null;
   public_share_enabled_at: string | null;
   public_share_enabled_by: string | null;
+  discovery_warning: string | null;
 }
 
 function parseJsonArraySafe(raw: string | null | undefined): string[] {
@@ -78,6 +79,9 @@ function rowToRecord(row: ScanRow): ScanRecord {
     publicShareEnabled: row.public_share_enabled === 1,
     publicShareEnabledAt: row.public_share_enabled_at,
     publicShareEnabledBy: row.public_share_enabled_by,
+    // Read-boundary validation (T1i): only the known literal is surfaced, so
+    // an unexpected stored value never reaches templates or callers.
+    ...(row.discovery_warning === 'waf-blocked' ? { discoveryWarning: 'waf-blocked' as const } : {}),
   };
 }
 
@@ -127,7 +131,8 @@ const LIST_COLUMNS =
   'created_at, completed_at, pages_scanned, total_issues, errors, warnings, ' +
   'notices, confirmed_violations, json_report_path, error, org_id, ' +
   'branding_guideline_id, branding_guideline_version, brand_related_count, ' +
-  'public_share_enabled, public_share_enabled_at, public_share_enabled_by';
+  'public_share_enabled, public_share_enabled_at, public_share_enabled_by, ' +
+  'discovery_warning';
 
 // ---------------------------------------------------------------------------
 // SqliteScanRepository
@@ -232,6 +237,7 @@ export class SqliteScanRepository implements ScanRepository {
       brandingGuidelineId: 'branding_guideline_id',
       brandingGuidelineVersion: 'branding_guideline_version',
       brandRelatedCount: 'brand_related_count',
+      discoveryWarning: 'discovery_warning',
     };
 
     const setClauses: string[] = [];

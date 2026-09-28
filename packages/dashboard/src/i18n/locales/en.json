@@ -1292,6 +1292,7 @@
     "none": "No active share links."
   },
   "reportDetail": {
+    "discoveryBlocked": "Scanned {{pages}} page(s); site discovery was blocked by bot protection, so only the page(s) listed in this report were scanned. This is not a whole-site result.",
     "siteUrl": "Site URL",
     "standard": "Standard",
     "status": "Status",

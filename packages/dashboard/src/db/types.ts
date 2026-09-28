@@ -29,6 +29,13 @@ export type { ManualTestResult, ManualTestStatus } from '../manual-criteria.js';
 // Scan types
 // ---------------------------------------------------------------------------
 
+/**
+ * Migration 089 (WAF-SURFACE-1). Currently the only defined value is
+ * 'waf-blocked': full-site discovery hit a bot-protection challenge on the
+ * start URL, so the scan's page list is not a whole-site discovery result.
+ */
+export type DiscoveryWarning = 'waf-blocked';
+
 export interface ScanRecord {
   readonly id: string;
   readonly siteUrl: string;
@@ -85,6 +92,14 @@ export interface ScanRecord {
   readonly publicShareEnabledAt?: string | null;
   /** Phase 64.1 — user id that flipped the static badge on. */
   readonly publicShareEnabledBy?: string | null;
+  /**
+   * Migration 089 (WAF-SURFACE-1). Set when a full-site scan's discovery
+   * pass hit a bot-protection challenge on the start URL. NULL/undefined
+   * means discovery was not blocked, or the row predates the migration.
+   * Optional so external Postgres/Mongo StorageAdapter plugins still
+   * type-check without implementing it.
+   */
+  readonly discoveryWarning?: DiscoveryWarning;
 }
 
 export interface ScanFilters {

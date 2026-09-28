@@ -2,7 +2,7 @@ import { EventEmitter } from 'node:events';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { StorageAdapter } from '../db/index.js';
-import type { PageHashEntry } from '../db/types.js';
+import type { PageHashEntry, DiscoveryWarning } from '../db/types.js';
 import { checkCompliance, dispatchWebhookEvent } from '../compliance-client.js';
 import type { SsePublisher, RedisScanQueue } from '../cache/redis.js';
 import type { PluginManager } from '../plugins/manager.js';
@@ -321,6 +321,10 @@ export class ScanOrchestrator {
 
       let pagesScanned = 0;
       let pagesSkipped = 0;
+      // WAF-SURFACE-1: written by whichever branch below ran (standard or
+      // incremental) so the final updateScan/complete-event below stay a
+      // single write site regardless of which discovery path was taken.
+      let discoveryWarning: DiscoveryWarning | undefined;
       let errors = 0;
       let warnings = 0;
       let notices = 0;
@@ -522,7 +526,11 @@ export class ScanOrchestrator {
             },
           } as Parameters<typeof createScanner>[0]);
 
-          const result = await (scanner as { scan: (url: string) => Promise<{ pages: Array<{ url: string; issueCount: number; issues: Array<{ type: string; code: string; message: string; selector: string; context: string }> }>; summary: { pagesScanned: number; byLevel: { error: number; warning: number; notice: number } } }> }).scan(config.siteUrl);
+          const result = await (scanner as { scan: (url: string) => Promise<{ pages: Array<{ url: string; issueCount: number; issues: Array<{ type: string; code: string; message: string; selector: string; context: string }> }>; summary: { pagesScanned: number; byLevel: { error: number; warning: number; notice: number } }; wafWarning?: string }> }).scan(config.siteUrl);
+
+          if (typeof result.wafWarning === 'string' && result.wafWarning.length > 0) {
+            discoveryWarning = 'waf-blocked';
+          }
 
           pagesScanned = result.summary.pagesScanned;
           errors = result.summary.byLevel.error;
@@ -844,6 +852,7 @@ export class ScanOrchestrator {
         ...(brandingGuidelineId !== undefined ? { brandingGuidelineId, brandingGuidelineVersion, brandRelatedCount } : {}),
         jsonReport: reportJson,
         jsonReportPath: jsonPath,
+        ...(discoveryWarning !== undefined ? { discoveryWarning } : {}),
       });
 
       // Best-effort filesystem write for backward compatibility
