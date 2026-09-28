@@ -31,6 +31,8 @@ import {
 import { isScoredItem, type AnalyseVisualReport, type GenerateFixReport, type ItemRecord } from '../../src/eval/report.js';
 import type { GenerateFixScoreRecord } from '../../src/eval/score-generate-fix.js';
 import type { AnalyseVisualScoreRecord } from '../../src/eval/score-analyse-visual.js';
+import { parseAnalyseVisualVerdict } from '../../src/eval/verdict-analyse-visual.js';
+import { UNMEASURED_INSTABILITY_CLAUSE_FRAGMENT } from '../../src/eval/licence-qualifier.js';
 
 const PACKAGE_ROOT = process.cwd();
 
@@ -182,5 +184,49 @@ describe('luqen-llm eval verdict --replication CLI', () => {
     expect(output).toMatch(/^Non-inferiority clause power insufficiency reason: run-to-run-instability-exceeds-ceiling/m);
     expect(output).toMatch(/^Licence qualifier: Run-to-run instability was measured at/m);
     expect(process.exitCode).toBeUndefined();
+  });
+
+  it('analyse-visual measured replication leaves the false-PASS caveat un-superseded', async () => {
+    const baselinePath = join(PACKAGE_ROOT, 'tests/eval/baselines/analyse-visual.repeat-02.report.json');
+    const candidatePath = join(PACKAGE_ROOT, 'tests/eval/baselines/analyse-visual.repeat-01.report.json');
+    const replicationPath = join(PACKAGE_ROOT, 'tests/eval/baselines/analyse-visual.baseline.v1.json');
+    const outPath = join(dir, 'f1-verdict.json');
+
+    const program = createProgram();
+    await program.parseAsync(
+      [
+        'node',
+        'cli',
+        'eval',
+        'verdict',
+        '--baseline',
+        baselinePath,
+        '--candidate',
+        candidatePath,
+        '--replication',
+        replicationPath,
+        '--out',
+        outPath,
+      ],
+      { from: 'node' },
+    );
+
+    const output = logs.join('\n');
+    expect(output).toMatch(/^Overall: PASS$/m);
+    expect(output).toMatch(/^False-PASS gate: PASS$/m);
+    const licenceQualifierLine = output.split('\n').find((l) => l.startsWith('Licence qualifier:'));
+    expect(licenceQualifierLine).toBeDefined();
+    expect(licenceQualifierLine).not.toContain('falsePassGate');
+
+    const written = readFileSync(outPath, 'utf-8');
+    const verdict = parseAnalyseVisualVerdict(written);
+    expect(verdict.licenceQualifier.state).toBe('measured');
+    expect(verdict.nonInferiorityClause.power.runToRunInstability.state).toBe('measured');
+    if (verdict.licenceQualifier.state === 'measured') {
+      expect(verdict.licenceQualifier.supersededClauses.map((c) => c.path)).toEqual([
+        'licenceStrings.nonInferiorityClause.analyseVisualCorrect.pass.text',
+      ]);
+    }
+    expect(verdict.falsePassGate.licence).toContain(UNMEASURED_INSTABILITY_CLAUSE_FRAGMENT);
   });
 });

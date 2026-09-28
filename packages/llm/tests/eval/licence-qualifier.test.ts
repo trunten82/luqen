@@ -18,6 +18,27 @@ import {
 
 const PACKAGE_ROOT = process.cwd();
 
+/**
+ * A test-local, independent walk over `bar.licenceStrings` -- deliberately
+ * NEVER imported from the module under test, so this pin cannot be made to
+ * agree with `licence-qualifier.ts` by construction. Used only for the
+ * "and no others" half of the presence pin below.
+ */
+function findAllOccurrencesOfFragment(value: unknown, fragment: string, pathPrefix: string): string[] {
+  if (typeof value === 'string') {
+    return value.includes(fragment) ? [pathPrefix] : [];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) => findAllOccurrencesOfFragment(item, fragment, `${pathPrefix}[${index}]`));
+  }
+  if (value !== null && typeof value === 'object') {
+    return Object.entries(value as Record<string, unknown>).flatMap(([key, child]) =>
+      findAllOccurrencesOfFragment(child, fragment, `${pathPrefix}.${key}`),
+    );
+  }
+  return [];
+}
+
 describe('UNMEASURED_INSTABILITY_CLAUSE_FRAGMENT — pinned against the REAL loaded bar (T-86-07)', () => {
   it('is present, verbatim, in exactly the three known PASS licence surfaces, and no others', () => {
     const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
@@ -33,19 +54,52 @@ describe('UNMEASURED_INSTABILITY_CLAUSE_FRAGMENT — pinned against the REAL loa
       UNMEASURED_INSTABILITY_CLAUSE_FRAGMENT,
     );
 
-    // An edit to any of these three strings now fails THIS test too, on top
-    // of the digest pin decision-bars.ts already carries -- an extra lock on
-    // the pre-registration, as the plan requires.
-    const qualifier = buildLicenceQualifier({ state: 'measured', value: 0.9 }, 'generate-fix', bar);
-    expect(qualifier.state).toBe('measured');
-    if (qualifier.state === 'measured') {
-      expect(qualifier.supersededClauses).toHaveLength(3);
-      expect(qualifier.supersededClauses.map((c) => c.path).sort()).toEqual(
-        [
-          'licenceStrings.falsePassGate.pass.additionalCaveatRequiredOnEveryPass',
-          'licenceStrings.nonInferiorityClause.generateFix.pass.text',
-          'licenceStrings.nonInferiorityClause.analyseVisualCorrect.pass.text',
-        ].sort(),
+    // "and no others" -- a TEST-LOCAL recursive walk, independent of the
+    // module under test (AMD-1: buildLicenceQualifier now scopes its own
+    // walk to one subtree, so this pin can no longer read the count off
+    // buildLicenceQualifier's own output -- see L1 below for that).
+    const allOccurrences = findAllOccurrencesOfFragment(
+      bar.licenceStrings,
+      UNMEASURED_INSTABILITY_CLAUSE_FRAGMENT,
+      'licenceStrings',
+    );
+    expect(allOccurrences.sort()).toEqual(
+      [
+        'licenceStrings.falsePassGate.pass.additionalCaveatRequiredOnEveryPass',
+        'licenceStrings.nonInferiorityClause.generateFix.pass.text',
+        'licenceStrings.nonInferiorityClause.analyseVisualCorrect.pass.text',
+      ].sort(),
+    );
+  });
+
+  it('a measured qualifier supersedes only its own capability non-inferiority clause and never a false-PASS clause', () => {
+    const bar = loadDecisionBars(PACKAGE_ROOT, 'v1');
+
+    const gfQualifier = buildLicenceQualifier({ state: 'measured', value: 0.42 }, 'generate-fix', bar);
+    expect(gfQualifier.state).toBe('measured');
+    if (gfQualifier.state === 'measured') {
+      expect(gfQualifier.supersededClauses.map((c) => c.path)).toEqual([
+        'licenceStrings.nonInferiorityClause.generateFix.pass.text',
+      ]);
+      expect(gfQualifier.supersededClauses.some((c) => c.path.startsWith('licenceStrings.falsePassGate'))).toBe(
+        false,
+      );
+      expect(gfQualifier.supersededClauses.some((c) => c.path.startsWith('licenceStrings.overallVerdict'))).toBe(
+        false,
+      );
+    }
+
+    const avQualifier = buildLicenceQualifier({ state: 'measured', value: 0.42 }, 'analyse-visual', bar);
+    expect(avQualifier.state).toBe('measured');
+    if (avQualifier.state === 'measured') {
+      expect(avQualifier.supersededClauses.map((c) => c.path)).toEqual([
+        'licenceStrings.nonInferiorityClause.analyseVisualCorrect.pass.text',
+      ]);
+      expect(avQualifier.supersededClauses.some((c) => c.path.startsWith('licenceStrings.falsePassGate'))).toBe(
+        false,
+      );
+      expect(avQualifier.supersededClauses.some((c) => c.path.startsWith('licenceStrings.overallVerdict'))).toBe(
+        false,
       );
     }
   });
@@ -124,12 +178,19 @@ describe('buildLicenceQualifier — zero-clause throw (Task 2, "a search that fi
 
 describe('buildLicenceQualifier — the walk over non-object, non-string leaves and array-valued clauses (Task 2 defensive coverage)', () => {
   it('descends into an array-valued clause, finding the fragment inside one element', () => {
+    // Scratch clause relocated under licenceStrings.nonInferiorityClause.generateFix
+    // (AMD-1): the walk is now scoped to the verdict capability's own
+    // non-inferiority subtree, so a clause anywhere else is invisible to it.
     const scratchBar = {
       licenceStrings: {
-        arrayHolder: [
-          { text: 'nothing relevant' },
-          { text: UNMEASURED_INSTABILITY_CLAUSE_FRAGMENT + ', found inside an array element' },
-        ],
+        nonInferiorityClause: {
+          generateFix: {
+            arrayHolder: [
+              { text: 'nothing relevant' },
+              { text: UNMEASURED_INSTABILITY_CLAUSE_FRAGMENT + ', found inside an array element' },
+            ],
+          },
+        },
       },
       varianceAssumption: { 'generate-fix': { assumedValue: 0.25 }, 'analyse-visual': { assumedValue: 0.25 } },
     } as unknown as LoadedDecisionBars;
@@ -138,17 +199,23 @@ describe('buildLicenceQualifier — the walk over non-object, non-string leaves 
     expect(qualifier.state).toBe('measured');
     if (qualifier.state === 'measured') {
       expect(qualifier.supersededClauses).toHaveLength(1);
-      expect(qualifier.supersededClauses[0]!.path).toBe('licenceStrings.arrayHolder[1].text');
+      expect(qualifier.supersededClauses[0]!.path).toBe(
+        'licenceStrings.nonInferiorityClause.generateFix.arrayHolder[1].text',
+      );
     }
   });
 
   it('a number or boolean leaf is neither a string nor an object -- the walk skips it without throwing, and finds the fragment beside it', () => {
     const scratchBar = {
       licenceStrings: {
-        someNumericField: 42,
-        someBooleanField: true,
-        someNullField: null,
-        actualClause: { text: UNMEASURED_INSTABILITY_CLAUSE_FRAGMENT },
+        nonInferiorityClause: {
+          generateFix: {
+            someNumericField: 42,
+            someBooleanField: true,
+            someNullField: null,
+            actualClause: { text: UNMEASURED_INSTABILITY_CLAUSE_FRAGMENT },
+          },
+        },
       },
       varianceAssumption: { 'generate-fix': { assumedValue: 0.25 }, 'analyse-visual': { assumedValue: 0.25 } },
     } as unknown as LoadedDecisionBars;
@@ -157,7 +224,9 @@ describe('buildLicenceQualifier — the walk over non-object, non-string leaves 
     expect(qualifier.state).toBe('measured');
     if (qualifier.state === 'measured') {
       expect(qualifier.supersededClauses).toHaveLength(1);
-      expect(qualifier.supersededClauses[0]!.path).toBe('licenceStrings.actualClause.text');
+      expect(qualifier.supersededClauses[0]!.path).toBe(
+        'licenceStrings.nonInferiorityClause.generateFix.actualClause.text',
+      );
     }
   });
 });
