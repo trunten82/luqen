@@ -11,7 +11,9 @@ A real-browser, end-to-end UAT that proves two things together:
 
 It also exercises **FIX 1** — the `allowPrivateScanTargets` SSRF escape hatch —
 because the fixture is served on `127.0.0.1` and the scan only succeeds when the
-dashboard is configured with `allowPrivateScanTargets: true`.
+dashboard is configured with `allowPrivateScanTargets: true`. The same flag also
+opts discovery (robots.txt, sitemaps, crawl, redirects, browser fallback) out of
+the core SSRF guard; without it, discovery refuses every loopback request.
 
 ## Run it
 

@@ -11,6 +11,17 @@ export { scanUrls, type ScanOptions, type ScanResults } from './scanner/scanner.
 export { WebserviceClient, WebservicePool } from './scanner/webservice-client.js';
 export { DirectScanner } from './scanner/direct-scanner.js';
 export { discoverUrls } from './discovery/discover.js';
+export {
+  assertPublicUrl,
+  isPublicUrl,
+  isPrivateHostname,
+  isPrivateIpAddress,
+  operatorPolicyFor,
+  SsrfBlockedError,
+  type HostResolver,
+  type NetworkGuardPolicy,
+} from './net/ssrf-guard.js';
+export { guardedFetch, MAX_REDIRECT_HOPS } from './net/guarded-fetch.js';
 export type { DiscoveryFallback } from './discovery/discover.js';
 export {
   resolveChromium,
@@ -168,6 +179,13 @@ export interface CreateScannerOptions {
    * small. Default: 5.
    */
   readonly a11yTreeMaxPages?: number;
+  /**
+   * Operator opt-out of the discovery SSRF guard (DISCOVERY-SSRF-1). Default
+   * false: robots.txt, sitemaps, crawled pages and every redirect hop are
+   * refused when they target a private / loopback address. The dashboard wires
+   * this from its `allowPrivateScanTargets` config flag.
+   */
+  readonly allowPrivateTargets?: boolean;
 }
 
 export interface Scanner {
@@ -256,6 +274,7 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
             crawlDepth: 2,
             alsoCrawl: true,
             headers: opts.headers,
+            guard: { allowPrivate: opts.allowPrivateTargets === true },
           }, true);
           urls = result.urls;
           wafWarning = result.wafWarning;

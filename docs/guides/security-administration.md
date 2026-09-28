@@ -142,6 +142,28 @@ Scan target URLs are validated before being submitted to the pa11y webservice. P
 - Link-local (169.254.x)
 - Other reserved ranges
 
+**Discovery is guarded too.** Validating the start URL is not enough on its
+own: a public site controls its `robots.txt`, its sitemaps and its redirects.
+Every request discovery makes — `robots.txt`, each `Sitemap:` directive, each
+sitemap-index child, each crawled page, incremental-scan content hashing,
+every HTTP redirect hop (followed manually, at most 5, each re-checked), and
+every request the headless-browser discovery fallback issues — is checked
+against the hostname AND every address it resolves to. Refused: loopback,
+RFC 1918, link-local incl. `169.254.169.254`, CGNAT `100.64.0.0/10`,
+`0.0.0.0/8`, multicast/reserved, IPv6 `::1` / `fc00::/7` / `fe80::/10`,
+IPv4-mapped / NAT64 / 6to4 forms of any of those, and decimal / hex / octal
+IPv4 spellings. A name that cannot be resolved is refused. A refused request
+degrades like an unreachable one (no sitemap, page skipped); it never fails
+the scan. Residual: the guard resolves the name, then the HTTP client
+resolves it again, so a DNS-rebinding host with a near-zero TTL can still win
+that race.
+
+**Opt-out for trusted test environments.** `allowPrivateScanTargets: true` in
+`dashboard.config.json` (or `DASHBOARD_ALLOW_PRIVATE_SCAN_TARGETS=true`)
+disables BOTH the start-URL check and the discovery guard. It exists for the
+loopback UAT harness (`packages/dashboard/tests/browser-uat`); never enable it
+on a server reachable by untrusted users.
+
 ---
 
 ## Session security

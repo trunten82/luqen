@@ -67,6 +67,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Security
 
+- Page discovery no longer lets a scanned site steer the server into
+  requesting private or internal addresses (blind SSRF). The dashboard only
+  validated the scan's start URL; discovery then fetched `robots.txt`,
+  `Sitemap:` directives, sitemap-index children, crawled pages and every HTTP
+  redirect hop without re-checking the target, so a public site could make
+  the server `GET http://127.0.0.1:<port>/...` or a LAN address. Every one of
+  those requests — plus incremental-scan content hashing and every request
+  the headless-browser discovery fallback makes (redirects, images, frames,
+  `fetch`) — now goes through one guard in `@luqen/core` that refuses
+  loopback, RFC 1918, link-local (including `169.254.169.254` metadata),
+  CGNAT `100.64.0.0/10`, `0.0.0.0/8`, IPv6 loopback / unique-local /
+  link-local, IPv4-mapped/NAT64/6to4 IPv6, and decimal / hex / octal IPv4
+  spellings, checks both the hostname and every address it resolves to
+  (resolution failure refuses), follows redirects manually (max 5 hops,
+  each re-checked; caller headers dropped on a cross-origin hop). The
+  dashboard's existing `allowPrivateScanTargets` /
+  `DASHBOARD_ALLOW_PRIVATE_SCAN_TARGETS` opt-out now also covers discovery,
+  so loopback UAT keeps working. The `luqen` CLI and stdio MCP server keep
+  discovery on private hosts only when the operator's own start URL is
+  private. Known residual: the guard resolves before `fetch` resolves again,
+  so a DNS-rebinding host with a near-zero TTL can still race it.
 - The session secret is now rotatable independently of at-rest encrypted
   data. Previously, `DASHBOARD_SESSION_SECRET` doubled as the AES key for
   four at-rest stores (OAuth signing keys, service-connection secrets, git

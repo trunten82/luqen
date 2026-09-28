@@ -130,6 +130,13 @@ class ScanQueue {
 
 export interface OrchestratorOptions {
   readonly maxConcurrent?: number;
+  /**
+   * DISCOVERY-SSRF-1: the dashboard's `allowPrivateScanTargets` flag, threaded
+   * into core discovery. Default false — robots.txt, sitemaps, crawled pages,
+   * content hashing and every redirect hop refuse private / loopback targets.
+   * True ONLY for local UAT against loopback fixtures (tests/browser-uat).
+   */
+  readonly allowPrivateScanTargets?: boolean;
   /** Optional Redis publisher for cross-instance SSE delivery. */
   readonly ssePublisher?: SsePublisher;
   /** Optional Redis queue for cross-instance scan distribution. */
@@ -184,6 +191,8 @@ export class ScanOrchestrator {
   private readonly brandScoreRepository?: BrandScoreRepository;
   /** Phase 84: constructor-injected vision-analyzer resolver. */
   private readonly resolveVisionAnalyzer?: OrchestratorOptions['resolveVisionAnalyzer'];
+  /** DISCOVERY-SSRF-1: operator opt-out of the core discovery SSRF guard. */
+  private readonly allowPrivateScanTargets: boolean;
   /** Buffer recent events per scan so late-connecting SSE clients catch up. */
   private readonly eventBuffers = new Map<string, ScanProgressEvent[]>();
   /**
@@ -208,6 +217,7 @@ export class ScanOrchestrator {
     this.brandingOrchestrator = opts.brandingOrchestrator;
     this.brandScoreRepository = opts.brandScoreRepository;
     this.resolveVisionAnalyzer = opts.resolveVisionAnalyzer;
+    this.allowPrivateScanTargets = opts.allowPrivateScanTargets === true;
   }
 
   emit(scanId: string, event: ScanProgressEvent): void {
@@ -318,7 +328,7 @@ export class ScanOrchestrator {
         WebserviceClient: new (url: string, headers: Record<string, string>) => unknown;
         WebservicePool: new (urls: readonly string[], headers: Record<string, string>) => unknown;
         DirectScanner: new () => { scan: (url: string, opts: unknown) => Promise<unknown> };
-        computeContentHashes: (urls: readonly string[], concurrency?: number, headers?: Readonly<Record<string, string>>) => Promise<Map<string, string>>;
+        computeContentHashes: (urls: readonly string[], concurrency?: number, headers?: Readonly<Record<string, string>>, guard?: { readonly allowPrivate?: boolean }) => Promise<Map<string, string>>;
       };
 
       let pagesScanned = 0;
@@ -353,6 +363,7 @@ export class ScanOrchestrator {
               crawlDepth: 2,
               alsoCrawl: true,
               headers: config.headers,
+              guard: { allowPrivate: this.allowPrivateScanTargets },
             }, true);
             discoveredUrls = result.urls;
             discoveryWarning = discoveryWarningFrom(result);
@@ -379,6 +390,8 @@ export class ScanOrchestrator {
             ? await computeContentHashes(
                 discoveredUrls.map((u) => u.url),
                 config.concurrency,
+                undefined,
+                { allowPrivate: this.allowPrivateScanTargets },
               )
             : new Map<string, string>();
 
@@ -506,6 +519,7 @@ export class ScanOrchestrator {
             concurrency: config.concurrency,
             singlePage: config.scanMode !== 'site',
             maxPages: config.maxPages,
+            allowPrivateTargets: this.allowPrivateScanTargets,
             includeWarnings: config.includeWarnings !== false,
             includeNotices: config.includeNotices !== false,
             ...(config.runner !== undefined ? { runner: config.runner } : {}),
