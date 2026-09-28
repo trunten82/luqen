@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import { computeDiscoveryScope, isInDiscoveryScope } from './scope.js';
 
 const NON_HTML_EXTENSIONS = new Set([
   '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.ico',
@@ -53,7 +54,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
 export async function crawlSite(startUrl: string, options: CrawlOptions, returnResult: true): Promise<CrawlResult>;
 export async function crawlSite(startUrl: string, options: CrawlOptions, returnResult?: boolean): Promise<string[] | CrawlResult> {
   const { maxPages, maxDepth, isAllowed } = options;
-  const baseOrigin = new URL(startUrl).origin;
+  const scope = computeDiscoveryScope(startUrl);
   const visited = new Set<string>();
   const queue: Array<{ url: string; depth: number }> = [];
   let wafWarning: string | undefined;
@@ -96,7 +97,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions, returnR
           if (!href) return;
           const normalized = normalizeUrl(href, url);
           if (!normalized) return;
-          if (!normalized.startsWith(baseOrigin)) return;
+          if (!isInDiscoveryScope(normalized, scope)) return;
           if (visited.has(normalized)) return;
           if (!isHtmlUrl(normalized)) return;
           if (!isAllowed(normalized)) return;

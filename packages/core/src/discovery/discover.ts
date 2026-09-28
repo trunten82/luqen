@@ -2,6 +2,7 @@ import type { DiscoveredUrl } from '../types.js';
 import { fetchRobots } from './robots.js';
 import { parseSitemap } from './sitemap.js';
 import { crawlSite } from './crawler.js';
+import { computeDiscoveryScope, isInDiscoveryScope } from './scope.js';
 
 interface DiscoverOptions {
   readonly maxPages: number;
@@ -20,6 +21,7 @@ export async function discoverUrls(baseUrl: string, options: DiscoverOptions, re
 export async function discoverUrls(baseUrl: string, options: DiscoverOptions, returnResult?: boolean): Promise<DiscoveredUrl[] | DiscoverResult> {
   const { maxPages, crawlDepth, alsoCrawl } = options;
   const robots = await fetchRobots(baseUrl);
+  const scope = computeDiscoveryScope(baseUrl);
 
   let sitemapUrls: string[] = [];
   if (robots.sitemapUrls.length > 0) {
@@ -30,7 +32,10 @@ export async function discoverUrls(baseUrl: string, options: DiscoverOptions, re
     sitemapUrls = await parseSitemap(defaultSitemapUrl);
   }
 
-  sitemapUrls = sitemapUrls.filter((url) => robots.isAllowed(url));
+  // DISCOVERY-SCOPE-3: scope-filter BEFORE hasSitemap is computed, so a
+  // sitemap whose entries are all out of scope counts as no sitemap and the
+  // crawl fallback still runs.
+  sitemapUrls = sitemapUrls.filter((url) => isInDiscoveryScope(url, scope) && robots.isAllowed(url));
   const hasSitemap = sitemapUrls.length > 0;
 
   let crawledUrls: string[] = [];
@@ -45,6 +50,9 @@ export async function discoverUrls(baseUrl: string, options: DiscoverOptions, re
       wafWarning = rawResult.wafWarning;
     }
   }
+  // Defence at the merge point too, independent of the crawler's own
+  // filtering — a second predicate application at the second entry point.
+  crawledUrls = crawledUrls.filter((url) => isInDiscoveryScope(url, scope));
 
   const seen = new Set<string>();
   const urls: DiscoveredUrl[] = [];

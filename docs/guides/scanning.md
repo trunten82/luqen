@@ -226,6 +226,29 @@ By default, luqen uses the sitemap if available and only crawls if no sitemap is
 
 All discovered URLs are deduplicated. The total is capped at `maxPages` (default 100).
 
+### Discovery scope
+
+Both sitemap and crawl discovery keep only URLs that match the start URL's **exact origin**
+(scheme, host, port — never a string prefix, so a userinfo trick like
+`https://example.com@127.0.0.1/`, a lookalike host like `https://example.com.evil.test/`, or
+another port like `https://example.com:8443/` are never followed) **and** whose path starts
+with the start URL's **directory prefix**:
+
+- A start URL ending in `/` uses that path as-is: `https://example.com/dev/en-us/` scopes
+  discovery to `/dev/en-us/...` only — sibling sections like `/dev/fr-fr/` are excluded.
+- A start URL that looks like a document uses its parent directory:
+  `https://example.com/dev/en-us/index.html` scopes to `/dev/en-us/`.
+- A start URL with no trailing slash and no file extension uses its parent directory too
+  (wider than the last segment, on purpose — see below): `https://example.com/dev/en-us`
+  scopes to `/dev/`. Add a trailing slash if you want the narrower `/dev/en-us/` scope.
+- A root start URL (`https://example.com` or `https://example.com/`) scopes to the whole
+  origin, exactly as before.
+
+If a sitemap's entries are **all** out of scope, it is treated as no sitemap and the crawl
+fallback still runs. One known consequence: a start URL on one host whose declared sitemap
+lists a different host (e.g. apex vs `www`) now yields no sitemap URLs at all and relies
+entirely on the crawl, since same-origin is enforced literally.
+
 ### Discovery method in reports
 
 Each page in the report is tagged with its discovery method (`sitemap` or `crawl`) so you can see how it was found.

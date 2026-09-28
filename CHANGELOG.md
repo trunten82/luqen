@@ -13,6 +13,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Full-site scans blocked by bot protection are now marked on the scan record
   and flagged on the progress and report pages instead of reading as a
   complete 1-page site.
+- Discovery (sitemap and crawl) now stays within the start URL's origin and
+  path prefix; crawled links to other hosts via userinfo, lookalike hosts, or
+  other ports are no longer followed.
 
 ## [3.6.0] - 2026-09-04
 

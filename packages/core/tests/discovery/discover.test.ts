@@ -60,4 +60,57 @@ describe('discoverUrls', () => {
     const result = await discoverUrls('https://example.com', { maxPages: 100, crawlDepth: 3, alsoCrawl: false });
     expect(result.map((r) => r.url)).not.toContain('https://example.com/admin');
   });
+
+  describe('discovery scope (DISCOVERY-SCOPE-3)', () => {
+    it('sitemap URLs from another origin are dropped', async () => {
+      mockParseSitemap.mockResolvedValue([
+        'https://example.com/a',
+        'https://cdn.example.org/b',
+        'http://example.com/c',
+      ]);
+      const result = await discoverUrls('https://example.com', { maxPages: 100, crawlDepth: 3, alsoCrawl: false });
+      const urls = result.map((r) => r.url);
+      expect(urls).toContain('https://example.com/a');
+      expect(urls).not.toContain('https://cdn.example.org/b');
+      expect(urls).not.toContain('http://example.com/c');
+    });
+
+    it('sitemap URLs outside the start section are dropped', async () => {
+      mockParseSitemap.mockResolvedValue([
+        'https://example.com/dev/en-us/',
+        'https://example.com/dev/en-us/a',
+        'https://example.com/dev/fr-fr/b',
+      ]);
+      const result = await discoverUrls('https://example.com/dev/en-us/', { maxPages: 100, crawlDepth: 3, alsoCrawl: false });
+      const urls = result.map((r) => r.url);
+      expect(urls).toContain('https://example.com/dev/en-us/');
+      expect(urls).toContain('https://example.com/dev/en-us/a');
+      expect(urls).not.toContain('https://example.com/dev/fr-fr/b');
+    });
+
+    it('an all-out-of-scope sitemap still triggers the crawl fallback', async () => {
+      mockParseSitemap.mockResolvedValue(['https://example.com/dev/fr-fr/']);
+      mockCrawlSite.mockResolvedValue(['https://example.com/dev/en-us/']);
+      await discoverUrls('https://example.com/dev/en-us/', { maxPages: 100, crawlDepth: 3, alsoCrawl: false });
+      expect(mockCrawlSite).toHaveBeenCalled();
+    });
+
+    it('crawled URLs outside scope are dropped at the merge', async () => {
+      mockCrawlSite.mockResolvedValue([
+        'https://example.com/dev/en-us/',
+        'https://example.com/dev/fr-fr/x',
+      ]);
+      const result = await discoverUrls('https://example.com/dev/en-us/', { maxPages: 100, crawlDepth: 3, alsoCrawl: false });
+      const urls = result.map((r) => r.url);
+      expect(urls).not.toContain('https://example.com/dev/fr-fr/x');
+    });
+
+    it('a root start URL keeps every same-origin sitemap URL', async () => {
+      mockParseSitemap.mockResolvedValue(['https://example.com/', 'https://example.com/about']);
+      const result = await discoverUrls('https://example.com', { maxPages: 100, crawlDepth: 3, alsoCrawl: false });
+      const urls = result.map((r) => r.url);
+      expect(urls).toContain('https://example.com/');
+      expect(urls).toContain('https://example.com/about');
+    });
+  });
 });
