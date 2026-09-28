@@ -904,6 +904,7 @@
   },
   "scanProgress": {
     "discoveryBlocked": "{{pages}} page(s) analysée(s) ; la découverte du site a été bloquée par une protection anti-robots, donc seule(s) la/les page(s) listée(s) dans le rapport ont été analysées. Ce n'est pas un résultat pour l'ensemble du site.",
+    "discoveryBrowser": "{{pages}} page(s) analysée(s). La protection anti-robots a bloqué la découverte standard du site, donc les pages ont été trouvées en ouvrant le site dans un navigateur headless et en suivant ses liens. Les pages non accessibles de cette façon dans les limites d'exploration n'ont pas été découvertes.",
     "scanDetails": "Détails de l'Analyse",
     "siteUrl": "URL du Site",
     "standard": "Standard",
@@ -944,6 +945,7 @@
   },
   "reportDetail": {
     "discoveryBlocked": "{{pages}} page(s) analysée(s) ; la découverte du site a été bloquée par une protection anti-robots, donc seule(s) la/les page(s) listée(s) dans ce rapport ont été analysées. Ce n'est pas un résultat pour l'ensemble du site.",
+    "discoveryBrowser": "{{pages}} page(s) analysée(s). La protection anti-robots a bloqué la découverte standard du site, donc ces pages ont été trouvées en ouvrant le site dans un navigateur headless et en suivant ses liens. Les pages non accessibles de cette façon dans les limites d'exploration n'ont pas été découvertes.",
     "siteUrl": "URL du Site",
     "standard": "Standard",
     "status": "Statut",

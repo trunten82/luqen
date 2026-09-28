@@ -1228,6 +1228,7 @@
   },
   "scanProgress": {
     "discoveryBlocked": "Scanned {{pages}} page(s); site discovery was blocked by bot protection, so only the page(s) listed in the report were scanned. This is not a whole-site result.",
+    "discoveryBrowser": "Scanned {{pages}} page(s). Bot protection blocked standard site discovery, so the pages were found by opening the site in a headless browser and following its links. Pages not reachable that way within the crawl limits were not discovered.",
     "scanDetails": "Scan Details",
     "siteUrl": "Site URL",
     "standard": "Standard",

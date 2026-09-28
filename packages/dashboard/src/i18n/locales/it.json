@@ -904,6 +904,7 @@
   },
   "scanProgress": {
     "discoveryBlocked": "Scansionate {{pages}} pagina/e; l'individuazione del sito è stata bloccata dalla protezione anti-bot, quindi sono state scansionate solo la/le pagina/e elencate nel report. Questo non è un risultato dell'intero sito.",
+    "discoveryBrowser": "Scansionate {{pages}} pagina/e. La protezione anti-bot ha bloccato l'individuazione standard del sito, quindi le pagine sono state trovate aprendo il sito in un browser headless e seguendo i suoi link. Le pagine non raggiungibili in questo modo entro i limiti di scansione non sono state individuate.",
     "scanDetails": "Dettagli Scansione",
     "siteUrl": "URL del Sito",
     "standard": "Standard",
@@ -944,6 +945,7 @@
   },
   "reportDetail": {
     "discoveryBlocked": "Scansionate {{pages}} pagina/e; l'individuazione del sito è stata bloccata dalla protezione anti-bot, quindi sono state scansionate solo la/le pagina/e elencate in questo report. Questo non è un risultato dell'intero sito.",
+    "discoveryBrowser": "Scansionate {{pages}} pagina/e. La protezione anti-bot ha bloccato l'individuazione standard del sito, quindi queste pagine sono state trovate aprendo il sito in un browser headless e seguendo i suoi link. Le pagine non raggiungibili in questo modo entro i limiti di scansione non sono state individuate.",
     "siteUrl": "URL del Sito",
     "standard": "Standard",
     "status": "Stato",
