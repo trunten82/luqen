@@ -48,8 +48,19 @@ verdict, never loosen one. **It is NOT a pre-registered instability threshold.**
 wanting a real instability bar pre-registers one.
 
 This instrument is a **regression detector, not a parity certifier** — see
-`docs/guides/llm-eval-harness.md`. Measured power to certify a genuinely identical candidate is
-0.103 (n=17) and 0.176 (n=13), so UNDERPOWERED is the expected verdict for most real comparisons.
+`docs/guides/llm-eval-harness.md`. Power to certify a genuinely identical candidate is 0.103 (n=17)
+and 0.176 (n=13), **COMPUTED under the ASSUMED 0.25** discordant-pair-rate ceiling pre-registered in
+`decision-bars.v1.json` — an assumption, not a measurement — so UNDERPOWERED is the expected verdict
+for most real comparisons.
+
+**Measured on 2026-09-28 from the committed repeats (quick 260928-863):** for `generate-fix` the
+self-discordance is **0**, and an identical candidate PASSed all 6 ordered self-comparisons of the
+production pin against itself — for this capability the 0.25 assumption is conservative. In the
+other direction, `analyse-visual`'s false-PASS count across the three identical runs was
+**`falsePass = 0, 1, 2`**, which lets a production-identical candidate FAIL the pre-registered
+false-PASS gate on noise alone (3 of 6 ordered self-comparisons FAILed on the gate, 2 PASSed, 1 was
+UNDERPOWERED) — see `docs/guides/llm-eval-harness.md`'s false-PASS noise disclosure for the full
+detail and why the v1 bar is not changed.
 
 ## Cost, and the prediction it was scored against
 
