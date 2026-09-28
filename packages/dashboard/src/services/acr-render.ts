@@ -16,6 +16,7 @@ import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import Mustache from 'mustache';
+import { launchChromium, safeCloseBrowser } from '@luqen/core';
 import type { AcrView } from './acr-view.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -116,29 +117,17 @@ export async function renderAcrHtml(view: AcrView, chrome: AcrHtmlChrome = {}): 
     + `<body>${chrome.bodyPrefix ?? ''}${body}${chrome.bodySuffix ?? ''}</body></html>`;
 }
 
-/** Resolve a chromium executable, mirroring the scanner's proven resolution. */
-function chromiumExecutable(): string | undefined {
-  for (const p of ['/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome']) {
-    if (existsSync(p)) return p;
-  }
-  return undefined; // let puppeteer fall back to its bundled browser
-}
-
 /**
  * Render the ACR view to a PDF buffer via the host chromium. A4, print
  * backgrounds, waits for webfonts to settle so typography is deterministic.
+ *
+ * Launches through the ONE shared resolver/launcher in `@luqen/core`
+ * (CHROMIUM-RESOLVE-1) — no local Chromium discovery, no bare
+ * `puppeteer.launch()`.
  */
 export async function generateAcrPdf(view: AcrView): Promise<Buffer> {
   const html = await renderAcrHtml(view);
-  // Dynamic import keeps puppeteer out of the cold-start path of routes that
-  // never produce a PDF.
-  const { default: puppeteer } = await import('puppeteer');
-  const exe = chromiumExecutable();
-  const browser = await puppeteer.launch({
-    headless: true,
-    ...(exe ? { executablePath: exe } : {}),
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-  });
+  const browser = await launchChromium();
   try {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'load', timeout: 30_000 });
@@ -146,6 +135,6 @@ export async function generateAcrPdf(view: AcrView): Promise<Buffer> {
     const pdf = await page.pdf({ format: 'A4', printBackground: true });
     return Buffer.from(pdf);
   } finally {
-    await browser.close().catch(() => {});
+    await safeCloseBrowser(browser);
   }
 }

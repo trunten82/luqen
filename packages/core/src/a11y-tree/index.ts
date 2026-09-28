@@ -17,14 +17,12 @@
  *
  * Browser launch: the box runs services as ROOT, so Chrome MUST be launched
  * with `--no-sandbox --disable-setuid-sandbox` — exactly the requirement that,
- * when missed, silently killed the IBM engine. Chrome discovery reuses the same
- * strategy as the reflow / behavioral / Lighthouse / IBM engines.
+ * when missed, silently killed the IBM engine. Chrome discovery goes through
+ * the ONE shared resolver in packages/core/src/browser/ (CHROMIUM-RESOLVE-1).
  */
 
-import { existsSync, readdirSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { join } from 'node:path';
-import type { Browser, CDPSession, Page, PuppeteerNode } from 'puppeteer';
+import type { Browser, CDPSession, Page } from 'puppeteer';
+import { launchChromium, safeCloseBrowser } from '../browser/launch.js';
 import type { A11yTreeOptions, A11yTreeResult } from './types.js';
 import { mapA11yTreeObservations, type A11yTreeObservation } from './map.js';
 
@@ -67,132 +65,6 @@ const ROLES_REQUIRING_NAME: ReadonlySet<string> = new Set([
   'tab',
   'image',
 ]);
-
-/** Lazily-loaded puppeteer runtime (resolved through pa11y). */
-let puppeteerPromise: Promise<PuppeteerNode> | undefined;
-
-/**
- * Load the puppeteer runtime. Resolves the module through pa11y (the package
- * that actually depends on puppeteer), falling back to a bare specifier in case
- * puppeteer is hoisted to the top level. Mirrors the reflow / IBM helpers.
- */
-async function loadPuppeteer(): Promise<PuppeteerNode> {
-  if (!puppeteerPromise) {
-    puppeteerPromise = (async () => {
-      const require = createRequire(import.meta.url);
-      let specifier = 'puppeteer';
-      try {
-        specifier = require.resolve('puppeteer');
-      } catch {
-        try {
-          const pa11yRequire = createRequire(require.resolve('pa11y/package.json'));
-          specifier = pa11yRequire.resolve('puppeteer');
-        } catch {
-          // Leave the bare specifier; the import below surfaces a clear error.
-        }
-      }
-      const mod = (await import(specifier)) as { default?: PuppeteerNode } & PuppeteerNode;
-      return (mod.default ?? mod) as PuppeteerNode;
-    })();
-  }
-  return puppeteerPromise;
-}
-
-/** Scan a puppeteer-style chrome cache dir for an installed chrome binary. */
-function findChromeInCache(cacheRoot: string): string | undefined {
-  try {
-    const chromeDir = join(cacheRoot, 'chrome');
-    if (!existsSync(chromeDir)) return undefined;
-    for (const entry of readdirSync(chromeDir)) {
-      const candidate = join(chromeDir, entry, 'chrome-linux64', 'chrome');
-      if (existsSync(candidate)) return candidate;
-    }
-  } catch {
-    // Ignore — fall through to other discovery strategies.
-  }
-  return undefined;
-}
-
-/** Scan a playwright cache dir for an installed chromium binary. */
-function findPlaywrightChromium(): string | undefined {
-  const root = join(process.env['HOME'] ?? '/root', '.cache', 'ms-playwright');
-  try {
-    if (!existsSync(root)) return undefined;
-    for (const entry of readdirSync(root)) {
-      if (!entry.startsWith('chromium')) continue;
-      const candidate = join(root, entry, 'chrome-linux64', 'chrome');
-      if (existsSync(candidate)) return candidate;
-    }
-  } catch {
-    // Ignore.
-  }
-  return undefined;
-}
-
-/**
- * Find a Chromium/Chrome executable. Prefers an explicit env override and
- * system binaries, then puppeteer's own download cache, then a playwright
- * chromium. Returns undefined when nothing is found on disk.
- */
-function findChromiumExecutable(): string | undefined {
-  const explicit = [
-    process.env['PUPPETEER_EXECUTABLE_PATH'],
-    '/usr/bin/chromium',
-    '/usr/bin/chromium-browser',
-    '/usr/bin/google-chrome',
-    '/usr/bin/google-chrome-stable',
-  ];
-  for (const p of explicit) {
-    if (p && existsSync(p)) return p;
-  }
-  const home = process.env['HOME'] ?? '/root';
-  return findChromeInCache(join(home, '.cache', 'puppeteer')) ?? findPlaywrightChromium();
-}
-
-/**
- * Resolve the chromium executable: explicit env / system binaries / cache
- * scans, then puppeteer's OWN resolver (`executablePath()`). Returns undefined
- * to let puppeteer.launch() use its built-in default.
- */
-function resolveExecutablePath(puppeteer: PuppeteerNode): string | undefined {
-  const explicit = findChromiumExecutable();
-  if (explicit) return explicit;
-  try {
-    const own = puppeteer.executablePath();
-    if (own && existsSync(own)) return own;
-  } catch {
-    // executablePath can throw if no browser is configured — fall through.
-  }
-  return undefined;
-}
-
-/**
- * Build the puppeteer launch options, merging caller overrides last. The
- * `--no-sandbox` / `--disable-setuid-sandbox` flags are essential when running
- * as root (the live server) — without them Chrome refuses to start.
- */
-function buildLaunchOptions(
-  puppeteer: PuppeteerNode,
-  opts: A11yTreeOptions,
-): Record<string, unknown> {
-  const executablePath = resolveExecutablePath(puppeteer);
-  return {
-    headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-    ...(executablePath ? { executablePath } : {}),
-    ...(opts.chromeLaunchConfig ?? {}),
-  };
-}
-
-/** Close a browser without throwing (best-effort teardown). */
-async function safeCloseBrowser(browser: Browser | undefined): Promise<void> {
-  if (!browser) return;
-  try {
-    await browser.close();
-  } catch {
-    // Never let teardown failures mask the real result / error.
-  }
-}
 
 /** Build a compact CSS-ish selector from a CDP DOM node's attributes. */
 function selectorFromNode(node: { localName?: string; nodeName?: string; attributes?: string[] }): string {
@@ -302,11 +174,8 @@ export async function runA11yTreeChecks(
   let browser: Browser | undefined;
   let client: CDPSession | undefined;
   try {
-    const puppeteer = await loadPuppeteer();
     const timeout = opts.timeout ?? DEFAULT_TIMEOUT;
-    browser = await puppeteer.launch(
-      buildLaunchOptions(puppeteer, opts) as Parameters<PuppeteerNode['launch']>[0],
-    );
+    browser = await launchChromium(opts.chromeLaunchConfig);
     const page: Page = await browser.newPage();
     if (opts.headers && Object.keys(opts.headers).length > 0) {
       await page.setExtraHTTPHeaders({ ...opts.headers });

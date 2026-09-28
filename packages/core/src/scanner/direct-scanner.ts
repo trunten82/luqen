@@ -3,7 +3,15 @@
  *
  * This is the default scan mode. The webservice path (WebserviceClient/Pool) remains
  * available as a fallback when `webserviceUrl` is explicitly configured.
+ *
+ * Browser resolution goes through the ONE shared resolver in
+ * packages/core/src/browser/ (CHROMIUM-RESOLVE-1). A resolution failure
+ * REJECTS the scan before pa11y runs — loud, per page — rather than falling
+ * through to pa11y's own bundled-puppeteer default resolver.
  */
+
+import { resolveChromium } from '../browser/resolve.js';
+import { CHROMIUM_LAUNCH_ARGS } from '../browser/launch.js';
 
 export interface DirectScanOptions {
   readonly standard: string;
@@ -31,31 +39,14 @@ export interface DirectScanResult {
   }>;
 }
 
-/** Find system Chromium binary if available. */
-function findSystemChromium(): string | undefined {
-  const paths = [
-    '/usr/bin/chromium',
-    '/usr/bin/chromium-browser',
-    '/usr/bin/google-chrome',
-    '/usr/bin/google-chrome-stable',
-    process.env['PUPPETEER_EXECUTABLE_PATH'],
-  ];
-  for (const p of paths) {
-    if (p && existsSync(p)) return p;
-  }
-  return undefined;
-}
-
-import { existsSync } from 'node:fs';
-
 export class DirectScanner {
   async scan(url: string, options: DirectScanOptions): Promise<DirectScanResult> {
     // pa11y is a CommonJS package — use dynamic import for ESM compatibility
     const pa11yModule = await import('pa11y');
     const pa11y = pa11yModule.default ?? pa11yModule;
 
-    // Prefer system Chromium (avoids missing shared library issues in LXC/Docker)
-    const executablePath = findSystemChromium();
+    // A ChromiumNotFoundError propagates here, before pa11y ever runs.
+    const { executablePath } = await resolveChromium();
 
     const result = await pa11y(url, {
       standard: options.standard || 'WCAG2AA',
@@ -70,8 +61,8 @@ export class DirectScanner {
       includeWarnings: options.includeWarnings !== false,
       includeNotices: options.includeNotices !== false,
       chromeLaunchConfig: {
-        ...(executablePath ? { executablePath } : {}),
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+        executablePath,
+        args: [...CHROMIUM_LAUNCH_ARGS],
       },
     });
 
