@@ -20,6 +20,11 @@ const TEST_SESSION_SECRET = 'test-session-secret-at-least-32b';
 
 const fakeConfig = {
   sessionSecret: TEST_SESSION_SECRET,
+  // PBH-A: encryptionKey is a separate config field now; this fixture builds
+  // a DashboardConfig by hand (bypassing loadConfig/withEncryptionKeyDefault),
+  // so it must set it explicitly to keep the "unset defaults to sessionSecret"
+  // backward-compat behavior this test relies on.
+  encryptionKey: TEST_SESSION_SECRET,
 } as DashboardConfig;
 
 interface TestContext {

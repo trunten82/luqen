@@ -23,7 +23,8 @@ The dashboard depends on two external services:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `DASHBOARD_SESSION_SECRET` | Yes | — | Session encryption key (minimum 32 bytes) |
+| `DASHBOARD_SESSION_SECRET` | Yes | — | Session cookie signing key (minimum 32 bytes) |
+| `DASHBOARD_ENCRYPTION_KEY` | No | Defaults to `DASHBOARD_SESSION_SECRET` | At-rest AES key (OAuth signing keys, service-connection secrets, git credentials, plugin secrets), independent of the session secret. See [the rotation runbook](./security-administration.md#rotating-the-session-secret-and-the-at-rest-encryption-key). |
 | `DASHBOARD_PORT` | No | `5000` | HTTP port |
 | `DASHBOARD_COMPLIANCE_URL` | No | `http://localhost:4000` | Compliance service URL |
 | `DASHBOARD_COMPLIANCE_API_KEY` | No | — | API key for solo-mode compliance access |
@@ -506,8 +507,9 @@ API key and SSO users see an informational message explaining that password chan
 
 ## Session management
 
-- Sessions are stored server-side and encrypted with `DASHBOARD_SESSION_SECRET`.
+- Sessions are sealed, client-held cookies (`@fastify/secure-session`), not stored server-side — encrypted and signed with `DASHBOARD_SESSION_SECRET` (corrected 2026-09-28; this line previously claimed server-side storage).
 - The session secret must be at least 32 bytes.
+- The at-rest encryption key (`DASHBOARD_ENCRYPTION_KEY`) is a SEPARATE secret from the session secret — see [the rotation runbook](./security-administration.md#rotating-the-session-secret-and-the-at-rest-encryption-key). Rotating the session secret only ever logs users out; it no longer affects stored plugin secrets, git credentials, service-connection secrets, or OAuth signing keys.
 - Sessions are invalidated when the database is reset (boot ID tracking prevents stale session reuse).
 - `Session.regenerate()` is called on login to prevent session fixation.
 - Rate limiting is applied to the login endpoint: 5 attempts per 15 minutes.
