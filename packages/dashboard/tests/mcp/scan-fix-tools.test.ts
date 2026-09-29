@@ -165,6 +165,44 @@ describe('dashboard_scan_page', () => {
     expect(scanSpy).not.toHaveBeenCalled();
   });
 
+  it('returns isError:true for a public hostname that RESOLVES to a private address (START-URL-DNS-1)', async () => {
+    const scanner = makeStubScanner();
+    const scanSpy = vi.spyOn(scanner, 'scan');
+    const resolveHost = vi.fn(async () => ['192.168.100.50'] as readonly string[]);
+
+    ({ client, closeAll } = await makeServerAndClient((server) => {
+      registerScanTools(server, { scanner, resolveHost });
+    }));
+
+    const result = await client.callTool({
+      name: 'dashboard_scan_page',
+      arguments: { url: 'https://rebind.example/admin' },
+    });
+
+    expect(result.isError).toBe(true);
+    expect(parseToolText(result)['error']).toContain('private');
+    expect(resolveHost).toHaveBeenCalledWith('rebind.example');
+    expect(scanSpy).not.toHaveBeenCalled();
+  });
+
+  it('scans a hostname that resolves only to public addresses (START-URL-DNS-1 control)', async () => {
+    const scanner = makeStubScanner([FAKE_ISSUE]);
+    const scanSpy = vi.spyOn(scanner, 'scan');
+    const resolveHost = vi.fn(async () => ['93.184.215.14'] as readonly string[]);
+
+    ({ client, closeAll } = await makeServerAndClient((server) => {
+      registerScanTools(server, { scanner, resolveHost });
+    }));
+
+    const result = await client.callTool({
+      name: 'dashboard_scan_page',
+      arguments: { url: 'https://public.example/' },
+    });
+
+    expect(result.isError).not.toBe(true);
+    expect(scanSpy).toHaveBeenCalledTimes(1);
+  });
+
   it('returns isError:true for localhost url (SSRF blocked)', async () => {
     const scanner = makeStubScanner();
     const scanSpy = vi.spyOn(scanner, 'scan');

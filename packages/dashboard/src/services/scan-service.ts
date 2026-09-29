@@ -12,6 +12,13 @@ import type { StorageAdapter } from '../db/index.js';
 import type { ScanOrchestrator } from '../scanner/orchestrator.js';
 import type { DashboardConfig } from '../config.js';
 import type { ScanRecord } from '../db/types.js';
+import {
+  assertPublicUrl,
+  isPrivateHostname as isPrivateHostnameCore,
+  SsrfBlockedError,
+  type HostResolver,
+} from '@luqen/core';
+import { systemHostResolver } from './host-resolver.js';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -88,34 +95,42 @@ function normalizeStringArray(value: string | string[] | undefined): string[] {
   return [value];
 }
 
+/** User-facing refusal for a private / internal scan target (unchanged text). */
+export const PRIVATE_TARGET_ERROR = 'Scanning internal or private addresses is not allowed.';
+/** User-facing refusal when the start URL's host does not resolve. */
+export const UNRESOLVABLE_TARGET_ERROR = 'Domain not found — check the URL for typos.';
+
 /**
- * SSRF protection: block private/internal IP ranges and reserved hostnames.
+ * SSRF protection (string-only): is `hostname` a reserved name or a private IP
+ * literal in any encoding? Delegates to @luqen/core's classifier so the
+ * dashboard and the discovery guard share one definition of "private"
+ * (loopback, RFC 1918, link-local/metadata, CGNAT, IPv6 ULA/link-local,
+ * IPv4-mapped/compatible/NAT64/6to4 forms, .local/.internal/.localhost).
+ * Accepts a bracketed IPv6 host as `URL.hostname` returns it.
  */
 export function isPrivateHostname(hostname: string): boolean {
-  const h = hostname.toLowerCase();
-  return (
-    h === 'localhost' ||
-    h.startsWith('127.') ||
-    h === '::1' ||
-    h === '[::1]' ||
-    h === '0.0.0.0' ||
-    h.startsWith('10.') ||
-    h.startsWith('192.168.') ||
-    /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(h) ||
-    h === '169.254.169.254' ||
-    h.startsWith('169.254.') ||
-    h.endsWith('.internal') ||
-    h.endsWith('.local')
-  );
+  return isPrivateHostnameCore(hostname.replace(/^\[|\]$/g, ''));
 }
 
 /**
- * Validate and parse the scan URL. Returns the parsed URL or an error string.
+ * Validate and parse the scan URL. Resolves {@link UrlValidation} to the
+ * parsed URL or an error string.
+ *
+ * START-URL-DNS-1: unless `allowPrivate` (the `allowPrivateScanTargets`
+ * opt-out) is set, the host is refused when it is a private literal OR when it
+ * RESOLVES to any private address, and when it does not resolve at all (fail
+ * closed). `resolve` is the DNS seam (tests inject it); it defaults to
+ * {@link systemHostResolver} (`dns.lookup(host, { all: true })`).
+ *
+ * Residual, documented: pa11y's browser resolves the name again, so a
+ * DNS-rebinding server with a ~0 s TTL can still win the race between this
+ * check and the scan (same residual as the discovery guard).
  */
-export function validateScanUrl(
+export async function validateScanUrl(
   rawUrl: string,
   allowPrivate = false,
-): { url: URL } | { error: string } {
+  resolve?: HostResolver,
+): Promise<UrlValidation> {
   if (typeof rawUrl !== 'string' || rawUrl.trim() === '') {
     return { error: 'Please enter a URL to scan.' };
   }
@@ -131,12 +146,21 @@ export function validateScanUrl(
     return { error: 'URL must use http or https' };
   }
 
-  if (!allowPrivate && isPrivateHostname(parsedUrl.hostname)) {
-    return { error: 'Scanning internal or private addresses is not allowed.' };
+  if (allowPrivate) {
+    return { url: parsedUrl };
+  }
+
+  try {
+    await assertPublicUrl(parsedUrl.toString(), { resolve: resolve ?? systemHostResolver });
+  } catch (err) {
+    if (!(err instanceof SsrfBlockedError)) throw err;
+    return { error: err.reason.startsWith('DNS resolution') ? UNRESOLVABLE_TARGET_ERROR : PRIVATE_TARGET_ERROR };
   }
 
   return { url: parsedUrl };
 }
+
+export type UrlValidation = { readonly url: URL } | { readonly error: string };
 
 /**
  * Pre-validate that the URL is reachable before starting a scan.
@@ -175,6 +199,8 @@ export class ScanService {
     private readonly storage: StorageAdapter,
     private readonly orchestrator: ScanOrchestrator,
     private readonly config: DashboardConfig,
+    /** DNS seam for the start-URL check; defaults to the system resolver. */
+    private readonly resolveHost?: HostResolver,
   ) {}
 
   /**
@@ -186,7 +212,11 @@ export class ScanService {
     context: ScanContext,
   ): Promise<ScanInitiationResult> {
     // 1. Validate URL
-    const urlResult = validateScanUrl(input.siteUrl, this.config.allowPrivateScanTargets ?? false);
+    const urlResult = await validateScanUrl(
+      input.siteUrl,
+      this.config.allowPrivateScanTargets ?? false,
+      this.resolveHost,
+    );
     if ('error' in urlResult) {
       return { ok: false, error: urlResult.error };
     }

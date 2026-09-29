@@ -50,6 +50,9 @@ function makeOrchestrator() {
   return { startScan: vi.fn() } as unknown as ScanOrchestrator;
 }
 
+/** Injected DNS: every name resolves to a public documentation address — no real DNS in tests. */
+const publicResolver = async (): Promise<readonly string[]> => ['93.184.215.14'];
+
 function makeConfig(overrides: Partial<DashboardConfig> = {}) {
   return {
     maxConcurrentScans: 4,
@@ -131,42 +134,42 @@ describe('isPrivateHostname', () => {
 // ---------------------------------------------------------------------------
 
 describe('validateScanUrl', () => {
-  it('returns URL for valid https://example.com', () => {
-    const result = validateScanUrl('https://example.com');
+  it('returns URL for valid https://example.com', async () => {
+    const result = await validateScanUrl('https://example.com', false, publicResolver);
     expect(result).toHaveProperty('url');
     expect((result as { url: URL }).url.hostname).toBe('example.com');
   });
 
-  it('returns error for empty string', () => {
-    const result = validateScanUrl('');
+  it('returns error for empty string', async () => {
+    const result = await validateScanUrl('');
     expect(result).toHaveProperty('error');
   });
 
-  it('returns error for non-URL string', () => {
-    const result = validateScanUrl('not a url at all');
+  it('returns error for non-URL string', async () => {
+    const result = await validateScanUrl('not a url at all');
     expect(result).toHaveProperty('error');
   });
 
-  it('returns error for ftp:// protocol', () => {
-    const result = validateScanUrl('ftp://example.com');
-    expect(result).toHaveProperty('error');
-    expect((result as { error: string }).error).toContain('http');
-  });
-
-  it('returns error for file:/// protocol', () => {
-    const result = validateScanUrl('file:///etc/passwd');
+  it('returns error for ftp:// protocol', async () => {
+    const result = await validateScanUrl('ftp://example.com');
     expect(result).toHaveProperty('error');
     expect((result as { error: string }).error).toContain('http');
   });
 
-  it('returns error for private IP http://192.168.1.1', () => {
-    const result = validateScanUrl('http://192.168.1.1');
+  it('returns error for file:/// protocol', async () => {
+    const result = await validateScanUrl('file:///etc/passwd');
+    expect(result).toHaveProperty('error');
+    expect((result as { error: string }).error).toContain('http');
+  });
+
+  it('returns error for private IP http://192.168.1.1', async () => {
+    const result = await validateScanUrl('http://192.168.1.1');
     expect(result).toHaveProperty('error');
     expect((result as { error: string }).error).toContain('private');
   });
 
-  it('returns error for http://localhost', () => {
-    const result = validateScanUrl('http://localhost');
+  it('returns error for http://localhost', async () => {
+    const result = await validateScanUrl('http://localhost');
     expect(result).toHaveProperty('error');
     expect((result as { error: string }).error).toContain('private');
   });
@@ -234,7 +237,7 @@ describe('ScanService.initiateScan — regulations (07-P02)', () => {
   it('normalizes a single regulation string into an array and persists it', async () => {
     const storage = makeStorage({ id: 'scan-1', orgId: 'org-1' });
     const orchestrator = makeOrchestrator();
-    const service = new ScanService(storage, orchestrator, makeConfig());
+    const service = new ScanService(storage, orchestrator, makeConfig(), publicResolver);
 
     const result = await service.initiateScan(
       {
@@ -259,7 +262,7 @@ describe('ScanService.initiateScan — regulations (07-P02)', () => {
   it('accepts multi-value regulations array from form submission', async () => {
     const storage = makeStorage({ id: 'scan-1', orgId: 'org-1' });
     const orchestrator = makeOrchestrator();
-    const service = new ScanService(storage, orchestrator, makeConfig());
+    const service = new ScanService(storage, orchestrator, makeConfig(), publicResolver);
 
     const result = await service.initiateScan(
       {
@@ -280,7 +283,7 @@ describe('ScanService.initiateScan — regulations (07-P02)', () => {
   it('defaults regulations to [] when omitted', async () => {
     const storage = makeStorage({ id: 'scan-1', orgId: 'org-1' });
     const orchestrator = makeOrchestrator();
-    const service = new ScanService(storage, orchestrator, makeConfig());
+    const service = new ScanService(storage, orchestrator, makeConfig(), publicResolver);
 
     const result = await service.initiateScan(
       {
