@@ -714,6 +714,19 @@ export class PluginManager {
     }
   }
 
+  /**
+   * Process shutdown: deactivate every running plugin instance (closing any
+   * resident browser it holds) WITHOUT touching the persisted status, so every
+   * plugin comes back active on the next start. Unlike {@link deactivate},
+   * which is an admin action and records the plugin as inactive. Never throws.
+   */
+  async shutdownAll(): Promise<void> {
+    this.stopHealthChecks();
+    const running = [...this.activeInstances.entries()];
+    this.activeInstances.clear();
+    await Promise.allSettled(running.map(([, instance]) => instance.deactivate()));
+  }
+
   // -----------------------------------------------------------------------
   // Get active plugins by type
   // -----------------------------------------------------------------------
