@@ -86,8 +86,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `DASHBOARD_ALLOW_PRIVATE_SCAN_TARGETS` opt-out now also covers discovery,
   so loopback UAT keeps working. The `luqen` CLI and stdio MCP server keep
   discovery on private hosts only when the operator's own start URL is
-  private. Known residual: the guard resolves before `fetch` resolves again,
-  so a DNS-rebinding host with a near-zero TTL can still race it.
+  private. The DNS-rebinding race this guard originally left open (resolve,
+  then `fetch` resolves again) is closed by the pinning entry below.
 - The scan start URL is now checked against what its hostname RESOLVES to,
   not only against its spelling. The dashboard's start-URL validation was a
   string-only check, so a public hostname whose DNS answer was `127.0.0.1`
@@ -124,6 +124,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   is not covered. The separately installed axe scanner plugin is not called by
   any scan path today (no caller of its `evaluate` hook), so it has no page
   load to guard.
+- Discovery's HTTP requests are now pinned to the address the SSRF guard
+  validated, closing the DNS-rebinding race: previously the guard resolved a
+  hostname and `fetch` resolved it again, so a host with a near-zero TTL could
+  answer a public address to the check and `127.0.0.1` to the connection.
+  `robots.txt`, sitemaps, crawled pages, content hashing and every redirect
+  hop now resolve once, refuse the name if ANY address is private, and
+  connect only to those validated addresses (an `undici` `Agent` whose
+  connect-time `lookup` answers only the pinned addresses; each hop is
+  resolved and pinned afresh). The URL, `Host` header and TLS server name
+  keep the original hostname, so certificates are still verified against it.
+  `@luqen/core` now depends on `undici` (already installed transitively via
+  `cheerio`). Not pinned, and still documented as residuals: page loads in
+  the scan engines and the headless-browser discovery fallback (Chromium
+  resolves hosts itself), and the dashboard's start-URL check, which only
+  validates and does not connect.
 - The session secret is now rotatable independently of at-rest encrypted
   data. Previously, `DASHBOARD_SESSION_SECRET` doubled as the AES key for
   four at-rest stores (OAuth signing keys, service-connection secrets, git
