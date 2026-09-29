@@ -364,6 +364,7 @@ SSE events streamed during a scan:
 
 | Event type | Meaning |
 |------------|---------|
+| `discovery_progress` | Site discovery still running — `pagesFound` so far and `discoveryPhase` (`sitemap` / `crawl` / `browser`); at most one per second within a phase |
 | `discovery` | Site discovery complete — total page count known |
 | `scan_start` | Scan started |
 | `page_progress` | A single page has been scanned — includes page URL and running issue counts |
