@@ -39,6 +39,9 @@
       aria-live="polite"
       aria-label="Scan status"
       class="status-banner status-banner--{{scan.status}}"
+      data-discovering-sitemap="{{t "scanProgress.discoveringSitemap"}}"
+      data-discovering-crawl="{{t "scanProgress.discoveringCrawl"}}"
+      data-discovering-browser="{{t "scanProgress.discoveringBrowser"}}"
     >
       <span class="status-banner__icon" aria-hidden="true"></span>
       <span id="status-text">
@@ -173,6 +176,15 @@
     return open + name + close;
   }
   var PAGES_PLACEHOLDER = bracePlaceholder('pages');
+  var COUNT_PLACEHOLDER = bracePlaceholder('count');
+  // DISCOVERY-PROGRESS-1: the per-phase sentences live in data-* ATTRIBUTES
+  // on the status banner (getAttribute() decodes the HTML-escaped t() output,
+  // same reason as the discovery notices above). Once scanning has begun
+  // ('discovery' arrived) a late progress event must not overwrite the
+  // scanning display.
+  var DISCOVERY_PHASES = { sitemap: true, crawl: true, browser: true };
+  var discoveryDone = false;
+  var lastDiscoveryPhase = null;
   function revealDiscoveryNotice(code, pagesScanned) {
     var el = discoveryElementsByCode[code];
     if (!el) return null;
@@ -200,7 +212,30 @@
     addLog('{{t "scanProgress.logScanStarted"}}');
   });
 
+  source.addEventListener('discovery_progress', function (e) {
+    if (discoveryDone) return;
+    try {
+      var evt = JSON.parse(e.data);
+      var d = evt.data || {};
+      var phase = d.discoveryPhase;
+      var found = d.pagesFound;
+      if (!Object.prototype.hasOwnProperty.call(DISCOVERY_PHASES, phase)) return;
+      if (typeof found !== 'number' || !isFinite(found) || found < 0) return;
+      var template = statusBanner ? (statusBanner.getAttribute('data-discovering-' + phase) || '') : '';
+      if (!template) return;
+      var msg = template.replace(COUNT_PLACEHOLDER, String(found));
+      if (statusText) statusText.textContent = msg;
+      if (statusBanner) statusBanner.className = 'status-banner status-banner--running';
+      if (pagesDiscoveredEl) pagesDiscoveredEl.textContent = String(found);
+      if (phase !== lastDiscoveryPhase) {
+        lastDiscoveryPhase = phase;
+        addLog(msg);
+      }
+    } catch (_) {}
+  });
+
   source.addEventListener('discovery', function (e) {
+    discoveryDone = true;
     try {
       var evt = JSON.parse(e.data);
       if (evt.data && evt.data.pagesDiscovered !== undefined && pagesDiscoveredEl) {
