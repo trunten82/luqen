@@ -39,6 +39,18 @@ jobs:
           git reset --hard origin/master
           echo "Deploying $(git rev-parse --short HEAD)"
 
+      - name: Stop the dashboard before install and build
+        # The dashboard is the box's largest resident process (peaked at 2.8G
+        # after a deep scan). With it running, `npm ci` + the build pushed the
+        # 8 GB container into the OOM killer on 2026-09-28 (Deploy run
+        # 36495649180: npm ci exit 137, then the kernel killed the dashboard),
+        # leaving new source on disk behind an old dist. Stop it first; the
+        # install+build window is ~40 s, and "Restart services" starts it
+        # again. The always() step at the end guarantees it never stays down.
+        run: |
+          systemctl stop luqen-dashboard
+          systemctl is-active luqen-dashboard || true
+
       - name: Install dependencies
         # The box uses its system Chromium (the scanner engines discover it at
         # runtime), so block puppeteer's postinstall Chromium download — it
@@ -69,6 +81,15 @@ jobs:
           npm run build -w packages/branding
           npm run build -w packages/dashboard
 
+      - name: Record restart counters
+        # NRestarts is NOT reset by a manual restart (the dashboard already
+        # carries 1 from the 2026-09-28 OOM kill), so the verify step compares
+        # against these values rather than against zero.
+        run: |
+          for u in luqen-compliance luqen-llm luqen-branding luqen-dashboard; do
+            echo "NR_${u//-/_}=$(systemctl show -p NRestarts --value "$u")" >> "$GITHUB_ENV"
+          done
+
       - name: Restart services
         # Restart every live unit so the freshly-built dist is loaded. Each
         # service is independent; restart compliance/llm/branding before the
@@ -77,6 +98,20 @@ jobs:
           systemctl restart luqen-compliance luqen-llm luqen-branding luqen-dashboard
           sleep 3
           systemctl is-active luqen-compliance luqen-llm luqen-branding luqen-dashboard
+
+      - name: Verify the restart window
+        # A crash-looping unit can read "active" between restarts, so check
+        # that no unit auto-restarted after the deploy's own restart, and that
+        # the dashboard answers /health from the box itself.
+        run: |
+          sleep 10
+          for u in luqen-compliance luqen-llm luqen-branding luqen-dashboard; do
+            var="NR_${u//-/_}"; before="${!var}"
+            n=$(systemctl show -p NRestarts --value "$u")
+            echo "$u NRestarts before=$before after=$n $(systemctl is-active "$u")"
+            if [ -z "$before" ] || [ "$n" != "$before" ]; then echo "$u auto-restarted after deploy (or counter missing)"; exit 1; fi
+          done
+          curl -fsS -o /dev/null -w 'health HTTP %{http_code}\n' http://localhost:5000/health
 
       - name: Smoke check
         run: |
@@ -91,3 +126,12 @@ jobs:
           done
           echo "smoke check failed: /login never returned 200"
           exit 1
+
+      - name: Never leave a service stopped
+        # Runs even when install or build failed: the dashboard was stopped
+        # above, so a failed deploy must still bring the (previous) build back
+        # rather than leave the site down. Idempotent for running units.
+        if: always()
+        run: |
+          systemctl start luqen-compliance luqen-llm luqen-branding luqen-dashboard
+          systemctl is-active luqen-compliance luqen-llm luqen-branding luqen-dashboard
