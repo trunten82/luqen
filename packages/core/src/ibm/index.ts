@@ -104,7 +104,7 @@ export async function runIbmChecks(
     // when the service runs as root; the checker scans the page we hand it
     // rather than spawning its own (sandboxed) Chrome.
     const timeout = opts.timeout ?? DEFAULT_TIMEOUT;
-    browser = await launchChromium(opts.chromeLaunchConfig);
+    browser = await launchChromium({ ...opts.chromeLaunchConfig, guard: opts.guard ?? {} }); // SCAN-EGRESS-PROXY-1
     const page: Page = await browser.newPage();
     await guardPageRequests(page, opts.guard ?? {}); // ENGINE-SSRF-1
     if (opts.headers && Object.keys(opts.headers).length > 0) {

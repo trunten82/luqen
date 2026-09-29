@@ -21,7 +21,8 @@ import { createRequire } from 'node:module';
 import type { Issue } from '../types.js';
 import { resolveChromium } from '../browser/resolve.js';
 import type { Browser, Page } from 'puppeteer';
-import { CHROMIUM_LAUNCH_ARGS } from '../browser/launch.js';
+import { CHROMIUM_LAUNCH_ARGS, withEgressProxyArgs } from '../browser/launch.js';
+import { openEgressProxy, type EgressProxy } from '../net/egress-proxy.js';
 import { loadPuppeteer } from '../browser/puppeteer-runtime.js';
 import { guardPageRequests } from '../net/browser-request-guard.js';
 import type { LighthouseOptions, LighthouseResult } from './types.js';
@@ -87,13 +88,23 @@ async function loadChromeLauncher(): Promise<ChromeLauncherModule> {
   return chromeLauncherPromise;
 }
 
-/** Build chrome-launcher options, merging caller overrides last. */
-function buildLaunchOptions(opts: LighthouseOptions, chromePath: string): Record<string, unknown> {
-  return {
+/**
+ * Build chrome-launcher options, merging caller overrides last — except the
+ * egress-proxy flags (SCAN-EGRESS-PROXY-1), which are appended AFTER the merge
+ * so no `chromeFlags` override can drop or replace them.
+ */
+export function buildLaunchOptions(
+  opts: LighthouseOptions,
+  chromePath: string,
+  proxy: Pick<EgressProxy, 'port'>,
+): Record<string, unknown> {
+  const merged: Record<string, unknown> = {
     chromeFlags: ['--headless=new', ...CHROMIUM_LAUNCH_ARGS],
     chromePath,
     ...(opts.chromeLaunchConfig ?? {}),
   };
+  const flags = Array.isArray(merged['chromeFlags']) ? (merged['chromeFlags'] as unknown[]).map(String) : [];
+  return { ...merged, chromeFlags: withEgressProxyArgs(flags, proxy) };
 }
 
 /**
@@ -108,6 +119,7 @@ export async function runLighthouseChecks(
 ): Promise<LighthouseResult> {
   let chrome: { port: number; kill(): Promise<void> } | undefined;
   let controller: Browser | undefined;
+  let proxy: EgressProxy | undefined;
   try {
     // Resolve BEFORE loading chrome-launcher: a resolution failure must
     // surface as our own typed error rather than silently falling through
@@ -116,7 +128,9 @@ export async function runLighthouseChecks(
     const executablePath = configuredChromePath ?? (await resolveChromium()).executablePath;
 
     const launcher = await loadChromeLauncher();
-    chrome = await launcher.launch(buildLaunchOptions(opts, executablePath));
+    // SCAN-EGRESS-PROXY-1 — FAIL CLOSED: no proxy, no Chrome.
+    proxy = await openEgressProxy(opts.guard ?? {});
+    chrome = await launcher.launch(buildLaunchOptions(opts, executablePath, proxy));
 
     const lighthouse = await loadLighthouse();
     const flags: Record<string, unknown> = {
@@ -165,6 +179,7 @@ export async function runLighthouseChecks(
         // Never let teardown failures mask the real result / error.
       }
     }
+    await proxy?.close();
   }
 }
 

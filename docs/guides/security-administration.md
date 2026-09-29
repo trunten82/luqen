@@ -150,9 +150,10 @@ with "Domain not found". Refused ranges:
 - CGNAT `100.64.0.0/10`, IPv6 unique-local `fc00::/7`
 - IPv4-mapped / NAT64 / 6to4 forms of any of those, multicast and other reserved ranges
 
-Residual, same as discovery: the check resolves the name, then the scanner's
-browser resolves it again, so a DNS-rebinding host with a near-zero TTL can
-still win that race.
+This check resolves the name, and the scanner's browser would otherwise
+resolve it again (a near-zero-TTL rebinding host could win that race). That
+second resolution is closed by the scan egress proxy described below: every
+browser load resolves once in the proxy and connects to the validated address.
 
 **Discovery is guarded too.** Validating the start URL is not enough on its
 own: a public site controls its `robots.txt`, its sitemaps and its redirects.
@@ -181,7 +182,7 @@ original hostname, so HTTPS certificates are still verified against the name
 that was requested. Each redirect hop is resolved, checked and pinned afresh.
 Nothing is pinned when there is nothing to resolve (an IP-literal host) or
 when the opt-out below applies. The headless-browser discovery fallback is
-**not** pinned — see the browser residual below.
+pinned by the egress proxy described next.
 
 **Page loads by the scan engines are guarded too.** After discovery, each
 engine loads every page in a real headless Chromium, and a page controls its
@@ -203,27 +204,58 @@ results (it is not an error for the scan as a whole). Covered engines and how:
 | Lighthouse | Puppeteer attaches to the chrome-launcher instance, guards a page, and passes it as Lighthouse's documented `page` argument. |
 | Browser discovery fallback | Unchanged (the same guard, now in `@luqen/core`'s `net/browser-request-guard`). |
 
+**Every scan and discovery Chromium goes through a filtering egress proxy
+(WebSockets and browser DNS rebinding).** Request interception has two
+blind spots: Chromium never surfaces `ws:`/`wss:` handshakes to it, and it
+never sees the address Chromium connects to (Chromium resolves hosts itself,
+so a rebinding host could answer public to the check and private to the
+connection). Both are closed at the network layer: every browser launched
+through `@luqen/core` (`launchChromium`, and Lighthouse's chrome-launcher)
+gets its OWN in-process forward proxy on `127.0.0.1:<ephemeral port>`,
+enforcing that scan's guard policy, and is started with
+`--proxy-server=http://127.0.0.1:<port>` and `--proxy-bypass-list=<-loopback>`
+(Chromium bypasses proxies for loopback by default; that flag removes the
+bypass, so `127.0.0.1`/`localhost` targets are checked too). Caller-supplied
+proxy flags (`--no-proxy-server`, `--proxy-server`, `--proxy-bypass-list`,
+`--proxy-pac-url`, ...) are dropped, so no launch override can route around it.
+
+- Every `http:` request reaches the proxy in absolute form; every `https:`,
+  `ws:` and `wss:` connection reaches it as a `CONNECT` tunnel (measured:
+  Chromium tunnels plain `ws://` through `CONNECT` too). The proxy resolves
+  the target ONCE with the same guard as discovery, refuses it if ANY address
+  is private (`403`; the request fails in the page as a
+  failed load), and otherwise connects only to the addresses it validated —
+  Chromium never resolves the name, so there is no second answer to rebind to.
+  A `CONNECT` tunnel is a raw byte pipe, so TLS stays end to end: the
+  certificate and SNI are Chromium's own against the original hostname. An
+  absolute-form `Upgrade` request (plain `ws://` from a client that does not
+  use `CONNECT`) gets the same check.
+- **Fail closed.** The proxy is started and proven listening BEFORE Chromium
+  is launched; if it cannot be, the launch throws `EgressProxyUnavailableError`
+  ("Scan egress proxy unavailable — refusing to launch Chromium without it")
+  and no browser starts: pa11y rejects the page, every other engine reports
+  that message as the page's error. If the proxy dies mid-scan, Chromium does
+  not fall back to a direct connection — loads fail with
+  `net::ERR_PROXY_CONNECTION_FAILED` (measured).
+- One proxy per browser, closed with the browser (and whenever puppeteer
+  reports it disconnected); each proxy accepts at most 256 client connections, gives an upstream 15 s
+  to connect, and tears a tunnel or request down on both sides after 120 s
+  idle. It never listens on anything but `127.0.0.1`. No new service, port or
+  systemd unit is involved.
+- The page-level request interception above stays in place as a second layer.
+- The ACR PDF renderer launches through the same shared launcher, so it gets
+  a strict proxy too (its fonts and evidence images are inlined as `data:`
+  URIs; only an `https` badge image is fetched).
+- A `CONNECT` to a `trustedOrigins` entry is allowed only for that entry's
+  exact `host:port`.
+
 Not covered, by design or by measurement:
 
-- **WebSockets.** Chromium does not surface `ws:`/`wss:` handshakes to request
-  interception, so a scanned page can still open a WebSocket to an internal
-  address (measured: the handshake reached a loopback server while every
-  other request type was refused). Closing it needs a network-level control
-  (an egress proxy or firewall rule for the scanner host), not a browser hook.
-- **DNS rebinding in the browser.** The guard resolves each request's host,
-  but Chromium then resolves the host itself, and request interception never
-  sees the address Chromium connects to — so a rebinding host with a
-  near-zero TTL can still win that race for page loads, redirects and
-  subresources (and for the headless-browser discovery fallback). The Node
-  discovery path above is pinned; the browser is not. Pinning only the start
-  host with Chromium's `--host-resolver-rules` was assessed and not shipped:
-  it would cover one host out of every host a page loads (redirect targets,
-  subresources and frames on other hosts stay racy), it would have to be
-  threaded through every engine's launch — including Lighthouse's
-  chrome-launcher flags and the dashboard's own scanners — and it would fix
-  a long crawl to the start host's first answer. Full coverage needs a
-  network-level control: an egress firewall rule for the scanner host, or an
-  egress proxy that resolves, checks and pins every connection itself.
+- **Non-HTTP browser traffic.** The proxy carries what Chromium sends through
+  an HTTP proxy (HTTP, HTTPS, WebSockets). WebRTC's UDP (STUN/TURN/ICE) does
+  not use an HTTP proxy and was not measured here; it cannot carry an HTTP
+  request to an internal service, but a network-level egress rule for the
+  scanner host is still the complete control.
 - **The legacy pa11y webservice backend** (`webserviceUrl`) loads pages in its
   own remote process; its page loads are outside this guard.
 - **The axe scanner plugin** (`@luqen/plugin-scanner-axe`, installed
@@ -234,8 +266,10 @@ Not covered, by design or by measurement:
 
 **Opt-out for trusted test environments.** `allowPrivateScanTargets: true` in
 `dashboard.config.json` (or `DASHBOARD_ALLOW_PRIVATE_SCAN_TARGETS=true`)
-disables the start-URL check, the discovery guard AND the engine page-load
-guard. It exists for the
+disables the start-URL check, the discovery guard, the engine page-load
+guard AND the egress proxy's address check (the proxy still runs, so the
+browser still has no direct route, but it allows private targets). It exists
+for the
 loopback UAT harness (`packages/dashboard/tests/browser-uat`); never enable it
 on a server reachable by untrusted users.
 
