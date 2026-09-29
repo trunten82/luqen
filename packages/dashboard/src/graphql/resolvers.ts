@@ -413,7 +413,7 @@ export const resolvers = {
       requirePerm(ctx, 'scans.create');
 
       // SSRF protection: validate URL before creating scan
-      const urlResult = validateScanUrl(args.input.siteUrl);
+      const urlResult = await validateScanUrl(args.input.siteUrl);
       if ('error' in urlResult) {
         throw new Error(urlResult.error);
       }

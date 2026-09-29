@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// Hermetic DNS for the start-URL SSRF check (START-URL-DNS-1): every test host
+// resolves to a public documentation address; no real DNS lookups.
+vi.mock('../../src/services/host-resolver.js', () => ({
+  systemHostResolver: async (): Promise<readonly string[]> => ['93.184.215.14'],
+}));
+
 vi.mock('node:fs/promises', () => ({
   readFile: vi.fn(),
 }));

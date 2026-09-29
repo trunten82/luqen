@@ -30,9 +30,12 @@ describe('isPrivateHostname (SSRF guard)', () => {
   });
 });
 
+/** Injected DNS: no real resolution in tests. */
+const publicResolver = async (): Promise<readonly string[]> => ['93.184.215.14'];
+
 describe('validateScanUrl allowPrivate escape hatch', () => {
-  it('rejects loopback URLs by default (secure default)', () => {
-    const result = validateScanUrl('http://127.0.0.1/');
+  it('rejects loopback URLs by default (secure default)', async () => {
+    const result = await validateScanUrl('http://127.0.0.1/');
     expect('error' in result).toBe(true);
     if ('error' in result) {
       expect(typeof result.error).toBe('string');
@@ -40,21 +43,21 @@ describe('validateScanUrl allowPrivate escape hatch', () => {
     }
   });
 
-  it('rejects another loopback address by default', () => {
-    const result = validateScanUrl('http://127.0.0.2/');
+  it('rejects another loopback address by default', async () => {
+    const result = await validateScanUrl('http://127.0.0.2/');
     expect('error' in result).toBe(true);
   });
 
-  it('accepts loopback URLs when allowPrivate is true', () => {
-    const result = validateScanUrl('http://127.0.0.1/', true);
+  it('accepts loopback URLs when allowPrivate is true', async () => {
+    const result = await validateScanUrl('http://127.0.0.1/', true);
     expect('url' in result).toBe(true);
     if ('url' in result) {
       expect(result.url.hostname).toBe('127.0.0.1');
     }
   });
 
-  it('still accepts public URLs regardless of allowPrivate', () => {
-    expect('url' in validateScanUrl('https://example.com/')).toBe(true);
-    expect('url' in validateScanUrl('https://example.com/', true)).toBe(true);
+  it('still accepts public URLs regardless of allowPrivate', async () => {
+    expect('url' in await validateScanUrl('https://example.com/', false, publicResolver)).toBe(true);
+    expect('url' in await validateScanUrl('https://example.com/', true, publicResolver)).toBe(true);
   });
 });
