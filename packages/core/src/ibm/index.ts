@@ -29,8 +29,8 @@
 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { Browser, Page } from 'puppeteer';
-import { launchChromium, safeCloseBrowser } from '../browser/launch.js';
+import type { Page } from 'puppeteer';
+import { openEnginePage, type EnginePage } from '../browser/shared-browser.js';
 import { guardPageRequests } from '../net/browser-request-guard.js';
 import type { IbmOptions, IbmResult } from './types.js';
 import { mapIbmResults, type IbmReport } from './map.js';
@@ -98,14 +98,14 @@ export async function runIbmChecks(
   opts: IbmOptions = {},
 ): Promise<IbmResult> {
   let checker: AceCheckerModule | undefined;
-  let browser: Browser | undefined;
+  let engine: EnginePage | undefined;
   try {
-    // Launch OUR OWN puppeteer browser with --no-sandbox so Chrome starts even
-    // when the service runs as root; the checker scans the page we hand it
-    // rather than spawning its own (sandboxed) Chrome.
+    // OUR OWN page (a shared-browser lease, or our own --no-sandbox browser) so
+    // Chrome starts even when the service runs as root; the checker scans the
+    // page we hand it rather than spawning its own (sandboxed) Chrome.
     const timeout = opts.timeout ?? DEFAULT_TIMEOUT;
-    browser = await launchChromium({ ...opts.chromeLaunchConfig, guard: opts.guard ?? {} }); // SCAN-EGRESS-PROXY-1
-    const page: Page = await browser.newPage();
+    engine = await openEnginePage(opts); // SCAN-EGRESS-PROXY-1 / DEEP-SCAN-BROWSER-REUSE-1
+    const page: Page = engine.page;
     await guardPageRequests(page, opts.guard ?? {}); // ENGINE-SSRF-1
     if (opts.headers && Object.keys(opts.headers).length > 0) {
       await page.setExtraHTTPHeaders({ ...opts.headers });
@@ -145,7 +145,7 @@ export async function runIbmChecks(
         // Never let teardown failures mask the real result / error.
       }
     }
-    await safeCloseBrowser(browser);
+    await engine?.dispose();
   }
 }
 

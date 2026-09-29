@@ -44,6 +44,8 @@ export {
   liveBrowserCount,
   CHROMIUM_LAUNCH_ARGS,
 } from './browser/launch.js';
+export { createSharedBrowser } from './browser/shared-browser.js';
+export type { SharedBrowser, EngineLease } from './browser/shared-browser.js';
 export { sweepStaleChromeProfiles, defaultProfileRoot } from './browser/profile-dir.js';
 export type { SweepOptions, SweepResult } from './browser/profile-dir.js';
 export { startEgressProxy, egressProxyArgs, EgressProxyUnavailableError } from './net/egress-proxy.js';
@@ -85,6 +87,8 @@ import { runLighthouseChecks } from './lighthouse/index.js';
 import { runIbmChecks } from './ibm/index.js';
 import { runReflowChecks } from './reflow/index.js';
 import { runA11yTreeChecks } from './a11y-tree/index.js';
+import { createSharedBrowser, type SharedBrowser } from './browser/shared-browser.js';
+import type { NetworkGuardPolicy } from './net/ssrf-guard.js';
 import type { DiscoveredUrl, PageResult, AccessibilityIssue, ProgressListener } from './types.js';
 import type { DiscoveryProgressListener } from './discovery/progress.js';
 
@@ -126,7 +130,8 @@ export interface CreateScannerOptions {
    * When true, run the behavioral testing layer (real-browser keyboard /
    * focus / dynamic-state checks) on each scanned page IN ADDITION to the
    * static Pa11y scan. Default: false. OPT-IN — a "deep behavioral scan".
-   * Slower + heavier (launches a headless browser per page); bounded by
+   * Slower + heavier (a real browser page per scanned page, on the scan's
+   * shared Chromium — DEEP-SCAN-BROWSER-REUSE-1); bounded by
    * `behavioralMaxPages`.
    */
   readonly behavioral?: boolean;
@@ -147,8 +152,8 @@ export interface CreateScannerOptions {
    * When true, run the Lighthouse accessibility engine (Google Lighthouse's
    * accessibility category — a curated axe-core audit set) on each scanned page
    * IN ADDITION to the static Pa11y scan. Default: false. OPT-IN — part of the
-   * "deep scan". Heavy (launches a headless Chrome and runs Lighthouse per
-   * page); bounded by `lighthouseMaxPages`. Findings carry runner='lighthouse'.
+   * "deep scan". Heavy (runs Lighthouse per page on the scan's shared
+   * Chromium); bounded by `lighthouseMaxPages`. Findings carry runner='lighthouse'.
    */
   readonly lighthouse?: boolean;
   /**
@@ -161,13 +166,13 @@ export interface CreateScannerOptions {
    * When true, run the IBM Equal Access engine (IBM's accessibility-checker —
    * a SECOND independent ruleset, distinct from axe-core) on each scanned page
    * IN ADDITION to the static Pa11y scan. Default: false. OPT-IN — part of the
-   * "deep scan". Heavy (drives its own headless Chrome per page); bounded by
+   * "deep scan". Heavy (a browser page per scanned page); bounded by
    * `ibmMaxPages`. Findings carry runner='ibm'.
    */
   readonly ibm?: boolean;
   /**
    * Cap on how many of the scanned pages the IBM layer runs against. IBM is
-   * heavy (own headless Chrome), so the default is small. Default: 5.
+   * heavy, so the default is small. Default: 5.
    */
   readonly ibmMaxPages?: number;
   /**
@@ -175,13 +180,13 @@ export interface CreateScannerOptions {
    * CSS px and checks for content that breaks — horizontal scrolling, element
    * overflow, zoom-locked viewport meta) on each scanned page IN ADDITION to
    * the static Pa11y scan. Default: false. OPT-IN — part of the "deep scan".
-   * Heavy (launches a headless Chrome per page); bounded by `reflowMaxPages`.
+   * Heavy (a browser page per scanned page); bounded by `reflowMaxPages`.
    * Findings carry runner='reflow' (WCAG 1.4.10 / 1.4.4).
    */
   readonly reflow?: boolean;
   /**
    * Cap on how many of the scanned pages the reflow layer runs against. Reflow
-   * launches its own headless Chrome per page, so the default is small.
+   * loads and re-lays-out every page, so the default is small.
    * Default: 5.
    */
   readonly reflowMaxPages?: number;
@@ -189,15 +194,14 @@ export interface CreateScannerOptions {
    * When true, run the accessibility-tree engine (inspects the CDP accessibility
    * tree for interactive nodes with no accessible name [WCAG 4.1.2] and positive
    * tabindex [WCAG 2.4.3]) on each scanned page IN ADDITION to the static Pa11y
-   * scan. Default: false. OPT-IN — part of the "deep scan". Heavy (launches a
-   * headless Chrome per page); bounded by `a11yTreeMaxPages`. Findings carry
+   * scan. Default: false. OPT-IN — part of the "deep scan". Heavy (a browser
+   * page per scanned page); bounded by `a11yTreeMaxPages`. Findings carry
    * runner='a11y-tree'.
    */
   readonly a11yTree?: boolean;
   /**
    * Cap on how many of the scanned pages the accessibility-tree layer runs
-   * against. It launches its own headless Chrome per page, so the default is
-   * small. Default: 5.
+   * against. It loads every page in a browser, so the default is small. Default: 5.
    */
   readonly a11yTreeMaxPages?: number;
   /**
@@ -313,79 +317,116 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
         }
       }
 
-      // Scan all discovered URLs
-      const results = await scanUrls(urls, clientOrPool, scanOptions);
-
-      // Optional behavioral pass (opt-in). Runs a real-browser interaction
-      // suite on up to `behavioralMaxPages` of the scanned pages and merges
-      // its findings into each page's issue list (runner='behavioral'). Each
-      // page is best-effort: a behavioral failure never breaks the static scan.
-      const behavioralPages: PageResult[] = opts.behavioral === true
-        ? await runBehavioralPass(results.pages, opts)
-        : results.pages;
-
-      // Optional Lighthouse pass (opt-in, part of deep scan). Runs Google
-      // Lighthouse's accessibility category on up to `lighthouseMaxPages` of the
-      // scanned pages and merges its findings (runner='lighthouse') into each
-      // page. Best-effort: a Lighthouse failure never breaks the static scan.
-      const lighthousePages: PageResult[] = opts.lighthouse === true
-        ? await runLighthousePass(behavioralPages, opts)
-        : behavioralPages;
-
-      // Optional IBM Equal Access pass (opt-in, part of deep scan). Runs IBM's
-      // accessibility-checker (a second independent ruleset) on up to
-      // `ibmMaxPages` of the scanned pages and merges its findings
-      // (runner='ibm') into each page. Best-effort: an IBM failure never breaks
-      // the static scan.
-      const ibmPages: PageResult[] = opts.ibm === true
-        ? await runIbmPass(lighthousePages, opts)
-        : lighthousePages;
-
-      // Optional reflow / zoom-400% pass (opt-in, part of deep scan). Narrows
-      // each scanned page to 320 CSS px and merges its findings (runner='reflow')
-      // for WCAG 1.4.10 / 1.4.4. Best-effort: a reflow failure never breaks the
-      // static scan.
-      const reflowPages: PageResult[] = opts.reflow === true
-        ? await runReflowPass(ibmPages, opts)
-        : ibmPages;
-
-      // Optional accessibility-tree pass (opt-in, part of deep scan). Inspects
-      // the CDP accessibility tree for nameless interactive nodes (WCAG 4.1.2)
-      // and positive tabindex (WCAG 2.4.3) and merges its findings
-      // (runner='a11y-tree') into each page. Best-effort: a failure never breaks
-      // the static scan.
-      const pages: PageResult[] = opts.a11yTree === true
-        ? await runA11yTreePass(reflowPages, opts)
-        : reflowPages;
-
-      // Aggregate results
-      let errorCount = 0;
-      let warningCount = 0;
-      let noticeCount = 0;
-
-      for (const page of pages) {
-        for (const issue of page.issues) {
-          if (issue.type === 'error') errorCount++;
-          else if (issue.type === 'warning') warningCount++;
-          else noticeCount++;
-        }
+      // DEEP-SCAN-BROWSER-REUSE-1: a deep scan runs every browser engine on
+      // ONE shared Chromium (per scan, launched on first use, a fresh isolated
+      // context per engine run), closed when the scan ends — also on error.
+      const shared = isDeepScan(opts) ? createSharedBrowser(engineGuard) : undefined;
+      try {
+        return await runEngines(urls, shared, wafWarning, discoveryFallback);
+      } finally {
+        await shared?.close();
       }
-
-      return {
-        pages,
-        summary: {
-          pagesScanned: pages.length,
-          byLevel: {
-            error: errorCount,
-            warning: warningCount,
-            notice: noticeCount,
-          },
-        },
-        ...(wafWarning !== undefined ? { wafWarning } : {}),
-        ...(discoveryFallback !== undefined ? { discoveryFallback } : {}),
-      };
     },
   };
+
+  async function runEngines(
+    urls: DiscoveredUrl[],
+    shared: SharedBrowser | undefined,
+    wafWarning: string | undefined,
+    discoveryFallback: 'browser' | undefined,
+  ) {
+    const engine: EngineContext = { guard: engineGuard, ...(shared !== undefined ? { sharedBrowser: shared } : {}) };
+    // Scan all discovered URLs (pa11y leases from the shared browser in direct mode).
+    const results = await scanUrls(urls, clientOrPool, {
+      ...scanOptions,
+      ...(shared !== undefined && clientOrPool instanceof DirectScanner ? { sharedBrowser: shared } : {}),
+    });
+
+    // Optional behavioral pass (opt-in). Runs a real-browser interaction
+    // suite on up to `behavioralMaxPages` of the scanned pages and merges
+    // its findings into each page's issue list (runner='behavioral'). Each
+    // page is best-effort: a behavioral failure never breaks the static scan.
+    const behavioralPages: PageResult[] = opts.behavioral === true
+      ? await runBehavioralPass(results.pages, opts, engine)
+      : results.pages;
+
+    // Optional Lighthouse pass (opt-in, part of deep scan). Runs Google
+    // Lighthouse's accessibility category on up to `lighthouseMaxPages` of the
+    // scanned pages and merges its findings (runner='lighthouse') into each
+    // page. Best-effort: a Lighthouse failure never breaks the static scan.
+    const lighthousePages: PageResult[] = opts.lighthouse === true
+      ? await runLighthousePass(behavioralPages, opts, engine)
+      : behavioralPages;
+
+    // Optional IBM Equal Access pass (opt-in, part of deep scan). Runs IBM's
+    // accessibility-checker (a second independent ruleset) on up to
+    // `ibmMaxPages` of the scanned pages and merges its findings
+    // (runner='ibm') into each page. Best-effort: an IBM failure never breaks
+    // the static scan.
+    const ibmPages: PageResult[] = opts.ibm === true
+      ? await runIbmPass(lighthousePages, opts, engine)
+      : lighthousePages;
+
+    // Optional reflow / zoom-400% pass (opt-in, part of deep scan). Narrows
+    // each scanned page to 320 CSS px and merges its findings (runner='reflow')
+    // for WCAG 1.4.10 / 1.4.4. Best-effort: a reflow failure never breaks the
+    // static scan.
+    const reflowPages: PageResult[] = opts.reflow === true
+      ? await runReflowPass(ibmPages, opts, engine)
+      : ibmPages;
+
+    // Optional accessibility-tree pass (opt-in, part of deep scan). Inspects
+    // the CDP accessibility tree for nameless interactive nodes (WCAG 4.1.2)
+    // and positive tabindex (WCAG 2.4.3) and merges its findings
+    // (runner='a11y-tree') into each page. Best-effort: a failure never breaks
+    // the static scan.
+    const pages: PageResult[] = opts.a11yTree === true
+      ? await runA11yTreePass(reflowPages, opts, engine)
+      : reflowPages;
+
+    // Aggregate results
+    let errorCount = 0;
+    let warningCount = 0;
+    let noticeCount = 0;
+
+    for (const page of pages) {
+      for (const issue of page.issues) {
+        if (issue.type === 'error') errorCount++;
+        else if (issue.type === 'warning') warningCount++;
+        else noticeCount++;
+      }
+    }
+
+    return {
+      pages,
+      summary: {
+        pagesScanned: pages.length,
+        byLevel: {
+          error: errorCount,
+          warning: warningCount,
+          notice: noticeCount,
+        },
+      },
+      ...(wafWarning !== undefined ? { wafWarning } : {}),
+      ...(discoveryFallback !== undefined ? { discoveryFallback } : {}),
+    };
+  }
+}
+
+/** The browser context every engine pass gets: the scan guard, plus the shared browser on a deep scan. */
+interface EngineContext {
+  readonly guard: NetworkGuardPolicy;
+  readonly sharedBrowser?: SharedBrowser;
+}
+
+/** A deep scan: any browser engine beyond the static scan, or more than one pa11y runner. */
+function isDeepScan(opts: CreateScannerOptions): boolean {
+  return opts.behavioral === true
+    || opts.lighthouse === true
+    || opts.ibm === true
+    || opts.reflow === true
+    || opts.a11yTree === true
+    || (opts.runners?.length ?? 0) > 1;
 }
 
 /**
@@ -400,6 +441,7 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
 async function runBehavioralPass(
   staticPages: PageResult[],
   opts: CreateScannerOptions,
+  engine: EngineContext,
 ): Promise<PageResult[]> {
   const cap = opts.behavioralMaxPages ?? 10;
   const out: PageResult[] = [];
@@ -412,7 +454,8 @@ async function runBehavioralPass(
     }
     try {
       const behavioral = await runBehavioralChecks(page.url, {
-        guard: { allowPrivate: opts.allowPrivateTargets === true },
+        guard: engine.guard,
+        ...(engine.sharedBrowser !== undefined ? { sharedBrowser: engine.sharedBrowser } : {}),
         ...(opts.timeout !== undefined ? { timeout: opts.timeout } : {}),
         ...(opts.headers !== undefined ? { headers: { ...opts.headers } } : {}),
         ...(opts.onVisualContext !== undefined ? { onVisualContext: opts.onVisualContext } : {}),
@@ -454,6 +497,7 @@ async function runBehavioralPass(
 async function runLighthousePass(
   inputPages: PageResult[],
   opts: CreateScannerOptions,
+  engine: EngineContext,
 ): Promise<PageResult[]> {
   const cap = opts.lighthouseMaxPages ?? 5;
   const out: PageResult[] = [];
@@ -466,7 +510,8 @@ async function runLighthousePass(
     }
     try {
       const lighthouse = await runLighthouseChecks(page.url, {
-        guard: { allowPrivate: opts.allowPrivateTargets === true },
+        guard: engine.guard,
+        ...(engine.sharedBrowser !== undefined ? { sharedBrowser: engine.sharedBrowser } : {}),
         ...(opts.timeout !== undefined ? { timeout: opts.timeout } : {}),
         ...(opts.headers !== undefined ? { headers: { ...opts.headers } } : {}),
       });
@@ -507,6 +552,7 @@ async function runLighthousePass(
 async function runIbmPass(
   inputPages: PageResult[],
   opts: CreateScannerOptions,
+  engine: EngineContext,
 ): Promise<PageResult[]> {
   const cap = opts.ibmMaxPages ?? 5;
   const out: PageResult[] = [];
@@ -519,7 +565,8 @@ async function runIbmPass(
     }
     try {
       const ibm = await runIbmChecks(page.url, {
-        guard: { allowPrivate: opts.allowPrivateTargets === true },
+        guard: engine.guard,
+        ...(engine.sharedBrowser !== undefined ? { sharedBrowser: engine.sharedBrowser } : {}),
         ...(opts.timeout !== undefined ? { timeout: opts.timeout } : {}),
         ...(opts.headers !== undefined ? { headers: { ...opts.headers } } : {}),
       });
@@ -560,6 +607,7 @@ async function runIbmPass(
 async function runReflowPass(
   inputPages: PageResult[],
   opts: CreateScannerOptions,
+  engine: EngineContext,
 ): Promise<PageResult[]> {
   const cap = opts.reflowMaxPages ?? 5;
   const out: PageResult[] = [];
@@ -572,7 +620,8 @@ async function runReflowPass(
     }
     try {
       const reflow = await runReflowChecks(page.url, {
-        guard: { allowPrivate: opts.allowPrivateTargets === true },
+        guard: engine.guard,
+        ...(engine.sharedBrowser !== undefined ? { sharedBrowser: engine.sharedBrowser } : {}),
         ...(opts.timeout !== undefined ? { timeout: opts.timeout } : {}),
         ...(opts.headers !== undefined ? { headers: { ...opts.headers } } : {}),
       });
@@ -613,6 +662,7 @@ async function runReflowPass(
 async function runA11yTreePass(
   inputPages: PageResult[],
   opts: CreateScannerOptions,
+  engine: EngineContext,
 ): Promise<PageResult[]> {
   const cap = opts.a11yTreeMaxPages ?? 5;
   const out: PageResult[] = [];
@@ -625,7 +675,8 @@ async function runA11yTreePass(
     }
     try {
       const a11yTree = await runA11yTreeChecks(page.url, {
-        guard: { allowPrivate: opts.allowPrivateTargets === true },
+        guard: engine.guard,
+        ...(engine.sharedBrowser !== undefined ? { sharedBrowser: engine.sharedBrowser } : {}),
         ...(opts.timeout !== undefined ? { timeout: opts.timeout } : {}),
         ...(opts.headers !== undefined ? { headers: { ...opts.headers } } : {}),
       });
