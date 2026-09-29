@@ -8,6 +8,7 @@
 
 import type { Browser, Page } from 'puppeteer';
 import { launchChromium, safeCloseBrowser } from '../browser/launch.js';
+import { guardPageRequests } from '../net/browser-request-guard.js';
 import type { BehavioralOptions } from './types.js';
 
 const DEFAULT_TIMEOUT = 30000;
@@ -40,6 +41,7 @@ export async function withPage<T>(
 ): Promise<T> {
   return withBrowser(opts, async (browser) => {
     const page = await browser.newPage();
+    await guardPageRequests(page, opts.guard ?? {}); // ENGINE-SSRF-1
     if (opts.headers && Object.keys(opts.headers).length > 0) {
       await page.setExtraHTTPHeaders(opts.headers);
     }

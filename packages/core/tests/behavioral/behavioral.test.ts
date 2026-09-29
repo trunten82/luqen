@@ -12,6 +12,13 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { runBehavioralChecks } from '../../src/behavioral/index.js';
 
+/**
+ * ENGINE-SSRF-1: these fixtures are served from loopback, which the engine's
+ * page-load guard refuses by default — use the operator opt-out, exactly as a
+ * local UAT against a loopback fixture would.
+ */
+const LOOPBACK_GUARD = { allowPrivate: true } as const;
+
 const TEST_TIMEOUT = 30000;
 
 /** The regex `extractCriterion()` uses downstream to map a code to a criterion. */
@@ -163,7 +170,7 @@ describe('runBehavioralChecks', () => {
   it(
     'clean accessible fixture yields zero errors',
     async () => {
-      const result = await runBehavioralChecks(`${baseUrl}/clean`);
+      const result = await runBehavioralChecks(`${baseUrl}/clean`, { guard: LOOPBACK_GUARD });
       expect(result.pagesChecked).toBe(1);
       expect(result.errors).toEqual([]);
       // The clean fixture must not produce any ERROR-level findings.
@@ -175,7 +182,7 @@ describe('runBehavioralChecks', () => {
   it(
     'keyboard-trap fixture yields exactly one 2.1.2 error',
     async () => {
-      const result = await runBehavioralChecks(`${baseUrl}/trap`);
+      const result = await runBehavioralChecks(`${baseUrl}/trap`, { guard: LOOPBACK_GUARD });
       const trapErrors = result.issues.filter(
         (i) => i.type === 'error' && i.code.includes('2_1_2'),
       );
@@ -189,7 +196,7 @@ describe('runBehavioralChecks', () => {
   it(
     'no-focus-indicator fixture yields a 2.4.7 warning and no error',
     async () => {
-      const result = await runBehavioralChecks(`${baseUrl}/no-indicator`);
+      const result = await runBehavioralChecks(`${baseUrl}/no-indicator`, { guard: LOOPBACK_GUARD });
       const focusWarnings = result.issues.filter(
         (i) => i.type === 'warning' && i.code.includes('2_4_7'),
       );
@@ -203,7 +210,7 @@ describe('runBehavioralChecks', () => {
   it(
     'dynamic-state fixture flags the broken toggle (4.1.2) but not the correct one',
     async () => {
-      const result = await runBehavioralChecks(`${baseUrl}/dynamic`);
+      const result = await runBehavioralChecks(`${baseUrl}/dynamic`, { guard: LOOPBACK_GUARD });
       const nrvWarnings = result.issues.filter(
         (i) => i.type === 'warning' && i.code.includes('4_1_2'),
       );
@@ -224,7 +231,7 @@ describe('runBehavioralChecks', () => {
     async () => {
       const paths = ['/clean', '/trap', '/no-indicator', '/dynamic'];
       for (const path of paths) {
-        const result = await runBehavioralChecks(`${baseUrl}${path}`);
+        const result = await runBehavioralChecks(`${baseUrl}${path}`, { guard: LOOPBACK_GUARD });
         for (const issue of result.issues) {
           expect(issue.runner).toBe('behavioral');
           expect(issue.code).toMatch(CRITERION_RE);
@@ -239,6 +246,7 @@ describe('runBehavioralChecks', () => {
     async () => {
       // Port 1 is privileged/closed — the connection fails fast.
       const result = await runBehavioralChecks('http://127.0.0.1:1/nope', {
+        guard: LOOPBACK_GUARD,
         timeout: 4000,
       });
       expect(result.pagesChecked).toBe(0);

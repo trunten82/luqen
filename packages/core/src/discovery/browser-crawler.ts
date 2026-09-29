@@ -27,6 +27,7 @@ import { isHtmlUrl, normalizeUrl } from './link-filters.js';
 import { computeDiscoveryScope, isInDiscoveryScope } from './scope.js';
 import { launchChromium, safeCloseBrowser } from '../browser/launch.js';
 import { isPublicUrl, type NetworkGuardPolicy } from '../net/ssrf-guard.js';
+import { guardPageRequests } from '../net/browser-request-guard.js';
 
 /** 20 s per page load — bounds a single stuck page. */
 export const BROWSER_DISCOVERY_PAGE_TIMEOUT_MS = 20_000;
@@ -77,48 +78,9 @@ function toMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-const NON_NETWORK_SCHEMES = new Set(['data:', 'blob:', 'about:']);
-
-/**
- * Decides whether the browser-discovery page may issue a request. Non-network
- * schemes (data:, blob:, about:) stay in-process and are allowed; http(s)
- * goes through the SSRF guard; every other scheme (file:, ftp:, ws: to an
- * unchecked host, chrome:) is refused.
- */
-export async function isBrowserRequestAllowed(url: string, guard: NetworkGuardPolicy): Promise<boolean> {
-  let protocol: string;
-  try {
-    protocol = new URL(url).protocol;
-  } catch {
-    return false;
-  }
-  if (NON_NETWORK_SCHEMES.has(protocol)) return true;
-  return isPublicUrl(url, guard);
-}
-
-/** Minimal slice of puppeteer's HTTPRequest the interception handler needs. */
-interface InterceptedRequest {
-  url(): string;
-  isInterceptResolutionHandled(): boolean;
-  abort(errorCode?: 'blockedbyclient'): Promise<void>;
-  continue(): Promise<void>;
-}
-
-/** Aborts (never throws) any request the guard refuses; continues the rest. */
-export async function handleInterceptedRequest(request: InterceptedRequest, guard: NetworkGuardPolicy): Promise<void> {
-  let allowed = false;
-  try {
-    allowed = await isBrowserRequestAllowed(request.url(), guard);
-  } catch {
-    allowed = false;
-  }
-  if (request.isInterceptResolutionHandled()) return;
-  try {
-    await (allowed ? request.continue() : request.abort('blockedbyclient'));
-  } catch {
-    // Ignore — the page may already be closed; the request never proceeds.
-  }
-}
+// The request policy lives in net/browser-request-guard.ts so every scan
+// engine shares it (ENGINE-SSRF-1); re-exported here for existing importers.
+export { isBrowserRequestAllowed, handleInterceptedRequest } from '../net/browser-request-guard.js';
 
 /** Default launcher: launches a real Chromium through the shared resolver and adapts it. */
 async function defaultLaunch(guard: NetworkGuardPolicy): Promise<DiscoveryBrowser> {
@@ -126,8 +88,7 @@ async function defaultLaunch(guard: NetworkGuardPolicy): Promise<DiscoveryBrowse
   return {
     async newPage() {
       const page = await browser.newPage();
-      await page.setRequestInterception(true);
-      page.on('request', (request) => { void handleInterceptedRequest(request, guard); });
+      await guardPageRequests(page, guard);
       return {
         async setExtraHTTPHeaders(headers: Record<string, string>) {
           await page.setExtraHTTPHeaders(headers);
