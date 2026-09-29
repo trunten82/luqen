@@ -170,9 +170,46 @@ the scan. Residual: the guard resolves the name, then the HTTP client
 resolves it again, so a DNS-rebinding host with a near-zero TTL can still win
 that race.
 
+**Page loads by the scan engines are guarded too.** After discovery, each
+engine loads every page in a real headless Chromium, and a page controls its
+own redirects and subresources. Every engine installs request interception on
+its page BEFORE navigating and applies the same check to every request the
+page makes — the navigation, each redirect hop, images, stylesheets, scripts,
+frames, `fetch`/XHR, beacons and dedicated-worker fetches. A refused request
+is aborted (`net::ERR_BLOCKED_BY_CLIENT`); the rest of the page still loads
+and is scanned. A refused top-level redirect means that page yields no
+results (it is not an error for the scan as a whole). Covered engines and how:
+
+| Engine | Guard seam |
+|--------|------------|
+| pa11y (htmlcs / axe runners) — `DirectScanner` | Luqen launches Chromium, guards the page, passes both via pa11y's documented `browser` + `page` options. pa11y's own `headers` interceptor is not used (it resolves requests synchronously and would pre-empt the guard); custom headers are applied to the first request only, as pa11y did. |
+| Behavioral (keyboard, dynamic state, vision capture) | Guard on the page before `goto`. |
+| Accessibility tree | Guard on the page before `goto`. |
+| Reflow / zoom 400% | Guard on the page before `goto`. |
+| IBM Equal Access | Guard on the page Luqen hands `getCompliance`. |
+| Lighthouse | Puppeteer attaches to the chrome-launcher instance, guards a page, and passes it as Lighthouse's documented `page` argument. |
+| Browser discovery fallback | Unchanged (the same guard, now in `@luqen/core`'s `net/browser-request-guard`). |
+
+Not covered, by design or by measurement:
+
+- **WebSockets.** Chromium does not surface `ws:`/`wss:` handshakes to request
+  interception, so a scanned page can still open a WebSocket to an internal
+  address (measured: the handshake reached a loopback server while every
+  other request type was refused). Closing it needs a network-level control
+  (an egress proxy or firewall rule for the scanner host), not a browser hook.
+- **DNS rebinding** — the same resolve-then-connect race as discovery.
+- **The legacy pa11y webservice backend** (`webserviceUrl`) loads pages in its
+  own remote process; its page loads are outside this guard.
+- **The axe scanner plugin** (`@luqen/plugin-scanner-axe`, installed
+  separately at runtime; its source is not in this repository) is not called
+  by any scan path in this release — the dashboard has no caller of a scanner
+  plugin's `evaluate` hook. If it is ever wired into scans, its page loads
+  must go through the same guard (`guardPageRequests` in `@luqen/core`).
+
 **Opt-out for trusted test environments.** `allowPrivateScanTargets: true` in
 `dashboard.config.json` (or `DASHBOARD_ALLOW_PRIVATE_SCAN_TARGETS=true`)
-disables BOTH the start-URL check and the discovery guard. It exists for the
+disables the start-URL check, the discovery guard AND the engine page-load
+guard. It exists for the
 loopback UAT harness (`packages/dashboard/tests/browser-uat`); never enable it
 on a server reachable by untrusted users.
 
