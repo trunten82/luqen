@@ -36,6 +36,8 @@ import { runLighthouseChecks } from '../../src/lighthouse/index.js';
 import { browserCrawlSite } from '../../src/discovery/browser-crawler.js';
 
 const TEST_TIMEOUT = 150_000;
+/** Attempts for the guarded WebSocket test when the worker fails to report in (see that test). */
+const WS_ATTEMPTS = 2;
 /** Grace period after an engine returns, so a late socket still counts. */
 const SETTLE_MS = 600;
 const PUBLIC_IP = '127.0.0.2';
@@ -255,15 +257,29 @@ describe.each(ENGINES)('SCAN-EGRESS-PROXY-1 %s — WebSocket', (_name, run) => {
   it(
     '[guarded] ws:// and wss:// from the page and from a dedicated worker never reach the victim',
     async () => {
-      const outcome = await run(`${siteOrigin}/ws`, { trustedOrigins: [siteOrigin] });
-      await settle();
-      expect(outcome.completed).toBe(true);
-      // The worker really ran (it reports in after opening its sockets).
-      expect(site.requests).toContain('/worker-ran');
-      expect(victim.upgrades).toEqual([]);
-      expect(victim.connections).toBe(0);
+      // The victim assertions come FIRST and run on EVERY attempt: the security
+      // property must never be masked by the liveness precondition below.
+      // Liveness (the worker really ran and opened its sockets) is a test
+      // precondition, not the guard: under a loaded host the dedicated worker
+      // has been measured failing to report in before pa11y closed the page
+      // (1 in 10 combined runs; 1 in 18 runs with 3 suites in parallel, always
+      // the '/worker-ran' assertion, never a victim hit). A run where the
+      // worker did not report is inconclusive for the worker half, so it is
+      // retried once rather than counted as a pass.
+      let workerRan = false;
+      for (let attempt = 1; attempt <= WS_ATTEMPTS && !workerRan; attempt++) {
+        reset(victim);
+        reset(site);
+        const outcome = await run(`${siteOrigin}/ws`, { trustedOrigins: [siteOrigin] });
+        await settle();
+        expect(outcome.completed).toBe(true);
+        expect(victim.upgrades).toEqual([]);
+        expect(victim.connections).toBe(0);
+        workerRan = site.requests.includes('/worker-ran');
+      }
+      expect(workerRan, `the dedicated worker never reported in across ${WS_ATTEMPTS} attempts, so its sockets were not exercised`).toBe(true);
     },
-    TEST_TIMEOUT,
+    TEST_TIMEOUT * WS_ATTEMPTS,
   );
 
   it(
