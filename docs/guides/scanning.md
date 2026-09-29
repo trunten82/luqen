@@ -204,6 +204,7 @@ SSE event types:
 | Event | Meaning |
 |-------|---------|
 | `scan_start` | Scan started, discovering pages |
+| `discovery_progress` | Discovery still running (site mode only). Carries `pagesFound` (distinct pages found so far, never decreasing, capped at `maxPages`) and `discoveryPhase` (`sitemap`, `crawl` or `browser`). Sent immediately on every phase change and at most once per second within a phase; never sent after `discovery` |
 | `discovery` | Pages discovered, count available |
 | `scan_complete` | A page was scanned (includes pagesScanned, totalPages, currentUrl) |
 | `compliance` | Running compliance check |
@@ -294,6 +295,10 @@ Those links go through the same scope, robots, extension-filtering, hash-strippi
 maxPages rules as the normal fetch-based crawler — the only difference is the DOM is real (JavaScript
 already ran) instead of parsed HTML. Discovered pages keep `discoveryMethod: 'crawl'` — there is no
 separate "browser-discovered" method value, only a separate flag on the scan record (below).
+
+While the fallback runs, the live progress page shows "Discovering pages… N found (browser
+fallback)" and updates it as links are found (`discovery_progress` events, at most one per second),
+so a long fallback is visibly working rather than looking frozen.
 
 The fallback runs ONLY when a challenge was detected, is bounded by a 20-second-per-page timeout and
 a 120-second total budget, always closes the browser it opened (success, page failure, launch
