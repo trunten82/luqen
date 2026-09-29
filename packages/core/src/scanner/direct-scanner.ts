@@ -21,7 +21,8 @@
  */
 
 import { resolveChromium } from '../browser/resolve.js';
-import { launchChromium, safeCloseBrowser } from '../browser/launch.js';
+import { openEnginePage } from '../browser/shared-browser.js';
+import type { SharedBrowser } from '../browser/shared-browser.js';
 import { guardPageRequests } from '../net/browser-request-guard.js';
 import type { NetworkGuardPolicy } from '../net/ssrf-guard.js';
 
@@ -42,6 +43,11 @@ export interface DirectScanOptions {
    * scanner was constructed with, then to `{}` (strict).
    */
   readonly guard?: NetworkGuardPolicy;
+  /**
+   * DEEP-SCAN-BROWSER-REUSE-1: lease the page from this per-scan shared
+   * browser (a fresh isolated context) instead of launching an own browser.
+   */
+  readonly sharedBrowser?: SharedBrowser;
 }
 
 export interface DirectScannerOptions {
@@ -73,15 +79,19 @@ export class DirectScanner {
     const pa11yModule = await import('pa11y');
     const pa11y = pa11yModule.default ?? pa11yModule;
 
-    // A ChromiumNotFoundError propagates here, before pa11y ever runs.
-    const { executablePath } = await resolveChromium();
-
     const guard = options.guard ?? this.guard;
+    // A ChromiumNotFoundError propagates here, before pa11y ever runs. A
+    // shared browser resolved (and launched) once for the whole scan.
+    const launchOverrides = options.sharedBrowser
+      ? {}
+      : { executablePath: (await resolveChromium()).executablePath };
     // SCAN-EGRESS-PROXY-1: the browser's egress proxy enforces the same guard.
-    const browser = await launchChromium({ executablePath, guard });
+    const { page, browser, dispose } = await openEnginePage(
+      { guard, ...(options.sharedBrowser ? { sharedBrowser: options.sharedBrowser } : {}) },
+      launchOverrides,
+    );
     let result: Awaited<ReturnType<typeof pa11y>>;
     try {
-      const page = await browser.newPage();
       await guardPageRequests(page, guard, {
         firstRequestHeaders: options.headers ?? {},
       });
@@ -101,7 +111,7 @@ export class DirectScanner {
         page,
       });
     } finally {
-      await safeCloseBrowser(browser);
+      await dispose();
     }
 
     return {

@@ -21,8 +21,8 @@
  * the ONE shared resolver in packages/core/src/browser/ (CHROMIUM-RESOLVE-1).
  */
 
-import type { Browser, CDPSession, Page } from 'puppeteer';
-import { launchChromium, safeCloseBrowser } from '../browser/launch.js';
+import type { CDPSession, Page } from 'puppeteer';
+import { openEnginePage, type EnginePage } from '../browser/shared-browser.js';
 import { guardPageRequests } from '../net/browser-request-guard.js';
 import type { A11yTreeOptions, A11yTreeResult } from './types.js';
 import { mapA11yTreeObservations, type A11yTreeObservation } from './map.js';
@@ -172,12 +172,12 @@ export async function runA11yTreeChecks(
   url: string,
   opts: A11yTreeOptions = {},
 ): Promise<A11yTreeResult> {
-  let browser: Browser | undefined;
+  let engine: EnginePage | undefined;
   let client: CDPSession | undefined;
   try {
     const timeout = opts.timeout ?? DEFAULT_TIMEOUT;
-    browser = await launchChromium({ ...opts.chromeLaunchConfig, guard: opts.guard ?? {} }); // SCAN-EGRESS-PROXY-1
-    const page: Page = await browser.newPage();
+    engine = await openEnginePage(opts); // SCAN-EGRESS-PROXY-1 / DEEP-SCAN-BROWSER-REUSE-1
+    const page: Page = engine.page;
     await guardPageRequests(page, opts.guard ?? {}); // ENGINE-SSRF-1
     if (opts.headers && Object.keys(opts.headers).length > 0) {
       await page.setExtraHTTPHeaders({ ...opts.headers });
@@ -206,7 +206,7 @@ export async function runA11yTreeChecks(
         // Never let teardown failures mask the real result / error.
       }
     }
-    await safeCloseBrowser(browser);
+    await engine?.dispose();
   }
 }
 
