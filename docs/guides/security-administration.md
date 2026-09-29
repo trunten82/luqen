@@ -166,9 +166,22 @@ RFC 1918, link-local incl. `169.254.169.254`, CGNAT `100.64.0.0/10`,
 IPv4-mapped / NAT64 / 6to4 forms of any of those, and decimal / hex / octal
 IPv4 spellings. A name that cannot be resolved is refused. A refused request
 degrades like an unreachable one (no sitemap, page skipped); it never fails
-the scan. Residual: the guard resolves the name, then the HTTP client
-resolves it again, so a DNS-rebinding host with a near-zero TTL can still win
-that race.
+the scan.
+
+**Discovery connections are pinned to the checked address (DNS rebinding).**
+Checking a name and then letting the HTTP client resolve it again would leave
+a race: a DNS-rebinding host with a near-zero TTL could answer a public
+address to the check and a private one to the connection. Every
+discovery request above that goes through Node (`robots.txt`, sitemaps,
+crawled pages, content hashing, and every redirect hop) resolves the name
+ONCE, refuses it if ANY returned address is private, and then connects only
+to those validated addresses — the connection never performs a second DNS
+lookup. The URL, the `Host` header and the TLS server name (SNI) keep the
+original hostname, so HTTPS certificates are still verified against the name
+that was requested. Each redirect hop is resolved, checked and pinned afresh.
+Nothing is pinned when there is nothing to resolve (an IP-literal host) or
+when the opt-out below applies. The headless-browser discovery fallback is
+**not** pinned — see the browser residual below.
 
 **Page loads by the scan engines are guarded too.** After discovery, each
 engine loads every page in a real headless Chromium, and a page controls its
@@ -197,7 +210,20 @@ Not covered, by design or by measurement:
   address (measured: the handshake reached a loopback server while every
   other request type was refused). Closing it needs a network-level control
   (an egress proxy or firewall rule for the scanner host), not a browser hook.
-- **DNS rebinding** — the same resolve-then-connect race as discovery.
+- **DNS rebinding in the browser.** The guard resolves each request's host,
+  but Chromium then resolves the host itself, and request interception never
+  sees the address Chromium connects to — so a rebinding host with a
+  near-zero TTL can still win that race for page loads, redirects and
+  subresources (and for the headless-browser discovery fallback). The Node
+  discovery path above is pinned; the browser is not. Pinning only the start
+  host with Chromium's `--host-resolver-rules` was assessed and not shipped:
+  it would cover one host out of every host a page loads (redirect targets,
+  subresources and frames on other hosts stay racy), it would have to be
+  threaded through every engine's launch — including Lighthouse's
+  chrome-launcher flags and the dashboard's own scanners — and it would fix
+  a long crawl to the start host's first answer. Full coverage needs a
+  network-level control: an egress firewall rule for the scanner host, or an
+  egress proxy that resolves, checks and pins every connection itself.
 - **The legacy pa11y webservice backend** (`webserviceUrl`) loads pages in its
   own remote process; its page loads are outside this guard.
 - **The axe scanner plugin** (`@luqen/plugin-scanner-axe`, installed
