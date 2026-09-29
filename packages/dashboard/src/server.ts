@@ -1288,7 +1288,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   };
   // Phase 80: DirectScanner for dashboard_scan_page (non-destructive inline
   // WCAG scan). One shared instance per server lifecycle — pa11y is stateless.
-  const mcpDirectScanner = new DirectScanner();
+  const mcpDirectScanner = new DirectScanner({ guard: { allowPrivate: config.allowPrivateScanTargets ?? false } }); // ENGINE-SSRF-1
   await registerMcpRoutes(server, {
     verifyToken: mcpVerifier,
     storage,

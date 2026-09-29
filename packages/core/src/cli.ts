@@ -211,7 +211,7 @@ program
 
       const clientOrScanner = effectiveConfig.webserviceUrl !== undefined
         ? new WebserviceClient(effectiveConfig.webserviceUrl, effectiveConfig.webserviceHeaders)
-        : new DirectScanner();
+        : new DirectScanner({ guard: operatorPolicyFor(url) });
 
       const { pages, errors } = await scanUrls(discoveredUrls, clientOrScanner, {
         standard: effectiveConfig.standard,
@@ -439,7 +439,7 @@ program
 
         const clientOrScanner = effectiveConfig.webserviceUrl !== undefined
           ? new WebserviceClient(effectiveConfig.webserviceUrl, effectiveConfig.webserviceHeaders)
-          : new DirectScanner();
+          : new DirectScanner({ guard: operatorPolicyFor(url) });
 
         const { pages, errors } = await scanUrls(discoveredUrls, clientOrScanner, {
           standard: effectiveConfig.standard,

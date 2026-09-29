@@ -23,6 +23,7 @@
 
 import type { Browser, CDPSession, Page } from 'puppeteer';
 import { launchChromium, safeCloseBrowser } from '../browser/launch.js';
+import { guardPageRequests } from '../net/browser-request-guard.js';
 import type { A11yTreeOptions, A11yTreeResult } from './types.js';
 import { mapA11yTreeObservations, type A11yTreeObservation } from './map.js';
 
@@ -177,6 +178,7 @@ export async function runA11yTreeChecks(
     const timeout = opts.timeout ?? DEFAULT_TIMEOUT;
     browser = await launchChromium(opts.chromeLaunchConfig);
     const page: Page = await browser.newPage();
+    await guardPageRequests(page, opts.guard ?? {}); // ENGINE-SSRF-1
     if (opts.headers && Object.keys(opts.headers).length > 0) {
       await page.setExtraHTTPHeaders({ ...opts.headers });
     }

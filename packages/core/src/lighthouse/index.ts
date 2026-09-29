@@ -20,7 +20,10 @@
 import { createRequire } from 'node:module';
 import type { Issue } from '../types.js';
 import { resolveChromium } from '../browser/resolve.js';
+import type { Browser, Page } from 'puppeteer';
 import { CHROMIUM_LAUNCH_ARGS } from '../browser/launch.js';
+import { loadPuppeteer } from '../browser/puppeteer-runtime.js';
+import { guardPageRequests } from '../net/browser-request-guard.js';
 import type { LighthouseOptions, LighthouseResult } from './types.js';
 import { mapLighthouseAudits, type LhAudit } from './map.js';
 
@@ -42,6 +45,7 @@ type LighthouseFn = (
   url: string,
   flags: Record<string, unknown>,
   config?: unknown,
+  page?: Page,
 ) => Promise<{ lhr?: { audits?: Record<string, LhAudit> } } | undefined>;
 
 let lighthousePromise: Promise<LighthouseFn> | undefined;
@@ -103,6 +107,7 @@ export async function runLighthouseChecks(
   opts: LighthouseOptions = {},
 ): Promise<LighthouseResult> {
   let chrome: { port: number; kill(): Promise<void> } | undefined;
+  let controller: Browser | undefined;
   try {
     // Resolve BEFORE loading chrome-launcher: a resolution failure must
     // surface as our own typed error rather than silently falling through
@@ -125,7 +130,17 @@ export async function runLighthouseChecks(
         : {}),
     };
 
-    const runnerResult = await lighthouse(url, flags);
+    // ENGINE-SSRF-1: Lighthouse drives the page it is GIVEN (its documented
+    // fourth argument), so attach puppeteer to the chrome-launcher instance,
+    // open the page ourselves and install the request guard on it before
+    // Lighthouse navigates. Without a page Lighthouse would open its own tab
+    // with no interception at all.
+    const puppeteer = await loadPuppeteer();
+    controller = await puppeteer.connect({ browserURL: `http://127.0.0.1:${chrome.port}`, defaultViewport: null });
+    const page = await controller.newPage();
+    await guardPageRequests(page, opts.guard ?? {});
+
+    const runnerResult = await lighthouse(url, flags, undefined, page);
     const audits = runnerResult?.lhr?.audits;
     const issues = mapLighthouseAudits(audits);
     return { issues, pagesChecked: 1, errors: [] };
@@ -136,6 +151,13 @@ export async function runLighthouseChecks(
       errors: [{ url, message: toMessage(err) }],
     };
   } finally {
+    if (controller) {
+      try {
+        await controller.disconnect();
+      } catch {
+        // Never let teardown failures mask the real result / error.
+      }
+    }
     if (chrome) {
       try {
         await chrome.kill();
