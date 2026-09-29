@@ -117,9 +117,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   page through its documented `page` argument. The existing
   `allowPrivateScanTargets` opt-out covers the engines too; the `luqen` CLI,
   stdio MCP server and `self-audit` keep private targets only when the
-  operator's own URL is private. Known residuals: WebSocket handshakes
-  (`ws:`/`wss:`) are not surfaced to request interception by Chromium and are
-  NOT refused (measured); the same DNS-rebinding race as discovery; the
+  operator's own URL is private. WebSocket handshakes and browser DNS
+  rebinding, which request interception cannot see, are closed by the
+  egress-proxy entry below. Known residual: the
   legacy remote pa11y-webservice backend loads pages outside this process and
   is not covered. The separately installed axe scanner plugin is not called by
   any scan path today (no caller of its `evaluate` hook), so it has no page
@@ -135,10 +135,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   resolved and pinned afresh). The URL, `Host` header and TLS server name
   keep the original hostname, so certificates are still verified against it.
   `@luqen/core` now depends on `undici` (already installed transitively via
-  `cheerio`). Not pinned, and still documented as residuals: page loads in
-  the scan engines and the headless-browser discovery fallback (Chromium
-  resolves hosts itself), and the dashboard's start-URL check, which only
-  validates and does not connect.
+  `cheerio`). Browser page loads are pinned by the egress-proxy entry below;
+  the dashboard's start-URL check only validates and does not connect.
+- Every scan and discovery Chromium now sends all of its traffic through a
+  filtering egress proxy, closing the two residuals the engine guard left
+  open: WebSocket handshakes (`ws:`/`wss:`, which Chromium never shows to
+  request interception) and DNS rebinding on browser page loads (Chromium
+  resolved hosts itself). Each browser gets its own in-process proxy on
+  `127.0.0.1:<ephemeral port>` enforcing that scan's guard, and is launched
+  with `--proxy-server` and `--proxy-bypass-list=<-loopback>` (the shared
+  launcher and Lighthouse's chrome-launcher; caller proxy flags are dropped).
+  The proxy resolves each target once, refuses any private / loopback /
+  link-local / metadata / CGNAT answer — for `CONNECT` tunnels too, which is
+  how Chromium sends `https:`, `ws:` and `wss:` — and connects only to the
+  validated address; TLS stays end to end. It fails closed: if the proxy
+  cannot be started, Chromium is not launched and the scan reports
+  `EgressProxyUnavailableError`; if it dies mid-scan, loads fail rather than
+  going direct. Measured with real Chromium in every engine (pa11y,
+  behavioral, accessibility tree, reflow, IBM, Lighthouse, discovery
+  fallback): WebSockets from a page and from a dedicated worker reach a
+  loopback victim before the change and not after, and a subresource on a
+  rebinding host reaches the validated public address, never the victim.
+  `allowPrivateScanTargets` still opts out. No new service or port.
 - The session secret is now rotatable independently of at-rest encrypted
   data. Previously, `DASHBOARD_SESSION_SECRET` doubled as the AES key for
   four at-rest stores (OAuth signing keys, service-connection secrets, git
