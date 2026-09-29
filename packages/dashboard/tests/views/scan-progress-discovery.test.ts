@@ -43,6 +43,35 @@ function renderScanProgress(scan: Record<string, unknown>, locale = 'en'): strin
   return template({ scan, locale });
 }
 
+/**
+ * Renders the page in jsdom with `runScripts: 'dangerously'` so the page's
+ * OWN inline <script> executes for real. `beforeParse` installs a stub
+ * EventSource on the window BEFORE that script runs (avoiding a
+ * `ReferenceError: EventSource is not defined` on the real parse-time
+ * execution), and records every `addEventListener` handler it registers.
+ */
+function renderRunning(scan: Record<string, unknown>, locale = 'en'): {
+  win: Window & typeof globalThis;
+  listeners: Record<string, Array<(evt: { data: string }) => void>>;
+} {
+  const html = renderScanProgress(scan, locale);
+  const listeners: Record<string, Array<(evt: { data: string }) => void>> = {};
+  class StubEventSource {
+    addEventListener(type: string, handler: (evt: { data: string }) => void): void {
+      (listeners[type] ??= []).push(handler);
+    }
+    close(): void {}
+  }
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously',
+    url: 'http://localhost/',
+    beforeParse(window) {
+      (window as unknown as { EventSource: unknown }).EventSource = StubEventSource;
+    },
+  });
+  return { win: dom.window, listeners };
+}
+
 describe('scan-progress.hbs — discovery-blocked banner (WAF-SURFACE-1)', () => {
   it('progress page shows the warning for a completed flagged scan', () => {
     const html = renderScanProgress({
@@ -134,35 +163,6 @@ describe('scan-progress.hbs — browser discovery banner (WAF-BROWSER-2)', () =>
     expect(match![1]).not.toContain('Scanned 7 page');
   });
 
-  /**
-   * Renders the page in jsdom with `runScripts: 'dangerously'` so the page's
-   * OWN inline <script> executes for real. `beforeParse` installs a stub
-   * EventSource on the window BEFORE that script runs (avoiding a
-   * `ReferenceError: EventSource is not defined` on the real parse-time
-   * execution), and records every `addEventListener` handler it registers.
-   */
-  function renderRunning(scan: Record<string, unknown>): {
-    win: Window & typeof globalThis;
-    listeners: Record<string, Array<(evt: { data: string }) => void>>;
-  } {
-    const html = renderScanProgress(scan);
-    const listeners: Record<string, Array<(evt: { data: string }) => void>> = {};
-    class StubEventSource {
-      addEventListener(type: string, handler: (evt: { data: string }) => void): void {
-        (listeners[type] ??= []).push(handler);
-      }
-      close(): void {}
-    }
-    const dom = new JSDOM(html, {
-      runScripts: 'dangerously',
-      url: 'http://localhost/',
-      beforeParse(window) {
-        (window as unknown as { EventSource: unknown }).EventSource = StubEventSource;
-      },
-    });
-    return { win: dom.window, listeners };
-  }
-
   it('P4: complete listener reveals the browser discovery note from the event', () => {
     const { win, listeners } = renderRunning({ id: 'scan-8', status: 'running', pagesScanned: 0 });
 
@@ -197,5 +197,74 @@ describe('scan-progress.hbs — browser discovery banner (WAF-BROWSER-2)', () =>
     const discoveryBlockedEl = win.document.getElementById('discovery-blocked')!;
     expect(discoveryBlockedEl.classList.contains('is-hidden')).toBe(false);
     expect(discoveryBrowserEl.classList.contains('is-hidden')).toBe(true);
+  });
+});
+
+describe('scan-progress.hbs — live discovery progress (DISCOVERY-PROGRESS-1)', () => {
+  function fire(
+    listeners: Record<string, Array<(evt: { data: string }) => void>>,
+    type: string,
+    data: Record<string, unknown>,
+  ): void {
+    const handlers = listeners[type] ?? [];
+    expect(handlers.length, `no ${type} listener registered`).toBeGreaterThan(0);
+    for (const h of handlers) h({ data: JSON.stringify({ type, data }) });
+  }
+
+  it('LP1: the status banner carries one untranslated count template per discovery phase', () => {
+    const html = renderScanProgress({ id: 'scan-lp1', status: 'running', pagesScanned: 0 });
+    const openTag = html.match(/<div\s+id="scan-status"[^>]*>/)![0];
+    const placeholder = ['{{', 'count', '}}'].join('');
+    for (const attr of ['data-discovering-sitemap', 'data-discovering-crawl', 'data-discovering-browser']) {
+      const m = openTag.match(new RegExp(`${attr}="([^"]*)"`));
+      expect(m, `missing ${attr}`).toBeTruthy();
+      expect(m![1]).toContain(placeholder);
+    }
+  });
+
+  it('LP2: a browser-fallback progress event shows the live count and method', () => {
+    const { win, listeners } = renderRunning({ id: 'scan-lp2', status: 'running', pagesScanned: 0 });
+    fire(listeners, 'discovery_progress', { pagesFound: 12, discoveryPhase: 'browser' });
+    const status = win.document.getElementById('status-text')!.textContent!.trim();
+    expect(status).toBe('Discovering pages\u2026 12 found (browser fallback)');
+    expect(win.document.getElementById('pages-discovered')!.textContent).toBe('12');
+  });
+
+  it('LP3: later events update the count in place', () => {
+    const { win, listeners } = renderRunning({ id: 'scan-lp3', status: 'running', pagesScanned: 0 });
+    fire(listeners, 'discovery_progress', { pagesFound: 1, discoveryPhase: 'crawl' });
+    expect(win.document.getElementById('status-text')!.textContent).toContain('1 found (crawl)');
+    fire(listeners, 'discovery_progress', { pagesFound: 20, discoveryPhase: 'browser' });
+    expect(win.document.getElementById('status-text')!.textContent).toContain('20 found (browser fallback)');
+    expect(win.document.getElementById('pages-discovered')!.textContent).toBe('20');
+  });
+
+  it('LP4: once scanning starts the scanning display wins and a late progress event is ignored', () => {
+    const { win, listeners } = renderRunning({ id: 'scan-lp4', status: 'running', pagesScanned: 0 });
+    fire(listeners, 'discovery_progress', { pagesFound: 5, discoveryPhase: 'browser' });
+    fire(listeners, 'discovery', { pagesDiscovered: 8 });
+    const scanning = win.document.getElementById('status-text')!.textContent;
+    expect(scanning).not.toContain('found (browser fallback)');
+    expect(scanning).toContain('8');
+    fire(listeners, 'discovery_progress', { pagesFound: 6, discoveryPhase: 'browser' });
+    expect(win.document.getElementById('status-text')!.textContent).toBe(scanning);
+    expect(win.document.getElementById('pages-discovered')!.textContent).toBe('8');
+  });
+
+  it('LP5: an unknown phase or a non-numeric count changes nothing', () => {
+    const { win, listeners } = renderRunning({ id: 'scan-lp5', status: 'running', pagesScanned: 0 });
+    const before = win.document.getElementById('status-text')!.textContent;
+    fire(listeners, 'discovery_progress', { pagesFound: 3, discoveryPhase: 'teleport' });
+    fire(listeners, 'discovery_progress', { pagesFound: '<b>x</b>', discoveryPhase: 'crawl' });
+    expect(win.document.getElementById('status-text')!.textContent).toBe(before);
+  });
+
+  it('LP6: a non-English locale renders its own sentence, entity-decoded', () => {
+    const { win, listeners } = renderRunning({ id: 'scan-lp6', status: 'running', pagesScanned: 0 }, 'it');
+    fire(listeners, 'discovery_progress', { pagesFound: 4, discoveryPhase: 'browser' });
+    const status = win.document.getElementById('status-text')!.textContent!;
+    expect(status).toContain('4');
+    expect(status).not.toContain('found (browser fallback)');
+    expect(status).not.toMatch(/&#x27;|&amp;|&quot;/);
   });
 });

@@ -23,6 +23,7 @@
  */
 
 import { isWafChallenge } from './crawler.js';
+import { notifyUrlFound } from './progress.js';
 import { isHtmlUrl, normalizeUrl } from './link-filters.js';
 import { computeDiscoveryScope, isInDiscoveryScope } from './scope.js';
 import { launchChromium, safeCloseBrowser } from '../browser/launch.js';
@@ -62,6 +63,12 @@ export interface BrowserCrawlOptions {
   readonly budgetMs?: number;
   /** SSRF guard for navigations and (default launcher) every page request. */
   readonly guard?: NetworkGuardPolicy;
+  /**
+   * DISCOVERY-PROGRESS-1: called once per URL as it joins the visited set
+   * (start URL included) — the only signal this crawl gives before it
+   * returns, which can take the whole budget. A throwing listener is ignored.
+   */
+  readonly onUrlFound?: (url: string) => void;
 }
 
 export interface BrowserCrawlDeps {
@@ -138,6 +145,7 @@ export async function browserCrawlSite(
   if (!startNormalized) return { urls: [] };
 
   const visited = new Set<string>([startNormalized]);
+  notifyUrlFound(options.onUrlFound, startNormalized);
   const queue: Array<{ url: string; depth: number }> = [{ url: startNormalized, depth: 0 }];
   const startedAt = now();
 
@@ -203,6 +211,7 @@ export async function browserCrawlSite(
           if (!isHtmlUrl(normalized)) continue;
           if (!isAllowed(normalized)) continue;
           visited.add(normalized);
+          notifyUrlFound(options.onUrlFound, normalized);
           queue.push({ url: normalized, depth: depth + 1 });
         }
       } finally {

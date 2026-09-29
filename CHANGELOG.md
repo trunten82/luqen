@@ -10,6 +10,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Live discovery progress: a full-site scan's progress page now shows
+  "Discovering pages… N found (sitemap / crawl / browser fallback)" while
+  discovery runs, instead of sitting on "Discovering pages…" until it
+  finishes — most visibly during the WAF browser fallback, which can take
+  up to its 120 s budget. Driven by a new `discovery_progress` SSE event
+  (`pagesFound`, `discoveryPhase`), emitted on every phase change and at
+  most once per second within a phase, with never-decreasing counts. Core
+  exposes it as `discoverUrls({ onProgress })` and
+  `createScanner({ onDiscoveryProgress })`. All 6 locales.
 - Browser-based discovery fallback: when a full-site scan's fetch-based
   discovery detects bot protection, Luqen re-discovers the site by rendering
   it in one headless Chromium and following the DOM's links, applying the

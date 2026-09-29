@@ -1557,6 +1557,87 @@ describe('ScanOrchestrator', () => {
       expect(discoveryEvents[0].data.pagesDiscovered).toBe(2);
     });
 
+    // ── Live discovery progress (DISCOVERY-PROGRESS-1) ──────────────────
+
+    it('DPO1: standard site scan forwards core discovery progress as discovery_progress events, before discovery', async () => {
+      const scanResult = makeScanResult([{ url: 'https://example.com', issues: [] }]);
+      mockCreateScanner.mockImplementation((opts: { onDiscoveryProgress?: (p: object) => void; onProgress: (p: object) => void }) => ({
+        scan: vi.fn().mockImplementation(async () => {
+          opts.onDiscoveryProgress?.({ phase: 'crawl', pagesFound: 1 });
+          opts.onDiscoveryProgress?.({ phase: 'browser', pagesFound: 7 });
+          opts.onProgress({ type: 'scan:start', url: 'https://example.com', current: 1, total: 7 });
+          opts.onProgress({ type: 'scan:complete', url: 'https://example.com', current: 1, total: 7 });
+          return scanResult;
+        }),
+      }));
+
+      const eventsPromise = waitForScan(orchestrator, 'scan-dpo1');
+      orchestrator.startScan('scan-dpo1', baseScanConfig({ scanMode: 'site' }));
+      const events = await eventsPromise;
+
+      const progress = events.filter((e) => e.type === 'discovery_progress');
+      expect(progress.map((e) => e.data)).toEqual([
+        { pagesFound: 1, discoveryPhase: 'crawl' },
+        { pagesFound: 7, discoveryPhase: 'browser' },
+      ]);
+      const types = events.map((e) => e.type);
+      expect(types.lastIndexOf('discovery_progress')).toBeLessThan(types.indexOf('discovery'));
+    });
+
+    it('DPO2: incremental site scan forwards discoverUrls progress as discovery_progress events, before discovery', async () => {
+      mockDiscoverUrls.mockImplementation(async (_url: string, opts: { onProgress?: (p: object) => void }) => {
+        opts.onProgress?.({ phase: 'sitemap', pagesFound: 0 });
+        opts.onProgress?.({ phase: 'browser', pagesFound: 3 });
+        return { urls: [{ url: 'https://example.com', discoveryMethod: 'crawl' }] };
+      });
+      mockComputeContentHashes.mockResolvedValue(new Map([['https://example.com', 'h']]));
+      (storage.pageHashes.getPageHashes as ReturnType<typeof vi.fn>).mockResolvedValue(new Map());
+      mockScanUrls.mockResolvedValue({ pages: [{ url: 'https://example.com', issueCount: 0, issues: [] }], errors: [] });
+
+      const eventsPromise = waitForScan(orchestrator, 'scan-dpo2');
+      orchestrator.startScan('scan-dpo2', baseScanConfig({ scanMode: 'site', incremental: true, orgId: 'org-1' }));
+      const events = await eventsPromise;
+
+      const progress = events.filter((e) => e.type === 'discovery_progress');
+      expect(progress.map((e) => e.data)).toEqual([
+        { pagesFound: 0, discoveryPhase: 'sitemap' },
+        { pagesFound: 3, discoveryPhase: 'browser' },
+      ]);
+      const types = events.map((e) => e.type);
+      expect(types.lastIndexOf('discovery_progress')).toBeLessThan(types.indexOf('discovery'));
+    });
+
+    it('DPO3: malformed progress payloads are dropped at the boundary', async () => {
+      const scanResult = makeScanResult([{ url: 'https://example.com', issues: [] }]);
+      mockCreateScanner.mockImplementation((opts: { onDiscoveryProgress?: (p: unknown) => void }) => ({
+        scan: vi.fn().mockImplementation(async () => {
+          opts.onDiscoveryProgress?.({ phase: 'teleport', pagesFound: 1 });
+          opts.onDiscoveryProgress?.({ phase: 'crawl', pagesFound: -1 });
+          opts.onDiscoveryProgress?.({ phase: 'crawl', pagesFound: Number.NaN });
+          opts.onDiscoveryProgress?.(null);
+          opts.onDiscoveryProgress?.({ phase: 'crawl', pagesFound: 2 });
+          return scanResult;
+        }),
+      }));
+
+      const eventsPromise = waitForScan(orchestrator, 'scan-dpo3');
+      orchestrator.startScan('scan-dpo3', baseScanConfig({ scanMode: 'site' }));
+      const events = await eventsPromise;
+
+      expect(events.filter((e) => e.type === 'discovery_progress').map((e) => e.data)).toEqual([
+        { pagesFound: 2, discoveryPhase: 'crawl' },
+      ]);
+    });
+
+    it('DPO4: single-page scans pass no discovery progress listener', async () => {
+      const mockScanner = { scan: vi.fn().mockResolvedValue(makeScanResult([{ url: 'https://example.com', issues: [] }])) };
+      mockCreateScanner.mockReturnValue(mockScanner);
+      const eventsPromise = waitForScan(orchestrator, 'scan-dpo4');
+      orchestrator.startScan('scan-dpo4', baseScanConfig({ scanMode: 'single' }));
+      await eventsPromise;
+      expect('onDiscoveryProgress' in (mockCreateScanner.mock.calls.at(-1)?.[0] as object)).toBe(false);
+    });
+
     // ── onProgress for incremental scan ─────────────────────────────────
 
     it('calls onProgress during incremental scan', async () => {

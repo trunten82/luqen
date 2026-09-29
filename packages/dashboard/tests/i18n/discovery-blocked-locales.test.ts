@@ -72,3 +72,27 @@ describe('browser discovery locale coverage (WAF-BROWSER-2)', () => {
     });
   }
 });
+
+const PROGRESS_KEYS = [
+  'scanProgress.discoveringSitemap',
+  'scanProgress.discoveringCrawl',
+  'scanProgress.discoveringBrowser',
+] as const;
+const COUNT_PLACEHOLDER = ['{{', 'count', '}}'].join('');
+
+describe('live discovery progress locale coverage (DISCOVERY-PROGRESS-1)', () => {
+  for (const locale of LOCALES) {
+    it(`LPL-${locale}: ${locale} defines every discovery progress string with one count placeholder`, () => {
+      const dict = loadLocale(locale);
+      for (const key of PROGRESS_KEYS) {
+        const value = getKeyValue(dict, key);
+        expect(value, `${locale}: missing ${key}`).toBeDefined();
+        const str = value as string;
+        expect(str.split(COUNT_PLACEHOLDER).length - 1, `${locale}: ${key} placeholder count`).toBe(1);
+        if (locale !== 'en') {
+          expect(str, `${locale}: ${key} must differ from en`).not.toBe(getKeyValue(enDict, key));
+        }
+      }
+    });
+  }
+});

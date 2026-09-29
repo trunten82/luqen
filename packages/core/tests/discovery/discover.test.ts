@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { discoverUrls } from '../../src/discovery/discover.js';
 import * as robotsModule from '../../src/discovery/robots.js';
 import * as sitemapModule from '../../src/discovery/sitemap.js';
@@ -200,6 +200,101 @@ describe('discoverUrls', () => {
       mockBrowserCrawlSite.mockResolvedValue({ urls: [START, ...many] });
       const result = await discoverUrls(START, { maxPages: 5, crawlDepth: 2, alsoCrawl: true }, true);
       expect(result.urls.length).toBeLessThanOrEqual(5);
+    });
+  });
+
+  describe('live progress (DISCOVERY-PROGRESS-1)', () => {
+    const START = 'https://example.com/dev/en-us/';
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(0);
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    type Evt = { phase: string; pagesFound: number; at: number };
+    function collector(): { events: Evt[]; onProgress: (p: { phase: string; pagesFound: number }) => void } {
+      const events: Evt[] = [];
+      return { events, onProgress: (p) => events.push({ ...p, at: Date.now() }) };
+    }
+
+    function assertMonotonic(events: Evt[]): void {
+      const counts = events.map((e) => e.pagesFound);
+      expect(counts).toEqual([...counts].sort((a, b) => a - b));
+    }
+
+    it('DPR1: sitemap and crawl phases are announced, and crawl finds are counted as they happen', async () => {
+      mockParseSitemap.mockResolvedValue([`${START}s1`, `${START}s2`]);
+      mockCrawlSite.mockImplementation((async (_url: string, opts: { onUrlFound?: (u: string) => void }) => {
+        opts.onUrlFound?.(START);
+        vi.advanceTimersByTime(1500);
+        opts.onUrlFound?.(`${START}c1`);
+        vi.advanceTimersByTime(1500);
+        return { urls: [START, `${START}c1`] };
+      }) as never);
+      const { events, onProgress } = collector();
+      await discoverUrls(START, { maxPages: 50, crawlDepth: 2, alsoCrawl: true, onProgress }, true);
+      expect(events[0]).toMatchObject({ phase: 'sitemap', pagesFound: 0 });
+      expect(events.some((e) => e.phase === 'crawl')).toBe(true);
+      // A crawl-phase event arrived DURING the crawl (at 1.5 s), not only at its end.
+      expect(events.some((e) => e.phase === 'crawl' && e.at > 0 && e.at < 3000)).toBe(true);
+      assertMonotonic(events);
+      expect(events[events.length - 1].pagesFound).toBe(4);
+    });
+
+    it('DPR2: the browser fallback streams its finds, throttled, with monotonic counts', async () => {
+      mockCrawlSite.mockImplementation((async (_url: string, opts: { onUrlFound?: (u: string) => void }) => {
+        opts.onUrlFound?.(START);
+        return { urls: [START], wafWarning: 'W' };
+      }) as never);
+      mockBrowserCrawlSite.mockImplementation(async (_url, opts) => {
+        const urls = [START];
+        (opts as { onUrlFound?: (u: string) => void }).onUrlFound?.(START);
+        for (let i = 0; i < 30; i++) {
+          vi.advanceTimersByTime(200);
+          const u = `${START}p${i}`;
+          urls.push(u);
+          (opts as { onUrlFound?: (u: string) => void }).onUrlFound?.(u);
+        }
+        return { urls };
+      });
+      const { events, onProgress } = collector();
+      const result = await discoverUrls(START, { maxPages: 50, crawlDepth: 2, alsoCrawl: true, onProgress }, true);
+      expect(result.discoveryFallback).toBe('browser');
+
+      const browserEvents = events.filter((e) => e.phase === 'browser');
+      // The phase is announced, then counts arrive WHILE the browser crawl runs.
+      expect(browserEvents.length).toBeGreaterThanOrEqual(3);
+      expect(browserEvents.some((e) => e.pagesFound > 1 && e.at < 6000)).toBe(true);
+      // Throttled: 30 finds over 6 s never produce 30 events, and no two
+      // browser-phase events are closer than one second.
+      expect(browserEvents.length).toBeLessThan(10);
+      for (let i = 1; i < browserEvents.length; i++) {
+        expect(browserEvents[i].at - browserEvents[i - 1].at).toBeGreaterThanOrEqual(1000);
+      }
+      assertMonotonic(events);
+    });
+
+    it('DPR3: no progress event fires after discoverUrls resolves', async () => {
+      mockCrawlSite.mockImplementation((async (_url: string, opts: { onUrlFound?: (u: string) => void }) => {
+        opts.onUrlFound?.(START);
+        opts.onUrlFound?.(`${START}a`);
+        return { urls: [START, `${START}a`] };
+      }) as never);
+      const { events, onProgress } = collector();
+      await discoverUrls(START, { maxPages: 50, crawlDepth: 2, alsoCrawl: true, onProgress }, true);
+      const countAtReturn = events.length;
+      vi.advanceTimersByTime(5000);
+      expect(events.length).toBe(countAtReturn);
+    });
+
+    it('DPR4: without onProgress no listener is threaded to the crawlers', async () => {
+      mockCrawlSite.mockResolvedValue({ urls: [START], wafWarning: 'W' } as never);
+      await discoverUrls(START, { maxPages: 50, crawlDepth: 2, alsoCrawl: true }, true);
+      expect('onUrlFound' in (mockCrawlSite.mock.calls[0][1] as object)).toBe(false);
+      expect('onUrlFound' in (mockBrowserCrawlSite.mock.calls[0][1] as object)).toBe(false);
     });
   });
 });
