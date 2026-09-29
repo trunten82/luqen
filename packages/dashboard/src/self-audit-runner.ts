@@ -103,10 +103,12 @@ async function pollResults(wsUrl: string, taskId: string, timeoutMs: number): Pr
 
 async function scanPageDirect(pageUrl: string): Promise<AuditPageResult> {
   try {
-    const { DirectScanner } = await import(
+    const { DirectScanner, operatorPolicyFor } = await import(
       /* webpackIgnore: true */ '@luqen/core'
     );
-    const scanner = new DirectScanner();
+    // ENGINE-SSRF-1: self-audit deliberately targets the operator's own
+    // (usually loopback) dashboard; a public --url still gets the strict guard.
+    const scanner = new DirectScanner({ guard: operatorPolicyFor(pageUrl) });
     const result = await scanner.scan(pageUrl, {
       standard: 'WCAG2AA',
       timeout: 30000,
