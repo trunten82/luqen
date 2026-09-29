@@ -9,6 +9,7 @@
  */
 
 import type { Issue } from '../types.js';
+import type { NetworkGuardPolicy } from '../net/ssrf-guard.js';
 import type { VisualContext } from './visual.js';
 
 export interface BehavioralOptions {
@@ -22,6 +23,12 @@ export interface BehavioralOptions {
   readonly maxTabStops?: number;
   /** Extra puppeteer launch config, merged over the defaults. */
   readonly chromeLaunchConfig?: Record<string, unknown>;
+  /**
+   * SSRF guard for every request the loaded page makes (ENGINE-SSRF-1).
+   * Default `{}` = strict: private / loopback targets are refused. Pass
+   * `{ allowPrivate: true }` only on an explicit operator opt-out.
+   */
+  readonly guard?: NetworkGuardPolicy;
   /**
    * Optional LLM-vision analyzer (Phase 84). When provided, the behavioral pass
    * captures the page's visual context (screenshot + heading outline + image

@@ -90,7 +90,7 @@ const TRAP_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><t
 describe('createScanner behavioral pass (integration)', () => {
   it('merges behavioral findings into page issues when behavioral=true', async () => {
     const url = await serve(TRAP_PAGE);
-    const scanner = createScanner({ standard: 'WCAG2AA', singlePage: true, behavioral: true });
+    const scanner = createScanner({ standard: 'WCAG2AA', singlePage: true, behavioral: true, allowPrivateTargets: true });
     const result = await scanner.scan(url);
 
     // The static Pa11y scan needs a system Chromium (DirectScanner only probes
@@ -117,7 +117,7 @@ describe('createScanner behavioral pass (integration)', () => {
 
   it('does NOT run behavioral checks when the flag is off (default)', async () => {
     const url = await serve(TRAP_PAGE);
-    const scanner = createScanner({ standard: 'WCAG2AA', singlePage: true });
+    const scanner = createScanner({ standard: 'WCAG2AA', singlePage: true, allowPrivateTargets: true });
     const result = await scanner.scan(url);
 
     const behavioralIssues = result.pages

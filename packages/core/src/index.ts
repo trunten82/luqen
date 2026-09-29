@@ -9,7 +9,7 @@ export { mapIssuesToSource } from './source-mapper/source-mapper.js';
 export { proposeFixesFromReport, type ProposeFixesResult } from './fixer/fix-proposer.js';
 export { scanUrls, type ScanOptions, type ScanResults } from './scanner/scanner.js';
 export { WebserviceClient, WebservicePool } from './scanner/webservice-client.js';
-export { DirectScanner } from './scanner/direct-scanner.js';
+export { DirectScanner, type DirectScannerOptions } from './scanner/direct-scanner.js';
 export { discoverUrls } from './discovery/discover.js';
 export {
   assertPublicUrl,
@@ -22,6 +22,7 @@ export {
   type NetworkGuardPolicy,
 } from './net/ssrf-guard.js';
 export { guardedFetch, MAX_REDIRECT_HOPS } from './net/guarded-fetch.js';
+export { guardPageRequests, isBrowserRequestAllowed } from './net/browser-request-guard.js';
 export type { DiscoveryFallback } from './discovery/discover.js';
 export {
   resolveChromium,
@@ -180,10 +181,12 @@ export interface CreateScannerOptions {
    */
   readonly a11yTreeMaxPages?: number;
   /**
-   * Operator opt-out of the discovery SSRF guard (DISCOVERY-SSRF-1). Default
-   * false: robots.txt, sitemaps, crawled pages and every redirect hop are
-   * refused when they target a private / loopback address. The dashboard wires
-   * this from its `allowPrivateScanTargets` config flag.
+   * Operator opt-out of the SSRF guard (DISCOVERY-SSRF-1, ENGINE-SSRF-1).
+   * Default false: robots.txt, sitemaps, crawled pages, every redirect hop AND
+   * every request a scan engine's browser page makes (pa11y, behavioral,
+   * Lighthouse, IBM, reflow, a11y-tree) are refused when they target a
+   * private / loopback address. The dashboard wires this from its
+   * `allowPrivateScanTargets` config flag.
    */
   readonly allowPrivateTargets?: boolean;
 }
@@ -217,6 +220,9 @@ export interface Scanner {
 export function createScanner(opts: CreateScannerOptions): Scanner {
   // Determine scan backend: webservice (legacy) or direct pa11y library (default)
   let clientOrPool: WebserviceClient | WebservicePool | DirectScanner;
+  // One SSRF policy for discovery AND every engine that loads a scanned page
+  // in a browser (DISCOVERY-SSRF-1 / ENGINE-SSRF-1).
+  const engineGuard = { allowPrivate: opts.allowPrivateTargets === true };
 
   if (opts.webserviceUrl !== undefined) {
     // Legacy: use pa11y-webservice HTTP API
@@ -234,8 +240,9 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
       ? new WebservicePool(allUrls, headers)
       : new WebserviceClient(allUrls[0], headers);
   } else {
-    // Default: direct pa11y npm library
-    clientOrPool = new DirectScanner();
+    // Default: direct pa11y npm library. ENGINE-SSRF-1: the page load is
+    // guarded with the same policy as discovery.
+    clientOrPool = new DirectScanner({ guard: engineGuard });
   }
 
   const scanOptions: ScanOptions = {
@@ -274,7 +281,7 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
             crawlDepth: 2,
             alsoCrawl: true,
             headers: opts.headers,
-            guard: { allowPrivate: opts.allowPrivateTargets === true },
+            guard: engineGuard,
           }, true);
           urls = result.urls;
           wafWarning = result.wafWarning;
@@ -384,6 +391,7 @@ async function runBehavioralPass(
     }
     try {
       const behavioral = await runBehavioralChecks(page.url, {
+        guard: { allowPrivate: opts.allowPrivateTargets === true },
         ...(opts.timeout !== undefined ? { timeout: opts.timeout } : {}),
         ...(opts.headers !== undefined ? { headers: { ...opts.headers } } : {}),
         ...(opts.onVisualContext !== undefined ? { onVisualContext: opts.onVisualContext } : {}),
@@ -437,6 +445,7 @@ async function runLighthousePass(
     }
     try {
       const lighthouse = await runLighthouseChecks(page.url, {
+        guard: { allowPrivate: opts.allowPrivateTargets === true },
         ...(opts.timeout !== undefined ? { timeout: opts.timeout } : {}),
         ...(opts.headers !== undefined ? { headers: { ...opts.headers } } : {}),
       });
@@ -489,6 +498,7 @@ async function runIbmPass(
     }
     try {
       const ibm = await runIbmChecks(page.url, {
+        guard: { allowPrivate: opts.allowPrivateTargets === true },
         ...(opts.timeout !== undefined ? { timeout: opts.timeout } : {}),
         ...(opts.headers !== undefined ? { headers: { ...opts.headers } } : {}),
       });
@@ -541,6 +551,7 @@ async function runReflowPass(
     }
     try {
       const reflow = await runReflowChecks(page.url, {
+        guard: { allowPrivate: opts.allowPrivateTargets === true },
         ...(opts.timeout !== undefined ? { timeout: opts.timeout } : {}),
         ...(opts.headers !== undefined ? { headers: { ...opts.headers } } : {}),
       });
@@ -593,6 +604,7 @@ async function runA11yTreePass(
     }
     try {
       const a11yTree = await runA11yTreeChecks(page.url, {
+        guard: { allowPrivate: opts.allowPrivateTargets === true },
         ...(opts.timeout !== undefined ? { timeout: opts.timeout } : {}),
         ...(opts.headers !== undefined ? { headers: { ...opts.headers } } : {}),
       });
