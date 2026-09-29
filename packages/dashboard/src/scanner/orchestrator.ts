@@ -5,6 +5,7 @@ import type { StorageAdapter } from '../db/index.js';
 import type { PageHashEntry, DiscoveryWarning } from '../db/types.js';
 import { checkCompliance, dispatchWebhookEvent } from '../compliance-client.js';
 import { discoveryWarningFrom } from './discovery-warning.js';
+import { discoveryProgressFrom, type DiscoveryProgressPhase } from './discovery-progress.js';
 import type { SsePublisher, RedisScanQueue } from '../cache/redis.js';
 import type { PluginManager } from '../plugins/manager.js';
 import type { LuqenEvent } from '../plugins/types.js';
@@ -18,10 +19,14 @@ import type { BrandGuideline } from '@luqen/branding';
 import type { Issue, VisualContext } from '@luqen/core';
 
 export interface ScanProgressEvent {
-  readonly type: 'discovery' | 'scan_start' | 'scan_complete' | 'scan_error' | 'compliance' | 'complete' | 'failed';
+  readonly type: 'discovery' | 'discovery_progress' | 'scan_start' | 'scan_complete' | 'scan_error' | 'compliance' | 'complete' | 'failed';
   readonly timestamp: string;
   readonly data: {
     readonly pagesDiscovered?: number;
+    /** DISCOVERY-PROGRESS-1 (`discovery_progress` only): distinct pages found so far. */
+    readonly pagesFound?: number;
+    /** DISCOVERY-PROGRESS-1 (`discovery_progress` only): the discovery method now running. */
+    readonly discoveryPhase?: DiscoveryProgressPhase;
     readonly pagesScanned?: number;
     readonly totalPages?: number;
     readonly currentUrl?: string;
@@ -308,6 +313,12 @@ export class ScanOrchestrator {
     const emit = (event: ScanProgressEvent): void => {
       this.emitter.emit(`scan:${scanId}`, event);
     };
+    // DISCOVERY-PROGRESS-1: the ONE forwarder both discovery call sites use.
+    const forwardDiscoveryProgress = (payload: unknown): void => {
+      const data = discoveryProgressFrom(payload);
+      if (data === null) return;
+      emit({ type: 'discovery_progress', timestamp: new Date().toISOString(), data });
+    };
 
     try {
       await this.storage.scans.updateScan(scanId, { status: 'running' });
@@ -364,6 +375,7 @@ export class ScanOrchestrator {
               alsoCrawl: true,
               headers: config.headers,
               guard: { allowPrivate: this.allowPrivateScanTargets },
+              onProgress: forwardDiscoveryProgress,
             }, true);
             discoveredUrls = result.urls;
             discoveryWarning = discoveryWarningFrom(result);
@@ -529,6 +541,7 @@ export class ScanOrchestrator {
             ...(config.behavioral === true ? { behavioral: true } : {}),
             ...(visionAnalyzer !== null ? { onVisualContext: visionAnalyzer, visualImageBytes: 5 } : {}),
             ...(config.deepScan === true ? { runners: ['htmlcs', 'axe'], lighthouse: true, ibm: true, reflow: true, a11yTree: true } : {}),
+            ...(config.scanMode === 'site' ? { onDiscoveryProgress: forwardDiscoveryProgress } : {}),
             onProgress: (progress: { type: string; url: string; current: number; total: number }) => {
               if (progress.type === 'scan:start') {
                 // First scan:start event tells us discovery is done
