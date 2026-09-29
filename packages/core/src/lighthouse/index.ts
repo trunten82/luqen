@@ -27,6 +27,8 @@ import { loadPuppeteer } from '../browser/puppeteer-runtime.js';
 import { guardPageRequests } from '../net/browser-request-guard.js';
 import type { LighthouseOptions, LighthouseResult } from './types.js';
 import { mapLighthouseAudits, type LhAudit } from './map.js';
+import { createProfileDir, removeProfileDir } from '../browser/profile-dir.js';
+import { trackLiveBrowser } from '../browser/live-registry.js';
 
 export type { LighthouseOptions, LighthouseResult } from './types.js';
 export { mapLighthouseAudits, AUDIT_WCAG_MAP, MAX_NODES_PER_AUDIT } from './map.js';
@@ -92,15 +94,20 @@ async function loadChromeLauncher(): Promise<ChromeLauncherModule> {
  * Build chrome-launcher options, merging caller overrides last — except the
  * egress-proxy flags (SCAN-EGRESS-PROXY-1), which are appended AFTER the merge
  * so no `chromeFlags` override can drop or replace them.
+ *
+ * PROFILE-CLEANUP-1: `userDataDir` is the luqen-owned profile dir unless the
+ * caller configured its own.
  */
 export function buildLaunchOptions(
   opts: LighthouseOptions,
   chromePath: string,
   proxy: Pick<EgressProxy, 'port'>,
+  userDataDir?: string,
 ): Record<string, unknown> {
   const merged: Record<string, unknown> = {
     chromeFlags: ['--headless=new', ...CHROMIUM_LAUNCH_ARGS],
     chromePath,
+    ...(userDataDir !== undefined ? { userDataDir } : {}),
     ...(opts.chromeLaunchConfig ?? {}),
   };
   const flags = Array.isArray(merged['chromeFlags']) ? (merged['chromeFlags'] as unknown[]).map(String) : [];
@@ -120,6 +127,12 @@ export async function runLighthouseChecks(
   let chrome: { port: number; kill(): Promise<void> } | undefined;
   let controller: Browser | undefined;
   let proxy: EgressProxy | undefined;
+  let profile: string | undefined;
+  // A host shutting down mid-run kills this Chrome too (PROFILE-CLEANUP-1).
+  const untrack = trackLiveBrowser(async () => {
+    await chrome?.kill();
+    await proxy?.close();
+  });
   try {
     // Resolve BEFORE loading chrome-launcher: a resolution failure must
     // surface as our own typed error rather than silently falling through
@@ -130,7 +143,10 @@ export async function runLighthouseChecks(
     const launcher = await loadChromeLauncher();
     // SCAN-EGRESS-PROXY-1 — FAIL CLOSED: no proxy, no Chrome.
     proxy = await openEgressProxy(opts.guard ?? {});
-    chrome = await launcher.launch(buildLaunchOptions(opts, executablePath, proxy));
+    profile = opts.chromeLaunchConfig?.['userDataDir'] === undefined
+      ? await createProfileDir().catch(() => undefined) // fall back to chrome-launcher's own tmp dir
+      : undefined;
+    chrome = await launcher.launch(buildLaunchOptions(opts, executablePath, proxy, profile));
 
     const lighthouse = await loadLighthouse();
     const flags: Record<string, unknown> = {
@@ -180,6 +196,9 @@ export async function runLighthouseChecks(
       }
     }
     await proxy?.close();
+    untrack();
+    // chrome.kill() SIGKILLs the process group, so nothing still writes here.
+    if (profile !== undefined) await removeProfileDir(profile, null);
   }
 }
 

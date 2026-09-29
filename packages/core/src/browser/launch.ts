@@ -13,6 +13,12 @@
  * cannot be, launch throws {@link EgressProxyUnavailableError} and Chromium is
  * never started. Caller-supplied proxy flags are dropped, so no override can
  * route around it. The proxy is closed with the browser.
+ *
+ * PROFILE-CLEANUP-1: every browser launched here gets its OWN profile dir
+ * under `<tmpdir>/luqen-chrome/` (browser/profile-dir.ts), removed once the
+ * browser process has exited — on close AND on a crash-style disconnect.
+ * Every live browser is registered so a shutting-down host can close them all
+ * ({@link closeAllBrowsers}).
  */
 
 import type { Browser, PuppeteerNode } from 'puppeteer';
@@ -26,6 +32,8 @@ import {
   type EgressProxyStarter,
 } from '../net/egress-proxy.js';
 import type { NetworkGuardPolicy } from '../net/ssrf-guard.js';
+import { createProfileDir, removeProfileDir, type ExitObservable } from './profile-dir.js';
+import { closeAllTracked, trackedCount, trackLiveBrowser } from './live-registry.js';
 
 /**
  * `--no-sandbox` / `--disable-setuid-sandbox` are essential when running as
@@ -42,6 +50,8 @@ export interface LaunchChromiumDeps {
   readonly resolve?: (deps?: ResolveChromiumDeps) => Promise<{ readonly executablePath: string }>;
   /** Egress-proxy seam (tests); defaults to {@link startEgressProxy}. */
   readonly startEgressProxy?: EgressProxyStarter;
+  /** Root for per-launch profile dirs (tests); defaults to `<tmpdir>/luqen-chrome`. */
+  readonly profileRoot?: string;
 }
 
 export interface LaunchChromiumOverrides {
@@ -65,6 +75,32 @@ export function withEgressProxyArgs(args: readonly string[], proxy: Pick<EgressP
 }
 
 const browserProxies = new WeakMap<object, EgressProxy>();
+/** Memoised per-browser teardown: proxy close + profile removal + deregistration. */
+const browserCleanups = new WeakMap<object, () => Promise<void>>();
+
+/** A caller that picked its own profile keeps full ownership of it. */
+function callerOwnsProfile(overrides: Record<string, unknown>, args: readonly string[]): boolean {
+  return typeof overrides['userDataDir'] === 'string' || args.some((a) => a.startsWith('--user-data-dir'));
+}
+
+/** A profile dir, or undefined to fall back to puppeteer's own temporary one. */
+async function openProfileDir(root: string | undefined): Promise<string | undefined> {
+  try {
+    return await createProfileDir(root);
+  } catch {
+    return undefined;
+  }
+}
+
+type BrowserEvents = {
+  once?: (event: string, fn: () => void) => unknown;
+  process?: () => ExitObservable | null;
+};
+
+function memoOnce(fn: () => Promise<void>): () => Promise<void> {
+  let run: Promise<void> | undefined;
+  return () => (run ??= fn());
+}
 
 /** The egress proxy a browser from {@link launchChromium} is bound to. */
 export function egressProxyOf(browser: object): EgressProxy | undefined {
@@ -93,11 +129,15 @@ export async function launchChromium(
   // FAIL CLOSED: throws EgressProxyUnavailableError before any launch.
   const proxy = await openEgressProxy(guard ?? {}, deps.startEgressProxy ?? startEgressProxy);
 
+  const callerArgs = launchOverrides.args ?? CHROMIUM_LAUNCH_ARGS;
+  const profileDir = callerOwnsProfile(launchOverrides, callerArgs) ? undefined : await openProfileDir(deps.profileRoot);
+
   const options = {
     headless: true, // MEASURED equivalent to 'new' in puppeteer-core 25.1.0
     executablePath,
     ...launchOverrides,
-    args: withEgressProxyArgs(launchOverrides.args ?? CHROMIUM_LAUNCH_ARGS, proxy),
+    ...(profileDir !== undefined ? { userDataDir: profileDir } : {}),
+    args: withEgressProxyArgs(callerArgs, proxy),
   };
 
   let browser: Browser;
@@ -105,14 +145,37 @@ export async function launchChromium(
     browser = (await puppeteer.launch(options as Parameters<PuppeteerNode['launch']>[0])) as Browser;
   } catch (err) {
     await proxy.close();
+    if (profileDir !== undefined) await removeProfileDir(profileDir);
     throw err;
   }
   browserProxies.set(browser, proxy);
-  // A crashed or externally closed browser must not leave its proxy behind.
-  (browser as { once?: (event: string, fn: () => void) => unknown }).once?.('disconnected', () => {
-    void proxy.close();
+  const events = browser as unknown as BrowserEvents;
+  const untrack = trackLiveBrowser(() => safeCloseBrowser(browser));
+  const cleanup = memoOnce(async () => {
+    untrack();
+    await proxy.close();
+    if (profileDir !== undefined) await removeProfileDir(profileDir, events.process?.() ?? null);
+  });
+  browserCleanups.set(browser, cleanup);
+  // A crashed or externally closed browser must not leave its proxy or profile behind.
+  events.once?.('disconnected', () => {
+    void cleanup();
   });
   return browser;
+}
+
+/**
+ * Close every browser launched through {@link launchChromium} (and every other
+ * tracked engine browser) that is still alive, with its proxy and profile.
+ * Used by a host process shutting down. Never throws.
+ */
+export async function closeAllBrowsers(): Promise<void> {
+  await closeAllTracked();
+}
+
+/** How many launched browsers are still alive (open and not yet disconnected). */
+export function liveBrowserCount(): number {
+  return trackedCount();
 }
 
 /** Close a browser without throwing (best-effort teardown). */
@@ -123,5 +186,10 @@ export async function safeCloseBrowser(browser: Browser | undefined | null): Pro
   } catch {
     // Never let teardown failures mask the real result / error.
   }
-  await browserProxies.get(browser)?.close();
+  const cleanup = browserCleanups.get(browser);
+  if (cleanup) {
+    await cleanup();
+  } else {
+    await browserProxies.get(browser)?.close();
+  }
 }
