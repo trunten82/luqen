@@ -16,6 +16,7 @@
  */
 
 import type { Issue } from '../types.js';
+import type { NetworkGuardPolicy } from '../net/ssrf-guard.js';
 
 export interface IbmOptions {
   /** Navigation/run timeout in ms (default 60000). */
@@ -24,6 +25,12 @@ export interface IbmOptions {
   readonly headers?: Record<string, string>;
   /** Extra chrome/puppeteer launch config, merged over the defaults. */
   readonly chromeLaunchConfig?: Record<string, unknown>;
+  /**
+   * SSRF guard for every request the loaded page makes (ENGINE-SSRF-1).
+   * Default `{}` = strict: private / loopback targets are refused. Pass
+   * `{ allowPrivate: true }` only on an explicit operator opt-out.
+   */
+  readonly guard?: NetworkGuardPolicy;
 }
 
 export interface IbmResult {

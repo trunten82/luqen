@@ -31,6 +31,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Browser, Page } from 'puppeteer';
 import { launchChromium, safeCloseBrowser } from '../browser/launch.js';
+import { guardPageRequests } from '../net/browser-request-guard.js';
 import type { IbmOptions, IbmResult } from './types.js';
 import { mapIbmResults, type IbmReport } from './map.js';
 
@@ -105,6 +106,7 @@ export async function runIbmChecks(
     const timeout = opts.timeout ?? DEFAULT_TIMEOUT;
     browser = await launchChromium(opts.chromeLaunchConfig);
     const page: Page = await browser.newPage();
+    await guardPageRequests(page, opts.guard ?? {}); // ENGINE-SSRF-1
     if (opts.headers && Object.keys(opts.headers).length > 0) {
       await page.setExtraHTTPHeaders({ ...opts.headers });
     }

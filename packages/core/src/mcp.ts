@@ -68,7 +68,7 @@ export function createServer(): LuqenMcpServer {
 
         const clientOrScanner = mergedConfig.webserviceUrl !== undefined
           ? new WebserviceClient(mergedConfig.webserviceUrl, mergedConfig.webserviceHeaders)
-          : new DirectScanner();
+          : new DirectScanner({ guard: operatorPolicyFor(args.url) });
 
         const scanResults = await scanUrls(urls, clientOrScanner, {
           standard: mergedConfig.standard,
@@ -288,7 +288,7 @@ export function createServer(): LuqenMcpServer {
 
         if (config.webserviceUrl === undefined) {
           // Direct mode — use pa11y npm library
-          const scanner = new DirectScanner();
+          const scanner = new DirectScanner({ guard: operatorPolicyFor(args.url) });
           const scanResult = await scanner.scan(args.url, {
             standard: args.standard ?? 'WCAG2AA',
             timeout: args.timeout,
@@ -388,7 +388,7 @@ export function createServer(): LuqenMcpServer {
 
         async function processUrlDirect(url: string): Promise<{ url: string; result: unknown; error?: string }> {
           try {
-            const scanner = new DirectScanner();
+            const scanner = new DirectScanner({ guard: operatorPolicyFor(url) });
             const scanResult = await scanner.scan(url, {
               standard: args.standard ?? 'WCAG2AA',
               timeout: args.timeout,

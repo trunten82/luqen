@@ -327,7 +327,7 @@ export class ScanOrchestrator {
         scanUrls: (urls: unknown[], client: unknown, opts: unknown) => Promise<{ pages: Array<{ url: string; discoveryMethod: string; issueCount: number; issues: Array<{ type: string; code: string; message: string; selector: string; context: string }> }>; errors: unknown[] }>;
         WebserviceClient: new (url: string, headers: Record<string, string>) => unknown;
         WebservicePool: new (urls: readonly string[], headers: Record<string, string>) => unknown;
-        DirectScanner: new () => { scan: (url: string, opts: unknown) => Promise<unknown> };
+        DirectScanner: new (options?: { guard?: { readonly allowPrivate?: boolean } }) => { scan: (url: string, opts: unknown) => Promise<unknown> };
         computeContentHashes: (urls: readonly string[], concurrency?: number, headers?: Readonly<Record<string, string>>, guard?: { readonly allowPrivate?: boolean }) => Promise<Map<string, string>>;
       };
 
@@ -443,7 +443,8 @@ export class ScanOrchestrator {
                 ? new WebservicePool(allUrls, {})
                 : new WebserviceClient(config.webserviceUrl, {});
             } else {
-              client = new DirectScanner();
+              // ENGINE-SSRF-1: the page load follows the same opt-out as discovery.
+              client = new DirectScanner({ guard: { allowPrivate: this.allowPrivateScanTargets } });
             }
             const scanOptions = {
               standard: config.standard as 'WCAG2A' | 'WCAG2AA' | 'WCAG2AAA',

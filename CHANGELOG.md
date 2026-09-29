@@ -102,6 +102,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `allowPrivateScanTargets` opt-out still skips the check. Known residual:
   the scanner's browser resolves the name again, so a DNS-rebinding host
   with a near-zero TTL can still race it.
+- Scan engines no longer let a scanned page make the server's Chromium
+  request private or internal addresses. Discovery was guarded, but every
+  engine that then LOADS each page in a real browser — pa11y (htmlcs / axe
+  runners), the behavioral pass, the accessibility-tree and reflow passes,
+  IBM Equal Access and Lighthouse — followed redirects and loaded images,
+  frames, stylesheets and `fetch`/XHR to any host, so a public page whose
+  redirect or `<img>`/`<iframe>`/`fetch` pointed at `127.0.0.1` or an RFC 1918
+  address made the server request it. Each engine's page now gets the same
+  request-interception guard the browser-discovery fallback uses (same
+  address predicate, `data:`/`blob:`/`about:` allowed, other schemes refused)
+  before it navigates; pa11y is handed a pre-guarded browser + page through
+  its documented `browser`/`page` options, and Lighthouse drives a guarded
+  page through its documented `page` argument. The existing
+  `allowPrivateScanTargets` opt-out covers the engines too; the `luqen` CLI,
+  stdio MCP server and `self-audit` keep private targets only when the
+  operator's own URL is private. Known residuals: WebSocket handshakes
+  (`ws:`/`wss:`) are not surfaced to request interception by Chromium and are
+  NOT refused (measured); the same DNS-rebinding race as discovery; the
+  legacy remote pa11y-webservice backend loads pages outside this process and
+  is not covered. The separately installed axe scanner plugin is not called by
+  any scan path today (no caller of its `evaluate` hook), so it has no page
+  load to guard.
 - The session secret is now rotatable independently of at-rest encrypted
   data. Previously, `DASHBOARD_SESSION_SECRET` doubled as the AES key for
   four at-rest stores (OAuth signing keys, service-connection secrets, git

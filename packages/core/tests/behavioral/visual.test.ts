@@ -13,6 +13,13 @@ import { captureVisualContext } from '../../src/behavioral/visual.js';
 import { runBehavioralChecks } from '../../src/behavioral/index.js';
 import type { Issue } from '../../src/types.js';
 
+/**
+ * ENGINE-SSRF-1: these fixtures are served from loopback, which the engine's
+ * page-load guard refuses by default — use the operator opt-out, exactly as a
+ * local UAT against a loopback fixture would.
+ */
+const LOOPBACK_GUARD = { allowPrivate: true } as const;
+
 const TEST_TIMEOUT = 30000;
 
 const FIXTURE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Visual</title>
@@ -49,7 +56,7 @@ describe('captureVisualContext', () => {
   });
 
   it('captures a non-empty PNG screenshot', async () => {
-    const ctx = await withPage(baseUrl, {}, (page) => captureVisualContext(page));
+    const ctx = await withPage(baseUrl, { guard: LOOPBACK_GUARD }, (page) => captureVisualContext(page));
     expect(ctx.screenshot.mediaType).toBe('image/png');
     expect(ctx.screenshot.data.length).toBeGreaterThan(100);
     // base64 sanity (no data: prefix)
@@ -57,7 +64,7 @@ describe('captureVisualContext', () => {
   }, TEST_TIMEOUT);
 
   it('lists the real heading and flags the styled-div candidate', async () => {
-    const ctx = await withPage(baseUrl, {}, (page) => captureVisualContext(page));
+    const ctx = await withPage(baseUrl, { guard: LOOPBACK_GUARD }, (page) => captureVisualContext(page));
     expect(ctx.headingOutline).toContain('Real Page Title');
     expect(ctx.headingOutline).toMatch(/HEADING <h1>/);
     expect(ctx.headingOutline).toContain('Styled Div Heading');
@@ -65,7 +72,7 @@ describe('captureVisualContext', () => {
   }, TEST_TIMEOUT);
 
   it('inventories images with alt + surrounding context', async () => {
-    const ctx = await withPage(baseUrl, {}, (page) => captureVisualContext(page));
+    const ctx = await withPage(baseUrl, { guard: LOOPBACK_GUARD }, (page) => captureVisualContext(page));
     expect(ctx.images.length).toBe(2);
     const chart = ctx.images.find((i) => i.src.includes('chart.png'));
     expect(chart).toBeDefined();
@@ -76,12 +83,12 @@ describe('captureVisualContext', () => {
   }, TEST_TIMEOUT);
 
   it('does not capture per-image bytes by default (maxImageBytes = 0)', async () => {
-    const ctx = await withPage(baseUrl, {}, (page) => captureVisualContext(page));
+    const ctx = await withPage(baseUrl, { guard: LOOPBACK_GUARD }, (page) => captureVisualContext(page));
     expect(ctx.images.every((i) => i.bytes === undefined)).toBe(true);
   }, TEST_TIMEOUT);
 
   it('captures rendered PNG bytes per image when maxImageBytes > 0 (Phase 84 alt-text)', async () => {
-    const ctx = await withPage(baseUrl, {}, (page) => captureVisualContext(page, { maxImageBytes: 5 }));
+    const ctx = await withPage(baseUrl, { guard: LOOPBACK_GUARD }, (page) => captureVisualContext(page, { maxImageBytes: 5 }));
     const withBytes = ctx.images.filter((i) => i.bytes !== undefined);
     expect(withBytes.length).toBeGreaterThan(0);
     for (const img of withBytes) {
@@ -102,6 +109,7 @@ describe('captureVisualContext', () => {
       runner: 'vision',
     };
     const result = await runBehavioralChecks(baseUrl, {
+      guard: LOOPBACK_GUARD,
       onVisualContext: async (ctx, url) => {
         receivedOutline = ctx.headingOutline;
         expect(url).toBe(baseUrl);
@@ -117,6 +125,7 @@ describe('captureVisualContext', () => {
 
   it('records a non-fatal error when onVisualContext throws (other checks survive)', async () => {
     const result = await runBehavioralChecks(baseUrl, {
+      guard: LOOPBACK_GUARD,
       onVisualContext: async () => {
         throw new Error('LLM unreachable');
       },
