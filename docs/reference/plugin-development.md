@@ -183,6 +183,8 @@ discover  -->  install  -->  configure  -->  activate  -->  health check
 
 6. **Deactivate** -- The `deactivate()` method is called and the instance is removed from memory. Status returns to `inactive`.
 
+   `deactivate()` is also called for every active plugin when the dashboard shuts down (SIGTERM/SIGINT); there the saved status stays `active`, so the plugin starts again on the next boot. Release everything the plugin holds in `deactivate()` — close any browser it launched — because the dashboard exits once shutdown finishes (hard deadline: 20 s). A plugin that launches puppeteer directly gets puppeteer's default temporary profile in the temp directory; the dashboard's startup sweep removes such profiles only once they are stale and no running Chromium uses them.
+
 7. **Remove** -- Deactivates the plugin if active, deletes the database record, and removes the package files from `pluginsDir/<name>/`.
 
 ---
