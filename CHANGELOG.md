@@ -88,6 +88,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   discovery on private hosts only when the operator's own start URL is
   private. Known residual: the guard resolves before `fetch` resolves again,
   so a DNS-rebinding host with a near-zero TTL can still race it.
+- The scan start URL is now checked against what its hostname RESOLVES to,
+  not only against its spelling. The dashboard's start-URL validation was a
+  string-only check, so a public hostname whose DNS answer was `127.0.0.1`
+  or an RFC 1918 address passed and pa11y scanned the internal target; it
+  also missed IPv6 unique-local, IPv4-mapped IPv6 and CGNAT `100.64.0.0/10`
+  literals. It now delegates to the same `@luqen/core` SSRF predicate as
+  discovery: private literals in any encoding are refused, every resolved
+  address must be public, and a host that does not resolve is refused
+  ("Domain not found"). Applies to the scan form, the GraphQL `createScan`
+  mutation and the `dashboard_scan_page` MCP tool (whose separate
+  block-list is removed in favour of the shared predicate). The
+  `allowPrivateScanTargets` opt-out still skips the check. Known residual:
+  the scanner's browser resolves the name again, so a DNS-rebinding host
+  with a near-zero TTL can still race it.
 - The session secret is now rotatable independently of at-rest encrypted
   data. Previously, `DASHBOARD_SESSION_SECRET` doubled as the AES key for
   four at-rest stores (OAuth signing keys, service-connection secrets, git

@@ -1,4 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+// Hermetic DNS for the start-URL SSRF check (START-URL-DNS-1): every test host
+// resolves to a public documentation address; no real DNS lookups.
+vi.mock('../../src/services/host-resolver.js', () => ({
+  systemHostResolver: async (): Promise<readonly string[]> => ['93.184.215.14'],
+}));
 import Fastify, { FastifyInstance, FastifyReply } from 'fastify';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
