@@ -297,4 +297,36 @@ describe('browserCrawlSite', () => {
     const result = await browserCrawlSite(START, baseOptions, { launch });
     expect(result.urls).toEqual([START]);
   });
+
+  it('B15: DISCOVERY-PROGRESS-1 reports every URL it finds, in order, as it finds it', async () => {
+    const recorder = makeRecorder();
+    const found: string[] = [];
+    const launch = makeFakeLauncher(
+      {
+        [START]: { links: [`${START}a`, `${START}b`, 'https://other.test/x'] },
+        [`${START}a`]: { links: [`${START}c`, `${START}b`] },
+      },
+      recorder,
+    );
+    const result = await browserCrawlSite(
+      START,
+      { ...baseOptions, onUrlFound: (url: string) => found.push(url) },
+      { launch },
+    );
+    // Exactly the returned set, each once — out-of-scope links never reported.
+    expect(found).toEqual(result.urls);
+    expect(found).toEqual([START, `${START}a`, `${START}b`, `${START}c`]);
+  });
+
+  it('B16: DISCOVERY-PROGRESS-1 a throwing onUrlFound never breaks the crawl', async () => {
+    const recorder = makeRecorder();
+    const launch = makeFakeLauncher({ [START]: { links: [`${START}a`] } }, recorder);
+    const result = await browserCrawlSite(
+      START,
+      { ...baseOptions, onUrlFound: () => { throw new Error('listener boom'); } },
+      { launch },
+    );
+    expect(result.urls).toEqual([START, `${START}a`]);
+    expect(result.error).toBeUndefined();
+  });
 });

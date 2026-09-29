@@ -3,6 +3,7 @@ import { computeDiscoveryScope, isInDiscoveryScope } from './scope.js';
 import { isHtmlUrl, normalizeUrl } from './link-filters.js';
 import { guardedFetch } from '../net/guarded-fetch.js';
 import type { NetworkGuardPolicy } from '../net/ssrf-guard.js';
+import { notifyUrlFound } from './progress.js';
 
 const WAF_SIGNATURES = [
   '_Incapsula_Resource',
@@ -26,6 +27,12 @@ interface CrawlOptions {
   readonly headers?: Record<string, string>;
   /** SSRF guard applied to every page fetch and redirect hop (DISCOVERY-SSRF-1). */
   readonly guard?: NetworkGuardPolicy;
+  /**
+   * DISCOVERY-PROGRESS-1: called once per URL as it joins the visited set
+   * (start URL included), so a caller can report live progress. A throwing
+   * listener is ignored.
+   */
+  readonly onUrlFound?: (url: string) => void;
 }
 
 export interface CrawlResult {
@@ -47,6 +54,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions, returnR
 
   queue.push({ url: startNormalized, depth: 0 });
   visited.add(startNormalized);
+  notifyUrlFound(options.onUrlFound, startNormalized);
 
   while (queue.length > 0 && visited.size <= maxPages) {
     const item = queue.shift();
@@ -85,6 +93,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions, returnR
           if (!isHtmlUrl(normalized)) return;
           if (!isAllowed(normalized)) return;
           visited.add(normalized);
+          notifyUrlFound(options.onUrlFound, normalized);
           queue.push({ url: normalized, depth: depth + 1 });
         });
       }
