@@ -1585,5 +1585,6 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     });
   });
 
+  server.decorate('pluginManager', pluginManager); // graceful shutdown (process-lifecycle.ts)
   return server;
 }
