@@ -29,6 +29,7 @@ import type { LighthouseOptions, LighthouseResult } from './types.js';
 import { mapLighthouseAudits, type LhAudit } from './map.js';
 import { createProfileDir, removeProfileDir } from '../browser/profile-dir.js';
 import { trackLiveBrowser } from '../browser/live-registry.js';
+import type { EngineLease, SharedBrowser } from '../browser/shared-browser.js';
 
 export type { LighthouseOptions, LighthouseResult } from './types.js';
 export { mapLighthouseAudits, AUDIT_WCAG_MAP, MAX_NODES_PER_AUDIT } from './map.js';
@@ -124,6 +125,7 @@ export async function runLighthouseChecks(
   url: string,
   opts: LighthouseOptions = {},
 ): Promise<LighthouseResult> {
+  if (opts.sharedBrowser) return runOnSharedBrowser(url, opts, opts.sharedBrowser);
   let chrome: { port: number; kill(): Promise<void> } | undefined;
   let controller: Browser | undefined;
   let proxy: EgressProxy | undefined;
@@ -149,16 +151,7 @@ export async function runLighthouseChecks(
     chrome = await launcher.launch(buildLaunchOptions(opts, executablePath, proxy, profile));
 
     const lighthouse = await loadLighthouse();
-    const flags: Record<string, unknown> = {
-      port: chrome.port,
-      output: 'json',
-      logLevel: 'silent',
-      onlyCategories: ['accessibility'],
-      maxWaitForLoad: opts.timeout ?? DEFAULT_TIMEOUT,
-      ...(opts.headers && Object.keys(opts.headers).length > 0
-        ? { extraHeaders: { ...opts.headers } }
-        : {}),
-    };
+    const flags = lighthouseFlags(opts, chrome.port);
 
     // ENGINE-SSRF-1: Lighthouse drives the page it is GIVEN (its documented
     // fourth argument), so attach puppeteer to the chrome-launcher instance,
@@ -199,6 +192,51 @@ export async function runLighthouseChecks(
     untrack();
     // chrome.kill() SIGKILLs the process group, so nothing still writes here.
     if (profile !== undefined) await removeProfileDir(profile, null);
+  }
+}
+
+/** Lighthouse flags shared by both launch paths; `port` only when Lighthouse must find Chrome itself. */
+function lighthouseFlags(opts: LighthouseOptions, port?: number): Record<string, unknown> {
+  return {
+    ...(port !== undefined ? { port } : {}),
+    output: 'json',
+    logLevel: 'silent',
+    onlyCategories: ['accessibility'],
+    maxWaitForLoad: opts.timeout ?? DEFAULT_TIMEOUT,
+    ...(opts.headers && Object.keys(opts.headers).length > 0
+      ? { extraHeaders: { ...opts.headers } }
+      : {}),
+  };
+}
+
+/**
+ * DEEP-SCAN-BROWSER-REUSE-1: run Lighthouse on a lease from the per-scan
+ * shared browser — its documented page argument, as the chrome-launcher path
+ * already does — instead of launching chrome-launcher. The lease is a fresh
+ * browser context, so Lighthouse's storage reset and emulation cannot reach
+ * any other engine's page; the egress proxy is the shared browser's.
+ */
+async function runOnSharedBrowser(
+  url: string,
+  opts: LighthouseOptions,
+  shared: SharedBrowser,
+): Promise<LighthouseResult> {
+  let lease: EngineLease | undefined;
+  try {
+    lease = await shared.acquire();
+    await guardPageRequests(lease.page, opts.guard ?? {}); // ENGINE-SSRF-1
+    const lighthouse = await loadLighthouse();
+    const runnerResult = await lighthouse(url, lighthouseFlags(opts), undefined, lease.page);
+    const issues = mapLighthouseAudits(runnerResult?.lhr?.audits);
+    return { issues, pagesChecked: 1, errors: [] };
+  } catch (err) {
+    return {
+      issues: [],
+      pagesChecked: 0,
+      errors: [{ url, message: toMessage(err) }],
+    };
+  } finally {
+    await lease?.release();
   }
 }
 

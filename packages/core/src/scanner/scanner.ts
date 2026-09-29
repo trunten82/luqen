@@ -2,6 +2,7 @@ import type { DiscoveredUrl, ScanError, PageResult, AccessibilityIssue, Progress
 import type { WebserviceClient, Pa11yIssue, Pa11yResult } from './webservice-client.js';
 import type { WebservicePool } from './webservice-client.js';
 import type { DirectScanner } from './direct-scanner.js';
+import type { SharedBrowser } from '../browser/shared-browser.js';
 
 export interface ScanOptions {
   readonly standard: 'WCAG2A' | 'WCAG2AA' | 'WCAG2AAA';
@@ -20,6 +21,8 @@ export interface ScanOptions {
   readonly runners?: readonly string[];
   readonly includeWarnings?: boolean;
   readonly includeNotices?: boolean;
+  /** Deep scan: the per-scan shared browser pa11y leases its pages from (direct mode only). */
+  readonly sharedBrowser?: SharedBrowser;
 }
 
 export interface ScanResults {
@@ -251,6 +254,7 @@ async function scanUrlDirect(
       runners: options.runners,
       includeWarnings: options.includeWarnings,
       includeNotices: options.includeNotices,
+      ...(options.sharedBrowser !== undefined ? { sharedBrowser: options.sharedBrowser } : {}),
     });
 
     const rawIssues: AccessibilityIssue[] = result.issues.map((issue) => ({

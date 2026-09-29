@@ -10,6 +10,7 @@
 
 import type { Issue } from '../types.js';
 import type { NetworkGuardPolicy } from '../net/ssrf-guard.js';
+import type { SharedBrowser } from '../browser/shared-browser.js';
 import type { VisualContext } from './visual.js';
 
 export interface BehavioralOptions {
@@ -21,6 +22,12 @@ export interface BehavioralOptions {
   readonly maxInteractions?: number;
   /** Max Tab presses during keyboard traversal (default 100). */
   readonly maxTabStops?: number;
+  /**
+   * DEEP-SCAN-BROWSER-REUSE-1: when set, run on a lease from this per-scan
+   * shared browser (a fresh isolated context + page) instead of launching an
+   * own browser. `chromeLaunchConfig` is then ignored.
+   */
+  readonly sharedBrowser?: SharedBrowser;
   /** Extra puppeteer launch config, merged over the defaults. */
   readonly chromeLaunchConfig?: Record<string, unknown>;
   /**
