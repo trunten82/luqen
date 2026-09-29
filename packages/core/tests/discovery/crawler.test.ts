@@ -24,6 +24,16 @@ describe('crawlSite', () => {
     expect(urls).toContain('https://example.com/contact');
   });
 
+  it('DISCOVERY-PROGRESS-1: reports every URL it finds, each once, matching the returned set', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, headers: new Headers({ 'content-type': 'text/html' }), text: async () => htmlPage(['/about', '/contact', '/about']) })
+      .mockResolvedValue({ ok: true, headers: new Headers({ 'content-type': 'text/html' }), text: async () => htmlPage([]) });
+    const found: string[] = [];
+    const urls = await crawlSite('https://example.com', { maxPages: 100, maxDepth: 3, isAllowed: () => true, guard: PUBLIC_TEST_POLICY, onUrlFound: (u) => found.push(u) });
+    expect(found).toEqual(urls);
+    expect(found).toEqual(['https://example.com/', 'https://example.com/about', 'https://example.com/contact']);
+  });
+
   it('respects maxDepth', async () => {
     mockFetch.mockResolvedValue({ ok: true, headers: new Headers({ 'content-type': 'text/html' }), text: async () => htmlPage(['/level2']) });
     const urls = await crawlSite('https://example.com', { maxPages: 100, maxDepth: 1, isAllowed: () => true, guard: PUBLIC_TEST_POLICY });

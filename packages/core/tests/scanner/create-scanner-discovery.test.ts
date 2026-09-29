@@ -85,3 +85,31 @@ describe('createScanner().scan() — discoveryFallback surfacing (WAF-BROWSER-2)
     expect('discoveryFallback' in result).toBe(false);
   });
 });
+
+describe('createScanner().scan() — discovery progress (DISCOVERY-PROGRESS-1)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockScanUrls.mockResolvedValue({
+      pages: [{ url: START_URL, issues: [], discoveryMethod: 'crawl' } as never],
+      errors: [],
+    });
+  });
+
+  it('CSP1: onDiscoveryProgress is threaded to discovery and receives its events', async () => {
+    mockDiscoverUrls.mockImplementation((async (_url: string, opts: { onProgress?: (p: unknown) => void }) => {
+      opts.onProgress?.({ phase: 'browser', pagesFound: 3 });
+      return { urls: [{ url: START_URL, discoveryMethod: 'crawl' }] };
+    }) as never);
+    const seen: unknown[] = [];
+    const scanner = createScanner({ onDiscoveryProgress: (p) => seen.push(p) });
+    await scanner.scan(START_URL);
+    expect(seen).toEqual([{ phase: 'browser', pagesFound: 3 }]);
+  });
+
+  it('CSP2: without onDiscoveryProgress no listener is passed to discovery', async () => {
+    mockDiscoverUrls.mockResolvedValue({ urls: [{ url: START_URL, discoveryMethod: 'crawl' }] });
+    const scanner = createScanner({});
+    await scanner.scan(START_URL);
+    expect('onProgress' in (mockDiscoverUrls.mock.calls[0][1] as object)).toBe(false);
+  });
+});

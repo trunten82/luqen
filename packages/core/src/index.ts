@@ -24,6 +24,8 @@ export {
 export { guardedFetch, MAX_REDIRECT_HOPS } from './net/guarded-fetch.js';
 export { guardPageRequests, isBrowserRequestAllowed } from './net/browser-request-guard.js';
 export type { DiscoveryFallback } from './discovery/discover.js';
+export { DISCOVERY_PROGRESS_INTERVAL_MS } from './discovery/progress.js';
+export type { DiscoveryPhase, DiscoveryProgress, DiscoveryProgressListener } from './discovery/progress.js';
 export {
   resolveChromium,
   probeChromium,
@@ -84,6 +86,7 @@ import { runIbmChecks } from './ibm/index.js';
 import { runReflowChecks } from './reflow/index.js';
 import { runA11yTreeChecks } from './a11y-tree/index.js';
 import type { DiscoveredUrl, PageResult, AccessibilityIssue, ProgressListener } from './types.js';
+import type { DiscoveryProgressListener } from './discovery/progress.js';
 
 export interface CreateScannerOptions {
   /** When set, uses the pa11y webservice HTTP API (legacy mode). When omitted, uses direct pa11y npm library. */
@@ -101,6 +104,12 @@ export interface CreateScannerOptions {
   readonly actions?: readonly string[];
   readonly wait?: number;
   readonly onProgress?: ProgressListener;
+  /**
+   * DISCOVERY-PROGRESS-1: live "N pages found so far, in phase X" events while
+   * site-mode discovery runs (sitemap, crawl, browser fallback), throttled to
+   * one per second within a phase. Never called in single-page mode.
+   */
+  readonly onDiscoveryProgress?: DiscoveryProgressListener;
   /** When true, scan only the given URL without discovery/crawling. Default: false. */
   readonly singlePage?: boolean;
   /** Maximum pages to discover and scan. Default: 50. Env override: LUQEN_MAX_PAGES. */
@@ -293,6 +302,7 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
             alsoCrawl: true,
             headers: opts.headers,
             guard: engineGuard,
+            ...(opts.onDiscoveryProgress !== undefined ? { onProgress: opts.onDiscoveryProgress } : {}),
           }, true);
           urls = result.urls;
           wafWarning = result.wafWarning;
