@@ -150,9 +150,10 @@ with "Domain not found". Refused ranges:
 - CGNAT `100.64.0.0/10`, IPv6 unique-local `fc00::/7`
 - IPv4-mapped / NAT64 / 6to4 forms of any of those, multicast and other reserved ranges
 
-Residual, same as discovery: the check resolves the name, then the scanner's
-browser resolves it again, so a DNS-rebinding host with a near-zero TTL can
-still win that race.
+This check resolves the name, and the scanner's browser would otherwise
+resolve it again (a near-zero-TTL rebinding host could win that race). That
+second resolution is closed by the scan egress proxy described below: every
+browser load resolves once in the proxy and connects to the validated address.
 
 **Discovery is guarded too.** Validating the start URL is not enough on its
 own: a public site controls its `robots.txt`, its sitemaps and its redirects.
