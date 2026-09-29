@@ -64,6 +64,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Discovery (sitemap and crawl) now stays within the start URL's origin and
   path prefix; crawled links to other hosts via userinfo, lookalike hosts, or
   other ports are no longer followed.
+- `systemctl stop luqen-dashboard` no longer hangs for systemd's full 90 s
+  stop timeout and ends in SIGKILL. The dashboard had no SIGTERM handler of
+  its own, while puppeteer registers one for every browser it launches (the
+  axe scanner plugin's resident browsers included) that closes the browser
+  but never exits — so the listening HTTP server kept the process alive. The
+  `serve` command now shuts down gracefully on SIGTERM/SIGINT: it stops the
+  HTTP server, deactivates plugins (closing their browsers, without changing
+  their saved status), closes every engine browser still open with its egress
+  proxy, and exits — within a 20 s hard deadline, after which it logs an error
+  and exits 1. Repeated signals are ignored while shutting down.
+- Chromium profile directories no longer accumulate in the temp directory
+  (RAM-backed tmpfs on many hosts). Every browser Luqen launches, Lighthouse
+  included, now gets its own profile under `<tmpdir>/luqen-chrome/`, removed
+  once the browser has exited — on close and after a crash. At startup the
+  dashboard sweeps stale `<tmpdir>/puppeteer_dev_chrome_profile-*` and
+  `<tmpdir>/luqen-chrome/*` directories older than one hour, never one that a
+  running Chromium uses, and deletes nothing if it cannot read the process
+  table. The sweep is the only cleanup for profiles created by plugins that
+  launch puppeteer themselves (the axe scanner plugin).
 
 ### Security
 

@@ -30,11 +30,11 @@ program
       const { createServer } = await import('./server.js');
       const server = await createServer(resolved);
 
-      // Keep the service alive when third-party async code (pa11y/puppeteer
-      // scan interception) leaks an unhandled rejection — log it instead of
-      // letting Node kill the whole dashboard.
+      // Unhandled-rejection guard (pa11y/puppeteer leaks); stale-profile sweep + graceful SIGTERM shutdown.
       const { registerProcessGuards } = await import('./process-guards.js');
       registerProcessGuards(server.log);
+      const { installProcessLifecycle } = await import('./process-lifecycle.js');
+      installProcessLifecycle(server);
 
       await server.listen({ port: resolved.port, host: '0.0.0.0' });
       console.log(`Luqen listening on http://0.0.0.0:${resolved.port}`);
