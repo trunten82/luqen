@@ -8,10 +8,11 @@
  * encoding) -> DNS resolution, rejecting when ANY resolved address is
  * private. Resolution failure is a refusal (fail closed).
  *
- * Residual, documented: the guard resolves, then `fetch` resolves again, so a
- * DNS-rebinding server with a ~0 s TTL can still win the race between the two
- * lookups. Closing it needs connection-time address pinning (an undici
- * dispatcher with a checked `lookup`), which core does not depend on today.
+ * DNS rebinding (SSRF-DNS-PIN-1): {@link resolvePublicTarget} returns the
+ * addresses it validated, and `guardedFetch` pins the connection to exactly
+ * those (pinned-dispatcher.ts), so the fetch never resolves the name a second
+ * time. Browser engines are NOT pinned — Chromium resolves on its own; see the
+ * SSRF section of docs/guides/security-administration.md.
  */
 
 import { lookup } from 'node:dns/promises';
@@ -36,6 +37,18 @@ export interface NetworkGuardPolicy {
   readonly trustedOrigins?: readonly string[];
   /** DNS seam; defaults to `dns.lookup(host, { all: true })`. */
   readonly resolve?: HostResolver;
+  /**
+   * Address-classification seam; defaults to {@link isPrivateIpAddress}. Same
+   * trust level as `resolve` (tests use both to simulate DNS rebinding with
+   * two loopback servers); never wired from operator configuration.
+   */
+  readonly isBlockedAddress?: (address: string) => boolean;
+}
+
+/** A hostname and the addresses the guard validated for it — the pin. */
+export interface PinnedTarget {
+  readonly hostname: string;
+  readonly addresses: readonly string[];
 }
 
 export class SsrfBlockedError extends Error {
@@ -76,29 +89,42 @@ async function resolveAll(hostname: string, resolver: HostResolver, url: string)
 }
 
 /**
- * Throws {@link SsrfBlockedError} unless `url` is an http(s) URL whose host is
- * neither a reserved name, a private IP literal, nor a name resolving to any
- * private address — or the policy explicitly exempts it.
+ * Validates `url` like {@link assertPublicUrl} and returns the hostname with
+ * EVERY address it resolved to — all of them checked — so the caller can pin
+ * the connection to exactly those. Returns `null` when there is nothing to pin:
+ * an IP-literal host (no DNS), or a policy opt-out (`allowPrivate`, a trusted
+ * origin). Throws {@link SsrfBlockedError} on any refusal.
  */
-export async function assertPublicUrl(url: string, policy: NetworkGuardPolicy = {}): Promise<void> {
+export async function resolvePublicTarget(url: string, policy: NetworkGuardPolicy = {}): Promise<PinnedTarget | null> {
   const target = parseTarget(url);
   if (target.protocol !== 'http:' && target.protocol !== 'https:') {
     throw new SsrfBlockedError(url, `protocol ${target.protocol} is not allowed`);
   }
-  if (policy.allowPrivate === true) return;
-  if (policy.trustedOrigins?.includes(target.origin) === true) return;
+  if (policy.allowPrivate === true) return null;
+  if (policy.trustedOrigins?.includes(target.origin) === true) return null;
 
   const hostname = target.hostname.replace(/^\[|\]$/g, '');
   if (isPrivateHostname(hostname)) {
     throw new SsrfBlockedError(url, `host ${target.hostname} is private or reserved`);
   }
-  if (isIpLiteral(hostname)) return;
+  if (isIpLiteral(hostname)) return null;
 
   const addresses = await resolveAll(hostname, policy.resolve ?? defaultResolver, url);
-  const privateAddress = addresses.find((address) => isPrivateIpAddress(address));
+  const isBlocked = policy.isBlockedAddress ?? isPrivateIpAddress;
+  const privateAddress = addresses.find((address) => isBlocked(address));
   if (privateAddress !== undefined) {
     throw new SsrfBlockedError(url, `host ${target.hostname} resolves to private address ${privateAddress}`);
   }
+  return { hostname, addresses: [...addresses] };
+}
+
+/**
+ * Throws {@link SsrfBlockedError} unless `url` is an http(s) URL whose host is
+ * neither a reserved name, a private IP literal, nor a name resolving to any
+ * private address — or the policy explicitly exempts it.
+ */
+export async function assertPublicUrl(url: string, policy: NetworkGuardPolicy = {}): Promise<void> {
+  await resolvePublicTarget(url, policy);
 }
 
 /** Non-throwing form of {@link assertPublicUrl}. */
