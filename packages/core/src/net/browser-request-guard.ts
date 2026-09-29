@@ -14,8 +14,11 @@
  * (file:, ftp:, chrome:, ...) is refused.
  *
  * Residual, measured: WebSocket handshakes (ws:/wss:) are NOT surfaced to
- * request interception by Chromium, so this layer cannot refuse them. See the
- * SSRF section of docs/guides/security-administration.md.
+ * request interception by Chromium, so this layer cannot refuse them. Also
+ * NOT pinned: this check resolves the host, then Chromium resolves it again
+ * on its own, so a DNS-rebinding host can still race it (the Node fetch path
+ * is pinned; see pinned-dispatcher.ts). See the SSRF section of
+ * docs/guides/security-administration.md.
  */
 
 import { isPublicUrl, type NetworkGuardPolicy } from './ssrf-guard.js';
