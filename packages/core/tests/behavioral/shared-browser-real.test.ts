@@ -16,18 +16,25 @@
  * Browser tier — run via `npx vitest run --config vitest.browser.config.ts`.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import type { Page } from 'puppeteer';
 import { createSharedBrowser } from '../../src/browser/shared-browser.js';
-import { liveBrowserCount } from '../../src/browser/launch.js';
+import { launchChromium, liveBrowserCount } from '../../src/browser/launch.js';
 import { DirectScanner } from '../../src/scanner/direct-scanner.js';
 import { runBehavioralChecks } from '../../src/behavioral/index.js';
 import { runA11yTreeChecks } from '../../src/a11y-tree/index.js';
 import { runReflowChecks } from '../../src/reflow/index.js';
 import { runIbmChecks } from '../../src/ibm/index.js';
 import { runLighthouseChecks } from '../../src/lighthouse/index.js';
+
+// Pass-through spy: every Chromium launched by ANY caller (the shared browser
+// or an engine launching its own) is counted, and still really launched.
+vi.mock('../../src/browser/launch.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/browser/launch.js')>();
+  return { ...actual, launchChromium: vi.fn(actual.launchChromium) };
+});
 
 const TEST_TIMEOUT = 180_000;
 const GUARD = { allowPrivate: true } as const;
@@ -145,6 +152,7 @@ describe('DEEP-SCAN-BROWSER-REUSE-1 shared browser — every engine on one launc
     '[one-launch] pa11y, behavioral, lighthouse, ibm, reflow and a11y-tree all complete on ONE browser, closed at the end',
     async () => {
       const before = liveBrowserCount();
+      vi.mocked(launchChromium).mockClear();
       const shared = createSharedBrowser(GUARD);
       const url = `${origin}/`;
       const opts = { guard: GUARD, sharedBrowser: shared, timeout: 60_000 };
@@ -158,6 +166,9 @@ describe('DEEP-SCAN-BROWSER-REUSE-1 shared browser — every engine on one launc
           expect(result.errors, run.name).toEqual([]);
           expect(result.pagesChecked, run.name).toBe(1);
         }
+        // ONE Chromium for all six engines — counted at launchChromium itself,
+        // so an engine that launched its own browser is caught too.
+        expect(launchChromium).toHaveBeenCalledTimes(1);
         expect(shared.launchCount()).toBe(1);
         expect(liveBrowserCount()).toBe(before + 1);
       } finally {
