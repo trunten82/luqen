@@ -81,15 +81,6 @@ jobs:
           npm run build -w packages/branding
           npm run build -w packages/dashboard
 
-      - name: Record restart counters
-        # NRestarts is NOT reset by a manual restart (the dashboard already
-        # carries 1 from the 2026-09-28 OOM kill), so the verify step compares
-        # against these values rather than against zero.
-        run: |
-          for u in luqen-compliance luqen-llm luqen-branding luqen-dashboard; do
-            echo "NR_${u//-/_}=$(systemctl show -p NRestarts --value "$u")" >> "$GITHUB_ENV"
-          done
-
       - name: Restart services
         # Restart every live unit so the freshly-built dist is loaded. Each
         # service is independent; restart compliance/llm/branding before the
@@ -99,10 +90,21 @@ jobs:
           sleep 3
           systemctl is-active luqen-compliance luqen-llm luqen-branding luqen-dashboard
 
+      - name: Record restart counters
+        # Snapshot NRestarts AFTER the deploy's own restart. Taken before it,
+        # the baseline is wrong both ways: `systemctl restart` keeps the
+        # counter, but the dashboard was stopped above and a stop+start resets
+        # it to 0 — Deploy 36580834963 failed on exactly that (3 -> 0) while
+        # the dashboard was healthy.
+        run: |
+          for u in luqen-compliance luqen-llm luqen-branding luqen-dashboard; do
+            echo "NR_${u//-/_}=$(systemctl show -p NRestarts --value "$u")" >> "$GITHUB_ENV"
+          done
+
       - name: Verify the restart window
         # A crash-looping unit can read "active" between restarts, so check
-        # that no unit auto-restarted after the deploy's own restart, and that
-        # the dashboard answers /health from the box itself.
+        # that no unit auto-restarted in the 10 s after the counters were
+        # recorded, and that the dashboard answers /health from the box itself.
         run: |
           sleep 10
           for u in luqen-compliance luqen-llm luqen-branding luqen-dashboard; do
