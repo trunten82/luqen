@@ -99,9 +99,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   ("Domain not found"). Applies to the scan form, the GraphQL `createScan`
   mutation and the `dashboard_scan_page` MCP tool (whose separate
   block-list is removed in favour of the shared predicate). The
-  `allowPrivateScanTargets` opt-out still skips the check. Known residual:
-  the scanner's browser resolves the name again, so a DNS-rebinding host
-  with a near-zero TTL can still race it.
+  `allowPrivateScanTargets` opt-out still skips the check. The residual this
+  check originally left open (the scanner's browser resolves the name again,
+  so a near-zero-TTL rebinding host could race it) is closed by the scan
+  egress proxy entry below, which resolves once and connects to the
+  validated address for every browser load.
 - Scan engines no longer let a scanned page make the server's Chromium
   request private or internal addresses. Discovery was guarded, but every
   engine that then LOADS each page in a real browser — pa11y (htmlcs / axe
