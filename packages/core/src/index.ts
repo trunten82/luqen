@@ -34,7 +34,9 @@ export type {
   ResolvedChromium,
   ChromiumProbe,
 } from './browser/resolve.js';
-export { launchChromium, safeCloseBrowser, CHROMIUM_LAUNCH_ARGS } from './browser/launch.js';
+export { launchChromium, safeCloseBrowser, egressProxyOf, CHROMIUM_LAUNCH_ARGS } from './browser/launch.js';
+export { startEgressProxy, egressProxyArgs, EgressProxyUnavailableError } from './net/egress-proxy.js';
+export type { EgressProxy, EgressProxyOptions, EgressProxyEvent } from './net/egress-proxy.js';
 export { buildAnnotatedPages } from './reporter/html-reporter.js';
 export { computeContentHash, computeContentHashes } from './scanner/content-hash.js';
 export { runBehavioralChecks } from './behavioral/index.js';
