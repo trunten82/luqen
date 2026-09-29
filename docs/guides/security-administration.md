@@ -135,12 +135,24 @@ Plugin configuration secrets (API keys, OAuth client secrets, SMTP passwords) ar
 
 ### SSRF protection
 
-Scan target URLs are validated before being submitted to the pa11y webservice. Private and internal IP ranges are blocked to prevent the scanner from being used as a proxy to reach internal services:
+Scan start URLs are validated before a scan is created — on the scan form,
+the REST/GraphQL `createScan` paths, and the agent `dashboard_scan_page` MCP
+tool. The check uses the same `@luqen/core` predicate as discovery (below):
+the hostname is refused when it is a private or reserved literal in any
+spelling, AND when it **resolves** (DNS, all A/AAAA records) to any private
+address — so a public name pointed at `127.0.0.1` or a LAN address is refused
+before pa11y ever loads it. A start URL whose host does not resolve is refused
+with "Domain not found". Refused ranges:
 
 - RFC 1918 private addresses (10.x, 172.16-31.x, 192.168.x)
-- Loopback (127.x)
-- Link-local (169.254.x)
-- Other reserved ranges
+- Loopback (127.x, `::1`) and `0.0.0.0/8`
+- Link-local (169.254.x, including the `169.254.169.254` metadata address; `fe80::/10`)
+- CGNAT `100.64.0.0/10`, IPv6 unique-local `fc00::/7`
+- IPv4-mapped / NAT64 / 6to4 forms of any of those, multicast and other reserved ranges
+
+Residual, same as discovery: the check resolves the name, then the scanner's
+browser resolves it again, so a DNS-rebinding host with a near-zero TTL can
+still win that race.
 
 **Discovery is guarded too.** Validating the start URL is not enough on its
 own: a public site controls its `robots.txt`, its sitemaps and its redirects.
