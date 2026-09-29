@@ -6,84 +6,30 @@
  * creating a scan record or triggering any background job.
  *
  * Security:
- *   T-80-05: SSRF protection — agent-supplied URLs are validated with
- *   `isPrivateHostname` before the scanner is invoked. Private/loopback
- *   hosts are rejected with errorEnvelope (isError:true).
+ *   T-80-05: SSRF protection — agent-supplied URLs go through the shared
+ *   `validateScanUrl` (protocol allowlist + private-literal check + DNS
+ *   resolution, all delegated to @luqen/core's SSRF predicate) before the
+ *   scanner is invoked. Private/loopback/unresolvable hosts are rejected with
+ *   errorEnvelope (isError:true). The dashboard's `allowPrivateScanTargets`
+ *   opt-out is deliberately NOT honoured here.
  *
  * Non-destructive (D-09): no write path, no scan record created.
  * Tool is annotated read-only.
  */
 
 import { z } from 'zod';
-import net from 'node:net';
-import { promises as dns } from 'node:dns';
 import { getCurrentToolContext } from '@luqen/core/mcp';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { DirectScanner } from '@luqen/core';
+import type { DirectScanner, HostResolver } from '@luqen/core';
 import { validateScanUrl } from '../../services/scan-service.js';
-
-/**
- * SSRF egress block-list (T-80-05). Built from `node:net` BlockList — no new
- * dependency. Covers IPv4 + IPv6 loopback, private, link-local, CGNAT,
- * multicast, and reserved ranges. The agent scan tool accepts an arbitrary
- * caller-supplied URL, so the string-only `isPrivateHostname` check is not
- * enough — we DNS-resolve the host and reject if ANY resolved address falls in
- * a blocked range. Resolution also normalises IPv4 alternate encodings
- * (decimal/octal/hex hostnames resolve to their dotted form) and rejects
- * check-time DNS-rebinding to a private IP.
- */
-const SSRF_BLOCK = new net.BlockList();
-SSRF_BLOCK.addSubnet('0.0.0.0', 8);
-SSRF_BLOCK.addSubnet('10.0.0.0', 8);
-SSRF_BLOCK.addSubnet('100.64.0.0', 10); // CGNAT
-SSRF_BLOCK.addSubnet('127.0.0.0', 8);
-SSRF_BLOCK.addSubnet('169.254.0.0', 16); // link-local incl. cloud metadata 169.254.169.254
-SSRF_BLOCK.addSubnet('172.16.0.0', 12);
-SSRF_BLOCK.addSubnet('192.0.0.0', 24);
-SSRF_BLOCK.addSubnet('192.168.0.0', 16);
-SSRF_BLOCK.addSubnet('198.18.0.0', 15);
-SSRF_BLOCK.addSubnet('224.0.0.0', 4); // multicast
-SSRF_BLOCK.addSubnet('240.0.0.0', 4); // reserved
-SSRF_BLOCK.addSubnet('::1', 128, 'ipv6');
-SSRF_BLOCK.addSubnet('::', 128, 'ipv6');
-SSRF_BLOCK.addSubnet('fc00::', 7, 'ipv6'); // unique-local
-SSRF_BLOCK.addSubnet('fe80::', 10, 'ipv6'); // link-local
-SSRF_BLOCK.addSubnet('ff00::', 8, 'ipv6'); // multicast
-
-/**
- * Resolve `hostname` and return true only if EVERY resolved address is public.
- * Rejects on resolution failure (can't prove it's public → don't scan).
- */
-async function resolvesToPublicOnly(hostname: string): Promise<boolean> {
-  let addrs: Array<{ address: string; family: number }>;
-  try {
-    addrs = await dns.lookup(hostname, { all: true, verbatim: true });
-  } catch {
-    return false;
-  }
-  if (addrs.length === 0) {
-    return false;
-  }
-  for (const a of addrs) {
-    let addr = a.address;
-    let fam: 'ipv4' | 'ipv6' = a.family === 6 ? 'ipv6' : 'ipv4';
-    // Unwrap IPv4-mapped IPv6 (::ffff:a.b.c.d) so it's range-checked as IPv4.
-    if (fam === 'ipv6' && addr.toLowerCase().startsWith('::ffff:') && net.isIPv4(addr.slice(7))) {
-      addr = addr.slice(7);
-      fam = 'ipv4';
-    }
-    if (!net.isIP(addr) || SSRF_BLOCK.check(addr, fam)) {
-      return false;
-    }
-  }
-  return true;
-}
 
 export const SCAN_TOOL_NAMES = ['dashboard_scan_page'] as const;
 
 export interface RegisterScanToolsOptions {
   /** DirectScanner instance (or stub in tests) injected at registration time. */
   readonly scanner: DirectScanner;
+  /** DNS seam for the URL SSRF check (tests inject it); defaults to the system resolver. */
+  readonly resolveHost?: HostResolver;
 }
 
 // ── Shared helpers (copied verbatim from compliance.ts lines 62-83) ──────────
@@ -117,7 +63,7 @@ export function registerScanTools(
   server: McpServer,
   opts: RegisterScanToolsOptions,
 ): void {
-  const { scanner } = opts;
+  const { scanner, resolveHost } = opts;
 
   // ---- dashboard_scan_page ----
   server.registerTool(
@@ -162,23 +108,15 @@ export function registerScanTools(
         return errorEnvelope('Either "url" or "html" must be supplied.');
       }
 
-      // SSRF protection (T-80-05). Layered:
-      //  1. validateScanUrl — protocol allowlist (http/https only) + the
-      //     platform's string-based private-host check (fast reject).
-      //  2. resolvesToPublicOnly — DNS-resolve and reject if any resolved IP is
-      //     private/reserved (catches IPv4 alt-encodings, IPv6 ranges, and
-      //     check-time DNS rebinding that the string check misses).
+      // SSRF protection (T-80-05, START-URL-DNS-1): validateScanUrl applies the
+      // protocol allowlist, refuses private literals in any encoding, and
+      // DNS-resolves the host, refusing if ANY resolved address is private or
+      // the name does not resolve. allowPrivate is hard-wired false for agents.
       if (url !== undefined) {
-        const validated = validateScanUrl(url, false);
+        const validated = await validateScanUrl(url, false, resolveHost);
         if ('error' in validated) {
           return errorEnvelope(
             `${validated.error} Provide a publicly accessible http(s) URL.`,
-          );
-        }
-        if (!(await resolvesToPublicOnly(validated.url.hostname))) {
-          return errorEnvelope(
-            'Scanning internal, private, or unresolvable addresses is not allowed. ' +
-            'Provide a publicly accessible URL.',
           );
         }
       }
@@ -188,7 +126,7 @@ export function registerScanTools(
       // rendered in Chromium can request internal subresources (img/src,
       // link/href, style url(), etc.). Fully closing this needs request
       // interception INSIDE the shared @luqen/core scanner (re-validate every
-      // navigation/subresource host against SSRF_BLOCK, or launch with network
+      // navigation/subresource host against the core SSRF predicate, or launch with network
       // egress disabled) — a scanner-level change tracked separately. The tool
       // is gated by mcp.use + scans.create (authenticated org members only),
       // which bounds exposure until that lands.
