@@ -64,6 +64,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   hashing it would mark every page "unchanged" and skip it forever. Every
   page is scanned and no page hash is written for that run; clean sites are
   unaffected.
+- A deep scan now runs every browser engine (pa11y htmlcs/axe, behavioral
+  and vision, Lighthouse, IBM, reflow, a11y-tree) on ONE shared Chromium per
+  scan instead of launching a fresh browser per engine per page. Each engine
+  run gets its own fresh browser context, so cookies, storage, permissions
+  and emulation cannot leak between engines; the browser keeps the same
+  egress proxy, request guard and removable profile dir, is relaunched if it
+  crashes, and is closed when the scan ends (also on error). Findings are
+  unchanged: per-engine issue identity sets matched the per-engine-launch
+  baseline exactly on a fixture site and a public page. Lighthouse drives the
+  shared browser through its page argument instead of chrome-launcher.
 
 ### Fixed
 

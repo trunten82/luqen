@@ -34,6 +34,7 @@ import { runReflowChecks } from '../../src/reflow/index.js';
 import { runIbmChecks } from '../../src/ibm/index.js';
 import { runLighthouseChecks } from '../../src/lighthouse/index.js';
 import { browserCrawlSite } from '../../src/discovery/browser-crawler.js';
+import { createSharedBrowser, type SharedBrowser } from '../../src/browser/shared-browser.js';
 
 const TEST_TIMEOUT = 150_000;
 /** Attempts for the guarded WebSocket test when the worker fails to report in (see that test). */
@@ -253,7 +254,50 @@ const ENGINES: ReadonlyArray<readonly [string, EngineRun, boolean]> = [
   }, false],
 ];
 
-describe.each(ENGINES)('SCAN-EGRESS-PROXY-1 %s — WebSocket', (_name, run) => {
+/**
+ * DEEP-SCAN-BROWSER-REUSE-1: the same engines on a lease from a per-scan
+ * SHARED browser (fresh context per run) — the egress proxy and the page
+ * guard must hold exactly as on an engine's own browser.
+ */
+async function onShared<T>(
+  guard: NetworkGuardPolicy,
+  args: readonly string[] | undefined,
+  fn: (sharedBrowser: SharedBrowser) => Promise<T>,
+): Promise<T> {
+  const shared = createSharedBrowser(guard, args ? { launchOverrides: launchConfig(args) } : {});
+  try {
+    const result = await fn(shared);
+    expect(shared.launchCount()).toBe(1);
+    return result;
+  } finally {
+    await shared.close();
+  }
+}
+
+const SHARED_ENGINES: ReadonlyArray<readonly [string, EngineRun, boolean]> = [
+  ['pa11y (DirectScanner, shared)', (url, guard, args) => onShared(guard, args, async (sharedBrowser) => {
+    try {
+      await new DirectScanner({ guard }).scan(url, { standard: 'WCAG2AA', timeout: 30_000, sharedBrowser });
+      return { completed: true };
+    } catch (err) {
+      return { completed: false, error: String(err) };
+    }
+  }), true],
+  ['behavioral (shared)', (url, guard, args) => onShared(guard, args, async (sharedBrowser) =>
+    fromResult(await runBehavioralChecks(url, { guard, timeout: 30_000, sharedBrowser }))), true],
+  ['a11y-tree (shared)', (url, guard, args) => onShared(guard, args, async (sharedBrowser) =>
+    fromResult(await runA11yTreeChecks(url, { guard, timeout: 30_000, sharedBrowser }))), true],
+  ['reflow (shared)', (url, guard, args) => onShared(guard, args, async (sharedBrowser) =>
+    fromResult(await runReflowChecks(url, { guard, timeout: 30_000, sharedBrowser }))), true],
+  ['ibm (shared)', (url, guard, args) => onShared(guard, args, async (sharedBrowser) =>
+    fromResult(await runIbmChecks(url, { guard, timeout: 60_000, sharedBrowser }))), true],
+  ['lighthouse (shared)', (url, guard, args) => onShared(guard, args, async (sharedBrowser) =>
+    fromResult(await runLighthouseChecks(url, { guard, timeout: 60_000, sharedBrowser }))), true],
+];
+
+const ALL_ENGINES = [...ENGINES, ...SHARED_ENGINES];
+
+describe.each(ALL_ENGINES)('SCAN-EGRESS-PROXY-1 %s — WebSocket', (_name, run) => {
   it(
     '[guarded] ws:// and wss:// from the page and from a dedicated worker never reach the victim',
     async () => {
@@ -310,7 +354,7 @@ function rebindGuard(extra: Partial<NetworkGuardPolicy> = {}): NetworkGuardPolic
 /** Chromium's OWN resolution of rebind.test answers the victim: the rebind. */
 const BROWSER_REBINDS = [`--host-resolver-rules=MAP rebind.test ${VICTIM_IP}`];
 
-describe.each(ENGINES.filter(([, , takesArgs]) => takesArgs))('SCAN-EGRESS-PROXY-1 %s — DNS rebinding', (_name, run) => {
+describe.each(ALL_ENGINES.filter(([, , takesArgs]) => takesArgs))('SCAN-EGRESS-PROXY-1 %s — DNS rebinding', (_name, run) => {
   it(
     '[rebinding] a subresource on a rebinding host reaches the validated public address, never the victim',
     async () => {

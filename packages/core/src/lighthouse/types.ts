@@ -14,12 +14,19 @@
 
 import type { Issue } from '../types.js';
 import type { NetworkGuardPolicy } from '../net/ssrf-guard.js';
+import type { SharedBrowser } from '../browser/shared-browser.js';
 
 export interface LighthouseOptions {
   /** Navigation/run timeout in ms (default 60000). Lighthouse is heavier than pa11y. */
   readonly timeout?: number;
   /** Extra HTTP headers to send with the page request. */
   readonly headers?: Record<string, string>;
+  /**
+   * DEEP-SCAN-BROWSER-REUSE-1: when set, run on a lease from this per-scan
+   * shared browser (a fresh isolated context + page) instead of launching an
+   * own browser. `chromeLaunchConfig` is then ignored.
+   */
+  readonly sharedBrowser?: SharedBrowser;
   /** Extra chrome-launcher config, merged over the defaults. */
   readonly chromeLaunchConfig?: Record<string, unknown>;
   /**

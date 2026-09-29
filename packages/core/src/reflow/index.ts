@@ -24,8 +24,8 @@
  * (CHROMIUM-RESOLVE-1) — no local copy of the discovery strategy.
  */
 
-import type { Browser, Page } from 'puppeteer';
-import { launchChromium, safeCloseBrowser } from '../browser/launch.js';
+import type { Page } from 'puppeteer';
+import { openEnginePage, type EnginePage } from '../browser/shared-browser.js';
 import { guardPageRequests } from '../net/browser-request-guard.js';
 import type { ReflowOptions, ReflowResult } from './types.js';
 import { mapReflowObservations, type ReflowObservation } from './map.js';
@@ -180,11 +180,11 @@ export async function runReflowChecks(
   url: string,
   opts: ReflowOptions = {},
 ): Promise<ReflowResult> {
-  let browser: Browser | undefined;
+  let engine: EnginePage | undefined;
   try {
     const timeout = opts.timeout ?? DEFAULT_TIMEOUT;
-    browser = await launchChromium({ ...opts.chromeLaunchConfig, guard: opts.guard ?? {} }); // SCAN-EGRESS-PROXY-1
-    const page: Page = await browser.newPage();
+    engine = await openEnginePage(opts); // SCAN-EGRESS-PROXY-1 / DEEP-SCAN-BROWSER-REUSE-1
+    const page: Page = engine.page;
     await guardPageRequests(page, opts.guard ?? {}); // ENGINE-SSRF-1
     if (opts.headers && Object.keys(opts.headers).length > 0) {
       await page.setExtraHTTPHeaders({ ...opts.headers });
@@ -210,7 +210,7 @@ export async function runReflowChecks(
       errors: [{ url, message: toMessage(err) }],
     };
   } finally {
-    await safeCloseBrowser(browser);
+    await engine?.dispose();
   }
 }
 

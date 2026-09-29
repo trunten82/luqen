@@ -201,8 +201,18 @@ results (it is not an error for the scan as a whole). Covered engines and how:
 | Accessibility tree | Guard on the page before `goto`. |
 | Reflow / zoom 400% | Guard on the page before `goto`. |
 | IBM Equal Access | Guard on the page Luqen hands `getCompliance`. |
-| Lighthouse | Puppeteer attaches to the chrome-launcher instance, guards a page, and passes it as Lighthouse's documented `page` argument. |
+| Lighthouse | In a deep scan, a guarded page leased from the scan's shared browser is passed as Lighthouse's documented `page` argument. Called on its own, Puppeteer attaches to a chrome-launcher instance, guards a page, and passes it the same way. |
 | Browser discovery fallback | Unchanged (the same guard, now in `@luqen/core`'s `net/browser-request-guard`). |
+
+**One shared browser per deep scan.** A deep scan launches ONE Chromium
+(through `launchChromium`, so with the egress proxy below and its own
+profile dir) and every engine above runs on a lease from it: a fresh browser
+context with one new page, guarded as in the table, closed when the engine
+finishes. Contexts do not share cookies, storage, permissions or emulation,
+so no engine sees state another engine's page load left behind. A crashed
+browser is relaunched for the next engine; the browser is closed when the
+scan ends, also on error. Engines called outside a deep scan still launch
+their own browser.
 
 **Every scan and discovery Chromium goes through a filtering egress proxy
 (WebSockets and browser DNS rebinding).** Request interception has two
