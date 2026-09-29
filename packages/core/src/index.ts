@@ -34,7 +34,16 @@ export type {
   ResolvedChromium,
   ChromiumProbe,
 } from './browser/resolve.js';
-export { launchChromium, safeCloseBrowser, egressProxyOf, CHROMIUM_LAUNCH_ARGS } from './browser/launch.js';
+export {
+  launchChromium,
+  safeCloseBrowser,
+  egressProxyOf,
+  closeAllBrowsers,
+  liveBrowserCount,
+  CHROMIUM_LAUNCH_ARGS,
+} from './browser/launch.js';
+export { sweepStaleChromeProfiles, defaultProfileRoot } from './browser/profile-dir.js';
+export type { SweepOptions, SweepResult } from './browser/profile-dir.js';
 export { startEgressProxy, egressProxyArgs, EgressProxyUnavailableError } from './net/egress-proxy.js';
 export type { EgressProxy, EgressProxyOptions, EgressProxyEvent } from './net/egress-proxy.js';
 export { buildAnnotatedPages } from './reporter/html-reporter.js';
