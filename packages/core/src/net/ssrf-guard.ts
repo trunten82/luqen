@@ -11,8 +11,8 @@
  * DNS rebinding (SSRF-DNS-PIN-1): {@link resolvePublicTarget} returns the
  * addresses it validated, and `guardedFetch` pins the connection to exactly
  * those (pinned-dispatcher.ts), so the fetch never resolves the name a second
- * time. Browser engines are NOT pinned — Chromium resolves on its own; see the
- * SSRF section of docs/guides/security-administration.md.
+ * time. Browser engines are pinned by the egress proxy (egress-proxy.ts),
+ * which resolves through this module and connects to the validated address.
  */
 
 import { lookup } from 'node:dns/promises';

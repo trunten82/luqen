@@ -76,11 +76,13 @@ export class DirectScanner {
     // A ChromiumNotFoundError propagates here, before pa11y ever runs.
     const { executablePath } = await resolveChromium();
 
-    const browser = await launchChromium({ executablePath });
+    const guard = options.guard ?? this.guard;
+    // SCAN-EGRESS-PROXY-1: the browser's egress proxy enforces the same guard.
+    const browser = await launchChromium({ executablePath, guard });
     let result: Awaited<ReturnType<typeof pa11y>>;
     try {
       const page = await browser.newPage();
-      await guardPageRequests(page, options.guard ?? this.guard, {
+      await guardPageRequests(page, guard, {
         firstRequestHeaders: options.headers ?? {},
       });
       result = await pa11y(url, {

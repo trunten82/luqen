@@ -151,7 +151,8 @@ describe('DirectScanner', () => {
 
     await scanner.scan('https://example.com', { standard: 'WCAG2AA' });
 
-    expect(mockLaunchChromium).toHaveBeenCalledWith({ executablePath: '/fake/chrome' });
+    // SCAN-EGRESS-PROXY-1: the launch carries the guard its egress proxy enforces.
+    expect(mockLaunchChromium).toHaveBeenCalledWith({ executablePath: '/fake/chrome', guard: {} });
     const callArgs = pa11yFn.mock.calls[0];
     expect(callArgs[1].browser).toBe(fakeBrowser);
     expect(callArgs[1].page).toBe(fakePage);
@@ -174,6 +175,8 @@ describe('DirectScanner', () => {
     fakePage.handlers.length = 0;
     await new DirectScanner({ guard: { allowPrivate: true } }).scan('https://example.com', { standard: 'WCAG2AA', guard: {} });
     expect((await dispatch('http://127.0.0.1:8080/')).action).toBe('abort');
+    // The egress proxy gets the SAME effective guard as the page interception.
+    expect(mockLaunchChromium.mock.calls.map((call) => (call[0] as { guard: unknown }).guard)).toEqual([{ allowPrivate: true }, {}]);
   });
 
   it('ES3: headers go to the FIRST request only (pa11y parity), never through pa11y\'s own interceptor', async () => {

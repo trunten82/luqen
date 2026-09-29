@@ -84,7 +84,7 @@ export { isBrowserRequestAllowed, handleInterceptedRequest } from '../net/browse
 
 /** Default launcher: launches a real Chromium through the shared resolver and adapts it. */
 async function defaultLaunch(guard: NetworkGuardPolicy): Promise<DiscoveryBrowser> {
-  const browser = await launchChromium();
+  const browser = await launchChromium({ guard }); // SCAN-EGRESS-PROXY-1
   return {
     async newPage() {
       const page = await browser.newPage();

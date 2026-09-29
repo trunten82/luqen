@@ -13,12 +13,12 @@
  * allowed; http(s) goes through {@link isPublicUrl}; every other scheme
  * (file:, ftp:, chrome:, ...) is refused.
  *
- * Residual, measured: WebSocket handshakes (ws:/wss:) are NOT surfaced to
- * request interception by Chromium, so this layer cannot refuse them. Also
- * NOT pinned: this check resolves the host, then Chromium resolves it again
- * on its own, so a DNS-rebinding host can still race it (the Node fetch path
- * is pinned; see pinned-dispatcher.ts). See the SSRF section of
- * docs/guides/security-administration.md.
+ * This layer cannot see WebSocket handshakes (ws:/wss: are NOT surfaced to
+ * request interception by Chromium, measured) nor the address Chromium
+ * connects to (Chromium resolves hosts itself). Both are closed one layer
+ * down by the per-browser egress proxy (egress-proxy.ts, SCAN-EGRESS-PROXY-1),
+ * which every launch goes through; this guard stays as the second layer. See
+ * the SSRF section of docs/guides/security-administration.md.
  */
 
 import { isPublicUrl, type NetworkGuardPolicy } from './ssrf-guard.js';

@@ -23,7 +23,7 @@ export async function withBrowser<T>(
 ): Promise<T> {
   let browser: Browser | undefined;
   try {
-    browser = await launchChromium(opts.chromeLaunchConfig);
+    browser = await launchChromium({ ...opts.chromeLaunchConfig, guard: opts.guard ?? {} }); // SCAN-EGRESS-PROXY-1
     return await fn(browser);
   } finally {
     await safeCloseBrowser(browser);
