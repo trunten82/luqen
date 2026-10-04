@@ -619,6 +619,75 @@ describe('Export API routes', () => {
     });
   });
 
+  // Template-deduplicated issues must still appear in the Excel grid.
+  // normalizeReportData moves any issue repeated on 3+ pages out of
+  // page.issues into templateIssues; the workbook used to iterate only
+  // page.issues, so a 50-page scan exported 131 rows against a PDF
+  // TOTAL ISSUES of 435 (the 304 missing rows were all template issues).
+  describe('issues.xlsx counts every occurrence, including template issues', () => {
+    const shared = {
+      type: 'error',
+      code: 'WCAG2AA.Principle1.Guideline1_1.1_1_1.H37',
+      message: 'Image missing alt text',
+      selector: 'header img.logo',
+      context: '<img src="logo.png" class="logo">',
+    };
+    const unique = {
+      type: 'warning',
+      code: 'WCAG2AA.Principle1.Guideline1_3.1_3_1.H48',
+      message: 'Navigation not in a list',
+      selector: 'nav.side',
+      context: '<nav class="side"></nav>',
+    };
+    const urls = ['https://example.com/', 'https://example.com/a', 'https://example.com/b'];
+    const fullPages = urls.map((url, i) => ({
+      url,
+      issueCount: i === 0 ? 2 : 1,
+      issues: i === 0 ? [shared, unique] : [shared],
+    }));
+
+    async function exportRows(report: Record<string, unknown>) {
+      const id = await makeCompletedScan(ctx, 'https://example.com');
+      await ctx.storage.scans.updateScan(id, { jsonReport: JSON.stringify(report) });
+      const response = await ctx.server.inject({
+        method: 'GET',
+        url: `/api/v1/export/scans/${id}/issues.xlsx`,
+      });
+      expect(response.statusCode).toBe(200);
+      return parseXlsxResponse(response.rawPayload);
+    }
+
+    it('dashboard-dedup path: one row per occurrence, template rows flagged', async () => {
+      const { headers, rows } = await exportRows({ pages: fullPages });
+      expect(rows).toHaveLength(4);
+      const pageCol = headers.indexOf('Page URL');
+      const tmplCol = headers.indexOf('Template Issue');
+      const affCol = headers.indexOf('Affected Pages');
+      expect(tmplCol).toBeGreaterThan(-1);
+      const templateRows = rows.filter((r) => r[tmplCol] === 'Yes');
+      expect(templateRows.map((r) => r[pageCol]).sort()).toEqual([...urls].sort());
+      expect(templateRows.every((r) => r[affCol] === '3/3')).toBe(true);
+      expect(rows.filter((r) => r[tmplCol] !== 'Yes')).toHaveLength(1);
+    });
+
+    it('core-reporter path (templateIssues + unstripped pages): no double count', async () => {
+      const { rows } = await exportRows({
+        pages: fullPages,
+        templateIssues: [{ ...shared, affectedPages: urls, affectedCount: 3 }],
+      });
+      expect(rows).toHaveLength(4);
+    });
+
+    it('core-reporter path with stripped pages: template occurrences restored', async () => {
+      const stripped = fullPages.map((p) => ({ ...p, issues: p.issues.filter((i) => i !== shared) }));
+      const { rows } = await exportRows({
+        pages: stripped,
+        templateIssues: [{ ...shared, affectedPages: urls, affectedCount: 3 }],
+      });
+      expect(rows).toHaveLength(4);
+    });
+  });
+
   // ── GET /api/v1/export/scans/:id/issues.csv — removed (CSV retired) ────
 
   describe('legacy CSV endpoints are removed', () => {
