@@ -18,6 +18,7 @@ import {
   resolveLocale,
 } from '../../services/vpat-share-service.js';
 import { ErrorEnvelope } from '../../api/schemas/envelope.js';
+import { flattenIssueOccurrences } from '../../services/issue-occurrences.js';
 
 // Export endpoints stream binary buffers — schemas declare a string body and
 // the correct `produces` content-type so the OpenAPI spec accurately reflects
@@ -278,19 +279,18 @@ export async function exportRoutes(
       // issues (includes WCAG metadata, regulation annotations, etc.)
       const normalized = normalizeReportData(raw as JsonReportFile, scan);
 
-      // Flatten all pages into rows (enriched pages have regulations attached)
+      // One row per issue OCCURRENCE, template-deduplicated ones included —
+      // otherwise the row count falls short of the PDF's TOTAL ISSUES by
+      // every occurrence normalizeReportData lifted into templateIssues.
       const pages = normalized.pages;
+      const occurrences = flattenIssueOccurrences(pages, normalized.templateIssues);
 
-      // Build page occurrence counts per issue code for "Affected Pages" column
-      const issuePageCounts = new Map<string, number>();
-      for (const page of pages) {
-        const codesOnPage = new Set<string>();
-        for (const issue of page.issues) {
-          codesOnPage.add(issue.code);
-        }
-        for (const code of codesOnPage) {
-          issuePageCounts.set(code, (issuePageCounts.get(code) ?? 0) + 1);
-        }
+      // Distinct pages per issue code for the "Affected Pages" column
+      const pagesByCode = new Map<string, Set<string>>();
+      for (const { pageUrl, issue } of occurrences) {
+        const set = pagesByCode.get(issue.code) ?? new Set<string>();
+        set.add(pageUrl);
+        pagesByCode.set(issue.code, set);
       }
       const totalPages = pages.length;
 
@@ -308,53 +308,53 @@ export async function exportRoutes(
         'Regulations',
         'Component',
         'Code',
+        'Template Issue',
       ];
 
       const rows: string[][] = [];
 
-      for (const page of pages) {
-        for (const issue of page.issues) {
-          const criterion = issue.wcagCriterion ?? extractCriterion(issue.code);
-          const wcag = criterion ? getWcagDescription(criterion) : null;
-          const title = issue.wcagTitle ?? wcag?.title ?? '';
+      for (const { pageUrl, issue, isTemplate } of occurrences) {
+        const criterion = issue.wcagCriterion ?? extractCriterion(issue.code);
+        const wcag = criterion ? getWcagDescription(criterion) : null;
+        const title = issue.wcagTitle ?? wcag?.title ?? '';
 
-          // Regulations from enriched issue (normalizeReportData merges annotations)
-          const regs = issue.regulations ?? [];
-          const regNames = regs.map((r) => r.shortName).join('; ');
+        // Regulations from enriched issue (normalizeReportData merges annotations)
+        const regs = issue.regulations ?? [];
+        const regNames = regs.map((r) => r.shortName).join('; ');
 
-          // Infer component from selector + context
-          const component = inferComponentForExport(issue.selector, issue.context);
+        // Infer component from selector + context
+        const component = inferComponentForExport(issue.selector ?? '', issue.context ?? '');
 
-          // Affected pages count for this issue code
-          const affectedPages = issuePageCounts.get(issue.code) ?? 1;
+        // Affected pages count for this issue code
+        const affectedPages = pagesByCode.get(issue.code)?.size ?? 1;
 
-          // Priority: regulatory errors first, then by severity and spread
-          const severityScore = issue.type === 'error' ? 3 : issue.type === 'warning' ? 2 : 1;
-          const regulatoryScore = regs.length > 0 ? 2 : 0;
-          const spreadScore = affectedPages >= totalPages * 0.5 ? 1 : 0;
-          const priorityNum = severityScore + regulatoryScore + spreadScore;
-          const priority = priorityNum >= 5 ? 'Critical' : priorityNum >= 4 ? 'High' : priorityNum >= 3 ? 'Medium' : 'Low';
+        // Priority: regulatory errors first, then by severity and spread
+        const severityScore = issue.type === 'error' ? 3 : issue.type === 'warning' ? 2 : 1;
+        const regulatoryScore = regs.length > 0 ? 2 : 0;
+        const spreadScore = affectedPages >= totalPages * 0.5 ? 1 : 0;
+        const priorityNum = severityScore + regulatoryScore + spreadScore;
+        const priority = priorityNum >= 5 ? 'Critical' : priorityNum >= 4 ? 'High' : priorityNum >= 3 ? 'Medium' : 'Low';
 
-          // Suggested fix from fix engine or generate from WCAG reference
-          const fixSuggestion = (issue as Record<string, unknown>).fixSuggestion as string | undefined
-            ?? (wcag ? `Refer to WCAG ${criterion}: ${wcag.title} — ${wcag.url ?? ''}` : '');
+        // Suggested fix from fix engine or generate from WCAG reference
+        const fixSuggestion = (issue as Record<string, unknown>).fixSuggestion as string | undefined
+          ?? (wcag ? `Refer to WCAG ${criterion}: ${wcag.title} — ${wcag.url ?? ''}` : '');
 
-          rows.push([
-            issue.type,
-            priority,
-            criterion ?? '',
-            title,
-            issue.message,
-            fixSuggestion,
-            issue.selector,
-            (issue.context ?? '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, 200),
-            page.url,
-            `${affectedPages}/${totalPages}`,
-            regNames,
-            component,
-            issue.code,
-          ]);
-        }
+        rows.push([
+          issue.type,
+          priority,
+          criterion ?? '',
+          title,
+          issue.message,
+          fixSuggestion,
+          issue.selector ?? '',
+          (issue.context ?? '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, 200),
+          pageUrl,
+          `${affectedPages}/${totalPages}`,
+          regNames,
+          component,
+          issue.code,
+          isTemplate ? 'Yes' : '',
+        ]);
       }
 
       const filename = `luqen-issues-${siteSlug(scan.siteUrl)}-${todayStamp()}`;
@@ -372,7 +372,7 @@ export async function exportRoutes(
       ws.columns = headers.map((h, i) => ({
         header: h,
         key: `col${i}`,
-        width: [8, 8, 10, 20, 40, 40, 30, 30, 40, 10, 20, 15, 30][i] ?? 20,
+        width: [8, 8, 10, 20, 40, 40, 30, 30, 40, 10, 20, 15, 30, 10][i] ?? 20,
       }));
       const headerRow = ws.getRow(1);
       headerRow.font = { bold: true, size: 10 };

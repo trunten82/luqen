@@ -77,6 +77,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- The issues Excel export (`issues.xlsx`) now has one row per issue
+  occurrence, so its row count matches the PDF and report page TOTAL ISSUES.
+  It used to omit every occurrence of an issue repeated on 3+ pages (the
+  "template" issues the PDF groups under Template Fixes) — on a 50-page scan
+  that was 304 of 435 issues. Those rows now appear once per affected page,
+  flagged by a new `Template Issue` column, and `Affected Pages` counts them.
 - Full-site scans blocked by bot protection are now marked on the scan record
   and flagged on the progress and report pages instead of reading as a
   complete 1-page site.

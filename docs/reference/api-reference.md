@@ -844,18 +844,18 @@ curl -H "X-API-Key: $LUQEN_API_KEY" \
 
 **Columns:** `id`, `siteUrl`, `scanMode`, `status`, `standard`, `pagesScanned`, `totalIssues`, `errors`, `warnings`, `notices`, `createdAt`, `completedAt`
 
-### `GET /api/v1/export/scans/:id/issues.csv`
+### `GET /api/v1/export/scans/:id/issues.xlsx`
 
-Download an Excel (XLSX) workbook of all issues for a specific scan. The URL retains the `.csv` suffix for backwards compatibility, but the response is an Excel file (`Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`).
-
-**Query parameters:** `severity`, `criterion` (same as the issues endpoint).
+Download an Excel (XLSX) workbook of all issues for a specific scan (`Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`). No query parameters. The legacy `.csv` URL is removed.
 
 ```bash
-curl -H "X-API-Key: $LUQEN_API_KEY" \
-  "http://localhost:5000/api/v1/export/scans/abc123/issues.csv" -o issues.xlsx
+curl -H "Authorization: Bearer $LUQEN_API_KEY" \
+  "http://localhost:5000/api/v1/export/scans/abc123/issues.xlsx" -o issues.xlsx
 ```
 
-**Columns:** `code`, `type`, `message`, `selector`, `context`, `wcagCriterion`, `wcagTitle`, `pageUrl`, `regulations`
+**Rows:** one per issue occurrence, so the row count equals the report's and PDF's TOTAL ISSUES. Issues repeated on 3+ pages (shown once under "Template Fixes" in the PDF and report page) appear once per affected page, with `Template Issue` = `Yes`.
+
+**Columns:** `Severity`, `Priority`, `WCAG Criterion`, `WCAG Title`, `Message`, `Suggested Fix`, `Selector`, `Context`, `Page URL`, `Affected Pages`, `Regulations`, `Component`, `Code`, `Template Issue`
 
 ### `GET /api/v1/export/trends.csv`
 

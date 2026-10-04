@@ -390,13 +390,13 @@ Three export endpoints are available (requires `X-API-Key` header):
 | Endpoint | Format | Description |
 |----------|--------|-------------|
 | `GET /api/v1/export/scans.csv` | CSV | Scans list (supports `siteUrl`, `from`, `to`, `limit`, `offset` filters) |
-| `GET /api/v1/export/scans/:id/issues.csv` | Excel (XLSX) | Issues for a scan (supports `severity`, `criterion` filters) |
+| `GET /api/v1/export/scans/:id/issues.xlsx` | Excel (XLSX) | Every issue occurrence for a scan — row count equals TOTAL ISSUES; template issues appear once per affected page, flagged in the `Template Issue` column |
 | `GET /api/v1/export/trends.csv` | CSV | Trend data (supports `siteUrl`, `from`, `to` filters) |
 
 ```bash
 # Download issues as Excel
 curl -H "X-API-Key: $LUQEN_API_KEY" \
-  "http://localhost:5000/api/v1/export/scans/abc123/issues.csv" -o issues.xlsx
+  "http://localhost:5000/api/v1/export/scans/abc123/issues.xlsx" -o issues.xlsx
 ```
 
 See [API Reference — Data Export](../reference/api-reference.md#data-export) for full details.
