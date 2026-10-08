@@ -248,6 +248,30 @@ describe('Auth routes', () => {
       expect((response.json() as { data: { error: string } }).data.error).toBe('Invalid API key.');
     });
 
+    it('[EVIDENCE] audits WHICH key opened the session (key row id, never the secret)', async () => {
+      const rawDb = ctx.storage.getRawDatabase();
+      const id = storeApiKey(rawDb, 'audited-key-12345678901234567890', 'audited');
+
+      const response = await ctx.server.inject({ method: 'POST', url: '/login', payload: { apiKey: 'audited-key-12345678901234567890' } });
+      expect(response.statusCode).toBe(302);
+
+      const row = rawDb.prepare("SELECT resource_id, details FROM audit_log WHERE action = 'login.success' ORDER BY timestamp DESC LIMIT 1").get() as { resource_id: string | null; details: string };
+      expect(row.resource_id).toBe(id);
+      expect(row.details).toBe('API key login');
+      expect(JSON.stringify(row)).not.toContain('audited-key-1234');
+    });
+
+    it('[EVIDENCE] audits which key was REFUSED', async () => {
+      const rawDb = ctx.storage.getRawDatabase();
+      const id = storeApiKey(rawDb, 'refused-key-12345678901234567890', 'refused', 'read-only');
+      rawDb.prepare('UPDATE api_keys SET org_id = ? WHERE id = ?').run('org-customer', id);
+
+      await ctx.server.inject({ method: 'POST', url: '/login', payload: { apiKey: 'refused-key-12345678901234567890' } });
+
+      const row = rawDb.prepare("SELECT resource_id FROM audit_log WHERE action = 'login.failure' ORDER BY timestamp DESC LIMIT 1").get() as { resource_id: string | null };
+      expect(row.resource_id).toBe(id);
+    });
+
     it('[SYMMETRY] still accepts the system-scope key (operator login is unchanged)', async () => {
       const rawDb = ctx.storage.getRawDatabase();
       const id = storeApiKey(rawDb, 'system-key-12345678901234567890', 'system key');
