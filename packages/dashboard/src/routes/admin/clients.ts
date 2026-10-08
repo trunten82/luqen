@@ -1,3 +1,4 @@
+import { bypassesOrgScope } from '../../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import {
@@ -108,7 +109,7 @@ export async function clientRoutes(
       }
 
       const currentOrgId = orgId ?? 'system';
-      const isGlobalAdmin = request.user?.role === 'admin' && (currentOrgId === 'system' || !currentOrgId);
+      const isGlobalAdmin = bypassesOrgScope(request.user) && (currentOrgId === 'system' || !currentOrgId);
 
       // Phase 31.1 Plan 04 Task 2: Dynamic-Client-Registered (DCR) OAuth
       // clients from oauth_clients_v2 (Plan 01). Admins see every DCR

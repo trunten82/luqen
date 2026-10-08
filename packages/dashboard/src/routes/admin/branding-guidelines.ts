@@ -1,3 +1,4 @@
+import { bypassesOrgScope } from '../../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { randomUUID } from 'node:crypto';
@@ -237,7 +238,7 @@ export async function brandingGuidelineRoutes(
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = request.user?.currentOrgId ?? 'system';
-      const isGlobalAdmin = request.user?.role === 'admin';
+      const isGlobalAdmin = bypassesOrgScope(request.user);
 
       // Tab selection — URL-driven, no client state. (08-P03)
       const rawTab = (request.query as { tab?: unknown } | undefined)?.tab;
@@ -834,7 +835,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
 
       // Verify org ownership
       const orgId = request.user?.currentOrgId ?? 'system';
-      const isGlobalAdmin = request.user?.role === 'admin';
+      const isGlobalAdmin = bypassesOrgScope(request.user);
       if (!isGlobalAdmin && guideline.orgId !== orgId) {
         return reply
           .code(403)

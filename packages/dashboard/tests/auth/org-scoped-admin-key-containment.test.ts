@@ -17,6 +17,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import Fastify from 'fastify';
 import { dataApiRoutes } from '../../src/routes/api/data.js';
+import { reportRoutes } from '../../src/routes/reports.js';
 import { AuthService } from '../../src/auth/auth-service.js';
 import { createAuthGuard } from '../../src/auth/middleware.js';
 import { enforceApiKeyRole } from '../../src/auth/api-key-guard.js';
@@ -130,6 +131,38 @@ describe('org-scoped admin API key containment', () => {
       // Before the fix this returned 200 and DELETED the other org's scan (break-tested).
       expect(res.statusCode).toBe(403);
       expect(await storage.scans.getScan(id)).not.toBeNull();
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('[EVIDENCE] an org-scoped admin key cannot share, revoke, publish or badge ANOTHER org\'s report (/api/v1/reports/*)', async () => {
+    const id = randomUUID();
+    await storage.scans.createScan({ id, siteUrl: 'https://other.example.com', standard: 'WCAG2AA', jurisdictions: [], createdBy: 'x', createdAt: new Date().toISOString(), orgId: 'other-org' });
+    await storage.scans.updateScan(id, { status: 'completed', completedAt: new Date().toISOString() });
+    const share = await storage.reportShares.createShare({ scanId: id, orgId: 'other-org', createdBy: 'x' });
+
+    const server = Fastify({ logger: false });
+    server.decorateReply('view', function (this: FastifyReply) { return this.code(200).send('{}'); });
+    server.addHook('preHandler', async (request) => {
+      request.user = { id: 'api-key', username: 'api-key', role: 'admin', currentOrgId: 'org-b', orgScopedApiKey: true };
+      (request as unknown as Record<string, unknown>)['permissions'] = new Set(ORG_OWNER_PERMISSIONS);
+    });
+    await reportRoutes(server, storage);
+    await server.ready();
+    try {
+      const calls: Array<[string, Record<string, unknown>]> = [
+        [`/api/v1/reports/${id}/shares`, {}],
+        [`/api/v1/reports/${id}/shares/${share.id}/revoke`, {}],
+        [`/api/v1/reports/${id}/public-share`, { enabled: true }],
+        [`/api/v1/reports/${id}/site-badge`, { enabled: true }],
+      ];
+      for (const [url, payload] of calls) {
+        const res = await server.inject({ method: 'POST', url, payload });
+        expect([403, 404], `${url} -> ${res.statusCode}`).toContain(res.statusCode);
+      }
+      expect((await storage.reportShares.listForScan(id)).length).toBe(1);
+      expect((await storage.reportShares.getShare(share.id))?.revokedAt ?? null).toBeNull();
     } finally {
       await server.close();
     }

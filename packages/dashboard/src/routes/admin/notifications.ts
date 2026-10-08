@@ -18,6 +18,7 @@
  * Phase 50 territory; here we only persist the boolean.
  */
 
+import { bypassesOrgScope } from '../../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../../db/index.js';
@@ -132,7 +133,7 @@ const HtmlPartialResponse = {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function isSystemAdmin(request: FastifyRequest): boolean {
-  return request.user?.role === 'admin';
+  return bypassesOrgScope(request.user);
 }
 
 function getOrgId(request: FastifyRequest): string | undefined {

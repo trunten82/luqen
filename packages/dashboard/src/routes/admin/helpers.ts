@@ -1,3 +1,4 @@
+import { bypassesOrgScope } from '../../permissions.js';
 import type { FastifyRequest } from 'fastify';
 
 /**
@@ -23,7 +24,7 @@ export function getToken(request: FastifyRequest): string {
   // regulatory proposals, edit system regulations, etc.). The global
   // token has scope=admin and orgId=system, so reads stay org-scoped via
   // X-Org-Id when the route opts in.
-  if (request.user?.role === 'admin' && reqExt._serviceToken) {
+  if (bypassesOrgScope(request.user) && reqExt._serviceToken) {
     return reqExt._serviceToken;
   }
 

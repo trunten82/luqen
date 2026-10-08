@@ -1,3 +1,4 @@
+import { bypassesOrgScope } from '../../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { requirePermission } from '../../auth/middleware.js';
@@ -48,7 +49,7 @@ export async function auditRoutes(
       const limit = Math.min(Math.max(parseInt(q.limit ?? '50', 10) || 50, 1), 200);
       const offset = Math.max(parseInt(q.offset ?? '0', 10) || 0, 0);
 
-      const isGlobalAdmin = request.user?.role === 'admin';
+      const isGlobalAdmin = bypassesOrgScope(request.user);
       const orgId = isGlobalAdmin ? undefined : request.user?.currentOrgId;
 
       const result = await storage.audit.query({

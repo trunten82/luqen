@@ -1,3 +1,4 @@
+import { bypassesOrgScope } from '../../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../../db/index.js';
@@ -68,7 +69,7 @@ function requireRolesRead(request: FastifyRequest, reply: FastifyReply): boolean
 
 /** Check if user can manage roles for a given scope. */
 function canManageRoles(request: FastifyRequest, roleOrgId: string): boolean {
-  const isAdmin = request.user?.role === 'admin';
+  const isAdmin = bypassesOrgScope(request.user);
   if (isAdmin) return true;
 
   // Org owner/admin can manage their org's roles
@@ -118,7 +119,7 @@ export async function roleRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!requireRolesRead(request, reply)) return;
 
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       const orgId = request.user?.currentOrgId ?? 'system';
       const hasOrgContext = orgId !== 'system';
 
@@ -202,7 +203,7 @@ export async function roleRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!requireRolesRead(request, reply)) return;
 
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       const globalRoles = await storage.roles.listGlobalRoles();
       const globalView = globalRoles.map((r) => ({
         ...r,
@@ -238,7 +239,7 @@ export async function roleRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!requireRolesRead(request, reply)) return;
 
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       const orgId = request.user?.currentOrgId ?? 'system';
       const hasOrgContext = orgId !== 'system';
 
@@ -312,7 +313,7 @@ export async function roleRoutes(
       const query = request.query as { scope?: string };
       const scope = query.scope ?? 'org';
       const orgId = request.user?.currentOrgId ?? 'system';
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
 
       // Only admin can create global roles
       if (scope === 'global' && !isAdmin) {
@@ -369,7 +370,7 @@ export async function roleRoutes(
         return reply.code(422).send({ error: 'Invalid role name format' });
       }
 
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       const userOrgId = request.user?.currentOrgId ?? 'system';
       let targetOrgId: string;
 

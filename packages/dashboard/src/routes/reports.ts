@@ -1,3 +1,4 @@
+import { bypassesOrgScope } from '../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { requirePermission } from '../auth/middleware.js';
 import { Type } from '@sinclair/typebox';
@@ -211,7 +212,7 @@ export async function reportRoutes(
 
       // Admin sees all scans (global view for troubleshooting);
       // other users see their org scans + system scans (no org assigned).
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       const orgId = request.user?.currentOrgId ?? 'system';
       const scans = await storage.scans.listScans({
         ...(q !== undefined && q !== '' ? { siteUrl: q } : {}),
@@ -315,7 +316,7 @@ export async function reportRoutes(
       }
 
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (!bypassesOrgScope(request.user) && scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).send({ error: 'Report not found' });
       }
 
@@ -423,7 +424,7 @@ export async function reportRoutes(
       }
 
       // Build assignees list (users + teams) for the assignment picker — org-scoped
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       const dashboardUsers = isAdmin
         ? await storage.users.listUsers()
         : orgId !== 'system'
@@ -610,7 +611,7 @@ export async function reportRoutes(
       }
 
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (!bypassesOrgScope(request.user) && scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).send({ error: 'Report not found' });
       }
 
@@ -682,7 +683,7 @@ export async function reportRoutes(
       }
 
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (!bypassesOrgScope(request.user) && scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).send({ error: 'Report not found' });
       }
 
@@ -769,7 +770,7 @@ export async function reportRoutes(
       const scan = await storage.scans.getScan(id);
       if (scan === null) return reply.code(404).send({ error: 'Report not found' });
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (!bypassesOrgScope(request.user) && scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).send({ error: 'Report not found' });
       }
       const body = (request.body ?? {}) as { expiresInDays?: number | null };
@@ -808,7 +809,7 @@ export async function reportRoutes(
         return reply.code(404).send({ error: 'Share not found' });
       }
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (request.user?.role !== 'admin' && share.orgId !== orgId && share.orgId !== 'system') {
+      if (!bypassesOrgScope(request.user) && share.orgId !== orgId && share.orgId !== 'system') {
         return reply.code(404).send({ error: 'Share not found' });
       }
       const revoked = await storage.reportShares.revoke(shareId);
@@ -848,7 +849,7 @@ export async function reportRoutes(
         return reply.code(404).send({ error: 'Report not found' });
       }
       const orgId = request.user?.currentOrgId ?? 'system';
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       if (!isAdmin && scan.orgId !== orgId) {
         return reply.code(403).send({ error: 'Forbidden' });
       }
@@ -904,7 +905,7 @@ export async function reportRoutes(
         return reply.code(404).send({ error: 'Report not found' });
       }
       const orgId = request.user?.currentOrgId ?? 'system';
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       if (!isAdmin && scan.orgId !== orgId) {
         return reply.code(403).send({ error: 'Forbidden' });
       }
@@ -1056,7 +1057,7 @@ export async function reportRoutes(
       }
 
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (!bypassesOrgScope(request.user) && scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).send({ error: 'Report not found' });
       }
 
@@ -1190,7 +1191,7 @@ export async function reportRoutes(
       }
 
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (!bypassesOrgScope(request.user) && scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.header('content-type', 'text/html').send(
           `<div class="alert alert--warning">Access denied.</div>`,
         );
@@ -1376,7 +1377,7 @@ export async function reportRoutes(
 
       // Org-scoping: admin sees all, others check orgId match
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (!bypassesOrgScope(request.user) && scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).header('content-type', 'text/html').send(
           `<div class="alert alert--warning">Report not found.</div>`,
         );

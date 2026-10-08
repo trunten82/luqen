@@ -1,3 +1,4 @@
+import { bypassesOrgScope } from '../../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { Type, type Static } from '@sinclair/typebox';
@@ -307,7 +308,7 @@ export async function organizationRoutes(
       }
 
       // Tenant isolation: non-admin users can only manage their own org
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       if (!isAdmin && request.user?.currentOrgId !== id) {
         return reply.code(403).send({ error: 'Forbidden: you can only manage your own organization' });
       }
@@ -383,7 +384,7 @@ export async function organizationRoutes(
       }
 
       // Tenant isolation: non-admin users can only manage their own org
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       if (!isAdmin && request.user?.currentOrgId !== id) {
         return reply.code(403).send({ error: 'Forbidden: you can only manage your own organization' });
       }
@@ -451,7 +452,7 @@ export async function organizationRoutes(
       }
 
       // Tenant isolation: non-admin users can only manage their own org
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       if (!isAdmin && request.user?.currentOrgId !== id) {
         return reply.code(403).send({ error: 'Forbidden: you can only manage your own organization' });
       }
@@ -494,7 +495,7 @@ export async function organizationRoutes(
       const { id, userId } = request.params as { id: string; userId: string };
 
       // Tenant isolation: non-admin users can only manage their own org
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       if (!isAdmin && request.user?.currentOrgId !== id) {
         return reply.code(403).send({ error: 'Forbidden: you can only manage your own organization' });
       }
@@ -557,7 +558,7 @@ export async function organizationRoutes(
       }
 
       // Tenant isolation: non-admin users can only manage their own org
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       if (!isAdmin && request.user?.currentOrgId !== id) {
         return reply.code(403).header('content-type', 'text/html')
           .send(toastHtml('Forbidden: you can only manage your own organization.', 'error'));
@@ -592,7 +593,7 @@ export async function organizationRoutes(
       }
 
       // Tenant isolation: non-admin users can only manage their own org
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       if (!isAdmin && request.user?.currentOrgId !== id) {
         return reply.code(403).header('content-type', 'text/html')
           .send(toastHtml('Forbidden: you can only manage your own organization.', 'error'));
@@ -684,7 +685,7 @@ export async function organizationRoutes(
       }
 
       // Tenant isolation: non-admin users can only manage their own org
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       if (!isAdmin && request.user?.currentOrgId !== id) {
         return reply.code(403).header('content-type', 'text/html')
           .send(toastHtml('Forbidden: you can only manage your own organization.', 'error'));
@@ -830,7 +831,7 @@ export async function organizationRoutes(
           .send(toastHtml('Organization not found.', 'error'));
       }
 
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       if (!isAdmin && request.user?.currentOrgId !== id) {
         return reply.code(403).header('content-type', 'text/html')
           .send(toastHtml('Forbidden: you can only manage your own organization.', 'error'));
@@ -858,7 +859,7 @@ export async function organizationRoutes(
           .send(toastHtml('Organization not found.', 'error'));
       }
 
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       if (!isAdmin && request.user?.currentOrgId !== id) {
         return reply.code(403).header('content-type', 'text/html')
           .send(toastHtml('Forbidden: you can only manage your own organization.', 'error'));

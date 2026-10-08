@@ -141,8 +141,8 @@ describe('at-rest key-invariant (PBH-A)', () => {
       { file: SERVER_TS, line: 1432, label: 'R10 startKeyHousekeeping' },
       { file: REL('cli.ts'), line: 219, label: 'R2 cli.ts PluginManager options' },
       { file: REL('routes', 'git-credentials.ts'), line: 32, label: 'R4 git-credentials encryptionKey local' },
-      { file: REL('routes', 'repos.ts'), line: 404, label: 'R5 repos.ts decryptSecret' },
-      { file: REL('routes', 'fix-pr.ts'), line: 305, label: 'R6 fix-pr.ts decryptSecret' },
+      { file: REL('routes', 'repos.ts'), line: 405, label: 'R5 repos.ts decryptSecret' },
+      { file: REL('routes', 'fix-pr.ts'), line: 306, label: 'R6 fix-pr.ts decryptSecret' },
     ];
 
     const results = EXPECTED_WIRING_SITES.map((site) => {

@@ -1,3 +1,4 @@
+import { bypassesOrgScope } from '../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { StorageAdapter } from '../db/index.js';
 import type { DashboardConfig } from '../config.js';
@@ -16,7 +17,7 @@ export async function homeRoutes(
   });
 
   server.get('/home', { schema: { ...HtmlPageSchema, tags: ['home'] } }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const isAdmin = request.user?.role === 'admin';
+    const isAdmin = bypassesOrgScope(request.user);
     const orgId = isAdmin ? undefined : request.user?.currentOrgId;
     const orgFilter = orgId !== undefined ? { orgId } : {};
     const recentScans = await storage.scans.listScans({ limit: 10, ...orgFilter });

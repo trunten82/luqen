@@ -1,3 +1,4 @@
+import { bypassesOrgScope } from '../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { StorageAdapter, ScanRecord } from '../db/index.js';
 import { HtmlPageSchema } from '../api/schemas/envelope.js';
@@ -305,7 +306,7 @@ export async function trendRoutes(
     '/reports/trends',
     { schema: { ...HtmlPageSchema, tags: ['trends'] } },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       const orgId = isAdmin ? undefined : request.user?.currentOrgId;
       const scans = await storage.scans.getTrendData(orgId);
       const trends = groupBySite(scans);

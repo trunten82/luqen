@@ -1,3 +1,4 @@
+import { bypassesOrgScope } from '../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { readFile } from 'node:fs/promises';
@@ -257,7 +258,7 @@ export async function fixPrRoutes(
       }
 
       // Admin bypass mirrors every other /reports/:id surface (UAT 2026-07-14).
-      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (!bypassesOrgScope(request.user) && scan.orgId !== orgId && scan.orgId !== 'system') {
         return isHtmx
           ? reply.code(404).send(toastHtml('Report not found.', 'error'))
           : reply.code(404).send({ error: 'Report not found' });

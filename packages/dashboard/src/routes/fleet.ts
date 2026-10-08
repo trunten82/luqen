@@ -1,3 +1,4 @@
+import { bypassesOrgScope } from '../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { StorageAdapter } from '../db/index.js';
 import type { WpSite } from '../db/interfaces/wp-network-repository.js';
@@ -154,7 +155,7 @@ export async function fleetRoutes(
     '/admin/fleet',
     { schema: { ...HtmlPageSchema, tags: ['fleet', 'admin'] } },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      if (request.user?.role !== 'admin') {
+      if (!bypassesOrgScope(request.user)) {
         return reply.code(403).view('errors/403.hbs', {
           pageTitle: 'Forbidden',
           user: request.user,
@@ -197,7 +198,7 @@ export async function fleetRoutes(
         user: request.user,
       });
     }
-    if (scope === 'admin' && request.user?.role !== 'admin') {
+    if (scope === 'admin' && !bypassesOrgScope(request.user)) {
       return reply.code(403).view('errors/403.hbs', {
         pageTitle: 'Forbidden',
         user: request.user,
