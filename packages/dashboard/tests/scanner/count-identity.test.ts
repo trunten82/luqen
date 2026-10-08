@@ -298,4 +298,64 @@ describe('count identity: countIssues reproduces the columns the real orchestrat
       totalIssues: stored.columns.totalIssues - 3,
     });
   });
+
+  it('standard path with zero issues: columns and countIssues are both zero', async () => {
+    const stored = await runStandardScan('scan-zero', [page('https://example.com/', [])]);
+
+    expect(stored.columns).toEqual({ errors: 0, warnings: 0, notices: 0, totalIssues: 0 });
+    expect(asColumns(countIssues(JSON.parse(stored.jsonReport)))).toEqual(stored.columns);
+  });
+
+  describe('incremental path (the orchestrator runs its own counting loop)', () => {
+    const SITE = 'https://example.com';
+
+    function discover(urls: string[], current: Record<string, string>, stored: Record<string, string>): void {
+      mockDiscoverUrls.mockResolvedValue({ urls: urls.map((url) => ({ url, discoveryMethod: 'crawl' })) });
+      mockComputeContentHashes.mockResolvedValue(new Map(Object.entries(current)));
+      (storage.pageHashes.getPageHashes as ReturnType<typeof vi.fn>).mockResolvedValue(
+        new Map(Object.entries(stored)),
+      );
+    }
+
+    async function runIncremental(scanId: string): Promise<StoredScan> {
+      const done = waitForScan(orchestrator, scanId);
+      orchestrator.startScan(scanId, baseScanConfig({ scanMode: 'site', incremental: true, orgId: 'org-1' }));
+      await done;
+      return completedUpdate(storage);
+    }
+
+    it('skips an unchanged page and still reproduces the columns for the changed ones', async () => {
+      discover(
+        [`${SITE}/`, `${SITE}/about`, `${SITE}/contact`],
+        { [`${SITE}/`]: 'a-new', [`${SITE}/about`]: 'b-same', [`${SITE}/contact`]: 'c-new' },
+        { [`${SITE}/`]: 'a-old', [`${SITE}/about`]: 'b-same' },
+      );
+      const changed = [
+        page(`${SITE}/`, [
+          issue('E1', '#a', 'error'),
+          issue('I1', '#b', 'info'),
+          issue('T1', '#c'),
+          issue('W1', '#d', 'warning'),
+        ]),
+        page(`${SITE}/contact`, [issue('N1', '#e', 'notice'), issue('E2', '#f', 'error')]),
+      ];
+      mockScanUrls.mockResolvedValue({ pages: changed, errors: [] });
+
+      const stored = await runIncremental('scan-inc-mixed');
+
+      expect(mockScanUrls.mock.calls[0][0]).toHaveLength(2);
+      expect(stored.columns).toEqual({ errors: 2, warnings: 1, notices: 3, totalIssues: 6 });
+      expect(asColumns(countIssues(JSON.parse(stored.jsonReport)))).toEqual(stored.columns);
+    });
+
+    it('with NO changed pages the columns are all 0 and so is countIssues', async () => {
+      discover([`${SITE}/`], { [`${SITE}/`]: 'same' }, { [`${SITE}/`]: 'same' });
+
+      const stored = await runIncremental('scan-inc-nochange');
+
+      expect(mockScanUrls).not.toHaveBeenCalled();
+      expect(stored.columns).toEqual({ errors: 0, warnings: 0, notices: 0, totalIssues: 0 });
+      expect(asColumns(countIssues(JSON.parse(stored.jsonReport)))).toEqual(stored.columns);
+    });
+  });
 });
