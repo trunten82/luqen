@@ -213,12 +213,17 @@ export class AuthService {
    * tokens but are refused here — accepting them turned an org's read-only key
    * into a global-admin session (fixed 2026-10-08).
    */
-  checkApiKeyForDashboardLogin(key: string): 'ok' | 'invalid' | 'org-scoped' | 'not-admin' {
+  checkApiKeyForDashboardLogin(key: string): {
+    readonly status: 'ok' | 'invalid' | 'org-scoped' | 'not-admin';
+    /** api_keys row id (never the secret), for the audit log; absent when invalid. */
+    readonly keyId?: string;
+  } {
     const result = validateApiKey(this.db, key);
-    if (!result.valid) return 'invalid';
-    if (result.orgId !== 'system') return 'org-scoped';
-    if (result.role !== 'admin') return 'not-admin';
-    return 'ok';
+    if (!result.valid) return { status: 'invalid' };
+    const keyId = result.keyId;
+    if (result.orgId !== 'system') return { status: 'org-scoped', keyId };
+    if (result.role !== 'admin') return { status: 'not-admin', keyId };
+    return { status: 'ok', keyId };
   }
 
   // -----------------------------------------------------------------------

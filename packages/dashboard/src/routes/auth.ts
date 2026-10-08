@@ -117,8 +117,8 @@ export async function authRoutes(
       if (typeof body.apiKey === 'string' && body.apiKey.trim() !== '') {
         const check = authService.checkApiKeyForDashboardLogin(body.apiKey.trim());
 
-        if (check === 'org-scoped' || check === 'not-admin') {
-          void storage?.audit.log({ actor: 'unknown', action: 'login.failure', resourceType: 'session', details: `API key refused for dashboard login (${check})`, ipAddress: request.ip });
+        if (check.status === 'org-scoped' || check.status === 'not-admin') {
+          void storage?.audit.log({ actor: 'unknown', action: 'login.failure', resourceType: 'session', ...(check.keyId ? { resourceId: check.keyId } : {}), details: `API key refused for dashboard login (${check.status})`, ipAddress: request.ip });
           return reply.view('login.hbs', {
             error: 'Organization API keys work for the API only. Sign in with your username and password.',
             mode,
@@ -126,7 +126,7 @@ export async function authRoutes(
           });
         }
 
-        if (check !== 'ok') {
+        if (check.status !== 'ok') {
           void storage?.audit.log({ actor: 'unknown', action: 'login.failure', resourceType: 'session', details: 'Invalid API key', ipAddress: request.ip });
           return reply.view('login.hbs', {
             error: 'Invalid API key.',
@@ -142,7 +142,7 @@ export async function authRoutes(
         session.set('authMethod', 'api-key');
         session.set('bootId', authService.getBootId());
 
-        void storage?.audit.log({ actor: 'admin', actorId: 'api-key', action: 'login.success', resourceType: 'session', details: 'API key login', ipAddress: request.ip });
+        void storage?.audit.log({ actor: 'admin', actorId: 'api-key', action: 'login.success', resourceType: 'session', ...(check.keyId ? { resourceId: check.keyId } : {}), details: 'API key login', ipAddress: request.ip });
         await reply.redirect(safeReturnTo(body.returnTo));
         return;
       }

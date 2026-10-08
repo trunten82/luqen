@@ -11,6 +11,8 @@ export interface ApiKeyValidationResult {
   readonly valid: boolean;
   readonly role?: ApiKeyRole;
   readonly orgId?: string;
+  /** api_keys row id (NOT the secret) — lets the audit log say which key was used. */
+  readonly keyId?: string;
 }
 
 /**
@@ -69,7 +71,7 @@ export function validateApiKey(
 
   if (row !== undefined) {
     updateLastUsed(db, keyHash);
-    return { valid: true, role: (row.role ?? 'admin') as ApiKeyRole, orgId: row.org_id };
+    return { valid: true, role: (row.role ?? 'admin') as ApiKeyRole, orgId: row.org_id, keyId: row.id };
   }
 
   return { valid: false };
