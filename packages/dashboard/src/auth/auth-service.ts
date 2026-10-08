@@ -159,7 +159,7 @@ export class AuthService {
             id: 'api-key',
             username: 'api-key',
             role: result.role ?? 'admin',
-            ...(isOrgScoped ? { currentOrgId: result.orgId } : {}),
+            ...(isOrgScoped ? { currentOrgId: result.orgId, orgScopedApiKey: true } : {}),
           },
         };
       }

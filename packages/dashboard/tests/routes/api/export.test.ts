@@ -336,6 +336,18 @@ describe('Export API routes', () => {
       expect(body.error).toBe('Report not found');
     });
 
+    it('[EVIDENCE] an org-scoped ADMIN API key cannot export another org\'s scan (any export endpoint)', async () => {
+      const reportPath = join(ctx.reportsDir, 'cross-org-key.json');
+      writeFileSync(reportPath, JSON.stringify(makeSampleReport()));
+      const id = await makeCompletedScan(ctx, 'https://example.com', { orgId: 'other-org', jsonReportPath: reportPath });
+      ctx.setUser({ id: 'api-key', username: 'api-key', role: 'admin', currentOrgId: 'org-b', orgScopedApiKey: true } as never);
+
+      for (const path of ['issues.xlsx', 'report.pdf', 'vpat.pdf', 'vpat-pack.zip']) {
+        const response = await ctx.server.inject({ method: 'GET', url: `/api/v1/export/scans/${id}/${path}` });
+        expect(response.statusCode, path).toBe(404);
+      }
+    });
+
     it('returns 404 when scan belongs to different org (non-admin caller)', async () => {
       const id = await makeCompletedScan(ctx, 'https://example.com', { orgId: 'other-org' });
       ctx.setUser({ id: 'user-2', username: 'bob', role: 'user', currentOrgId: 'org-b' });

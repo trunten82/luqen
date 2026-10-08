@@ -1,3 +1,4 @@
+import { bypassesOrgScope } from '../../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { requirePermission } from '../../auth/middleware.js';
 import { Type } from '@sinclair/typebox';
@@ -253,7 +254,7 @@ export async function exportRoutes(
       // HTML route and the vpat.pdf/vpat-pack.zip exports. Without the bypass
       // an admin could VIEW any org's report but its exports 404'd.
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (!bypassesOrgScope(request.user) && scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).send({ error: 'Report not found' });
       }
 
@@ -490,7 +491,7 @@ export async function exportRoutes(
       // HTML route and the vpat.pdf/vpat-pack.zip exports. Without the bypass
       // an admin could VIEW any org's report but its exports 404'd.
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (!bypassesOrgScope(request.user) && scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).send({ error: 'Report not found' });
       }
 
@@ -571,7 +572,7 @@ export async function exportRoutes(
 
       // Org-scope enforcement (mirror report.pdf route).
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (!bypassesOrgScope(request.user) && scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).send({ error: 'Report not found' });
       }
 
@@ -661,7 +662,7 @@ export async function exportRoutes(
 
       // Org-scope enforcement (mirror the vpat.pdf route).
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (!bypassesOrgScope(request.user) && scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).send({ error: 'Report not found' });
       }
 

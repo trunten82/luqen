@@ -7,6 +7,13 @@ export interface AuthUser {
   readonly role: string;
   readonly currentOrgId?: string;
   /**
+   * ORG-KEY-CONTAINMENT-1: true only for a request authenticated by an
+   * ORG-SCOPED API key. Such a key may carry role 'admin' (admin of ITS org)
+   * but is never a global admin: it is confined to /api/*, capped at the org
+   * Owner permission set, and never bypasses org isolation.
+   */
+  readonly orgScopedApiKey?: boolean;
+  /**
    * Phase 32 Plan 06 — per-org chat companion display name. Populated by the
    * org-context preHandler in server.ts after resolving the user's current
    * org. Omitted when the org has no custom name set (layout falls back to
@@ -44,12 +51,13 @@ export function createAuthGuard(authService: AuthService) {
       return;
     }
 
-    const authUser = result.user! as { id: string; username: string; role?: string; currentOrgId?: string };
+    const authUser = result.user! as { id: string; username: string; role?: string; currentOrgId?: string; orgScopedApiKey?: boolean };
     request.user = {
       id: authUser.id,
       username: authUser.username,
       role: authUser.role ?? 'viewer',
       ...(authUser.currentOrgId !== undefined ? { currentOrgId: authUser.currentOrgId } : {}),
+      ...(authUser.orgScopedApiKey === true ? { orgScopedApiKey: true } : {}),
     };
   };
 }

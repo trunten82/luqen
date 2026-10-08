@@ -34,6 +34,17 @@ export async function enforceApiKeyRole(
 
   const path = request.url.split('?')[0];
 
+  // ORG-KEY-CONTAINMENT-1: an org-scoped key is an API credential for ITS org
+  // only. Bearer auth applies to every route, so without this an org-scoped
+  // admin key could load HTML pages that treat role 'admin' as a global admin
+  // (e.g. GET /reports lists every org's scans).
+  if (request.user.orgScopedApiKey === true && !path.startsWith('/api/')) {
+    await reply.code(403).send({
+      error: 'Forbidden: organization API keys work for the /api/ endpoints only',
+    });
+    return;
+  }
+
   // Org-scoped keys cannot access admin/org management endpoints
   if (request.user.currentOrgId !== undefined) {
     if (path.startsWith('/api/v1/orgs') || path.startsWith('/api/v1/admin')) {

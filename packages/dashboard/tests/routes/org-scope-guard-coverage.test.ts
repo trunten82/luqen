@@ -44,6 +44,8 @@ describe('org-scope guards in routes', () => {
         const context = lines.slice(Math.max(0, i - 2), i + 1).join('\n');
         const hasBypass =
           context.includes("role !== 'admin'") ||
+          // ORG-KEY-CONTAINMENT-1: the global-admin-only bypass (excludes org-scoped admin API keys)
+          context.includes('bypassesOrgScope(') ||
           context.includes('isAdmin') ||
           context.includes('gate-exempt');
         if (!hasBypass) {

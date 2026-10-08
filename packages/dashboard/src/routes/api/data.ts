@@ -1,3 +1,4 @@
+import { bypassesOrgScope } from '../../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { readFile, unlink } from 'node:fs/promises';
@@ -665,7 +666,7 @@ export async function dataApiRoutes(
 
       // Admin-only: API key users are treated as admin
       const orgId = getOrgId(request);
-      if (request.user?.role !== 'admin' && scan.orgId !== orgId) {
+      if (!bypassesOrgScope(request.user) && scan.orgId !== orgId) {
         return reply.code(403).send({ error: 'Forbidden' });
       }
 
