@@ -3,6 +3,7 @@ import type { WebserviceClient, Pa11yIssue, Pa11yResult } from './webservice-cli
 import type { WebservicePool } from './webservice-client.js';
 import type { DirectScanner } from './direct-scanner.js';
 import type { SharedBrowser } from '../browser/shared-browser.js';
+import { withoutNonRenderedFallbackIssues } from './non-rendered-fallback.js';
 
 export interface ScanOptions {
   readonly standard: 'WCAG2A' | 'WCAG2AA' | 'WCAG2AAA';
@@ -31,7 +32,7 @@ export interface ScanResults {
 }
 
 function mapIssues(issues: readonly Pa11yIssue[]): AccessibilityIssue[] {
-  return issues.map((issue) => ({
+  return withoutNonRenderedFallbackIssues(issues).map((issue) => ({
     code: issue.code,
     type: issue.type as 'error' | 'warning' | 'notice',
     message: issue.message,

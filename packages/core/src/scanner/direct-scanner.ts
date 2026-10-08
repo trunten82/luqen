@@ -25,6 +25,7 @@ import { openEnginePage } from '../browser/shared-browser.js';
 import type { SharedBrowser } from '../browser/shared-browser.js';
 import { guardPageRequests } from '../net/browser-request-guard.js';
 import type { NetworkGuardPolicy } from '../net/ssrf-guard.js';
+import { withoutNonRenderedFallbackIssues } from './non-rendered-fallback.js';
 
 export interface DirectScanOptions {
   readonly standard: string;
@@ -116,14 +117,14 @@ export class DirectScanner {
 
     return {
       url: result.pageUrl || url,
-      issues: (result.issues || []).map((issue: { code: string; type: string; message: string; selector: string; context: string; runner?: string }) => ({
+      issues: withoutNonRenderedFallbackIssues((result.issues || []).map((issue: { code: string; type: string; message: string; selector: string; context: string; runner?: string }) => ({
         code: issue.code,
         type: issue.type,
         message: issue.message,
         selector: issue.selector,
         context: issue.context,
         runner: issue.runner || 'htmlcs',
-      })),
+      }))),
     };
   }
 }

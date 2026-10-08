@@ -144,6 +144,26 @@ describe('DirectScanner', () => {
     });
   });
 
+  it('[EVIDENCE] drops contrast findings on non-rendered <noscript>/<video> fallback content', async () => {
+    const pa11yModule = await import('pa11y');
+    const pa11yFn = pa11yModule.default as ReturnType<typeof vi.fn>;
+    const G18 = 'WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail';
+
+    // Shapes from the Northwind scan 00000000 (2026-10-08).
+    pa11yFn.mockResolvedValueOnce({
+      pageUrl: 'https://example.com',
+      issues: [
+        { code: G18, type: 'error', message: '1.23:1', selector: '#w > div:nth-child(1) > noscript', context: '<noscript><img class="img-bottles" src="h...</noscript>', runner: 'htmlcs' },
+        { code: G18, type: 'error', message: '1.23:1', selector: '#w > div > video', context: '<video controls>...</video>', runner: 'htmlcs' },
+        { code: G18, type: 'error', message: '2.1:1', selector: '#w > p', context: '<p>Real text</p>', runner: 'htmlcs' },
+      ],
+    });
+
+    const result = await scanner.scan('https://example.com', { standard: 'WCAG2AA' });
+
+    expect(result.issues.map((i) => i.selector)).toEqual(['#w > p']);
+  });
+
   it('DS1: launches the resolved browser itself and hands pa11y the browser + a guarded page', async () => {
     const pa11yModule = await import('pa11y');
     const pa11yFn = pa11yModule.default as ReturnType<typeof vi.fn>;
