@@ -161,7 +161,7 @@ describe('DirectScanner', () => {
     const pa11yFn = pa11yModule.default as ReturnType<typeof vi.fn>;
     const G18 = 'WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail';
 
-    // Shapes from the Northwind scan 00000000 (2026-10-08).
+    // Shapes from a real customer scan (2026-10-08).
     pa11yFn.mockResolvedValueOnce({
       pageUrl: 'https://example.com',
       issues: [

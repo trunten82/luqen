@@ -9,7 +9,7 @@ const G145 = 'WCAG2AA.Principle1.Guideline1_4.1_4_3.G145.Fail';
 const AAA_G17 = 'WCAG2AAA.Principle1.Guideline1_4.1_4_6.G17.Fail';
 const H37 = 'WCAG2AA.Principle1.Guideline1_1.1_1_1.H37';
 
-// Real selectors from the Northwind scan 00000000 (2026-10-08).
+// Real selectors from a customer scan (2026-10-08).
 const NOSCRIPT_SEL = '#mainwprapper > div:nth-child(8) > section > div > div:nth-child(1) > noscript';
 const VIDEO_SEL = '#mainwprapper > div:nth-child(9) > div > div > div > video';
 
