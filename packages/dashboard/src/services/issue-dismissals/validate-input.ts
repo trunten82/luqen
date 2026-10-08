@@ -33,12 +33,33 @@ const SELECTOR_WHOLE_PAGE =
   'This selector cannot identify an element: it matches the whole page, so a dismissal on it would hide every finding reported against the page root';
 const CODE_REQUIRED = 'A rule code is required';
 
-const WHOLE_PAGE_CSS = new Set(['', 'html', 'body', ':root', 'html>body']);
-const WHOLE_PAGE_XPATH = /^\/html(\[1\])?(\/body(\[1\])?)?$/;
+const ROOT_ELEMENTS = new Set(['html', 'body', ':root']);
+const WHOLE_PAGE_XPATH = /^\/\/?(html(\[1\])?(\/body(\[1\])?)?|body(\[1\])?)$/;
+const COMBINATOR = /\s*[>+~]\s*|\s+/;
+const COMPOUND_BASE = /^(\*|:root|[a-z][a-z0-9-]*)/;
+
+/**
+ * Does one CSS selector (no commas) target the root element? Only the LAST
+ * compound decides what a selector matches, so `html body`, `:root > body`
+ * and `body.home` all target body, while `body > div` and `body *` do not.
+ * A lone `*` matches the root too.
+ */
+function targetsRootElement(part: string): boolean {
+  const compounds = part.trim().split(COMBINATOR).filter((c) => c !== '');
+  if (compounds.length === 0) return false;
+  if (compounds.length === 1 && compounds[0] === '*') return true;
+  const base = COMPOUND_BASE.exec(compounds[compounds.length - 1]);
+  return base !== null && ROOT_ELEMENTS.has(base[1]);
+}
 
 export function isWholePageSelector(selector: string): boolean {
-  const normalised = selector.trim().toLowerCase().replace(/\s+/g, '');
-  return WHOLE_PAGE_CSS.has(normalised) || WHOLE_PAGE_XPATH.test(normalised);
+  const normalised = selector.trim().toLowerCase();
+  if (normalised === '') return true;
+  if (WHOLE_PAGE_XPATH.test(normalised.replace(/\s+/g, ''))) return true;
+  // Blank out bracket and paren contents so commas or combinators inside
+  // [attr] or :not(...) are not read as structure.
+  const structural = normalised.replace(/\[[^\]]*\]/g, '[]').replace(/\([^)]*\)/g, '()');
+  return structural.split(',').some(targetsRootElement);
 }
 
 export function validateDismissalReason(raw: unknown): ValidationResult<string> {

@@ -101,9 +101,19 @@ describe('isWholePageSelector', () => {
     expect(isWholePageSelector(selector)).toBe(true);
   });
 
+  // WR-03 (87 review): equivalent spellings of the root element — descendant
+  // combinator, qualifiers on html/body, :root chains, the universal selector,
+  // a selector list containing a root, and the // XPath form.
+  it.each([
+    ['html body'], [':root>body'], [':root body'], ['html.js'], ['html[lang]'], ['body.home'], ['body[class]'],
+    ['*'], ['html > body.home'], ['main, body'], ['//body'], ['//html'], ['html:not(.x)'],
+  ])('is true for the root-element spelling %j', (selector) => {
+    expect(isWholePageSelector(selector)).toBe(true);
+  });
+
   it.each([
     ['body > div'], ['#app'], ['html > body > main'], ['/html/body/img[1]'], ['/html[2]'], ['/html/body[2]'],
-    ['/html/head'], ['body.home'],
+    ['/html/head'], ['h tml'], ['.home'], ['body *'], ['html > body + div'], ['main, #app'],
   ])('is false for %j', (selector) => {
     expect(isWholePageSelector(selector)).toBe(false);
   });
