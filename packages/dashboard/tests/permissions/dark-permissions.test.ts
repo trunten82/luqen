@@ -75,4 +75,24 @@ describe('dark permissions (issues.dismiss)', () => {
     expect([...out]).toEqual(['reports.view']);
     expect(input).toEqual(['reports.view', 'issues.dismiss']);
   });
+
+  // WR-01 (87 review): parsePermissions is not the only way a role row gets
+  // written, so the dark filter must hold where permissions are RESOLVED.
+  it('a non-admin whose stored role rows carry a dark id does not resolve it', async () => {
+    const smuggled = {
+      async getEffectivePermissions(): Promise<Set<string>> {
+        return new Set<string>(['reports.view', 'issues.dismiss']);
+      },
+    };
+    const perms = await resolveEffectivePermissions(smuggled, 'u2', 'user', 'org-1');
+    expect(perms.has('issues.dismiss')).toBe(false);
+    // Control: the non-dark permission from the same rows survives.
+    expect(perms.has('reports.view')).toBe(true);
+  });
+
+  it('an org-scoped admin key never resolves a dark id', async () => {
+    const perms = await resolveEffectivePermissions(noRepo, 'k1', 'admin', 'org-1', { orgScopedApiKey: true });
+    for (const dark of DARK_PERMISSIONS) expect(perms.has(dark)).toBe(false);
+    expect(perms.size).toBeGreaterThan(0);
+  });
 });

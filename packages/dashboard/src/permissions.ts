@@ -54,7 +54,8 @@ export const ALL_PERMISSION_IDS: readonly string[] = ALL_PERMISSIONS.map((p) => 
  * that NO other path may yield yet:
  *   1. no DEFAULT_ORG_ROLES entry / ORG_* set contains them (pinned by test);
  *   2. custom roles cannot carry them (routes/admin/roles.ts parsePermissions
- *      filters with isRoleGrantablePermission);
+ *      filters with isRoleGrantablePermission), and resolveEffectivePermissions
+ *      strips them from every non-global-admin result;
  *   3. org-scoped admin API keys are capped at ORG_OWNER_PERMISSIONS (PR #102),
  *      so keeping that set dark-free keeps those keys dark-free;
  *   4. /login refuses org-scoped keys (PR #100).
@@ -129,14 +130,16 @@ export async function resolveEffectivePermissions(
   // org, so it holds at most what an org Owner holds — never the global
   // permissions (admin.system, ...).
   if (userRole === 'admin' && opts.orgScopedApiKey === true) {
-    return new Set(ORG_OWNER_PERMISSIONS);
+    return withoutDarkPermissions(ORG_OWNER_PERMISSIONS);
   }
   // Admin users get all permissions regardless of org context
   if (userRole === 'admin') {
     return new Set(ALL_PERMISSION_IDS);
   }
 
-  return roleRepository.getEffectivePermissions(userId, orgId);
+  // D-07: dark ids are filtered where permissions are RESOLVED, not only where
+  // a role form is parsed, so a role row written by any other path stays dark.
+  return withoutDarkPermissions(await roleRepository.getEffectivePermissions(userId, orgId));
 }
 
 // ---------------------------------------------------------------------------
