@@ -40,6 +40,23 @@ describe('scanUrls', () => {
     expect(results.errors).toHaveLength(0);
   });
 
+  it('[EVIDENCE] webservice path drops contrast findings on non-rendered <noscript>/<video> fallback content', async () => {
+    const G18 = 'WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail';
+    mockClient.getResults.mockResolvedValue([{
+      date: '2026-10-08',
+      issues: [
+        { code: G18, type: 'error', message: '1.23:1', selector: '#w > noscript', context: '<noscript>...</noscript>' },
+        { code: G18, type: 'error', message: '1.23:1', selector: '#w > div > video', context: '<video>...</video>' },
+        { code: 'WCAG2AA.H37', type: 'error', message: 'Image missing alt', selector: 'img', context: '<img src="photo.jpg">' },
+      ],
+    }]);
+    const results = await scanUrls(makeUrls(1), mockClient as WebserviceClient, {
+      standard: 'WCAG2AA', concurrency: 5, timeout: 30000, pollTimeout: 60000, ignore: [], hideElements: '', headers: {}, wait: 0,
+    });
+    expect(results.pages[0].issues.map((i) => i.selector)).toEqual(['img']);
+    expect(results.pages[0].issueCount).toBe(1);
+  });
+
   it('emits progress events', async () => {
     const events: ScanProgress[] = [];
     await scanUrls(makeUrls(2), mockClient as WebserviceClient, {
