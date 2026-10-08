@@ -206,6 +206,21 @@ export class AuthService {
     return validateApiKey(this.db, key).valid;
   }
 
+  /**
+   * API-KEY-LOGIN-SCOPE-1: may this key open a DASHBOARD SESSION? Only a
+   * system-scope admin key may: the session it creates is a global admin with no
+   * org. Org-scoped keys (any role) and non-admin keys stay valid as API Bearer
+   * tokens but are refused here — accepting them turned an org's read-only key
+   * into a global-admin session (fixed 2026-10-08).
+   */
+  checkApiKeyForDashboardLogin(key: string): 'ok' | 'invalid' | 'org-scoped' | 'not-admin' {
+    const result = validateApiKey(this.db, key);
+    if (!result.valid) return 'invalid';
+    if (result.orgId !== 'system') return 'org-scoped';
+    if (result.role !== 'admin') return 'not-admin';
+    return 'ok';
+  }
+
   // -----------------------------------------------------------------------
   // Password login
   // -----------------------------------------------------------------------

@@ -195,6 +195,69 @@ describe('Auth routes', () => {
       expect(response.headers['location']).toBe('/');
     });
 
+    it('[EVIDENCE] REFUSES an org-scoped API key — it must never open a global-admin dashboard session', async () => {
+      // The login path used to accept ANY active key and write role 'admin' with no org into the
+      // session: an org-scoped read-only key became a global admin (fixed 2026-10-08).
+      const rawDb = ctx.storage.getRawDatabase();
+      const id = storeApiKey(rawDb, 'org-key-123456789012345678901', 'org key', 'read-only');
+      rawDb.prepare('UPDATE api_keys SET org_id = ? WHERE id = ?').run('org-customer', id);
+
+      const response = await ctx.server.inject({
+        method: 'POST',
+        url: '/login',
+        payload: { apiKey: 'org-key-123456789012345678901' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json() as { template: string; data: { error: string } };
+      expect(body.template).toBe('login.hbs');
+      expect(body.data.error).toMatch(/organization API keys work for the API only/i);
+      expect(response.headers['set-cookie'] ?? '').not.toMatch(/session=/);
+    });
+
+    it('[SYMMETRY] REFUSES an org-scoped key even when its role is admin', async () => {
+      const rawDb = ctx.storage.getRawDatabase();
+      const id = storeApiKey(rawDb, 'org-admin-key-1234567890123456', 'org admin key', 'admin');
+      rawDb.prepare('UPDATE api_keys SET org_id = ? WHERE id = ?').run('org-customer', id);
+
+      const response = await ctx.server.inject({ method: 'POST', url: '/login', payload: { apiKey: 'org-admin-key-1234567890123456' } });
+
+      expect(response.statusCode).toBe(200);
+      expect((response.json() as { data: { error: string } }).data.error).toMatch(/organization API keys/i);
+    });
+
+    it('[SYMMETRY] REFUSES a system-scope key whose role is not admin (no read-only -> admin promotion)', async () => {
+      const rawDb = ctx.storage.getRawDatabase();
+      const id = storeApiKey(rawDb, 'sys-ro-key-1234567890123456789', 'system read-only', 'read-only');
+      rawDb.prepare('UPDATE api_keys SET org_id = ? WHERE id = ?').run('system', id);
+
+      const response = await ctx.server.inject({ method: 'POST', url: '/login', payload: { apiKey: 'sys-ro-key-1234567890123456789' } });
+
+      expect(response.statusCode).toBe(200);
+      expect((response.json() as { data: { error: string } }).data.error).toMatch(/API only/i);
+    });
+
+    it('[EVIDENCE] REFUSES an expired key before the periodic sweep has deactivated it', async () => {
+      const rawDb = ctx.storage.getRawDatabase();
+      const id = storeApiKey(rawDb, 'expired-key-123456789012345678', 'expired');
+      rawDb.prepare('UPDATE api_keys SET expires_at = ? WHERE id = ?').run('2026-01-01T00:00:00.000Z', id);
+
+      const response = await ctx.server.inject({ method: 'POST', url: '/login', payload: { apiKey: 'expired-key-123456789012345678' } });
+
+      expect(response.statusCode).toBe(200);
+      expect((response.json() as { data: { error: string } }).data.error).toBe('Invalid API key.');
+    });
+
+    it('[SYMMETRY] still accepts the system-scope key (operator login is unchanged)', async () => {
+      const rawDb = ctx.storage.getRawDatabase();
+      const id = storeApiKey(rawDb, 'system-key-12345678901234567890', 'system key');
+      rawDb.prepare('UPDATE api_keys SET org_id = ? WHERE id = ?').run('system', id);
+
+      const response = await ctx.server.inject({ method: 'POST', url: '/login', payload: { apiKey: 'system-key-12345678901234567890' } });
+
+      expect(response.statusCode).toBe(302);
+    });
+
     it('ignores empty API key string', async () => {
       const response = await ctx.server.inject({
         method: 'POST',

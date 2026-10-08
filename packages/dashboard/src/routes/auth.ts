@@ -115,9 +115,18 @@ export async function authRoutes(
 
       // ── API key login (available in all modes) ─────────────────────────
       if (typeof body.apiKey === 'string' && body.apiKey.trim() !== '') {
-        const valid = authService.validateApiKey(body.apiKey.trim());
+        const check = authService.checkApiKeyForDashboardLogin(body.apiKey.trim());
 
-        if (!valid) {
+        if (check === 'org-scoped' || check === 'not-admin') {
+          void storage?.audit.log({ actor: 'unknown', action: 'login.failure', resourceType: 'session', details: `API key refused for dashboard login (${check})`, ipAddress: request.ip });
+          return reply.view('login.hbs', {
+            error: 'Organization API keys work for the API only. Sign in with your username and password.',
+            mode,
+            loginMethods: authService.getLoginMethods(),
+          });
+        }
+
+        if (check !== 'ok') {
           void storage?.audit.log({ actor: 'unknown', action: 'login.failure', resourceType: 'session', details: 'Invalid API key', ipAddress: request.ip });
           return reply.view('login.hbs', {
             error: 'Invalid API key.',
