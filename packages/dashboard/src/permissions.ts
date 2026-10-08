@@ -16,6 +16,7 @@ export const ALL_PERMISSIONS = [
   { id: 'reports.compare', label: 'Compare reports', group: 'Reports' },
   { id: 'issues.assign', label: 'Assign issues to team members', group: 'Issues' },
   { id: 'issues.fix', label: 'Propose and view fixes', group: 'Issues' },
+  { id: 'issues.dismiss', label: 'Mark findings as false positives', group: 'Issues' },
   { id: 'manual_testing', label: 'Manual testing checklists', group: 'Testing' },
   { id: 'repos.manage', label: 'Connect repositories', group: 'Repositories' },
   { id: 'repos.credentials', label: 'Manage git credentials', group: 'Repositories' },
@@ -47,13 +48,48 @@ export type PermissionId = typeof ALL_PERMISSIONS[number]['id'];
 /** All permission id strings in a plain array. */
 export const ALL_PERMISSION_IDS: readonly string[] = ALL_PERMISSIONS.map((p) => p.id);
 
-/** Permission groups for the management UI. */
+/**
+ * DARK permissions (Phase 87, D-07, FP-17): ids that exist in the catalogue —
+ * so a global admin (role 'admin' resolves ALL_PERMISSION_IDS) holds them — but
+ * that NO other path may yield yet:
+ *   1. no DEFAULT_ORG_ROLES entry / ORG_* set contains them (pinned by test);
+ *   2. custom roles cannot carry them (routes/admin/roles.ts parsePermissions
+ *      filters with isRoleGrantablePermission);
+ *   3. org-scoped admin API keys are capped at ORG_OWNER_PERMISSIONS (PR #102),
+ *      so keeping that set dark-free keeps those keys dark-free;
+ *   4. /login refuses org-scoped keys (PR #100).
+ *
+ * Phase 89 (FP-18) lifts the grant: remove the id here, add it to
+ * ORG_OWNER_PERMISSIONS / ORG_ADMIN_PERMISSIONS, and seed existing orgs in a
+ * migration. NOTE: because PR #102 caps org-scoped admin keys at
+ * ORG_OWNER_PERMISSIONS, the moment the id joins that set it reaches those keys
+ * too (the path-3 pin in tests/auth/org-scoped-key-dark-permission.test.ts must
+ * be updated deliberately then).
+ */
+export const DARK_PERMISSIONS: ReadonlySet<PermissionId> = new Set<PermissionId>(['issues.dismiss']);
+
+/** A new Set of `ids` without any dark permission. Never mutates its argument. */
+export function withoutDarkPermissions(ids: Iterable<string>): Set<string> {
+  const out = new Set<string>();
+  for (const id of ids) {
+    if (!(DARK_PERMISSIONS as ReadonlySet<string>).has(id)) out.add(id);
+  }
+  return out;
+}
+
+/** May a role row carry this permission id? In the catalogue and not dark. */
+export function isRoleGrantablePermission(id: string): boolean {
+  return ALL_PERMISSION_IDS.includes(id) && !(DARK_PERMISSIONS as ReadonlySet<string>).has(id);
+}
+
+/** Permission groups for the management UI (dark ids are not listed). */
 export function getPermissionGroups(): Array<{
   readonly group: string;
   readonly permissions: ReadonlyArray<{ readonly id: string; readonly label: string }>;
 }> {
   const groupMap = new Map<string, Array<{ id: string; label: string }>>();
   for (const p of ALL_PERMISSIONS) {
+    if ((DARK_PERMISSIONS as ReadonlySet<string>).has(p.id)) continue;
     const existing = groupMap.get(p.group);
     if (existing !== undefined) {
       existing.push({ id: p.id, label: p.label });
