@@ -1,3 +1,4 @@
+import { bypassesOrgScope } from '../../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../../db/index.js';
@@ -57,7 +58,7 @@ const MixedResponse = {
 
 /** Tenant isolation: non-admin users can only mutate teams in their own org. */
 function canMutateTeam(request: FastifyRequest, teamOrgId: string): boolean {
-  if (request.user?.role === 'admin') return true;
+  if (bypassesOrgScope(request.user)) return true;
   const userOrgId = request.user?.currentOrgId ?? 'system';
   return teamOrgId === userOrgId;
 }
@@ -134,7 +135,7 @@ export async function teamRoutes(
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       // Admin sees all teams; other users see teams in their org
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       const teams = isAdmin
         ? await storage.teams.listTeams()
         : await storage.teams.listTeams(request.user?.currentOrgId ?? 'system');
@@ -270,7 +271,7 @@ export async function teamRoutes(
         return reply.code(404).send({ error: 'Team not found' });
       }
 
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       const memberIds = new Set((team.members ?? []).map((m) => m.userId));
 
       // Org owners see unbound + own org users; admins see all
@@ -531,7 +532,7 @@ export async function teamRoutes(
   // ────────────────────────────────────────────────────────────────────────
 
   function callerIsAdminOf(request: FastifyRequest, orgId: string): boolean {
-    if (request.user?.role === 'admin') return true;
+    if (bypassesOrgScope(request.user)) return true;
     const perms = (request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined;
     if (perms?.has('admin.system') === true) return true;
     if (perms?.has('admin.org') !== true) return false;

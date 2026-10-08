@@ -1,3 +1,4 @@
+import { bypassesOrgScope } from '../../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import type { StorageAdapter, DashboardUser } from '../../db/index.js';
@@ -30,7 +31,7 @@ const UsernameQuery = Type.Object(
 /** Check if a non-admin user can manage the target user.
  * Org owners can only manage users who are in their org's teams (not unbound/global users). */
 async function canManageUser(storage: StorageAdapter, request: FastifyRequest, targetUserId: string): Promise<boolean> {
-  if (request.user?.role === 'admin') return true;
+  if (bypassesOrgScope(request.user)) return true;
   const orgId = request.user?.currentOrgId;
   if (!orgId || orgId === 'system') return false;
   // Check if target user is in any team belonging to this org
@@ -137,7 +138,7 @@ export async function dashboardUserRoutes(
       schema: HtmlPageSchema,
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       const orgId = request.user?.currentOrgId;
 
       const users = isAdmin
@@ -192,7 +193,7 @@ export async function dashboardUserRoutes(
       schema: HtmlPartialResponse,
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       const roles = isAdmin
         ? ['executive', 'viewer', 'user', 'developer', 'admin']
         : ['executive', 'viewer', 'user', 'developer'];
@@ -223,7 +224,7 @@ export async function dashboardUserRoutes(
       let role = body.role?.trim() ?? 'user';
 
       // Non-admins cannot create admin users
-      if (role === 'admin' && request.user?.role !== 'admin') {
+      if (role === 'admin' && !bypassesOrgScope(request.user)) {
         role = 'user';
       }
 
@@ -270,12 +271,12 @@ export async function dashboardUserRoutes(
 
       try {
         const created = await storage.users.createUser(username, password, role);
-        const row = userRowHtml(created, request.user?.role === 'admin', hasPermission(request, 'users.roles'));
+        const row = userRowHtml(created, bypassesOrgScope(request.user), hasPermission(request, 'users.roles'));
 
         void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.create', resourceType: 'user', resourceId: created.id, details: { username: created.username, role }, ipAddress: request.ip });
 
         // If creator is org owner/admin (not global admin), bind user to their org
-        const isAdmin = request.user?.role === 'admin';
+        const isAdmin = bypassesOrgScope(request.user);
         const orgId = request.user?.currentOrgId;
         if (!isAdmin && orgId && orgId !== 'system') {
           // Add to org_members so getUserOrgs resolves the org for permission resolution
@@ -332,7 +333,7 @@ export async function dashboardUserRoutes(
       }
 
       // Only global admins can assign the 'admin' dashboard role
-      if (role === 'admin' && request.user?.role !== 'admin') {
+      if (role === 'admin' && !bypassesOrgScope(request.user)) {
         return reply
           .code(403)
           .header('content-type', 'text/html')
@@ -358,7 +359,7 @@ export async function dashboardUserRoutes(
             .send(toastHtml('User not found.', 'error'));
         }
 
-        const row = userRowHtml(updated, request.user?.role === 'admin', hasPermission(request, 'users.roles'));
+        const row = userRowHtml(updated, bypassesOrgScope(request.user), hasPermission(request, 'users.roles'));
         void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.role_change', resourceType: 'user', resourceId: id, details: { username: updated.username, newRole: role }, ipAddress: request.ip });
         return reply
           .code(200)
@@ -403,7 +404,7 @@ export async function dashboardUserRoutes(
             .send(toastHtml('User not found.', 'error'));
         }
 
-        const row = userRowHtml(deactivated, request.user?.role === 'admin', hasPermission(request, 'users.roles'));
+        const row = userRowHtml(deactivated, bypassesOrgScope(request.user), hasPermission(request, 'users.roles'));
         void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.deactivate', resourceType: 'user', resourceId: id, details: { username: deactivated.username }, ipAddress: request.ip });
         return reply
           .code(200)
@@ -440,7 +441,7 @@ export async function dashboardUserRoutes(
             .send(toastHtml('User not found.', 'error'));
         }
 
-        const row = userRowHtml(activated, request.user?.role === 'admin', hasPermission(request, 'users.roles'));
+        const row = userRowHtml(activated, bypassesOrgScope(request.user), hasPermission(request, 'users.roles'));
         void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.activate', resourceType: 'user', resourceId: id, details: { username: activated.username }, ipAddress: request.ip });
         return reply
           .code(200)

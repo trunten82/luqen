@@ -1,3 +1,4 @@
+import { bypassesOrgScope } from '../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { randomUUID } from 'node:crypto';
@@ -171,7 +172,7 @@ export async function repoRoutes(
       schema: { ...HtmlPageSchema, tags: ['repos'] },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       const currentOrgId = request.user?.currentOrgId ?? 'system';
 
       // Global admin sees repos for all orgs; org admin sees their own
@@ -212,7 +213,7 @@ export async function repoRoutes(
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as CreateRepoBody;
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       // Global admin can assign to any org via form; org admin uses their own
       const orgId = isAdmin && body.orgId?.trim()
         ? body.orgId.trim()
@@ -316,7 +317,7 @@ export async function repoRoutes(
 
       // Admin bypass mirrors every other /reports/:id surface (UAT 2026-07-14).
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (!bypassesOrgScope(request.user) && scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).send({ error: 'Report not found' });
       }
 

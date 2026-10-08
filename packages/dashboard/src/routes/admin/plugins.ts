@@ -1,3 +1,4 @@
+import { bypassesOrgScope } from '../../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { requirePermission } from '../../auth/middleware.js';
@@ -173,7 +174,7 @@ export async function pluginAdminRoutes(
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = request.user?.currentOrgId ?? 'system';
-      const isAdmin = request.user?.role === 'admin';
+      const isAdmin = bypassesOrgScope(request.user);
       const perms = (request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined ?? new Set<string>();
 
       // Global admin sees all; org admin sees global plugins (as available to activate for their org)

@@ -87,7 +87,14 @@ export async function resolveEffectivePermissions(
   userId: string,
   userRole: string,
   orgId?: string,
+  opts: { readonly orgScopedApiKey?: boolean } = {},
 ): Promise<Set<string>> {
+  // ORG-KEY-CONTAINMENT-1: an org-scoped key with role 'admin' administers ITS
+  // org, so it holds at most what an org Owner holds — never the global
+  // permissions (admin.system, ...).
+  if (userRole === 'admin' && opts.orgScopedApiKey === true) {
+    return new Set(ORG_OWNER_PERMISSIONS);
+  }
   // Admin users get all permissions regardless of org context
   if (userRole === 'admin') {
     return new Set(ALL_PERMISSION_IDS);
@@ -276,3 +283,14 @@ export const DEFAULT_ORG_ROLES: ReadonlyArray<{
   { name: 'Executive', description: 'View reports and generate/export VPAT/ACR reports (no scans or administration)', permissions: ORG_EXECUTIVE_PERMISSIONS },
   { name: 'Viewer', description: 'View reports only', permissions: ORG_VIEWER_PERMISSIONS },
 ];
+
+/**
+ * ORG-KEY-CONTAINMENT-1: may this caller bypass org isolation (read any org's
+ * scan)? Only a GLOBAL admin may — role 'admin' alone is not enough, because an
+ * org-scoped admin API key also carries role 'admin'.
+ */
+export function bypassesOrgScope(
+  user: { readonly role?: string; readonly orgScopedApiKey?: boolean } | undefined,
+): boolean {
+  return user?.role === 'admin' && user.orgScopedApiKey !== true;
+}

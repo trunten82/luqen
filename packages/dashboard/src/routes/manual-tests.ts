@@ -1,3 +1,4 @@
+import { bypassesOrgScope } from '../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { requirePermission } from '../auth/middleware.js';
 import { Type } from '@sinclair/typebox';
@@ -186,7 +187,7 @@ export async function manualTestRoutes(
       // rendered for them (UAT 2026-05-15).
       const orgId = request.user?.currentOrgId ?? 'system';
       if (
-        request.user?.role !== 'admin' &&
+        !bypassesOrgScope(request.user) &&
         scan.orgId !== orgId &&
         scan.orgId !== 'system'
       ) {
@@ -304,7 +305,7 @@ export async function manualTestRoutes(
       // rendered for them (UAT 2026-05-15).
       const orgId = request.user?.currentOrgId ?? 'system';
       if (
-        request.user?.role !== 'admin' &&
+        !bypassesOrgScope(request.user) &&
         scan.orgId !== orgId &&
         scan.orgId !== 'system'
       ) {
@@ -411,7 +412,7 @@ export async function manualTestRoutes(
       return null;
     }
     const orgId = request.user?.currentOrgId ?? 'system';
-    if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+    if (!bypassesOrgScope(request.user) && scan.orgId !== orgId && scan.orgId !== 'system') {
       reply.code(404).header('content-type', 'text/html').send('Report not found');
       return null;
     }

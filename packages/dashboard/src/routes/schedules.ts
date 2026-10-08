@@ -1,3 +1,4 @@
+import { bypassesOrgScope } from '../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { randomUUID } from 'node:crypto';
@@ -160,7 +161,7 @@ export async function scheduleRoutes(
 
       const orgId = request.user?.currentOrgId ?? 'system';
       // Admin bypass mirrors every other org-scoped surface (UAT 2026-07-14).
-      if (request.user?.role !== 'admin' && schedule.orgId !== orgId && schedule.orgId !== 'system') {
+      if (!bypassesOrgScope(request.user) && schedule.orgId !== orgId && schedule.orgId !== 'system') {
         return reply.code(404).send(toastHtml('Schedule not found', 'error'));
       }
 
@@ -189,7 +190,7 @@ export async function scheduleRoutes(
 
       const orgId = request.user?.currentOrgId ?? 'system';
       // Admin bypass mirrors every other org-scoped surface (UAT 2026-07-14).
-      if (request.user?.role !== 'admin' && schedule.orgId !== orgId && schedule.orgId !== 'system') {
+      if (!bypassesOrgScope(request.user) && schedule.orgId !== orgId && schedule.orgId !== 'system') {
         return reply.code(404).send(toastHtml('Schedule not found', 'error'));
       }
 

@@ -1,3 +1,4 @@
+import { bypassesOrgScope } from '../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { randomUUID } from 'node:crypto';
@@ -70,7 +71,7 @@ export async function assignmentRoutes(
       // (report page, exports, manual tests). UAT 2026-07-14: admins could view
       // a cross-org report but its linked sub-pages 404'd.
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (!bypassesOrgScope(request.user) && scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).send({ error: 'Report not found' });
       }
 
@@ -138,7 +139,7 @@ export async function assignmentRoutes(
       // (report page, exports, manual tests). UAT 2026-07-14: admins could view
       // a cross-org report but its linked sub-pages 404'd.
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (!bypassesOrgScope(request.user) && scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).send({ error: 'Report not found' });
       }
 
@@ -223,7 +224,7 @@ export async function assignmentRoutes(
 
       // Admin bypass mirrors the report/assignment list surfaces (UAT 2026-07-14).
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (request.user?.role !== 'admin' && assignment.orgId !== orgId && assignment.orgId !== 'system') {
+      if (!bypassesOrgScope(request.user) && assignment.orgId !== orgId && assignment.orgId !== 'system') {
         return reply.code(404).send({ error: 'Assignment not found' });
       }
 
@@ -300,7 +301,7 @@ export async function assignmentRoutes(
 
       // Admin bypass mirrors the report/assignment list surfaces (UAT 2026-07-14).
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (request.user?.role !== 'admin' && assignment.orgId !== orgId && assignment.orgId !== 'system') {
+      if (!bypassesOrgScope(request.user) && assignment.orgId !== orgId && assignment.orgId !== 'system') {
         return reply.code(404).send({ error: 'Assignment not found' });
       }
 

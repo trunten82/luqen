@@ -135,14 +135,14 @@ describe('at-rest key-invariant (PBH-A)', () => {
     const EXPECTED_WIRING_SITES: readonly WiringSite[] = [
       { file: SERVER_TS, line: 313, label: 'R1 PluginManager options' },
       { file: SERVER_TS, line: 355, label: 'R3 SqliteServiceConnectionsRepository' },
-      { file: SERVER_TS, line: 1116, label: 'R7 registerOauthKeysRoutes' },
-      { file: SERVER_TS, line: 1313, label: 'R8 ensureInitialSigningKey' },
-      { file: SERVER_TS, line: 1314, label: 'R9 createDashboardSigner' },
-      { file: SERVER_TS, line: 1431, label: 'R10 startKeyHousekeeping' },
+      { file: SERVER_TS, line: 1117, label: 'R7 registerOauthKeysRoutes' },
+      { file: SERVER_TS, line: 1314, label: 'R8 ensureInitialSigningKey' },
+      { file: SERVER_TS, line: 1315, label: 'R9 createDashboardSigner' },
+      { file: SERVER_TS, line: 1432, label: 'R10 startKeyHousekeeping' },
       { file: REL('cli.ts'), line: 219, label: 'R2 cli.ts PluginManager options' },
       { file: REL('routes', 'git-credentials.ts'), line: 32, label: 'R4 git-credentials encryptionKey local' },
-      { file: REL('routes', 'repos.ts'), line: 404, label: 'R5 repos.ts decryptSecret' },
-      { file: REL('routes', 'fix-pr.ts'), line: 305, label: 'R6 fix-pr.ts decryptSecret' },
+      { file: REL('routes', 'repos.ts'), line: 405, label: 'R5 repos.ts decryptSecret' },
+      { file: REL('routes', 'fix-pr.ts'), line: 306, label: 'R6 fix-pr.ts decryptSecret' },
     ];
 
     const results = EXPECTED_WIRING_SITES.map((site) => {

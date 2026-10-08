@@ -889,6 +889,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
       request.user.id,
       request.user.role,
       request.user.currentOrgId,
+      { orgScopedApiKey: request.user.orgScopedApiKey === true },
     );
     (request as unknown as Record<string, unknown>)['permissions'] = permissions;
   });
