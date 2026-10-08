@@ -131,3 +131,153 @@ describe('IssueDismissalRepository - mark', () => {
     expect(count('issue_dismissal_events')).toBe(0);
   });
 });
+
+describe('IssueDismissalRepository - conflict', () => {
+  it('returns a conflict carrying the existing dismissal on re-mark of an active key', async () => {
+    const first = await storage.issueDismissals!.mark(markInput());
+    if (first.kind !== 'created') throw new Error('expected created');
+
+    const second = await storage.issueDismissals!.mark(markInput({ actor: 'carol', reason: 'Other reason' }));
+
+    expect(second.kind).toBe('conflict');
+    if (second.kind !== 'conflict') throw new Error('unreachable');
+    expect(second.existing.id).toBe(first.dismissal.id);
+    expect(count('issue_dismissals')).toBe(1);
+    expect(await storage.issueDismissals!.listEvents(first.dismissal.id)).toHaveLength(1);
+    const audit = await storage.audit.query({ resourceType: 'issue_dismissal' });
+    expect(audit.total).toBe(1);
+  });
+});
+
+describe('IssueDismissalRepository - revoke', () => {
+  async function markOne(): Promise<string> {
+    const r = await storage.issueDismissals!.mark(markInput());
+    if (r.kind !== 'created') throw new Error('expected created');
+    return r.dismissal.id;
+  }
+
+  it('revokes, keeps the row, records revoker and comment, appends event and audit row', async () => {
+    const id = await markOne();
+
+    const result = await storage.issueDismissals!.revoke({
+      id,
+      orgId: 'org-a',
+      actor: 'bob',
+      actorId: 'u-2',
+      comment: 'Fixed upstream',
+    });
+
+    expect(result.kind).toBe('revoked');
+    if (result.kind !== 'revoked') throw new Error('unreachable');
+    expect(result.dismissal.status).toBe('revoked');
+    expect(result.dismissal.revokedBy).toBe('bob');
+    expect(result.dismissal.revokedById).toBe('u-2');
+    expect(result.dismissal.revokedAt).toBeTruthy();
+    expect(result.dismissal.revokeComment).toBe('Fixed upstream');
+    expect(count('issue_dismissals')).toBe(1);
+
+    const events = await storage.issueDismissals!.listEvents(id);
+    expect(events.map((e) => e.action)).toEqual(['mark', 'revoke']);
+    expect(events[1].actor).toBe('bob');
+    expect(events[1].actorId).toBe('u-2');
+    expect(events[1].text).toBe('Fixed upstream');
+
+    const audit = await storage.audit.query({ resourceType: 'issue_dismissal', action: 'issue_dismissal.revoke' });
+    expect(audit.total).toBe(1);
+    expect(audit.entries[0].resourceId).toBe(id);
+    expect(audit.entries[0].orgId).toBe('org-a');
+    const details = JSON.parse(String(audit.entries[0].details)) as Record<string, unknown>;
+    expect(details).toEqual({
+      siteUrl: SITE_URL,
+      code: 'WCAG2AA.1_4_3',
+      selector: '#hero > p',
+      comment: 'Fixed upstream',
+    });
+  });
+
+  it('stores a null comment as null', async () => {
+    const id = await markOne();
+    const result = await storage.issueDismissals!.revoke({ id, orgId: 'org-a', actor: 'bob', comment: null });
+    if (result.kind !== 'revoked') throw new Error('expected revoked');
+    expect(result.dismissal.revokeComment).toBeNull();
+    expect(result.dismissal.revokedById).toBeNull();
+    const events = await storage.issueDismissals!.listEvents(id);
+    expect(events[1].text).toBeNull();
+  });
+
+  it('second revoke returns already-revoked and writes no event or audit row', async () => {
+    const id = await markOne();
+    await storage.issueDismissals!.revoke({ id, orgId: 'org-a', actor: 'bob', comment: null });
+
+    const again = await storage.issueDismissals!.revoke({ id, orgId: 'org-a', actor: 'dave', comment: 'late' });
+
+    expect(again.kind).toBe('already-revoked');
+    if (again.kind !== 'already-revoked') throw new Error('unreachable');
+    expect(again.dismissal.revokedBy).toBe('bob');
+    expect(await storage.issueDismissals!.listEvents(id)).toHaveLength(2);
+    const audit = await storage.audit.query({ resourceType: 'issue_dismissal' });
+    expect(audit.total).toBe(2);
+  });
+
+  it('returns not-found for an unknown id', async () => {
+    const result = await storage.issueDismissals!.revoke({
+      id: randomUUID(),
+      orgId: 'org-a',
+      actor: 'bob',
+      comment: null,
+    });
+    expect(result.kind).toBe('not-found');
+    expect(count('issue_dismissal_events')).toBe(0);
+  });
+
+  it('persists no state change when the revoke audit insert fails (atomic)', async () => {
+    const id = await markOne();
+    storage.getRawDatabase().exec(
+      `CREATE TRIGGER t2 BEFORE INSERT ON audit_log WHEN NEW.action = 'issue_dismissal.revoke'
+       BEGIN SELECT RAISE(ABORT, 'audit unavailable'); END`,
+    );
+
+    await expect(
+      storage.issueDismissals!.revoke({ id, orgId: 'org-a', actor: 'bob', comment: null }),
+    ).rejects.toThrow(/audit unavailable/);
+
+    const still = await storage.issueDismissals!.getById(id);
+    expect(still?.status).toBe('active');
+    expect(await storage.issueDismissals!.listEvents(id)).toHaveLength(1);
+  });
+
+  it('allows re-marking after revoke and keeps both rows in history, newest first', async () => {
+    const firstId = await markOne();
+    await storage.issueDismissals!.revoke({ id: firstId, orgId: 'org-a', actor: 'bob', comment: null });
+
+    const again = await storage.issueDismissals!.mark(markInput({ actor: 'erin' }));
+    expect(again.kind).toBe('created');
+    if (again.kind !== 'created') throw new Error('unreachable');
+    expect(again.dismissal.id).not.toBe(firstId);
+
+    const all = await storage.issueDismissals!.listForSite('org-a', SITE_KEY);
+    expect(all).toHaveLength(2);
+    expect(all.map((d) => d.status).sort()).toEqual(['active', 'revoked']);
+    expect(all[0].createdAt >= all[1].createdAt).toBe(true);
+
+    const active = await storage.issueDismissals!.listActiveForSite('org-a', SITE_KEY);
+    expect(active.map((d) => d.id)).toEqual([again.dismissal.id]);
+  });
+});
+
+describe('IssueDismissalRepository - getById', () => {
+  it('returns the record, or null when absent', async () => {
+    const r = await storage.issueDismissals!.mark(markInput());
+    if (r.kind !== 'created') throw new Error('expected created');
+
+    expect(await storage.issueDismissals!.getById(r.dismissal.id)).toEqual(r.dismissal);
+    expect(await storage.issueDismissals!.getById(randomUUID())).toBeNull();
+  });
+});
+
+describe('IssueDismissalRepository - append-only surface', () => {
+  it('exposes no update or delete method', () => {
+    const methods = Object.getOwnPropertyNames(Object.getPrototypeOf(storage.issueDismissals));
+    expect(methods.filter((m) => /^(update|delete|remove|destroy)/i.test(m))).toEqual([]);
+  });
+});

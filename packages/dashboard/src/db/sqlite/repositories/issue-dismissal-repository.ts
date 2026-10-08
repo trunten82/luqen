@@ -159,12 +159,71 @@ export class SqliteIssueDismissalRepository implements IssueDismissalRepository 
     }
   }
 
-  async revoke(_input: RevokeIssueDismissalInput): Promise<RevokeIssueDismissalResult> {
-    throw new Error('not implemented');
+  async revoke(input: RevokeIssueDismissalInput): Promise<RevokeIssueDismissalResult> {
+    return this.db.transaction((): RevokeIssueDismissalResult => {
+      const now = new Date().toISOString();
+      const update = this.db.prepare(`
+        UPDATE issue_dismissals
+        SET status = 'revoked',
+            revoked_by = @actor,
+            revoked_by_id = @actorId,
+            revoked_at = @now,
+            revoke_comment = @comment
+        WHERE id = @id AND org_id = @orgId AND status = 'active'
+      `).run({
+        id: input.id,
+        orgId: input.orgId,
+        actor: input.actor,
+        actorId: input.actorId ?? null,
+        comment: input.comment,
+        now,
+      });
+
+      if (update.changes === 0) {
+        const row = this.db.prepare(
+          'SELECT * FROM issue_dismissals WHERE id = @id AND org_id = @orgId',
+        ).get({ id: input.id, orgId: input.orgId }) as DismissalRow | undefined;
+        if (!row) return { kind: 'not-found' };
+        return { kind: 'already-revoked', dismissal: rowToDismissal(row) };
+      }
+
+      const dismissal = this.requireById(input.id);
+
+      this.insertEvent({
+        dismissalId: input.id,
+        orgId: input.orgId,
+        action: 'revoke',
+        actor: input.actor,
+        actorId: input.actorId ?? null,
+        at: now,
+        text: input.comment,
+      });
+
+      insertAuditRow(this.db, {
+        actor: input.actor,
+        actorId: input.actorId,
+        action: 'issue_dismissal.revoke',
+        resourceType: 'issue_dismissal',
+        resourceId: input.id,
+        details: {
+          siteUrl: dismissal.siteUrl,
+          code: dismissal.code,
+          selector: dismissal.selector,
+          comment: input.comment,
+        },
+        ipAddress: input.ipAddress,
+        orgId: input.orgId,
+      });
+
+      return { kind: 'revoked', dismissal };
+    })();
   }
 
-  async getById(_id: string): Promise<IssueDismissal | null> {
-    throw new Error('not implemented');
+  async getById(id: string): Promise<IssueDismissal | null> {
+    const row = this.db.prepare('SELECT * FROM issue_dismissals WHERE id = @id').get({ id }) as
+      | DismissalRow
+      | undefined;
+    return row ? rowToDismissal(row) : null;
   }
 
   async listActiveForSite(orgId: string, siteKey: string): Promise<readonly IssueDismissal[]> {
@@ -176,8 +235,13 @@ export class SqliteIssueDismissalRepository implements IssueDismissalRepository 
     return rows.map(rowToDismissal);
   }
 
-  async listForSite(_orgId: string, _siteKey: string): Promise<readonly IssueDismissal[]> {
-    throw new Error('not implemented');
+  async listForSite(orgId: string, siteKey: string): Promise<readonly IssueDismissal[]> {
+    const rows = this.db.prepare(`
+      SELECT * FROM issue_dismissals
+      WHERE org_id = @orgId AND site_key = @siteKey
+      ORDER BY created_at DESC, rowid DESC
+    `).all({ orgId, siteKey }) as DismissalRow[];
+    return rows.map(rowToDismissal);
   }
 
   async listEvents(dismissalId: string): Promise<readonly IssueDismissalEvent[]> {
