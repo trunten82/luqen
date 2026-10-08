@@ -4,8 +4,8 @@ milestone: v3.8.0
 milestone_name: Mark as false positive
 current_phase: "87"
 current_phase_name: Dismissal store, domain model and permission
-status: planning
-stopped_at: "Phase 87 PLANNED 2026-10-08: 5 plans / 2 waves, plan-checker PASS (iteration 2, revised to build on PR #102). Next: /gsd-execute-phase 87."
+status: executing
+stopped_at: "Phase 87 EXECUTED (5/5 plans merged on gsd/v3.8.0-false-positive f5e9c555, not pushed); 87-05 prod half BLOCKED on a permission decision; next: code review, verify, ship. See phases/87-*/.continue-here.md"
 last_activity_desc: "v3.8.0 started; same day shipped PR #97 (noscript/video contrast FP), #98 (axe needs-review -> warning), #99 (deploy drain), #100 (/login escalation fix), #101 (audit key id)"
 state_head: b2df214c  # last CODE commit. Re-checkable: `git diff --name-only b2df214c..HEAD` must list nothing outside .planning/.
 last_updated: "2026-10-08T11:18:05.820Z"
