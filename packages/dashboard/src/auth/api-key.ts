@@ -58,8 +58,14 @@ export function validateApiKey(
 ): ApiKeyValidationResult {
   const keyHash = hashApiKey(key);
   const row = db
-    .prepare('SELECT id, role, org_id FROM api_keys WHERE key_hash = @keyHash AND active = 1')
-    .get({ keyHash }) as { id: string; role: string; org_id: string } | undefined;
+    // Expiry is enforced HERE, not only by the periodic sweep (api-key-sweep.ts):
+    // between a key's expiry and the next sweep it was still accepted.
+    .prepare(
+      `SELECT id, role, org_id FROM api_keys
+       WHERE key_hash = @keyHash AND active = 1
+         AND (expires_at IS NULL OR expires_at > @now)`,
+    )
+    .get({ keyHash, now: new Date().toISOString() }) as { id: string; role: string; org_id: string } | undefined;
 
   if (row !== undefined) {
     updateLastUsed(db, keyHash);
