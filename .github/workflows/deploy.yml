@@ -14,7 +14,12 @@ on:
     workflows: ['CI']
     types: [completed]
     branches: [master]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Skip the scan drain and restart even if scans are running (they will fail)'
+        type: boolean
+        default: false
 
 # Serialize deploys — burst pushes queue through one at a time rather than
 # racing on the same checkout / service restart.
@@ -38,6 +43,26 @@ jobs:
           git checkout master
           git reset --hard origin/master
           echo "Deploying $(git rev-parse --short HEAD)"
+
+      - name: Wait for in-flight scans (drain)
+        # DEPLOY-DRAIN-1: scans run inside the dashboard and nothing resumes
+        # them, so the restart below fails every queued/running scan. On
+        # 2026-10-08 a deploy killed a customer's 50-page scan this way. This
+        # step polls the dashboard DB read-only and waits (up to 30 min) until
+        # none is active. It runs IMMEDIATELY before the stop: once the
+        # dashboard is stopped no new scan can start, so there is no window
+        # between the check and the stop. On timeout it exits 3 and the job
+        # fails BEFORE any service is touched — the old build keeps serving.
+        # A missing DB or table fails the step too: unreadable is never "idle".
+        # Uses the root node_modules (better-sqlite3), present from the last
+        # deploy's npm ci.
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.force) }}
+        env:
+          DRAIN_TIMEOUT_SEC: '1800'
+          DRAIN_POLL_SEC: '15'
+        run: |
+          cd /root/luqen
+          node scripts/deploy-drain.mjs
 
       - name: Stop the dashboard before install and build
         # The dashboard is the box's largest resident process (peaked at 2.8G
