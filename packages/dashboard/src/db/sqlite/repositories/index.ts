@@ -41,3 +41,4 @@ export { SqliteReportIdentityRepository } from './report-identity-repository.js'
 export { SqliteAcrWordingRepository } from './acr-wording-repository.js';
 export { SqliteEntitlementRepository } from './entitlement-repository.js';
 export { SqliteDigestRepository } from './digest-repository.js';
+export { SqliteIssueDismissalRepository } from './issue-dismissal-repository.js';

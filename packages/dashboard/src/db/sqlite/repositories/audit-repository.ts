@@ -4,6 +4,31 @@ import type { AuditRepository } from '../../interfaces/audit-repository.js';
 import type { AuditEntry, AuditQuery, CreateAuditInput } from '../../types.js';
 
 // ---------------------------------------------------------------------------
+// insertAuditRow — the ONE audit_log INSERT in the codebase. Synchronous so a
+// caller already inside a db.transaction (e.g. the issue-dismissal repository)
+// can write its audit row atomically with its own state change.
+// ---------------------------------------------------------------------------
+
+export function insertAuditRow(db: Database.Database, entry: CreateAuditInput): void {
+  const stmt = db.prepare(`
+    INSERT INTO audit_log (id, timestamp, actor, actor_id, action, resource_type, resource_id, details, ip_address, org_id)
+    VALUES (@id, @timestamp, @actor, @actorId, @action, @resourceType, @resourceId, @details, @ipAddress, @orgId)
+  `);
+  stmt.run({
+    id: randomUUID(),
+    timestamp: new Date().toISOString(),
+    actor: entry.actor,
+    actorId: entry.actorId ?? null,
+    action: entry.action,
+    resourceType: entry.resourceType,
+    resourceId: entry.resourceId ?? null,
+    details: typeof entry.details === 'object' ? JSON.stringify(entry.details) : (entry.details ?? null),
+    ipAddress: entry.ipAddress ?? null,
+    orgId: entry.orgId ?? 'system',
+  });
+}
+
+// ---------------------------------------------------------------------------
 // SqliteAuditRepository
 // ---------------------------------------------------------------------------
 
@@ -11,22 +36,7 @@ export class SqliteAuditRepository implements AuditRepository {
   constructor(private readonly db: Database.Database) {}
 
   async log(entry: CreateAuditInput): Promise<void> {
-    const stmt = this.db.prepare(`
-      INSERT INTO audit_log (id, timestamp, actor, actor_id, action, resource_type, resource_id, details, ip_address, org_id)
-      VALUES (@id, @timestamp, @actor, @actorId, @action, @resourceType, @resourceId, @details, @ipAddress, @orgId)
-    `);
-    stmt.run({
-      id: randomUUID(),
-      timestamp: new Date().toISOString(),
-      actor: entry.actor,
-      actorId: entry.actorId ?? null,
-      action: entry.action,
-      resourceType: entry.resourceType,
-      resourceId: entry.resourceId ?? null,
-      details: typeof entry.details === 'object' ? JSON.stringify(entry.details) : (entry.details ?? null),
-      ipAddress: entry.ipAddress ?? null,
-      orgId: entry.orgId ?? 'system',
-    });
+    insertAuditRow(this.db, entry);
   }
 
   async query(q: AuditQuery): Promise<{ entries: AuditEntry[]; total: number }> {

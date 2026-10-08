@@ -40,6 +40,7 @@ import type { OrgAggregatorWebhookRepository } from './interfaces/org-aggregator
 import type { NotificationUnsubscribeRepository } from './interfaces/notification-unsubscribe-repository.js';
 import type { RemediationEventRepository } from './interfaces/remediation-event-repository.js';
 import type { DigestRepository } from './interfaces/digest-repository.js';
+import type { IssueDismissalRepository } from './interfaces/issue-dismissal-repository.js';
 
 export interface StorageAdapter {
   connect(): Promise<void>;
@@ -125,4 +126,11 @@ export interface StorageAdapter {
    * Consumers should guard with `storage.digest?.`.
    */
   readonly digest?: DigestRepository;
+  /**
+   * Issue dismissals ("Mark as false positive") and their append-only history
+   * (Phase 87 — FP-01..03). Required on the SQLite adapter; OPTIONAL here so
+   * that out-of-repo Postgres/Mongo StorageAdapter plugins do not break.
+   * Consumers should guard with `storage.issueDismissals?.`.
+   */
+  readonly issueDismissals?: IssueDismissalRepository;
 }
