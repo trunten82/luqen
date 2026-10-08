@@ -35,9 +35,7 @@ let tmpRoot: string;
 let app: FastifyInstance;
 let seed: SqliteStorageAdapter;
 let orgA: string;
-let orgB: string;
 let scanA: string;
-let scanB: string;
 let systemKey: string;
 let orgAKey: string;
 
@@ -92,9 +90,7 @@ beforeAll(async () => {
   seed = new SqliteStorageAdapter(dbPath);
   await seed.migrate();
   orgA = (await seed.organizations.createOrg({ name: 'Org A', slug: 'org-a-dis' })).id;
-  orgB = (await seed.organizations.createOrg({ name: 'Org B', slug: 'org-b-dis' })).id;
   scanA = await seedScan(orgA, SITE_URL);
-  scanB = await seedScan(orgB, SITE_URL);
   systemKey = generateApiKey();
   orgAKey = generateApiKey();
   await seed.apiKeys.storeKey(systemKey, 'e2e-system-admin', 'system', 'admin');
@@ -144,5 +140,56 @@ describe('issue dismissals through the real server (Phase 87-04)', () => {
   });
 });
 
-// Referenced by Task 2 additions; kept here so the seeded second org is used.
-void (() => scanB);
+async function freshTenant(): Promise<{ orgId: string; scanId: string; key: string; siteKey: string }> {
+  const slug = `org-${randomUUID().slice(0, 8)}`;
+  const orgId = (await seed.organizations.createOrg({ name: slug, slug })).id;
+  const siteUrl = `https://${slug}.test/dev/en-us/`;
+  const scanId = await seedScan(orgId, siteUrl);
+  const key = generateApiKey();
+  await seed.apiKeys.storeKey(key, `e2e-${slug}`, orgId, 'admin');
+  return { orgId, scanId, key, siteKey: `https://${slug}.test/dev/en-us` };
+}
+
+function authed(method: 'GET' | 'POST', url: string, key: string, payload?: Record<string, unknown>) {
+  return app.inject({ method, url, headers: { authorization: `Bearer ${key}` }, ...(payload !== undefined ? { payload } : {}) });
+}
+
+describe('issue dismissals through the real server — list and revoke', () => {
+  it('org-scoped admin api key lists its own org\'s dismissals', async () => {
+    const t = await freshTenant();
+    const marked = await seed.issueDismissals!.mark({
+      orgId: t.orgId, siteUrl: `${t.siteKey}/`, siteKey: t.siteKey, code: CODE, selector: SELECTOR, reason: 'seeded', actor: 'seed',
+    });
+    expect(marked.kind).toBe('created');
+    const res = await authed('GET', `/api/v1/scans/${t.scanId}/dismissals`, t.key);
+    expect(res.statusCode).toBe(200);
+    const items = res.json().dismissals as Array<{ selector: string; status: string }>;
+    expect(items).toHaveLength(1);
+    expect(items[0].selector).toBe(SELECTOR);
+    expect(items[0].status).toBe('active');
+  });
+
+  it('org-scoped admin api key cannot list another org\'s scan', async () => {
+    const mine = await freshTenant();
+    const theirs = await freshTenant();
+    const res = await authed('GET', `/api/v1/scans/${theirs.scanId}/dismissals`, mine.key);
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('global admin revokes and the list shows both events', async () => {
+    const t = await freshTenant();
+    const marked = await authed('POST', `/api/v1/scans/${t.scanId}/dismissals`, systemKey, {
+      code: CODE, selector: SELECTOR, reason: 'Hidden noscript copy',
+    });
+    expect(marked.statusCode).toBe(201);
+    const id = marked.json().id as string;
+    const revoked = await authed('POST', `/api/v1/dismissals/${id}/revoke`, systemKey, { comment: 'no longer true' });
+    expect(revoked.statusCode).toBe(200);
+    expect(revoked.json().status).toBe('revoked');
+
+    const res = await authed('GET', `/api/v1/scans/${t.scanId}/dismissals`, systemKey);
+    expect(res.statusCode).toBe(200);
+    const items = res.json().dismissals as Array<{ id: string; events: Array<{ action: string }> }>;
+    expect(items.find((i) => i.id === id)?.events.map((e) => e.action)).toEqual(['mark', 'revoke']);
+  });
+});

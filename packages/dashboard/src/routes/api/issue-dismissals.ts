@@ -2,10 +2,13 @@
  * Phase 87 — Issue dismissal ("Mark as false positive") API (FP-01..04, FP-17).
  *
  *   POST /api/v1/scans/:scanId/dismissals      body: { code, selector, reason }
+ *   POST /api/v1/dismissals/:id/revoke         body: { comment? }
+ *   GET  /api/v1/scans/:scanId/dismissals      active + revoked, with history
  *
  * The API is keyed by SCAN (D-01): the org and the site URL come from the scan
- * record, never from the client. Mark requires `issues.dismiss`, which is a
- * DARK permission (D-07): only global admins hold it until Phase 89.
+ * record, never from the client; revoke takes the org from the dismissal row.
+ * Mark and revoke require `issues.dismiss`, a DARK permission (D-07): only
+ * global admins hold it until Phase 89. List requires `reports.view`.
  *
  * Scan access differs from the shared guard (`!bypassesOrgScope && orgId !==
  * scan.orgId && scan.orgId !== 'system'`) in ONE deliberate way: org users get
@@ -23,16 +26,24 @@ import { requirePermission } from '../../auth/middleware.js';
 import { bypassesOrgScope } from '../../permissions.js';
 import { toSiteKey } from '../../services/issue-dismissals/site-key.js';
 import { applyDismissals } from '../../services/issue-dismissals/apply-dismissals.js';
-import { validateMarkInput } from '../../services/issue-dismissals/validate-input.js';
+import {
+  validateMarkInput,
+  validateRevokeComment,
+} from '../../services/issue-dismissals/validate-input.js';
 import {
   ErrorResponse,
   ConflictResponse,
   DismissalSchema,
+  ListResponse,
   MarkBody,
+  RevokeBody,
   ScanParams,
+  IdParams,
   RATE_LIMIT,
   dismissalToJson,
+  eventToJson,
   type MarkPayload,
+  type RevokePayload,
 } from './issue-dismissals-schemas.js';
 
 const NOT_SUPPORTED = 'Dismissals are not supported by this storage adapter';
@@ -139,6 +150,91 @@ export async function issueDismissalRoutes(
         });
       }
       return reply.code(201).send(dismissalToJson(result.dismissal));
+    },
+  );
+
+  // ── POST /api/v1/dismissals/:id/revoke ──────────────────────────────────
+  server.post(
+    '/api/v1/dismissals/:id/revoke',
+    {
+      preHandler: requirePermission('issues.dismiss'),
+      config: RATE_LIMIT,
+      schema: {
+        tags: ['issue-dismissals'],
+        params: IdParams,
+        body: RevokeBody,
+        response: {
+          200: DismissalSchema,
+          400: ErrorResponse,
+          401: ErrorResponse,
+          403: ErrorResponse,
+          404: ErrorResponse,
+          409: ErrorResponse,
+          503: ErrorResponse,
+        },
+      },
+    },
+    async (request: FastifyRequest<{ Params: { id: string }; Body: RevokePayload }>, reply) => {
+      const dismissals = repo();
+      if (dismissals === undefined) return reply.code(503).send({ error: NOT_SUPPORTED });
+
+      const existing = await dismissals.getById(request.params.id);
+      if (existing === null || !mayTouchOrg(request, existing.orgId)) {
+        return reply.code(404).send({ error: 'Dismissal not found' });
+      }
+
+      const comment = validateRevokeComment(request.body?.comment);
+      if (!comment.ok) return reply.code(400).send({ error: comment.error });
+
+      const result = await dismissals.revoke({
+        id: existing.id,
+        orgId: existing.orgId,
+        comment: comment.value,
+        ...actorOf(request),
+        ipAddress: request.ip,
+      });
+      if (result.kind === 'already-revoked') {
+        return reply.code(409).send({ error: 'This dismissal is already revoked' });
+      }
+      if (result.kind === 'not-found') return reply.code(404).send({ error: 'Dismissal not found' });
+      return reply.code(200).send(dismissalToJson(result.dismissal));
+    },
+  );
+
+  // ── GET /api/v1/scans/:scanId/dismissals ────────────────────────────────
+  server.get(
+    '/api/v1/scans/:scanId/dismissals',
+    {
+      preHandler: requirePermission('reports.view'),
+      schema: {
+        tags: ['issue-dismissals'],
+        params: ScanParams,
+        response: {
+          200: ListResponse,
+          401: ErrorResponse,
+          403: ErrorResponse,
+          404: ErrorResponse,
+          503: ErrorResponse,
+        },
+      },
+    },
+    async (request: FastifyRequest<{ Params: { scanId: string } }>, reply) => {
+      const dismissals = repo();
+      if (dismissals === undefined) return reply.code(503).send({ error: NOT_SUPPORTED });
+
+      const scan = await storage.scans.getScan(request.params.scanId);
+      if (scan === null || !mayTouchOrg(request, scan.orgId)) {
+        return reply.code(404).send({ error: 'Scan not found' });
+      }
+
+      const records = await dismissals.listForSite(scan.orgId, toSiteKey(scan.siteUrl));
+      const withEvents = await Promise.all(
+        records.map(async (record) => ({
+          ...dismissalToJson(record),
+          events: (await dismissals.listEvents(record.id)).map(eventToJson),
+        })),
+      );
+      return reply.code(200).send({ dismissals: withEvents });
     },
   );
 }
