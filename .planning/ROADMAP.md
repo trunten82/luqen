@@ -198,7 +198,14 @@ Requirements (16/16 Complete): `milestones/v3.7.0-REQUIREMENTS.md`.
   3. `issues.dismiss` appears in the RBAC matrix (`docs:rbac` drift green). The mark and revoke routes each return 403 to a user without the permission, enforced by route-level `requirePermission`. Break-test: remove the preHandler from one route and watch only that route's permission tests go red. While dark, three paths must not yield the permission, each with its own test: an org role (no `DEFAULT_ORG_ROLES` set includes it, and an org Owner cannot add it to a custom org role through `admin.roles`), and an org-scoped API key (FP-17, precondition for FP-18).
   4. The pure apply function returns the filtered report plus the dismissed occurrences and never mutates its input (proved on a deep-frozen fixture). The one shared count function derives errors, warnings, notices and total from that result. With zero dismissals, the count function reproduces the existing stored counts on a corpus of real stored reports covering both standard and incremental scan shapes. Any mismatch blocks the phase, because it would shift every historical score the moment Phase 88 deploys (FP-05).
   5. Isolation break-test: a matching dismissal removes exactly its own occurrences. Weakening the match key (dropping org or site) turns red only the cross-org and cross-site isolation tests, so a dismissal on site A never affects site B or another org. The new migration (next free id, `090` at af2a526f) applies cleanly to a prod-shaped DB copy. After merge, prod shows no user-visible change.
-**Plans**: TBD
+**Plans**: 5 plans (wave 1: 01, 02, 03 in parallel; wave 2: 04, 05)
+
+Plans:
+- [ ] 87-01-PLAN.md — pure domain: countIssues, applyDismissals, toSiteKey, validators; D-09a identity through the real orchestrator (FP-05, FP-04, FP-01)
+- [ ] 87-02-PLAN.md — `issues.dismiss` + DARK_PERMISSIONS on default and custom roles; org-scoped admin keys pinned on PR #102's Owner-set cap; /login re-run (FP-17)
+- [ ] 87-03-PLAN.md — migration 090, dismissal store + append-only history + atomic audit_log, isolation break-tests (FP-01, FP-02, FP-03)
+- [ ] 87-04-PLAN.md — mark/revoke/list API (bypassesOrgScope from PR #102), createServer proof of the dark path, drift regen, route break-tests (FP-01..04, FP-17)
+- [ ] 87-05-PLAN.md — read-only prod: D-09b count identity over every completed scan + migration 090 dry-run on prod's schema (FP-05, FP-01)
 
 ### Phase 88: Dismissals applied on every surface
 **Goal**: Once a dismissal exists, the dismissed finding stops counting everywhere a count, a score, a matrix or a conformance document is produced, now and on every later scan. The ACR says so openly instead of hiding the judgement. With zero dismissals, every surface is unchanged.

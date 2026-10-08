@@ -5,9 +5,9 @@ milestone_name: Mark as false positive
 current_phase: "87"
 current_phase_name: Dismissal store, domain model and permission
 status: planning
-stopped_at: "v3.8.0 opened 2026-10-08 (owner ruling via Allanon, a2a 01M4DHK3ZWJJB7TBYHKWPNQSNT). Roadmap 87-89 written; next: /gsd-plan-phase 87."
+stopped_at: "Phase 87 PLANNED 2026-10-08: 5 plans / 2 waves, plan-checker PASS (iteration 2, revised to build on PR #102). Next: /gsd-execute-phase 87."
 last_activity_desc: "v3.8.0 started; same day shipped PR #97 (noscript/video contrast FP), #98 (axe needs-review -> warning), #99 (deploy drain), #100 (/login escalation fix), #101 (audit key id)"
-state_head: 34fefa6e  # last CODE commit. Re-checkable: `git diff --name-only 34fefa6e..HEAD` must list nothing outside .planning/.
+state_head: b2df214c  # last CODE commit. Re-checkable: `git diff --name-only b2df214c..HEAD` must list nothing outside .planning/.
 last_updated: "2026-10-08T11:18:05.820Z"
 last_activity: 2026-10-08
 progress:
