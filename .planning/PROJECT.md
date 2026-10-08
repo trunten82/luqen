@@ -8,6 +8,29 @@ Luqen is a WCAG accessibility compliance platform built as a monorepo of Fastify
 
 AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control of the whole stack through the dashboard, not config files.
 
+## Current Milestone: v3.8.0 Mark as false positive
+
+**Goal:** Let a dashboard user dismiss a scan finding they have verified is a false positive, with a
+required reason and a full audit trail, so it stops counting against the site everywhere a count, a
+score or a conformance document is produced, and stays dismissed on every later scan.
+
+**Why now:** a customer (2026-10-08) asked how to mark 4 contrast findings as false positives and the
+product had no way to do it. Two engine-level false-positive classes were fixed the same day (PR #97
+noscript/video/audio contrast; PR #98 axe needs-review capped at warning), but engine fixes only cover
+classes we can generalise; a customer-verified judgement has no home today.
+
+**Owner ruling:** approved by Alessandro 2026-10-08 via an AskUserQuestion card in Allanon's session,
+relayed to luqen by a2a 01M4DHK3ZWJJB7TBYHKWPNQSNT. Scope as proposed; WordPress mirror OUT; Alessandro
+gets a test link before it goes live.
+
+**Target features:**
+- Mark an issue as a false positive from the report, with a REQUIRED reason
+- Dismissals stored per org, keyed on site + rule code + selector, with who/when
+- Dismissed issues excluded from issue counts, score and VPAT/ACR (and every surface that reports them)
+- Collapsed "Dismissed" section on the report showing each dismissal and its reason
+- Every mark/unmark audit-logged; dismissals revocable
+- Dismissals re-applied automatically to matching issues on later scans
+
 ## Current State
 
 **v3.7.0 AI output quality SHIPPED 2026-09-07, archived 2026-09-28** (prod f3d1043c after the Phase 86
@@ -85,7 +108,9 @@ permission is lifted, and `analyse-visual` stays on gemini-2.5-flash until this 
 Reuse the existing capability-execution engine and provider adapters — no new frameworks.
 
 **Out of scope / named follow-on:** behavioral a11y testing beyond Pa11y (Playwright keyboard / dynamic
-/ a11y-tree) is ranked next and proposed as v3.8.0. It is a bigger product moat with a decided plan,
+/ a11y-tree) is ranked next and proposed as v3.8.0 (2026-10-08: that number went to the owner-approved
+"Mark as false positive" milestone; behavioral testing stays the next PROPOSAL, unapproved, renumbered at
+its start). It is a bigger product moat with a decided plan,
 but it ADDS a capability while this milestone protects the ones already shipped and relied upon.
 
 ## Requirements
@@ -179,8 +204,8 @@ but it ADDS a capability while this milestone protects the ones already shipped 
 
 ### Active
 
-None — no active milestone (dormant by choice, 2026-09-28). Owner decision pending on a pre-registered,
-noise-aware v2 false-PASS gate (register 01M3K97VY409DDC376SWQ2YK09).
+v3.8.0 Mark as false positive — see REQUIREMENTS.md (FP-*). Unchanged and still pending with the owner:
+a pre-registered, noise-aware v2 false-PASS gate (register 01M3K97VY409DDC376SWQ2YK09).
 
 ### Out of Scope
 
@@ -191,6 +216,7 @@ noise-aware v2 false-PASS gate (register 01M3K97VY409DDC376SWQ2YK09).
 - ~~Org auto-creation of LLM OAuth client — manual setup sufficient~~ (DONE in v2.9.0)
 - Regulation-first rework (replacing jurisdictions as primary scope) — additive regulation filter is sufficient
 - Multi-tenant brand hierarchy beyond system/org — system + org-level opt-in is sufficient
+- WordPress plugin mirror of false-positive marking — owner ruled out of v3.8.0 scope (2026-10-08)
 
 ## Context
 
@@ -265,4 +291,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-28 after v3.7.0 milestone archived (dormant by choice, awaiting next milestone)*
+*Last updated: 2026-10-08 after v3.8.0 milestone started (Mark as false positive)*

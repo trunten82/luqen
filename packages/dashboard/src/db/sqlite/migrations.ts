@@ -2270,4 +2270,59 @@ WHERE org_id != 'system' AND name IN ('Owner', 'Admin');
 ALTER TABLE scan_records ADD COLUMN discovery_warning TEXT;
     `,
   },
+  {
+    id: '090',
+    name: 'create-issue-dismissals',
+    sql: `
+-- Phase 87 (FP-01..03) — issue dismissals ("Mark as false positive") and their
+-- append-only history. Additive only (D-13): CREATE ... IF NOT EXISTS, no seed
+-- rows, no permission rows (D-07), no triggers.
+--
+-- A dismissal is keyed by (org_id, site_key, code, selector). site_url keeps the
+-- raw URL as entered; site_key is the normalised key used for matching (D-02).
+-- Only one ACTIVE dismissal may exist per key; revoked rows are kept (D-03).
+CREATE TABLE IF NOT EXISTS issue_dismissals (
+  id             TEXT PRIMARY KEY,
+  org_id         TEXT NOT NULL,
+  site_url       TEXT NOT NULL,
+  site_key       TEXT NOT NULL,
+  code           TEXT NOT NULL,
+  selector       TEXT NOT NULL,
+  reason         TEXT NOT NULL,
+  status         TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','revoked')),
+  created_by     TEXT NOT NULL,
+  created_by_id  TEXT,
+  created_at     TEXT NOT NULL,
+  revoked_by     TEXT,
+  revoked_by_id  TEXT,
+  revoked_at     TEXT,
+  revoke_comment TEXT
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_issue_dismissals_active_key
+  ON issue_dismissals(org_id, site_key, code, selector)
+  WHERE status = 'active';
+
+CREATE INDEX IF NOT EXISTS idx_issue_dismissals_org_site
+  ON issue_dismissals(org_id, site_key, status);
+
+-- Append-only history: rows are only ever inserted (D-03, D-06).
+CREATE TABLE IF NOT EXISTS issue_dismissal_events (
+  id           TEXT PRIMARY KEY,
+  dismissal_id TEXT NOT NULL REFERENCES issue_dismissals(id),
+  org_id       TEXT NOT NULL,
+  action       TEXT NOT NULL CHECK (action IN ('mark','revoke')),
+  actor        TEXT NOT NULL,
+  actor_id     TEXT,
+  at           TEXT NOT NULL,
+  text         TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_issue_dismissal_events_dismissal
+  ON issue_dismissal_events(dismissal_id, at);
+
+CREATE INDEX IF NOT EXISTS idx_issue_dismissal_events_org
+  ON issue_dismissal_events(org_id);
+    `,
+  },
 ];

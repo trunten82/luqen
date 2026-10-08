@@ -2,7 +2,7 @@ import { bypassesOrgScope } from '../../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../../db/index.js';
-import { hasPermission, getPermissionGroups, ALL_PERMISSION_IDS, DEFAULT_ORG_ROLES } from '../../permissions.js';
+import { hasPermission, getPermissionGroups, isRoleGrantablePermission, ALL_PERMISSION_IDS, DEFAULT_ORG_ROLES } from '../../permissions.js';
 import { toastHtml, escapeHtml } from './helpers.js';
 import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
 
@@ -87,9 +87,9 @@ function canManageRoles(request: FastifyRequest, roleOrgId: string): boolean {
 
 function parsePermissions(rawPerms: string | string[] | undefined): string[] {
   return Array.isArray(rawPerms)
-    ? rawPerms.filter((p) => ALL_PERMISSION_IDS.includes(p))
+    ? rawPerms.filter((p) => isRoleGrantablePermission(p))
     : typeof rawPerms === 'string'
-      ? [rawPerms].filter((p) => ALL_PERMISSION_IDS.includes(p))
+      ? [rawPerms].filter((p) => isRoleGrantablePermission(p))
       : [];
 }
 

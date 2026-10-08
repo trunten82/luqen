@@ -54,6 +54,7 @@ import { fleetRoutes } from './routes/fleet.js';
 import { teamOrgLinkRoutes } from './routes/api/team-org-links.js';
 import { coordinatedPrRoutes } from './routes/api/coordinated-prs.js';
 import { bulkFixRoutes } from './routes/api/bulk-fixes.js';
+import { issueDismissalRoutes } from './routes/api/issue-dismissals.js';
 import { orgRoutes } from './routes/orgs.js';
 import { toolRoutes } from './routes/tools.js';
 import { methodologyRoutes } from './routes/methodology.js';
@@ -1213,6 +1214,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── Bulk fix dispatch API (Phase 62.3) ──────────────────────────────────
   await bulkFixRoutes(server, storage);
+  await issueDismissalRoutes(server, storage);
 
   // ── Setup API (create admin user via API key) ──────────────────────────
   await setupRoutes(server, storage, authService);
