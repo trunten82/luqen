@@ -144,6 +144,18 @@ describe('DirectScanner', () => {
     });
   });
 
+  it('[EVIDENCE] caps axe needs-review (incomplete) results at warning — they are not confirmed violations', async () => {
+    // pa11y 9 defaults levelCapWhenNeedsReview to 'error', so every axe "incomplete" result
+    // (contrast over a background image, a video that MAY need captions) arrived as an error.
+    // Measured 2026-10-08: 43 of 47 such contrast "errors" on a customer site passed or were not painted.
+    const pa11yModule = await import('pa11y');
+    const pa11yFn = pa11yModule.default as ReturnType<typeof vi.fn>;
+
+    await scanner.scan('https://example.com', { standard: 'WCAG2AA', runners: ['htmlcs', 'axe'] });
+
+    expect(pa11yFn.mock.calls[0][1].levelCapWhenNeedsReview).toBe('warning');
+  });
+
   it('[EVIDENCE] drops contrast findings on non-rendered <noscript>/<video> fallback content', async () => {
     const pa11yModule = await import('pa11y');
     const pa11yFn = pa11yModule.default as ReturnType<typeof vi.fn>;

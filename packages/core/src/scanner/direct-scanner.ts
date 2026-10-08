@@ -108,6 +108,11 @@ export class DirectScanner {
           : (options.runner === 'axe' ? ['axe'] : ['htmlcs']),
         includeWarnings: options.includeWarnings !== false,
         includeNotices: options.includeNotices !== false,
+        // AXE-NEEDS-REVIEW-1: axe "incomplete" = axe could not decide (contrast over a
+        // background image, a video that may need captions). pa11y 9 defaults this cap to
+        // 'error', which reported every undecided check as a failure; 43 of 47 such contrast
+        // "errors" measured on one live site passed or were never painted (2026-10-08).
+        levelCapWhenNeedsReview: 'warning',
         browser,
         page,
       });
