@@ -63,7 +63,12 @@ export function sanitizeReportParts(report: unknown): SanitizedReportParts {
     .filter(isObject)
     .map((p) => ({ url: String(p.url), issues: objectsOnly(p.issues) }));
   const templateIssues = Array.isArray(report.templateIssues)
-    ? (report.templateIssues.filter(isObject) as SanitizedTemplateIssue[])
+    ? report.templateIssues.filter(isObject).map(
+        (t): SanitizedTemplateIssue => ({
+          ...(t as SanitizedIssue),
+          affectedPages: Array.isArray(t.affectedPages) ? (t.affectedPages as string[]) : [],
+        }),
+      )
     : null;
   return { pages, templateIssues };
 }

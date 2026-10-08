@@ -280,4 +280,16 @@ describe('applyDismissals', () => {
       expect(dismissals).toEqual(dismissalSnapshot);
     }
   });
+
+  // WR-02 (87 review): shares countIssues' sanitiser, so a malformed
+  // affectedPages must not throw here either.
+  it('does not throw on a template issue whose affectedPages is not an array', () => {
+    const raw = {
+      pages: [{ url: 'https://a.example/', issues: [{ code: 'E', selector: '#e', type: 'error' }] }],
+      templateIssues: [{ code: 'T', selector: '#t', type: 'warning', affectedPages: 'https://a.example/' }],
+    };
+    const applied = applyDismissals(raw, [dismissal('d', 'E', '#e')], SITE);
+    expect(applied.dismissed).toHaveLength(1);
+    expect(countIssues(applied.report).total).toBe(0);
+  });
 });

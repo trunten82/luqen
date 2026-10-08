@@ -125,5 +125,20 @@ describe('countIssues', () => {
     it('a page without a url still counts its issues', () => {
       expect(countIssues({ pages: [{ issues: [iss('E', 'error')] }] }).errors).toBe(1);
     });
+
+    // WR-02 (87 review): a non-array affectedPages used to throw
+    // "items is not iterable" out of a function documented never to throw.
+    it.each([
+      ['a string', 'https://a.example/'],
+      ['an object', { url: 'https://a.example/' }],
+      ['a number', 3],
+      ['null', null],
+    ])('a template issue whose affectedPages is %s contributes nothing and does not throw', (_label, affectedPages) => {
+      const report = {
+        pages: [{ url: 'https://a.example/', issues: [iss('E', 'error')] }],
+        templateIssues: [{ ...iss('T', 'warning'), affectedPages }],
+      };
+      expect(countIssues(report)).toEqual({ errors: 1, warnings: 0, notices: 0, total: 1 });
+    });
   });
 });
