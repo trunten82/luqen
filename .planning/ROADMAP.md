@@ -184,7 +184,7 @@ Requirements (16/16 Complete): `milestones/v3.7.0-REQUIREMENTS.md`.
 
 **Phases (v3.8.0):**
 
-- [ ] **Phase 87: Dismissal store, domain model and permission** — per-org dismissal store + history + audit, selector refusal, permission-gated mark/revoke API, and the pure apply + shared count functions. Nothing user-visible changes in prod.
+- [x] **Phase 87: Dismissal store, domain model and permission** (shipped 2026-10-08, PR #103) — per-org dismissal store + history + audit, selector refusal, permission-gated mark/revoke API, and the pure apply + shared count functions. Nothing user-visible changes in prod.
 - [ ] **Phase 88: Dismissals applied on every surface** — render paths, VPAT/ACR with per-criterion disclosure, exports, bypass surfaces, compliance matrices, stored count columns + recompute on mark/revoke + re-application at scan end on both orchestrator paths.
 - [ ] **Phase 89: Dismissal UI, dark launch and role grant** — mark dialog with reason + preview, Dismissed section with revoke, 6-locale i18n, browser UAT; then the blocking test-link checkpoint with Alessandro, and the Owner/Admin grant as the last step.
 
@@ -201,11 +201,11 @@ Requirements (16/16 Complete): `milestones/v3.7.0-REQUIREMENTS.md`.
 **Plans**: 5 plans (wave 1: 01, 02, 03 in parallel; wave 2: 04, 05)
 
 Plans:
-- [ ] 87-01-PLAN.md — pure domain: countIssues, applyDismissals, toSiteKey, validators; D-09a identity through the real orchestrator (FP-05, FP-04, FP-01)
-- [ ] 87-02-PLAN.md — `issues.dismiss` + DARK_PERMISSIONS on default and custom roles; org-scoped admin keys pinned on PR #102's Owner-set cap; /login re-run (FP-17)
-- [ ] 87-03-PLAN.md — migration 090, dismissal store + append-only history + atomic audit_log, isolation break-tests (FP-01, FP-02, FP-03)
-- [ ] 87-04-PLAN.md — mark/revoke/list API (bypassesOrgScope from PR #102), createServer proof of the dark path, drift regen, route break-tests (FP-01..04, FP-17)
-- [ ] 87-05-PLAN.md — read-only prod: D-09b count identity over every completed scan + migration 090 dry-run on prod's schema (FP-05, FP-01)
+- [x] 87-01-PLAN.md — pure domain: countIssues, applyDismissals, toSiteKey, validators; D-09a identity through the real orchestrator (FP-05, FP-04, FP-01)
+- [x] 87-02-PLAN.md — `issues.dismiss` + DARK_PERMISSIONS on default and custom roles; org-scoped admin keys pinned on PR #102's Owner-set cap; /login re-run (FP-17)
+- [x] 87-03-PLAN.md — migration 090, dismissal store + append-only history + atomic audit_log, isolation break-tests (FP-01, FP-02, FP-03)
+- [x] 87-04-PLAN.md — mark/revoke/list API (bypassesOrgScope from PR #102), createServer proof of the dark path, drift regen, route break-tests (FP-01..04, FP-17)
+- [x] 87-05-PLAN.md — read-only prod: D-09b count identity over every completed scan + migration 090 dry-run on prod's schema (FP-05, FP-01)
 
 ### Phase 88: Dismissals applied on every surface
 **Goal**: Once a dismissal exists, the dismissed finding stops counting everywhere a count, a score, a matrix or a conformance document is produced, now and on every later scan. The ACR says so openly instead of hiding the judgement. With zero dismissals, every surface is unchanged.
@@ -247,7 +247,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 87. Dismissal store, domain model and permission | v3.8.0 | 0/? | Not started | - |
+| 87. Dismissal store, domain model and permission | v3.8.0 | 5/5 | Complete | 2026-10-08 |
 | 88. Dismissals applied on every surface | v3.8.0 | 0/? | Not started | - |
 | 89. Dismissal UI, dark launch and role grant | v3.8.0 | 0/? | Not started | - |
 

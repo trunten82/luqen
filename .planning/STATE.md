@@ -4,11 +4,11 @@ milestone: v3.8.0
 milestone_name: Mark as false positive
 current_phase: "87"
 current_phase_name: Dismissal store, domain model and permission
-status: executing
-stopped_at: "Phase 87 EXECUTED (5/5 plans merged on gsd/v3.8.0-false-positive f5e9c555, not pushed); 87-05 prod half BLOCKED on a permission decision; next: code review, verify, ship. See phases/87-*/.continue-here.md"
-last_activity_desc: "v3.8.0 started; same day shipped PR #97 (noscript/video contrast FP), #98 (axe needs-review -> warning), #99 (deploy drain), #100 (/login escalation fix), #101 (audit key id)"
-state_head: b2df214c  # last CODE commit. Re-checkable: `git diff --name-only b2df214c..HEAD` must list nothing outside .planning/.
-last_updated: "2026-10-08T11:18:05.820Z"
+status: phase_complete
+stopped_at: "Phase 87 SHIPPED (PR #103 merged --merge 7d467ce8, deployed); code-review WR-01..03 fixed; D-09b prod 333/333 + migration 090 dry-run ok. Next: Phase 88 (discuss/plan)."
+last_activity_desc: "2026-10-08: Phase 87 shipped; owner-ruled FULL public-history purge of client names/scan reports (filter-repo, all branches+tags force-pushed, master a22150bb before #103); refs/pull purge pending GitHub Support"
+state_head: 7d467ce8  # last CODE commit. Re-checkable: `git diff --name-only b2df214c..HEAD` must list nothing outside .planning/.
+last_updated: "2026-10-08T19:30:00Z"
 last_activity: 2026-10-08
 progress:
   total_phases: 0
