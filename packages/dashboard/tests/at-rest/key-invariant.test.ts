@@ -127,18 +127,21 @@ describe('at-rest key-invariant (PBH-A)', () => {
     // +14 lines (299->313, 341->355, 1101->1115, 1298->1312, 1299->1313,
     // 1412->1430). DISCOVERY-SSRF-1 then added one line (the orchestrator's
     // allowPrivateScanTargets option) above R7, shifting R7-R10 by +1
-    // (1115->1116, 1312->1313, 1313->1314, 1430->1431). The startup-check's own `encryptionKey: config.encryptionKey`
+    // (1115->1116, 1312->1313, 1313->1314, 1430->1431). Phase 87-04 then added the
+    // issueDismissalRoutes import (+1 for every site) and its registration above R8
+    // (+1 more for R8-R10): 313->314, 355->356, 1117->1118, 1314->1316, 1315->1317,
+    // 1432->1434. The startup-check's own `encryptionKey: config.encryptionKey`
     // reference (server.ts ~289) is NOT a new wiring site requiring a list
     // update — it is the read-only decrypt CHECK, not a write/consumer path,
     // and this test asserts an exact fixed-position list, not a generic scan.
     // A NEW at-rest call site forces a conscious update of this list.
     const EXPECTED_WIRING_SITES: readonly WiringSite[] = [
-      { file: SERVER_TS, line: 313, label: 'R1 PluginManager options' },
-      { file: SERVER_TS, line: 355, label: 'R3 SqliteServiceConnectionsRepository' },
-      { file: SERVER_TS, line: 1117, label: 'R7 registerOauthKeysRoutes' },
-      { file: SERVER_TS, line: 1314, label: 'R8 ensureInitialSigningKey' },
-      { file: SERVER_TS, line: 1315, label: 'R9 createDashboardSigner' },
-      { file: SERVER_TS, line: 1432, label: 'R10 startKeyHousekeeping' },
+      { file: SERVER_TS, line: 314, label: 'R1 PluginManager options' },
+      { file: SERVER_TS, line: 356, label: 'R3 SqliteServiceConnectionsRepository' },
+      { file: SERVER_TS, line: 1118, label: 'R7 registerOauthKeysRoutes' },
+      { file: SERVER_TS, line: 1316, label: 'R8 ensureInitialSigningKey' },
+      { file: SERVER_TS, line: 1317, label: 'R9 createDashboardSigner' },
+      { file: SERVER_TS, line: 1434, label: 'R10 startKeyHousekeeping' },
       { file: REL('cli.ts'), line: 219, label: 'R2 cli.ts PluginManager options' },
       { file: REL('routes', 'git-credentials.ts'), line: 32, label: 'R4 git-credentials encryptionKey local' },
       { file: REL('routes', 'repos.ts'), line: 405, label: 'R5 repos.ts decryptSecret' },
