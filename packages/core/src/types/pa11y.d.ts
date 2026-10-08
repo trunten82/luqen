@@ -1,5 +1,6 @@
 declare module 'pa11y' {
   interface Pa11yOptions {
+    levelCapWhenNeedsReview?: 'error' | 'warning' | 'notice';
     standard?: string;
     timeout?: number;
     wait?: number;
