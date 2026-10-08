@@ -8,7 +8,7 @@
 - ✅ **v3.5.0 Anti-overlay wedge — dev + exec first wave** — Phases 78-82 (shipped 2026-06-15)
 - ✅ **v3.6.0 Agent surface + semantic depth** — shipped 2026-09-04 directly to master (no numbered phases — vision adapter + `analyse-visual`, companion multimodal image upload + TTS, WP vision mirror, C#2 VPAT elevation)
 - ✅ **v3.7.0 AI output quality — eval harness + labelled reference sets** — Phases 83-86 (shipped 2026-09-07; archived 2026-09-28)
-- 💤 **No active milestone** — dormant by choice, awaiting the owner's go-ahead for the next one (2026-09-28)
+- 🚧 **v3.8.0 Mark as false positive** — Phases 87-89 (in progress, opened 2026-10-08)
 
 > **Milestone redefined (v3.5.0).** The original v3.5.0 "Commercial positioning & agency monetization" (Pro/Agency gates, credit-metered fixes) was **reversed by the single-product decision** ([[project_single_tier_decision]]). Only its Phase 78 (anti-overlay positioning) survives. The dead monetization phases that were numbered 79-82 (GATE/CREDIT/AGENCY/PRICE) are **retired** — their concepts must NOT be reused. v3.5.0 is now the **Anti-overlay wedge**: convert the verified 2026-06 market-positioning brief into product. Phase numbering continues from 78 (no reset).
 
@@ -165,3 +165,87 @@ Full phase details, success criteria and plan lists: `milestones/v3.7.0-ROADMAP.
 Requirements (16/16 Complete): `milestones/v3.7.0-REQUIREMENTS.md`.
 
 </details>
+
+---
+
+## Current Milestone: v3.8.0 Mark as false positive
+
+**Goal:** A dashboard user can dismiss a scan finding they have verified is a false positive, with a required reason and a full audit trail, so it stops counting against the site everywhere a count, a score or a conformance document is produced, and stays dismissed on every later scan.
+
+**Owner ruling:** approved by Alessandro 2026-10-08 via an AskUserQuestion card in Allanon's session, relayed to luqen by a2a 01M4DHK3ZWJJB7TBYHKWPNQSNT. WordPress mirror OUT. Alessandro gets a test link BEFORE it goes live.
+
+**Granularity:** coarse · **Phases:** 3 (87-89) · **Requirements:** 18/18 mapped ✓ · **Research:** `.planning/research/v3.8.0-DISMISSAL-SURFACE-MAP.md` (file:line map at af2a526f — re-verify at plan time)
+
+**Hard constraints threaded through every phase:**
+- **Apply at read, never rewrite evidence.** Stored issues in `json_report` are never mutated. Dismissals are applied by one pure function before `normalizeReportData`; only the derived `scan_records` count columns are rewritten, and the raw (pre-dismissal) counts stay recoverable.
+- **Safe in prod while dark.** Every master merge auto-deploys (the deploy drains in-flight scans first, PR #99). So every phase must be output-identical to today when no dismissal exists, and `issues.dismiss` must be unreachable by any customer identity until the final step of Phase 89.
+- **Every surface is its own call site.** The surface map lists dozens of producers (render, ACR, exports, raw/bypass, column readers, both orchestrator paths). Each needs its own test. Do not count one as covered because a sibling is.
+- **Break every guard in the phase that lands it.** For the exclusion, isolation and permission guards: remove the guard, watch the targeted tests go red and only those tests, record the command and its verbatim output in that phase's VERIFICATION, then restore. A later phase cannot capture that failure once the guard is in the tree.
+
+**Phases (v3.8.0):**
+
+- [ ] **Phase 87: Dismissal store, domain model and permission** — per-org dismissal store + history + audit, selector refusal, permission-gated mark/revoke API, and the pure apply + shared count functions. Nothing user-visible changes in prod.
+- [ ] **Phase 88: Dismissals applied on every surface** — render paths, VPAT/ACR with per-criterion disclosure, exports, bypass surfaces, compliance matrices, stored count columns + recompute on mark/revoke + re-application at scan end on both orchestrator paths.
+- [ ] **Phase 89: Dismissal UI, dark launch and role grant** — mark dialog with reason + preview, Dismissed section with revoke, 6-locale i18n, browser UAT; then the blocking test-link checkpoint with Alessandro, and the Owner/Admin grant as the last step.
+
+### Phase 87: Dismissal store, domain model and permission
+**Goal**: An authorised user can record, revoke and audit a false-positive dismissal for one finding on one org's site through a permission-gated API, and one pure function turns any stored report plus its active dismissals into a filtered report and the counts every later surface will use. Nothing that customers see changes.
+**Depends on**: Nothing (first phase of v3.8.0)
+**Requirements**: FP-01, FP-02, FP-03, FP-04, FP-05, FP-17
+**Success Criteria** (what must be TRUE):
+  1. A global admin can mark a finding as a false positive by (org, site URL, rule code, selector) with a reason, and the stored dismissal records the actor and timestamp. The API refuses an empty, whitespace-only or over-length reason. It also refuses a selector of `html`, `body` or empty with a message saying the selector cannot identify an element (FP-01, FP-04).
+  2. Revoking a dismissal changes its state and keeps the record. Each mark and each revoke shows up in the append-only dismissal history (who, when, reason or comment, action) and in `/admin/audit` (FP-02, FP-03).
+  3. `issues.dismiss` appears in the RBAC matrix (`docs:rbac` drift green). The mark and revoke routes each return 403 to a user without the permission, enforced by route-level `requirePermission`. Break-test: remove the preHandler from one route and watch only that route's permission tests go red. While dark, three paths must not yield the permission, each with its own test: an org role (no `DEFAULT_ORG_ROLES` set includes it, and an org Owner cannot add it to a custom org role through `admin.roles`), and an org-scoped API key (FP-17, precondition for FP-18).
+  4. The pure apply function returns the filtered report plus the dismissed occurrences and never mutates its input (proved on a deep-frozen fixture). The one shared count function derives errors, warnings, notices and total from that result. With zero dismissals, the count function reproduces the existing stored counts on a corpus of real stored reports covering both standard and incremental scan shapes. Any mismatch blocks the phase, because it would shift every historical score the moment Phase 88 deploys (FP-05).
+  5. Isolation break-test: a matching dismissal removes exactly its own occurrences. Weakening the match key (dropping org or site) turns red only the cross-org and cross-site isolation tests, so a dismissal on site A never affects site B or another org. The new migration (next free id, `090` at af2a526f) applies cleanly to a prod-shaped DB copy. After merge, prod shows no user-visible change.
+**Plans**: TBD
+
+### Phase 88: Dismissals applied on every surface
+**Goal**: Once a dismissal exists, the dismissed finding stops counting everywhere a count, a score, a matrix or a conformance document is produced, now and on every later scan. The ACR says so openly instead of hiding the judgement. With zero dismissals, every surface is unchanged.
+**Depends on**: Phase 87
+**Requirements**: FP-06, FP-07, FP-08, FP-09, FP-10, FP-11, FP-12, FP-13
+**Success Criteria** (what must be TRUE):
+  1. With one active dismissal on a test-org site, the finding is gone from every one of these surfaces:
+     - report detail (Issues, Templates and Pages tabs), print, the public report, AI-summary input, brand drilldown and email/notification bodies
+     - compare, MCP `dashboard_get_report` / `dashboard_query_issues` / the report resource / fleet criterion counts, and REST `/api/v1/scans/:id/issues`
+     - fix-PR and bulk-fix candidates
+     - `issues.xlsx` and `report.pdf`
+
+     `issues.xlsx` also has a "Dismissed" sheet with reason, actor and date. Every call site in the surface map has its own test (FP-06, FP-10, FP-11).
+  2. Every ACR path drops dismissed findings from its verdicts and discloses, per affected criterion, how many automated findings were dismissed as false positives after review. The paths are report VPAT, share, public ACR, report page, `vpat.pdf`, `vpat-pack.zip`, accessibility statement and fleet report. A criterion whose issues are all dismissed is not shown as failing in the compliance or regulation matrix. Break-test: suppressing the disclosure turns the disclosure test red on each ACR path separately (FP-07, FP-12).
+  3. The stored `errors` / `warnings` / `notices` / `total_issues` columns exclude dismissed issues. So does `confirmed_violations` where it can be derived, and the plan states which case applies. Raw pre-dismissal counts stay recoverable. A cross-surface test confirms that these surfaces all agree with the rendered report for the same scan, including the mixed JSON+column exposure source at `reports.ts` 553-555: home, trends score, badge, fleet, digest, legal exposure, reports list, raw-SQL API, GraphQL, MCP list and the scans/trends xlsx. Marking or revoking recomputes that site's existing scans immediately, streaming one scan at a time and never loading every `json_report` blob at once (FP-08, FP-09).
+  4. A later scan applies active dismissals on BOTH orchestrator paths (standard and incremental). The counts persisted at scan end exclude them, and so do the webhook, plugin and completion payloads. Break-test per path: removing the apply call from one path turns red only that path's test (FP-13).
+  5. With zero active dismissals, every surface above produces the same output as before the change, ACR included. A golden comparison on real stored reports proves it, which makes the merge safe to auto-deploy while the permission is dark.
+**Plans**: TBD
+
+### Phase 89: Dismissal UI, dark launch and role grant
+**Goal**: A permitted user can mark and revoke false positives from the report itself, with a required reason, a coverage preview and a visible Dismissed section in all six locales. Alessandro proves the flow on a test org before the permission reaches any customer role.
+**Depends on**: Phase 88
+**Requirements**: FP-14, FP-15, FP-16, FP-18
+**Success Criteria** (what must be TRUE):
+  1. On the report Issues and Templates tabs, a user with `issues.dismiss` can open a mark dialog. The dialog requires a reason and, before confirming, previews how many occurrences on how many pages of the site the dismissal will cover. A user without the permission sees no control, and a direct POST from that user returns 403 (FP-14).
+  2. A collapsed "Dismissed" section lists each dismissed issue with its reason, actor and date. Anyone with report access can see it. A permitted user can revoke with an optional comment, and the finding returns to counts, score and ACR (FP-15).
+  3. All new UI text exists in the 6 dashboard locales (template-key coverage gate green). The UI uses design-system classes only and no inline scripts under CSP, and the mobile layout works. A real-browser UAT (`tests/browser-uat`) runs mark → excluded everywhere → revoke → restored end to end on the deployed dark build (FP-16).
+  4. **BLOCKING human checkpoint, before any grant.**
+     - First, a measured read-back on prod shows `issues.dismiss` is held only by global human admins and that no customer user is one. The read-back counts every path that yields the permission (users, org and custom roles, API keys, API-key `/login` sessions), not users only.
+     - Then Alessandro receives a test link on a test org and reviews the flow, including the ACR disclosure wording, which goes into a document with legal weight.
+     - The grant does not merge until he approves directly, and the record names the channel (FP-18).
+  5. The grant of `issues.dismiss` to org Owner and Admin is the LAST step of the milestone. It updates the default role sets and adds a seeding migration for existing orgs, and ships as its own PR held until that approval, because merges auto-deploy. After deploy, a read-back confirms that an Owner on the test org can mark and that a Member or Viewer cannot (FP-18).
+**Plans**: TBD
+**UI hint**: yes
+
+**Progress (v3.8.0):**
+
+**Execution order:** strictly linear, 87 → 88 → 89. Each phase consumes the one before: 88 applies 87's pure functions everywhere, and 89's UI and rollout need the exclusion to be real on every surface before anyone can be shown it.
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 87. Dismissal store, domain model and permission | v3.8.0 | 0/? | Not started | - |
+| 88. Dismissals applied on every surface | v3.8.0 | 0/? | Not started | - |
+| 89. Dismissal UI, dark launch and role grant | v3.8.0 | 0/? | Not started | - |
+
+**Risks carried into planning (read from source 2026-10-08; not exercised live):**
+- **Dark-launch leaks beyond global admins.** `resolveEffectivePermissions` gives `ALL_PERMISSION_IDS` to any identity whose role is `admin` (`permissions.ts:92-93`, `role-repository.ts:192/207`). Two paths reach that role from a customer org. First, org-scoped API keys default to role `admin` (`auth-service.ts:161`, `api-key.ts:67`) (`org-api-keys.ts:240-242`), and anyone holding `admin.org` (in the default roles, org Owner) can create them. Second (FIXED 2026-10-08, PR #100 be59abf4, live): `POST /login` used to write `role: 'admin'` with no org for ANY valid key; only system-scope admin keys may open a session now. Investigation of the 48 historical API-key logins found none opened by an org key (reported to Allanon). Separately, an org Owner holds `admin.roles` and `parsePermissions` accepts any id in `ALL_PERMISSION_IDS` for custom org roles (`routes/admin/roles.ts:76/87-93`). The 2026-10-08 measurement ("2 global admins") counted users only. Phase 87 SC3 and Phase 89 SC4 carry this. The `/login` escalation was fixed outside the milestone (PR #100); org-scoped ADMIN keys holding every permission via Bearer remain Phase 87's to close.
+- **Count identity on deploy.** If the shared count function disagrees with core's `summary.byLevel` (incremental scans, template dedup, `confirmed_violations` from compliance), historical scores shift on the first deploy. Phase 87 SC4 gates this.
+- **Selector instability.** There is no selector normalisation anywhere, so a dismissal survives a later scan only if the selector is byte-identical. Expected behaviour for v1, since FP-V2-02 is deferred, but the UI copy should not promise more than that.
+- **Naming collision.** "dismiss" already exists for compliance proposals (`routes/admin/proposals.ts`, `compliance-client.ts`). Choose distinct identifiers and i18n keys.

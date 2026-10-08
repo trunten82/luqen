@@ -1,15 +1,15 @@
 ---
-gsd_state_version: 1.0
-milestone: none
-milestone_name: "DORMANT BY CHOICE — awaiting a new milestone. v3.7.0 shipped 2026-09-07, gap-closed and deployed 2026-09-28 (prod f3d1043c), archived 2026-09-28. The owner said on 2026-09-28 (relayed by the orchestrator) that no agent starts a new milestone yet — this field carries the reason so dormant-by-choice is distinguishable from an unnoticed gap."
-current_phase: none
-current_phase_name: none
-status: DORMANT — awaiting new milestone (no active milestone by instruction, not by omission)
-stopped_at: "v3.7.0 archived (milestones/v3.7.0-*). Nothing in flight. Re-check with: git status --short (clean) and a2a pending list (two luqen items, asked)."
-last_updated: "2026-09-28T07:40:00Z"
-last_activity: 2026-09-28
-last_activity_desc: Phase 86 verification gap closed (PR #81, deployed f3d1043c); v3.7.0 archived with 47 inherited audit items acknowledged
-state_head: f3d1043c  # last CODE commit. Re-checkable: `git diff --name-only f3d1043c..HEAD` must list nothing outside .planning/.
+gsd_state_version: "1.0"
+milestone: v3.8.0
+milestone_name: Mark as false positive
+current_phase: "87"
+current_phase_name: Dismissal store, domain model and permission
+status: planning
+stopped_at: "v3.8.0 opened 2026-10-08 (owner ruling via Allanon, a2a 01M4DHK3ZWJJB7TBYHKWPNQSNT). Roadmap 87-89 written; next: /gsd-plan-phase 87."
+last_activity_desc: "v3.8.0 started; same day shipped PR #97 (noscript/video contrast FP), #98 (axe needs-review -> warning), #99 (deploy drain), #100 (/login escalation fix), #101 (audit key id)"
+state_head: 34fefa6e  # last CODE commit. Re-checkable: `git diff --name-only 34fefa6e..HEAD` must list nothing outside .planning/.
+last_updated: "2026-10-08T11:18:05.820Z"
+last_activity: 2026-10-08
 progress:
   total_phases: 0
   completed_phases: 0
@@ -65,6 +65,7 @@ real fix is a longer timeout on the browser-launching cases, and it is NOT done.
 
 The item previously carried here ("Phase 86 has no 86-VERIFICATION.md") is RESOLVED, and what it found
 is recorded rather than smoothed over:
+
 - An independent verifier wrote 86-VERIFICATION.md: status `gaps_found` (verdict kept, not overwritten;
   a re-verification section is appended in that file).
 - Gap 1 (SC3: `eval verdict` never consumed the measured instability) — FIXED, PR #81, merged f3d1043c,
@@ -107,10 +108,10 @@ See: .planning/PROJECT.md (updated 2026-09-28 — v3.7.0 archived)
 
 ## Current Position
 
-Phase: Milestone v3.7.0 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-09-28 — Milestone v3.7.0 completed and archived
+Status: Defining requirements
+Last activity: 2026-10-08 — Milestone v3.8.0 started
 
 ## Phase Map (v3.7.0 — AI output quality)
 
@@ -163,7 +164,7 @@ measures a candidate model — that is explicitly next-milestone work.
 - **Excel-only exports (no CSV)** — use `buildXlsx()`
 - **WP plugin must not assume a local service** — remote Luqen endpoints are the norm; gate on a configured connection, degrade silently
 - **UI phases need human UAT** — automated checks miss cross-persona / mobile / URL edge cases
-- **Live tracks master, not develop** — push to master before deploy; no CI on lxc-luqen, deploy via explicit ssh
+- **Live tracks master, not develop** — every merge to master auto-deploys via the Deploy workflow on the self-hosted `luqen-prod` runner after green CI; the deploy drains in-flight scans first (PR #99, up to 30 min; `workflow_dispatch force=true` skips it)
 - **`parseGenerateFixResponse`/`parseAnalyseVisualResponse` never throw** — they catch and return empty strings; an all-empty parse looks identical to a genuine empty/low result unless the raw response is persisted alongside it (v3.7.0 HARNESS-06)
 - **Gemini thinking models share `maxOutputTokens` with thoughts** — a low cap truncates live output silently; relevant if a candidate under evaluation is a thinking model
 
@@ -171,6 +172,8 @@ measures a candidate model — that is explicitly next-milestone work.
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 261008-fs4 | Deploy waits for in-flight scans before restarting the dashboard (incident: deploy killed a customer scan); live break-test passed | 2026-10-08 | a36b2c16 | [261008-fs4-deploy-waits-for-in-flight-scans-before-](./quick/261008-fs4-deploy-waits-for-in-flight-scans-before-/) |
+| 261008-dd4 | Drop htmlcs/axe contrast false positives on non-rendered noscript/video/audio fallback content (Northwind customer report); PR #97 deployed | 2026-10-08 | d18cbe66 | [261008-dd4-htmlcs-false-positives-on-noscript-video](./quick/261008-dd4-htmlcs-false-positives-on-noscript-video/) |
 | 260601-fte | Manual-test evidence artifacts (screenshots/documents) in the VPAT/ACR report (web + PDF) | 2026-06-01 | 1304877 | [260601-fte-vpat-evidence-artifacts](./quick/260601-fte-vpat-evidence-artifacts/) |
 | 260601-njq | Per-org legal/company identity on VPAT/ACR reports (web + PDF + share); migration 082, optional StorageAdapter field | 2026-06-01 | c3cc788 | [260601-njq-vpat-org-legal-identity](./quick/260601-njq-vpat-org-legal-identity/) |
 | 260713-boq | Reports-page OOM/502: exclude json_report blob from scan list queries; opt-in includeReport for batch callers; deployed + verified live | 2026-07-13 | 35dd5e20 | [260713-reports-list-oom-json-report](./quick/260713-reports-list-oom-json-report/) |
