@@ -24,7 +24,10 @@ import { bypassesOrgScope } from '../../permissions.js';
 import { toSiteKey } from '../../services/issue-dismissals/site-key.js';
 import { applyDismissals } from '../../services/issue-dismissals/apply-dismissals.js';
 import { loadReportForScan } from '../../services/issue-dismissals/load-dismissed-report.js';
-import { recomputeSiteCounts } from '../../services/issue-dismissals/recompute-site-counts.js';
+import {
+  recomputeSiteCounts,
+  type RecomputeResult,
+} from '../../services/issue-dismissals/recompute-site-counts.js';
 import {
   validateMarkInput,
   validateRevokeComment,
@@ -32,7 +35,6 @@ import {
 import {
   ErrorResponse,
   ConflictResponse,
-  DismissalSchema,
   DismissalMutationResponse,
   ListResponse,
   MarkBody,
@@ -54,6 +56,29 @@ function mayTouchOrg(request: FastifyRequest, orgId: string): boolean {
   if (bypassesOrgScope(request.user)) return true;
   const current = request.user?.currentOrgId ?? '';
   return current !== '' && current === orgId;
+}
+
+/**
+ * Recompute the site's stored counts and log ONE summary line (D-13 / I1): how many scans and how
+ * long, with no identifiers. The first real mark's line is the measurement of the synchronous bound.
+ */
+async function recomputeAndLog(
+  request: FastifyRequest,
+  storage: StorageAdapter,
+  orgId: string,
+  siteKey: string,
+): Promise<RecomputeResult> {
+  const result = await recomputeSiteCounts(storage, orgId, siteKey, request.log);
+  request.log.info(
+    {
+      scanCount: result.recomputedScans + result.failedScans,
+      recomputedScans: result.recomputedScans,
+      failedScans: result.failedScans,
+      durationMs: result.durationMs,
+    },
+    'Dismissal recompute finished',
+  );
+  return result;
 }
 
 function actorOf(request: FastifyRequest): { actor: string; actorId?: string } {
@@ -144,7 +169,7 @@ export async function issueDismissalRoutes(
           existing_id: result.existing.id,
         });
       }
-      const recomputed = await recomputeSiteCounts(storage, scan.orgId, siteKey, request.log);
+      const recomputed = await recomputeAndLog(request, storage, scan.orgId, siteKey);
       return reply.code(201).send(mutationToJson(result.dismissal, recomputed));
     },
   );
@@ -160,7 +185,7 @@ export async function issueDismissalRoutes(
         params: IdParams,
         body: RevokeBody,
         response: {
-          200: DismissalSchema,
+          200: DismissalMutationResponse,
           400: ErrorResponse,
           401: ErrorResponse,
           403: ErrorResponse,
@@ -193,7 +218,8 @@ export async function issueDismissalRoutes(
         return reply.code(409).send({ error: 'This dismissal is already revoked' });
       }
       if (result.kind === 'not-found') return reply.code(404).send({ error: 'Dismissal not found' });
-      return reply.code(200).send(dismissalToJson(result.dismissal));
+      const recomputed = await recomputeAndLog(request, storage, existing.orgId, existing.siteKey);
+      return reply.code(200).send(mutationToJson(result.dismissal, recomputed));
     },
   );
 
