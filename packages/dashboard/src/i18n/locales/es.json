@@ -1474,6 +1474,7 @@
       "previewAssessed": "Basado en un análisis del",
       "previewLimitations": "Limitaciones conocidas:",
       "previewPending": "Revisión manual pendiente:",
+      "previewDismissed": "Criterios con hallazgos descartados:",
       "previewNoScan": "Todavía no se ha encontrado ningún análisis completado para el sitio configurado: establezca una URL del sitio y ejecute un análisis para incorporar las limitaciones conocidas.",
       "acrUrl": "Enlace al Informe de Conformidad de Accesibilidad (ACR)",
       "acrUrlHelp": "Opcional. Un enlace público a su ACR/VPAT completo, mostrado en la declaración como «Ver nuestro Informe de Conformidad de Accesibilidad»."
@@ -1489,6 +1490,8 @@
       "limitationsHeading": "Limitaciones conocidas",
       "limitationsIntro": "A pesar de nuestros mayores esfuerzos, los usuarios pueden encontrar las siguientes barreras. Estamos trabajando activamente para resolverlas:",
       "pendingNote": "Además, {{count}} criterios de éxito requieren una evaluación manual que las pruebas automatizadas por sí solas no pueden confirmar; estos se encuentran en revisión.",
+      "dismissedHeading": "Hallazgos automáticos descartados tras la revisión",
+      "dismissedItem": "{{count}} hallazgo(s) automático(s) descartado(s) como falso(s) positivo(s) tras la revisión",
       "noAssessment": "Actualmente se está realizando una evaluación completa de este sitio. Esta declaración se actualizará con conclusiones específicas una vez que finalice la evaluación.",
       "measuresHeading": "Medidas para favorecer la accesibilidad",
       "measureAutomated": "Análisis WCAG automatizado de las páginas con respecto a la norma objetivo.",

@@ -103,6 +103,9 @@
       {{#if preview.hasAssessment}}
         <p class="text-muted text-sm">{{t "a11yStatement.admin.previewAssessed"}} {{preview.assessmentDate}}</p>
         <p class="text-sm">{{t "a11yStatement.admin.previewLimitations"}} <strong>{{preview.knownLimitations.length}}</strong> · {{t "a11yStatement.admin.previewPending"}} <strong>{{preview.notEvaluatedCount}}</strong></p>
+        {{#if preview.dismissedDisclosures.length}}
+        <p class="text-sm">{{t "a11yStatement.admin.previewDismissed"}} <strong>{{preview.dismissedDisclosures.length}}</strong></p>
+        {{/if}}
       {{else}}
         <p class="text-muted text-sm">{{t "a11yStatement.admin.previewNoScan"}}</p>
       {{/if}}
