@@ -52,8 +52,13 @@ export async function openStore(): Promise<Store> {
 export async function buildRouteServer(
   storage: StorageAdapter,
   identity: { readonly user: HarnessUser; readonly permissions: readonly string[] },
+  options: { readonly logStream?: { write(chunk: string): void } } = {},
 ): Promise<FastifyInstance> {
-  const server = Fastify();
+  // A log stream (Plan 88-11) lets a test read what request.log wrote; default stays silent.
+  const server =
+    options.logStream === undefined
+      ? Fastify()
+      : Fastify({ logger: { level: 'info', stream: options.logStream } });
   server.addHook('preHandler', async (request) => {
     request.user = {
       id: identity.user.id ?? 'u-tester',
