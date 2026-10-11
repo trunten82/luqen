@@ -13,20 +13,26 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 process.env['TZ'] ??= 'UTC';
 
 import {
+  FLEET_SINCE,
   apiShapedReport,
   createApiContext,
+  driveMcpFleetCounts,
   driveMcpGetReport,
+  driveMcpReportResource,
 } from '../golden/drivers/api-drivers.js';
 import type { SurfaceContext } from '../golden/drivers/render-drivers.js';
 import {
   AFTER_BOTH,
+  AFTER_PARTIAL,
   DISMISS_PARTIAL,
   DISMISS_WHOLE,
   FABRIKAM_SITE,
   SEL_ALT,
   SEL_DISMISSED,
   SEL_LINK,
+  SEL_SIBLING,
   assertDismissedAbsent,
+  assertSiblingPresent,
   seedSurfaceDismissal,
   seedSurfaceScan,
 } from '../helpers/dismissal-surface-fixture.js';
@@ -91,5 +97,41 @@ describe('MCP dashboard_get_report applies the scan org active dismissals', () =
     expect(criteria).not.toContain('1.1.1');
     expect(criteria).not.toContain('1.4.3');
     expect(criteria).toContain('2.4.4');
+  });
+});
+
+describe('MCP scan report resource applies the scan org active dismissals', () => {
+  it('MCP scan report resource omits a dismissed finding', async () => {
+    await dismiss(DISMISS_PARTIAL);
+    const out = (await driveMcpReportResource(ctx)) as { report: ReportShape; scan: Record<string, unknown> };
+    const text = JSON.stringify(out);
+
+    assertDismissedAbsent(text, 'partial');
+    assertSiblingPresent(text);
+    expect(out.report.summary.totalIssues).toBe(AFTER_PARTIAL.total);
+    // The sibling still fails 1.4.3, so the jurisdiction keeps failing.
+    expect(out.report.compliance.matrix.EU.status).toBe('fail');
+  });
+});
+
+describe('MCP dashboard_scan_summary_for_fleet applies the scan org active dismissals', () => {
+  it('MCP fleet criterion counts exclude dismissed occurrences', async () => {
+    const before = (await driveMcpFleetCounts(ctx)) as Record<string, { data: ReadonlyArray<{ count: number }> }>;
+    expect(before['1.4.3']?.data[0]?.count).toBe(4); // 3 promo + 1 sibling
+    expect(before['1.1.1']?.data[0]?.count).toBe(1);
+
+    await dismiss(DISMISS_PARTIAL);
+    await dismiss(DISMISS_WHOLE);
+    const after = (await driveMcpFleetCounts(ctx)) as Record<string, { data: ReadonlyArray<{ count: number }> }>;
+
+    expect(after['1.4.3']?.data[0]?.count).toBe(1); // the sibling still counts
+    expect(after['1.1.1']?.data).toEqual([]); // site row disappears per the tool's zero rule
+  });
+
+  it('MCP fleet criterion counts ignore dismissals recorded for another org or site', async () => {
+    // createApiContext already seeded foreign dismissals only.
+    const out = (await driveMcpFleetCounts(ctx)) as Record<string, { data: ReadonlyArray<{ count: number }> }>;
+    expect(out['1.4.3']?.data[0]?.count).toBe(4);
+    expect(FLEET_SINCE).toBeTruthy();
   });
 });
