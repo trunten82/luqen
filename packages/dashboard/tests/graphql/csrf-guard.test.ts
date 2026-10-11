@@ -26,6 +26,7 @@ import type { GraphQLContext } from '../../src/graphql/resolvers.js';
 import { registerGraphqlCsrfGuard } from '../../src/graphql/csrf-guard.js';
 
 const PASSWORD = 'Placeholder-Pass-2026!x';
+const VALID_TOKEN = 'placeholder-valid-token';
 const MUTATION = `mutation { createUser(username: "csrf-probe", password: "${PASSWORD}") { id } }`;
 
 interface Ctx { readonly server: FastifyInstance; readonly storage: SqliteStorageAdapter; readonly cleanup: () => void }
@@ -38,7 +39,9 @@ async function setup(): Promise<Ctx> {
   await storage.migrate();
   const server = Fastify({ logger: false });
   await server.register(import('@fastify/formbody'));
-  registerGraphqlCsrfGuard(server);
+  // Stands in for AuthService.hasValidApiCredential: only VALID_TOKEN validates.
+  registerGraphqlCsrfGuard(server, (request) => request.headers.authorization === `Bearer ${VALID_TOKEN}`
+    || request.headers['x-api-key'] === VALID_TOKEN);
   await server.register(mercurius, {
     schema: graphqlSchema,
     resolvers: graphqlResolvers as Parameters<typeof mercurius>[1]['resolvers'],
@@ -101,24 +104,46 @@ describe('/graphql CSRF guard for cookie-authenticated POSTs', () => {
     expect(await probeCreated(ctx.storage)).toBe(true);
   });
 
-  it('leaves Bearer API-key callers untouched', async () => {
+  it('leaves callers with a VALID Bearer API key untouched', async () => {
     ctx = await setup();
     const res = await ctx.server.inject({
       method: 'POST', url: '/graphql',
-      headers: { 'content-type': 'application/x-www-form-urlencoded', authorization: 'Bearer placeholder-token' },
+      headers: { 'content-type': 'application/x-www-form-urlencoded', authorization: `Bearer ${VALID_TOKEN}` },
       payload: `query=${encodeURIComponent(MUTATION)}`,
     });
     expect(res.statusCode).not.toBe(403);
   });
 
-  it('leaves X-API-Key callers untouched', async () => {
+  it('leaves callers with a VALID X-API-Key untouched', async () => {
     ctx = await setup();
     const res = await ctx.server.inject({
       method: 'POST', url: '/graphql',
-      headers: { 'content-type': 'application/x-www-form-urlencoded', 'x-api-key': 'placeholder-token' },
+      headers: { 'content-type': 'application/x-www-form-urlencoded', 'x-api-key': VALID_TOKEN },
       payload: `query=${encodeURIComponent(MUTATION)}`,
     });
     expect(res.statusCode).not.toBe(403);
+  });
+
+  it('refuses a form-encoded mutation carrying a BOGUS Bearer token (csrf)', async () => {
+    ctx = await setup();
+    const res = await ctx.server.inject({
+      method: 'POST', url: '/graphql',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', authorization: 'Bearer bogus-token' },
+      payload: `query=${encodeURIComponent(MUTATION)}`,
+    });
+    expect(res.statusCode).toBe(403);
+    expect(await probeCreated(ctx.storage)).toBe(false);
+  });
+
+  it('refuses a form-encoded mutation carrying a BOGUS X-API-Key (csrf)', async () => {
+    ctx = await setup();
+    const res = await ctx.server.inject({
+      method: 'POST', url: '/graphql',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', 'x-api-key': 'bogus-token' },
+      payload: `query=${encodeURIComponent(MUTATION)}`,
+    });
+    expect(res.statusCode).toBe(403);
+    expect(await probeCreated(ctx.storage)).toBe(false);
   });
 
   it('does not touch other paths', async () => {

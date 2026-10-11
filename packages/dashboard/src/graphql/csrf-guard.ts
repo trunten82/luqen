@@ -12,9 +12,10 @@
  * its content type is a "simple" one (form-urlencoded, multipart/form-data,
  * text/plain). So a cookie-authenticated POST must carry a non-simple type —
  * application/json or application/graphql — which a foreign origin cannot send
- * without the server's CORS consent. Callers authenticating with
- * `Authorization: Bearer` or `X-API-Key` are not cookie-authenticated (a
- * browser never attaches those cross-origin on its own) and are left alone.
+ * without the server's CORS consent. Callers whose `Authorization: Bearer` /
+ * `X-API-Key` credential actually VALIDATES are not cookie-authenticated and
+ * are left alone; a bogus header does not exempt a request, because auth then
+ * falls through to the session cookie.
  * GET mutations are already refused by mercurius itself.
  */
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
@@ -26,24 +27,26 @@ function mediaType(header: string | undefined): string {
   return (header ?? '').split(';')[0]!.trim().toLowerCase();
 }
 
-function hasApiCredential(request: FastifyRequest): boolean {
-  const auth = request.headers.authorization;
-  if (typeof auth === 'string' && auth.startsWith('Bearer ')) return true;
-  const apiKey = request.headers['x-api-key'];
-  return typeof apiKey === 'string' && apiKey !== '';
-}
+/** True when the request presents an API credential that actually validates. */
+export type ApiCredentialValidator = (request: FastifyRequest) => boolean;
 
-/** Is this request one the guard lets through? Exported for unit reuse. */
-export function isGraphqlRequestCsrfSafe(request: FastifyRequest): boolean {
+/** Is this request one the guard lets through? */
+export function isGraphqlRequestCsrfSafe(
+  request: FastifyRequest,
+  hasValidApiCredential: ApiCredentialValidator,
+): boolean {
   if (request.method !== 'POST') return true;
   if (request.url.split('?')[0] !== GRAPHQL_PATH) return true;
-  if (hasApiCredential(request)) return true;
-  return ALLOWED_CONTENT_TYPES.has(mediaType(request.headers['content-type']));
+  if (ALLOWED_CONTENT_TYPES.has(mediaType(request.headers['content-type']))) return true;
+  return hasValidApiCredential(request);
 }
 
-export function registerGraphqlCsrfGuard(server: FastifyInstance): void {
+export function registerGraphqlCsrfGuard(
+  server: FastifyInstance,
+  hasValidApiCredential: ApiCredentialValidator,
+): void {
   server.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
-    if (isGraphqlRequestCsrfSafe(request)) return;
+    if (isGraphqlRequestCsrfSafe(request, hasValidApiCredential)) return;
     await reply.code(403).send({
       error: 'Forbidden: cookie-authenticated GraphQL requests must use Content-Type application/json',
     });

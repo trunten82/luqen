@@ -1404,7 +1404,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // ── GraphQL API (mercurius) ──────────────────────────────────────────────
   // /graphql is CSRF-token exempt (isCsrfExempt); cookie-authenticated POSTs
   // must instead use a non-simple content type (see graphql/csrf-guard.ts).
-  registerGraphqlCsrfGuard(server);
+  registerGraphqlCsrfGuard(server, (request) => authService.hasValidApiCredential(request));
   await server.register(mercurius, {
     schema: graphqlSchema,
     resolvers: graphqlResolvers as Parameters<typeof mercurius>[1]['resolvers'],
