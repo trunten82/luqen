@@ -24,7 +24,7 @@ const FABRIKAM_ORG = 'org-fabrikam';
 const NORTHWIND_ORG = 'org-northwind';
 const FORM = { 'content-type': 'application/x-www-form-urlencoded' };
 
-interface Actor { readonly role: string; readonly currentOrgId: string; readonly orgScopedApiKey?: boolean }
+interface Actor { readonly role: string; readonly currentOrgId?: string; readonly orgScopedApiKey?: boolean }
 interface Ctx {
   readonly server: FastifyInstance;
   readonly storage: SqliteStorageAdapter;
@@ -191,6 +191,19 @@ describe('admin branding routes org scoping', () => {
     ctx = await setup(fabrikamMember);
     const own = await ctx.storage.branding.addColor(ctx.fb, { id: randomUUID(), name: 'Accent', hexValue: '#445566' });
     const res = await ctx.server.inject({ method: 'POST', url: `/admin/branding-guidelines/${ctx.fb}/colors/${own.id}/delete` });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("refuses an org-less non-admin toggling a 'system' guideline (system org)", async () => {
+    ctx = await setup({ role: 'user' });
+    const res = await ctx.server.inject({ method: 'POST', url: `/admin/branding-guidelines/${ctx.sys}/toggle` });
+    expect(res.statusCode).toBe(404);
+    expect((await ctx.storage.branding.getGuideline(ctx.sys))?.active).toBe(true);
+  });
+
+  it("still lets an org-less non-admin open a 'system' guideline", async () => {
+    ctx = await setup({ role: 'user' });
+    const res = await ctx.server.inject({ method: 'GET', url: `/admin/branding-guidelines/${ctx.sys}` });
     expect(res.statusCode).toBe(200);
   });
 });

@@ -20,13 +20,20 @@ const NW_GUIDELINE = {
 const NW_COLOR = { id: 'color-northwind-1', guidelineId: NW_GUIDELINE.id, name: 'Primary', hexValue: '#112233' };
 const NW_FONT = { id: 'font-northwind-1', guidelineId: NW_GUIDELINE.id, family: 'Inter' };
 const NW_SELECTOR = { id: 'sel-northwind-1', guidelineId: NW_GUIDELINE.id, pattern: '.nw-logo' };
+const SYS_GUIDELINE = {
+  id: 'gl-system-1', orgId: 'system', name: 'Shared library brand', active: true,
+  colors: [], fonts: [], selectors: [],
+};
+const SYS_COLOR = { id: 'color-system-1', guidelineId: SYS_GUIDELINE.id, name: 'Base', hexValue: '#000000' };
 
 function makeStorage() {
-  const byOrg = (orgId: string) => (orgId === NORTHWIND_ORG ? [NW_GUIDELINE] : []);
-  const ofGuideline = <T>(item: T) => async (gid: string) => (gid === NW_GUIDELINE.id ? [item] : []);
+  const byOrg = (orgId: string) => (orgId === NORTHWIND_ORG ? [NW_GUIDELINE] : orgId === 'system' ? [SYS_GUIDELINE] : []);
+  const ofGuideline = <T>(item: T) => async (gid: string) =>
+    (gid === NW_GUIDELINE.id ? [item] : gid === SYS_GUIDELINE.id && item === (NW_COLOR as unknown) ? [SYS_COLOR] : []);
+  const guidelines: Record<string, typeof NW_GUIDELINE> = { [NW_GUIDELINE.id]: NW_GUIDELINE, [SYS_GUIDELINE.id]: SYS_GUIDELINE };
   return {
     branding: {
-      getGuideline: vi.fn(async (id: string) => (id === NW_GUIDELINE.id ? NW_GUIDELINE : null)),
+      getGuideline: vi.fn(async (id: string) => guidelines[id] ?? null),
       listGuidelines: vi.fn(async (orgId: string) => byOrg(orgId)),
       listColors: vi.fn(ofGuideline(NW_COLOR)),
       listFonts: vi.fn(ofGuideline(NW_FONT)),
@@ -136,5 +143,33 @@ describe('GraphQL branding org scoping', () => {
         expect(storage.branding[c.write]).toHaveBeenCalledWith(c.id);
       });
     }
+  });
+});
+
+describe("GraphQL branding: an org-less caller cannot edit the 'system' library", () => {
+  // ctx.orgId falls back to 'system' when the caller has no current org, and the
+  // system 'developer' role holds branding.manage — so strict orgId equality
+  // alone would admit the shared library.
+  const orgless = (s: Storage) => makeOrgCtx(s, { orgId: 'system', permissions: [...VIEW, ...MANAGE] });
+
+  it("toggleBrandingGuideline refuses a 'system' guideline to an org-less non-admin (system org)", async () => {
+    const storage = makeStorage();
+    await expect(resolvers.Mutation.toggleBrandingGuideline({}, { id: SYS_GUIDELINE.id }, orgless(storage)))
+      .rejects.toThrow('Guideline not found');
+    expect(storage.branding.updateGuideline).not.toHaveBeenCalled();
+  });
+
+  it("removeBrandColor refuses a 'system' guideline color to an org-less non-admin (system org)", async () => {
+    const storage = makeStorage();
+    await expect(resolvers.Mutation.removeBrandColor({}, { id: SYS_COLOR.id }, orgless(storage)))
+      .rejects.toThrow('not found');
+    expect(storage.branding.removeColor).not.toHaveBeenCalled();
+  });
+
+  it("a global admin without a current org may still toggle a 'system' guideline", async () => {
+    const storage = makeStorage();
+    const ctx = makeOrgCtx(storage, { orgId: 'system', role: 'admin', permissions: [...VIEW, ...MANAGE] });
+    await resolvers.Mutation.toggleBrandingGuideline({}, { id: SYS_GUIDELINE.id }, ctx);
+    expect(storage.branding.updateGuideline).toHaveBeenCalled();
   });
 });

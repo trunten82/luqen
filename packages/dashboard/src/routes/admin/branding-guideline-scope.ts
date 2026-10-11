@@ -22,8 +22,11 @@ type Actor = FastifyRequest['user'];
 
 export function guidelineInScope(actor: Actor, guidelineOrgId: string, access: GuidelineAccess): boolean {
   if (bypassesOrgScope(actor)) return true;
-  if (guidelineOrgId === (actor?.currentOrgId ?? 'system')) return true;
-  return access === 'read' && guidelineOrgId === 'system';
+  // The shared 'system' library is readable/linkable by everyone but editable
+  // only by a global admin — including by a caller with no current org, whose
+  // org would otherwise default to 'system'.
+  if (guidelineOrgId === 'system') return access === 'read';
+  return guidelineOrgId === actor?.currentOrgId;
 }
 
 function notFound(reply: FastifyReply, message: string): FastifyReply {

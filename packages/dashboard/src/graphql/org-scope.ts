@@ -88,12 +88,22 @@ export async function getGuidelineInOrg(
   return guideline;
 }
 
+/**
+ * ctx.orgId falls back to 'system' when the caller has no current org, and the
+ * system 'developer' role holds branding.manage — so orgId equality alone would
+ * let an org-less non-admin edit the shared 'system' library. Only a global
+ * admin may edit it.
+ */
+function mayEditInOrg(ctx: GraphQLContext): boolean {
+  return ctx.orgId !== 'system' || bypassesOrgScope(ctx.user);
+}
+
 /** Mutation form of getGuidelineInOrg: refuses with REST's 404 message. */
 export async function requireGuidelineInOrg(
   ctx: GraphQLContext,
   id: string,
 ): Promise<BrandingGuidelineRecord> {
-  const guideline = await getGuidelineInOrg(ctx, id);
+  const guideline = mayEditInOrg(ctx) ? await getGuidelineInOrg(ctx, id) : null;
   if (guideline === null) throw new Error('Guideline not found');
   return guideline;
 }
@@ -113,7 +123,7 @@ export async function requireBrandChildInOrg(
   kind: BrandChildKind,
   childId: string,
 ): Promise<void> {
-  const guidelines = await ctx.storage.branding.listGuidelines(ctx.orgId);
+  const guidelines = mayEditInOrg(ctx) ? await ctx.storage.branding.listGuidelines(ctx.orgId) : [];
   for (const g of guidelines) {
     if (g.orgId !== ctx.orgId) continue;
     const children = kind === 'color'
