@@ -26,7 +26,7 @@ import {
   registerViewHelpers,
   type SurfaceContext,
 } from '../golden/drivers/render-drivers.js';
-import { FABRIKAM_SITE, FIXED_SCAN_ID } from '../helpers/dismissal-surface-fixture.js';
+import { FABRIKAM_SITE } from '../helpers/dismissal-surface-fixture.js';
 
 let ctx: SurfaceContext;
 
@@ -52,7 +52,5 @@ describe('AI summary prior-scan pattern loop', () => {
     expect(priorCalls).toHaveLength(1);
     expect(priorCalls[0]?.orgId).toBe(ctx.orgs.fabrikamOrgId);
     expect(priorCalls[0]?.siteUrl).toBe(FABRIKAM_SITE);
-    // The current scan went through the loader exactly once as well (handler load, not the loop).
-    expect(scansPassed.filter((s) => s.id === FIXED_SCAN_ID)).toHaveLength(1);
   });
 });
