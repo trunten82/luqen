@@ -541,9 +541,12 @@ export class ScanOrchestrator {
             await this.storage.pageHashes.upsertPageHashes(hashEntries);
           }
 
-          // Placeholder until Plan 10 Task 2 wires this path's own persistedCountsFor call.
+          // D-16 / D-17: this path's own call to the shared helper. The raw basis is the count
+          // the loop above made over the scanned pages; the closure is NOT invoked until the tail.
+          const incrementalPages = reportPagesOf(scanPages, allIssues, config.siteUrl);
           const incrementalRaw: IssueCounts = { errors, warnings, notices, total: errors + warnings + notices };
-          computePersistedCounts = async () => incrementalRaw;
+          computePersistedCounts = () =>
+            persistedCountsFor(this.storage, { orgId, siteUrl: config.siteUrl }, incrementalPages, incrementalRaw);
         } else {
           // --- Standard (non-incremental) scan ---
           // Phase 84: resolve an org-scoped vision analyzer for the behavioral
