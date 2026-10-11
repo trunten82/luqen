@@ -7,7 +7,13 @@ import type { StorageAdapter, ScanRecord } from '../../db/index.js';
 import { SqliteStorageAdapter } from '../../db/sqlite/index.js';
 import { getFixSuggestion } from '../../fix-suggestions.js';
 import { ErrorEnvelope } from '../../api/schemas/envelope.js';
-import { applyActiveDismissals, withDismissalsInRawBlob } from '../../services/issue-dismissals/load-dismissed-report.js';
+import {
+  applyActiveDismissals,
+  applyLoadedDismissals,
+  withDismissalsInRawBlob,
+} from '../../services/issue-dismissals/load-dismissed-report.js';
+import { toSiteKey } from '../../services/issue-dismissals/site-key.js';
+import type { IssueDismissal } from '../../db/interfaces/issue-dismissal-repository.js';
 
 // Data API responds with bare JSON ({ data, total } / { data, ... }) — schemas
 // mirror that shape directly rather than going through LuqenResponse.
@@ -297,11 +303,34 @@ export async function dataApiRoutes(
         .all(params) as Array<Record<string, unknown>>;
 
       // Convert rows through the ScanRepository interface
-      const scanResults = await Promise.all(rows.map(async (row) => {
-        const record = await storage.scans.getScan(row['id'] as string);
-        return record !== null ? toPublicScan(record) : null;
-      }));
-      const scans = scanResults.filter(Boolean);
+      const records = (
+        await Promise.all(rows.map((row) => storage.scans.getScan(row['id'] as string)))
+      ).filter((record): record is ScanRecord => record !== null);
+
+      // The row's raw jsonReport is part of this response, so it follows the dismissals of the
+      // row's own org + site. One lookup per distinct (org, site) on the page; a row's blob is
+      // parsed only when its site has an active dismissal (the blobs are multi-MB).
+      const activeBySite = new Map<string, Promise<readonly IssueDismissal[]>>();
+      const lookupActive = (record: ScanRecord): Promise<readonly IssueDismissal[]> => {
+        const repo = storage.issueDismissals;
+        if (repo === undefined) return Promise.resolve([]);
+        const siteKey = toSiteKey(record.siteUrl);
+        const key = `${record.orgId}\u0000${siteKey}`;
+        const cached = activeBySite.get(key);
+        if (cached !== undefined) return cached;
+        const looked = repo.listActiveForSite(record.orgId, siteKey);
+        activeBySite.set(key, looked);
+        return looked;
+      };
+      const scans = await Promise.all(
+        records.map(async (record) => {
+          const active = await lookupActive(record);
+          if (active.length === 0) return toPublicScan(record);
+          const blob = parseRowBlob(record);
+          if (blob === null) return toPublicScan(record);
+          return toPublicScan(withDismissalsInRawBlob(record, applyLoadedDismissals(record, active, blob)));
+        }),
+      );
 
       return reply.header('content-type', 'application/json').send({
         data: scans,

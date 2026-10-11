@@ -44,9 +44,21 @@ export async function applyActiveDismissals<R>(
 ): Promise<AppliedActiveDismissals<R>> {
   const repo = storage.issueDismissals;
   if (repo === undefined) return { report: raw, dismissed: [], active: [] };
-  const siteKey = toSiteKey(scan.siteUrl);
-  const active = await repo.listActiveForSite(scan.orgId, siteKey);
+  const active = await repo.listActiveForSite(scan.orgId, toSiteKey(scan.siteUrl));
+  return applyLoadedDismissals(scan, active, raw);
+}
+
+/**
+ * The apply half of applyActiveDismissals for a caller that already holds the active rows of
+ * the scan's org + site (a list surface looks them up once per site, not once per row).
+ */
+export function applyLoadedDismissals<R>(
+  scan: Pick<ScanRecord, 'siteUrl'>,
+  active: readonly IssueDismissal[],
+  raw: R,
+): AppliedActiveDismissals<R> {
   if (active.length === 0) return { report: raw, dismissed: [], active: [] };
+  const siteKey = toSiteKey(scan.siteUrl);
   const applied = applyDismissals(raw, active, siteKey);
   if (applied.dismissed.length === 0) return { report: raw, dismissed: [], active };
   // D-08: the matrices follow the dismissals; only when something was actually dismissed.
