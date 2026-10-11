@@ -6,8 +6,30 @@
  * lives in DATA (remarks + an optional dismissedCount); acr-view localises it.
  * Public repo: Fabrikam placeholders only.
  */
-import { describe, expect, it } from 'vitest';
-import { buildVpat, type VpatScanInput } from '../../src/services/vpat-service.js';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+process.env['TZ'] ??= 'UTC';
+
+import {
+  appendDismissalNote,
+  buildVpat,
+  dismissalNoteEn,
+  localizeDismissalRemarks,
+  type VpatScanInput,
+} from '../../src/services/vpat-service.js';
+import { loadTranslations, t } from '../../src/i18n/index.js';
+import {
+  createSurfaceContext,
+  registerViewHelpers,
+  type SurfaceContext,
+} from '../golden/drivers/render-drivers.js';
+import { driveAcrView } from '../golden/drivers/acr-export-drivers.js';
+import {
+  DISMISS_PARTIAL,
+  DISMISS_WHOLE,
+  REASON_TOKEN,
+  seedSurfaceDismissal,
+} from '../helpers/dismissal-surface-fixture.js';
 import { normalizeReportData } from '../../src/services/report-service.js';
 import type { ManualTestResult } from '../../src/manual-criteria.js';
 
@@ -139,5 +161,90 @@ describe('buildVpat discloses dismissed occurrences per criterion', () => {
     expect(Object.keys(row ?? {}).sort()).toEqual(
       ['conformance', 'criterion', 'dismissedCount', 'level', 'remarks', 'title', 'url', 'version'],
     );
+  });
+});
+
+describe('the ACR view localises the shared disclosure (D-12)', () => {
+  it("the English locale strings equal buildVpat's English sentence", () => {
+    loadTranslations();
+    expect(t('acr.dismissedDisclosureOne', 'en')).toBe(dismissalNoteEn(1));
+    for (const n of [2, 3, 5, 12]) {
+      expect(t('acr.dismissedDisclosureOther', 'en', { count: String(n) })).toBe(dismissalNoteEn(n));
+    }
+  });
+
+  describe('through the real assembly', () => {
+    let ctx: SurfaceContext;
+    beforeEach(async () => {
+      registerViewHelpers();
+      ctx = await createSurfaceContext();
+      await seedSurfaceDismissal(ctx.storage, { orgId: ctx.orgs.fabrikamOrgId, match: DISMISS_PARTIAL });
+      await seedSurfaceDismissal(ctx.storage, { orgId: ctx.orgs.fabrikamOrgId, match: DISMISS_WHOLE });
+    });
+    afterEach(async () => {
+      await ctx.cleanup();
+    });
+
+    interface ViewRows {
+      readonly tables: ReadonlyArray<{
+        readonly rows: ReadonlyArray<{ readonly criterion: string; readonly remarks: string }>;
+      }>;
+    }
+    const remarksOf = (view: unknown, criterion: string): string | undefined =>
+      (view as ViewRows).tables.flatMap((tb) => tb.rows).find((r) => r.criterion === criterion)?.remarks;
+
+    it('ACR view in Italian carries the localised disclosure', async () => {
+      const view = await driveAcrView(ctx, 'it');
+      const three = t('acr.dismissedDisclosureOther', 'it', { count: '3' });
+      const one = t('acr.dismissedDisclosureOne', 'it');
+      expect(three).toContain('3');
+      expect(remarksOf(view, '1.4.3')?.endsWith(three)).toBe(true);
+      expect(remarksOf(view, '1.1.1')?.endsWith(one)).toBe(true);
+      const text = JSON.stringify(view);
+      expect(text).not.toContain(dismissalNoteEn(3));
+      expect(text).not.toContain(dismissalNoteEn(1));
+      expect(text).not.toContain(REASON_TOKEN);
+      expect(text).not.toContain('fabrikam-admin');
+    });
+
+    it('ACR view in English keeps the English sentence', async () => {
+      const view = await driveAcrView(ctx, 'en');
+      expect(remarksOf(view, '1.4.3')?.endsWith(dismissalNoteEn(3))).toBe(true);
+      expect(remarksOf(view, '1.1.1')?.endsWith(dismissalNoteEn(1))).toBe(true);
+    });
+  });
+});
+
+describe('localizeDismissalRemarks', () => {
+  const tag = (n: number): string => `<<${n}>>`;
+
+  it('swaps only the trailing English sentence and keeps the rest of the remark', () => {
+    const remarks = appendDismissalNote('Automated testing found 1 issue — 2 evidence files on record', 3);
+    const out = localizeDismissalRemarks({ remarks, dismissedCount: 3 }, tag);
+    expect(out).toBe('Automated testing found 1 issue — 2 evidence files on record — <<3>>');
+  });
+
+  it('localisation falls back to the English disclosure when the sentence cannot be swapped', () => {
+    const remarks = `Manually edited remark. ${dismissalNoteEn(3)} Trailing text.`;
+    const out = localizeDismissalRemarks({ remarks, dismissedCount: 3 }, tag);
+    expect(out).toBe(remarks);
+    expect(out).toContain(dismissalNoteEn(3));
+  });
+
+  it('a count that disagrees with the sentence keeps the English remark', () => {
+    const remarks = appendDismissalNote('x', 3);
+    expect(localizeDismissalRemarks({ remarks, dismissedCount: 4 }, tag)).toBe(remarks);
+  });
+
+  it('a row without a dismissal is untouched by localisation', () => {
+    const remarks = 'No dismissals here.';
+    expect(localizeDismissalRemarks({ remarks }, tag)).toBe(remarks);
+    expect(localizeDismissalRemarks({ remarks, dismissedCount: 0 }, tag)).toBe(remarks);
+  });
+
+  it('handles a remark that is only the sentence', () => {
+    const remarks = appendDismissalNote('', 1);
+    expect(remarks).toBe(dismissalNoteEn(1));
+    expect(localizeDismissalRemarks({ remarks, dismissedCount: 1 }, tag)).toBe('<<1>>');
   });
 });
