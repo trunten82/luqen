@@ -1,0 +1,3530 @@
+{
+  "issues-xlsx": {
+    "sheetNames": [
+      "Issues"
+    ],
+    "sheets": {
+      "Issues": [
+        [
+          "Severity",
+          "Priority",
+          "WCAG Criterion",
+          "WCAG Title",
+          "Message",
+          "Suggested Fix",
+          "Selector",
+          "Context",
+          "Page URL",
+          "Affected Pages",
+          "Regulations",
+          "Component",
+          "Code",
+          "Template Issue"
+        ],
+        [
+          "error",
+          "Critical",
+          "1.4.3",
+          "Contrast (Minimum)",
+          "Insufficient contrast ratio on the footer note",
+          "Refer to WCAG 1.4.3: Contrast (Minimum) — https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum",
+          "#fabrikam-footer-note",
+          "<p id=\"fabrikam-footer-note\">Footer text</p>",
+          "https://fabrikam.example/shop/",
+          "3/3",
+          "TAA",
+          "Footer",
+          "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+          ""
+        ],
+        [
+          "warning",
+          "Critical",
+          "2.4.4",
+          "Link Purpose (In Context)",
+          "Link purpose is unclear from the link text alone",
+          "Refer to WCAG 2.4.4: Link Purpose (In Context) — https://www.w3.org/WAI/WCAG21/Understanding/link-purpose-in-context",
+          "#fabrikam-more-link",
+          "<a id=\"fabrikam-more-link\" href=\"/more\">More</a>",
+          "https://fabrikam.example/shop/",
+          "2/3",
+          "TAA",
+          "Shared Layout",
+          "WCAG2A.Principle2.Guideline2_4.2_4_4.H77",
+          ""
+        ],
+        [
+          "error",
+          "Critical",
+          "1.1.1",
+          "Non-text Content",
+          "Image is missing a text alternative",
+          "Refer to WCAG 1.1.1: Non-text Content — https://www.w3.org/WAI/WCAG21/Understanding/non-text-content",
+          "#fabrikam-hero-img",
+          "<img id=\"fabrikam-hero-img\" src=\"hero.png\">",
+          "https://fabrikam.example/shop/about",
+          "1/3",
+          "TAA",
+          "Media / Carousel",
+          "WCAG2A.Principle1.Guideline1_1.1_1_1.H37",
+          ""
+        ],
+        [
+          "warning",
+          "Critical",
+          "2.4.4",
+          "Link Purpose (In Context)",
+          "Link purpose is unclear from the link text alone",
+          "Refer to WCAG 2.4.4: Link Purpose (In Context) — https://www.w3.org/WAI/WCAG21/Understanding/link-purpose-in-context",
+          "#fabrikam-more-link",
+          "<a id=\"fabrikam-more-link\" href=\"/more\">More</a>",
+          "https://fabrikam.example/shop/about",
+          "2/3",
+          "TAA",
+          "Shared Layout",
+          "WCAG2A.Principle2.Guideline2_4.2_4_4.H77",
+          ""
+        ],
+        [
+          "notice",
+          "Low",
+          "",
+          "",
+          "Engine fallback finding for the whole page",
+          "",
+          "html",
+          "",
+          "https://fabrikam.example/shop/contact",
+          "1/3",
+          "",
+          "Shared Layout",
+          "lighthouse.fallback",
+          ""
+        ],
+        [
+          "error",
+          "Critical",
+          "1.4.3",
+          "Contrast (Minimum)",
+          "Insufficient contrast ratio on the promo note",
+          "Refer to WCAG 1.4.3: Contrast (Minimum) — https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum",
+          "#fabrikam-promo-note",
+          "<p id=\"fabrikam-promo-note\">Promo text</p>",
+          "https://fabrikam.example/shop/",
+          "3/3",
+          "TAA",
+          "Shared Layout",
+          "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+          "Yes"
+        ],
+        [
+          "error",
+          "Critical",
+          "1.4.3",
+          "Contrast (Minimum)",
+          "Insufficient contrast ratio on the promo note",
+          "Refer to WCAG 1.4.3: Contrast (Minimum) — https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum",
+          "#fabrikam-promo-note",
+          "<p id=\"fabrikam-promo-note\">Promo text</p>",
+          "https://fabrikam.example/shop/about",
+          "3/3",
+          "TAA",
+          "Shared Layout",
+          "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+          "Yes"
+        ],
+        [
+          "error",
+          "Critical",
+          "1.4.3",
+          "Contrast (Minimum)",
+          "Insufficient contrast ratio on the promo note",
+          "Refer to WCAG 1.4.3: Contrast (Minimum) — https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum",
+          "#fabrikam-promo-note",
+          "<p id=\"fabrikam-promo-note\">Promo text</p>",
+          "https://fabrikam.example/shop/contact",
+          "3/3",
+          "TAA",
+          "Shared Layout",
+          "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+          "Yes"
+        ]
+      ]
+    }
+  },
+  "report-pdf-data": {
+    "scanMeta": {
+      "siteUrl": "https://fabrikam.example/shop/",
+      "standard": "WCAG2AA",
+      "jurisdictions": "EU",
+      "regulations": "",
+      "createdAtDisplay": "<volatile:createdAtDisplay>"
+    },
+    "reportData": {
+      "summary": {
+        "pagesScanned": 3,
+        "totalIssues": 8,
+        "byLevel": {
+          "error": 5,
+          "warning": 2,
+          "notice": 1
+        },
+        "pagesFailed": 0
+      },
+      "pages": [
+        {
+          "url": "https://fabrikam.example/shop/",
+          "issues": [
+            {
+              "type": "error",
+              "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+              "message": "Insufficient contrast ratio on the footer note",
+              "selector": "#fabrikam-footer-note",
+              "context": "<p id=\"fabrikam-footer-note\">Footer text</p>",
+              "brandMatch": {
+                "matched": true,
+                "strategy": "color-pair",
+                "matchDetail": "Brand grey pair"
+              },
+              "wcagCriterion": "1.4.3",
+              "wcagTitle": "Contrast (Minimum)",
+              "wcagDescription": "Text must have a contrast ratio of at least 4.5:1 against its background (3:1 for large text).",
+              "wcagImpact": "Users with low vision or color blindness cannot read text with insufficient contrast.",
+              "wcagUrl": "https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum",
+              "regulations": [
+                {
+                  "shortName": "TAA",
+                  "obligation": "mandatory",
+                  "jurisdictionId": "EU",
+                  "regulationName": "Test Accessibility Act"
+                }
+              ]
+            },
+            {
+              "type": "warning",
+              "code": "WCAG2A.Principle2.Guideline2_4.2_4_4.H77",
+              "message": "Link purpose is unclear from the link text alone",
+              "selector": "#fabrikam-more-link",
+              "context": "<a id=\"fabrikam-more-link\" href=\"/more\">More</a>",
+              "wcagCriterion": "2.4.4",
+              "wcagTitle": "Link Purpose (In Context)",
+              "wcagDescription": "The purpose of each link must be clear from the link text alone, or from the link text together with its context.",
+              "wcagImpact": "Screen reader users navigating a list of links cannot determine where vague links go.",
+              "wcagUrl": "https://www.w3.org/WAI/WCAG21/Understanding/link-purpose-in-context",
+              "regulations": [
+                {
+                  "shortName": "TAA",
+                  "obligation": "recommended",
+                  "jurisdictionId": "EU",
+                  "regulationName": "Test Accessibility Act"
+                }
+              ]
+            }
+          ],
+          "issueCount": 3
+        },
+        {
+          "url": "https://fabrikam.example/shop/about",
+          "issues": [
+            {
+              "type": "error",
+              "code": "WCAG2A.Principle1.Guideline1_1.1_1_1.H37",
+              "message": "Image is missing a text alternative",
+              "selector": "#fabrikam-hero-img",
+              "context": "<img id=\"fabrikam-hero-img\" src=\"hero.png\">",
+              "brandMatch": {
+                "matched": true,
+                "strategy": "selector",
+                "matchDetail": "Hero image token"
+              },
+              "wcagCriterion": "1.1.1",
+              "wcagTitle": "Non-text Content",
+              "wcagDescription": "All images, icons, and non-text content must have text alternatives that describe their purpose.",
+              "wcagImpact": "Screen reader users cannot understand what images convey without alt text.",
+              "wcagUrl": "https://www.w3.org/WAI/WCAG21/Understanding/non-text-content",
+              "regulations": [
+                {
+                  "shortName": "TAA",
+                  "obligation": "mandatory",
+                  "jurisdictionId": "EU",
+                  "regulationName": "Test Accessibility Act"
+                }
+              ]
+            },
+            {
+              "type": "warning",
+              "code": "WCAG2A.Principle2.Guideline2_4.2_4_4.H77",
+              "message": "Link purpose is unclear from the link text alone",
+              "selector": "#fabrikam-more-link",
+              "context": "<a id=\"fabrikam-more-link\" href=\"/more\">More</a>",
+              "wcagCriterion": "2.4.4",
+              "wcagTitle": "Link Purpose (In Context)",
+              "wcagDescription": "The purpose of each link must be clear from the link text alone, or from the link text together with its context.",
+              "wcagImpact": "Screen reader users navigating a list of links cannot determine where vague links go.",
+              "wcagUrl": "https://www.w3.org/WAI/WCAG21/Understanding/link-purpose-in-context",
+              "regulations": [
+                {
+                  "shortName": "TAA",
+                  "obligation": "recommended",
+                  "jurisdictionId": "EU",
+                  "regulationName": "Test Accessibility Act"
+                }
+              ]
+            }
+          ],
+          "issueCount": 3
+        },
+        {
+          "url": "https://fabrikam.example/shop/contact",
+          "issues": [
+            {
+              "type": "notice",
+              "code": "lighthouse.fallback",
+              "message": "Engine fallback finding for the whole page",
+              "selector": "html",
+              "context": ""
+            }
+          ],
+          "issueCount": 2
+        }
+      ],
+      "errors": [],
+      "compliance": {
+        "matrix": {
+          "EU": {
+            "jurisdictionId": "EU",
+            "jurisdictionName": "Test Union",
+            "status": "fail",
+            "mandatoryViolations": 2,
+            "recommendedViolations": 1,
+            "optionalViolations": 0,
+            "regulations": [
+              {
+                "regulationId": "TEST-REG",
+                "regulationName": "Test Accessibility Act",
+                "shortName": "TAA",
+                "status": "fail",
+                "enforcementDate": "2025-06-28",
+                "scope": "public",
+                "violations": [
+                  {
+                    "wcagCriterion": "1.1.1",
+                    "obligation": "mandatory",
+                    "issueCount": 1
+                  },
+                  {
+                    "wcagCriterion": "1.4.3",
+                    "obligation": "mandatory",
+                    "issueCount": 1
+                  },
+                  {
+                    "wcagCriterion": "2.4.4",
+                    "obligation": "recommended",
+                    "issueCount": 1
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "regulationMatrix": {
+          "TEST-REG": {
+            "regulationId": "TEST-REG",
+            "regulationName": "Test Accessibility Act",
+            "shortName": "TAA",
+            "jurisdictionId": "EU",
+            "status": "fail",
+            "mandatoryViolations": 2,
+            "recommendedViolations": 1,
+            "optionalViolations": 0,
+            "violatedRequirements": [
+              {
+                "wcagCriterion": "1.1.1",
+                "obligation": "mandatory",
+                "issueCount": 1
+              },
+              {
+                "wcagCriterion": "1.4.3",
+                "obligation": "mandatory",
+                "issueCount": 1
+              },
+              {
+                "wcagCriterion": "2.4.4",
+                "obligation": "recommended",
+                "issueCount": 1
+              }
+            ]
+          }
+        },
+        "annotatedIssues": [
+          {
+            "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+            "wcagCriterion": "1.4.3",
+            "wcagLevel": "AA",
+            "originalIssue": {
+              "type": "error",
+              "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+              "message": "Insufficient contrast ratio on the promo note",
+              "selector": "#fabrikam-promo-note",
+              "context": "<p id=\"fabrikam-promo-note\">Promo text</p>",
+              "brandMatch": {
+                "matched": true,
+                "strategy": "color-pair",
+                "matchDetail": "Brand blue pair"
+              }
+            },
+            "regulations": [
+              {
+                "regulationId": "TEST-REG",
+                "regulationName": "Test Accessibility Act",
+                "shortName": "TAA",
+                "jurisdictionId": "EU",
+                "obligation": "mandatory",
+                "enforcementDate": "2025-06-28"
+              }
+            ]
+          },
+          {
+            "code": "WCAG2A.Principle1.Guideline1_1.1_1_1.H37",
+            "wcagCriterion": "1.1.1",
+            "wcagLevel": "A",
+            "originalIssue": {
+              "type": "error",
+              "code": "WCAG2A.Principle1.Guideline1_1.1_1_1.H37",
+              "message": "Image is missing a text alternative",
+              "selector": "#fabrikam-hero-img",
+              "context": "<img id=\"fabrikam-hero-img\" src=\"hero.png\">",
+              "brandMatch": {
+                "matched": true,
+                "strategy": "selector",
+                "matchDetail": "Hero image token"
+              }
+            },
+            "regulations": [
+              {
+                "regulationId": "TEST-REG",
+                "regulationName": "Test Accessibility Act",
+                "shortName": "TAA",
+                "jurisdictionId": "EU",
+                "obligation": "mandatory",
+                "enforcementDate": "2025-06-28"
+              }
+            ]
+          },
+          {
+            "code": "WCAG2A.Principle2.Guideline2_4.2_4_4.H77",
+            "wcagCriterion": "2.4.4",
+            "wcagLevel": "A",
+            "originalIssue": {
+              "type": "warning",
+              "code": "WCAG2A.Principle2.Guideline2_4.2_4_4.H77",
+              "message": "Link purpose is unclear from the link text alone",
+              "selector": "#fabrikam-more-link",
+              "context": "<a id=\"fabrikam-more-link\" href=\"/more\">More</a>"
+            },
+            "regulations": [
+              {
+                "regulationId": "TEST-REG",
+                "regulationName": "Test Accessibility Act",
+                "shortName": "TAA",
+                "jurisdictionId": "EU",
+                "obligation": "recommended",
+                "enforcementDate": "2025-06-28"
+              }
+            ]
+          }
+        ],
+        "summary": {
+          "totalJurisdictions": 1,
+          "passing": 0,
+          "failing": 1,
+          "totalMandatoryViolations": 2,
+          "totalOptionalViolations": 0,
+          "needsReview": 0
+        }
+      },
+      "complianceMatrix": [
+        {
+          "jurisdictionId": "EU",
+          "jurisdictionName": "Test Union",
+          "status": "fail",
+          "mandatoryViolations": 2,
+          "recommendedViolations": 1,
+          "optionalViolations": 0,
+          "regulations": [
+            {
+              "shortName": "TAA",
+              "obligation": "mandatory",
+              "violations": [
+                {
+                  "wcagCriterion": "1.1.1",
+                  "obligation": "mandatory",
+                  "issueCount": 1
+                },
+                {
+                  "wcagCriterion": "1.4.3",
+                  "obligation": "mandatory",
+                  "issueCount": 1
+                },
+                {
+                  "wcagCriterion": "2.4.4",
+                  "obligation": "recommended",
+                  "issueCount": 1
+                }
+              ]
+            }
+          ],
+          "confirmedViolations": 2,
+          "needsReview": 1,
+          "reviewStatus": "fail",
+          "regulationCount": 1,
+          "violations": [
+            {
+              "wcagCriterion": "1.1.1",
+              "obligation": "mandatory",
+              "issueCount": 1,
+              "regulations": [
+                "TAA"
+              ]
+            },
+            {
+              "wcagCriterion": "1.4.3",
+              "obligation": "mandatory",
+              "issueCount": 1,
+              "regulations": [
+                "TAA"
+              ]
+            },
+            {
+              "wcagCriterion": "2.4.4",
+              "obligation": "recommended",
+              "issueCount": 1,
+              "regulations": [
+                "TAA"
+              ]
+            }
+          ],
+          "uniqueMandatoryViolations": 2,
+          "allRegulationsIdentical": false
+        }
+      ],
+      "regulationMatrix": [
+        {
+          "regulationId": "TEST-REG",
+          "regulationName": "Test Accessibility Act",
+          "shortName": "TAA",
+          "jurisdictionId": "EU",
+          "status": "fail",
+          "mandatoryViolations": 2,
+          "recommendedViolations": 1,
+          "optionalViolations": 0,
+          "violatedRequirements": [
+            {
+              "wcagCriterion": "1.1.1",
+              "obligation": "mandatory",
+              "issueCount": 1
+            },
+            {
+              "wcagCriterion": "1.4.3",
+              "obligation": "mandatory",
+              "issueCount": 1
+            },
+            {
+              "wcagCriterion": "2.4.4",
+              "obligation": "recommended",
+              "issueCount": 1
+            }
+          ]
+        }
+      ],
+      "templateIssues": [
+        {
+          "type": "error",
+          "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+          "message": "Insufficient contrast ratio on the promo note",
+          "selector": "#fabrikam-promo-note",
+          "context": "<p id=\"fabrikam-promo-note\">Promo text</p>",
+          "brandMatch": {
+            "matched": true,
+            "strategy": "color-pair",
+            "matchDetail": "Brand blue pair"
+          },
+          "wcagCriterion": "1.4.3",
+          "wcagTitle": "Contrast (Minimum)",
+          "wcagDescription": "Text must have a contrast ratio of at least 4.5:1 against its background (3:1 for large text).",
+          "wcagImpact": "Users with low vision or color blindness cannot read text with insufficient contrast.",
+          "wcagUrl": "https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum",
+          "regulations": [
+            {
+              "shortName": "TAA",
+              "obligation": "mandatory",
+              "jurisdictionId": "EU",
+              "regulationName": "Test Accessibility Act"
+            }
+          ],
+          "affectedPages": [
+            "https://fabrikam.example/shop/",
+            "https://fabrikam.example/shop/about",
+            "https://fabrikam.example/shop/contact"
+          ],
+          "affectedCount": 3,
+          "componentName": "Shared Layout"
+        }
+      ],
+      "templateIssueCount": 1,
+      "templateOccurrenceCount": 3,
+      "templateComponents": [
+        {
+          "componentName": "Shared Layout",
+          "issueCount": 1,
+          "maxAffectedPages": 3,
+          "issues": [
+            {
+              "type": "error",
+              "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+              "message": "Insufficient contrast ratio on the promo note",
+              "selector": "#fabrikam-promo-note",
+              "context": "<p id=\"fabrikam-promo-note\">Promo text</p>",
+              "brandMatch": {
+                "matched": true,
+                "strategy": "color-pair",
+                "matchDetail": "Brand blue pair"
+              },
+              "wcagCriterion": "1.4.3",
+              "wcagTitle": "Contrast (Minimum)",
+              "wcagDescription": "Text must have a contrast ratio of at least 4.5:1 against its background (3:1 for large text).",
+              "wcagImpact": "Users with low vision or color blindness cannot read text with insufficient contrast.",
+              "wcagUrl": "https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum",
+              "regulations": [
+                {
+                  "shortName": "TAA",
+                  "obligation": "mandatory",
+                  "jurisdictionId": "EU",
+                  "regulationName": "Test Accessibility Act"
+                }
+              ],
+              "affectedPages": [
+                "https://fabrikam.example/shop/",
+                "https://fabrikam.example/shop/about",
+                "https://fabrikam.example/shop/contact"
+              ],
+              "affectedCount": 3,
+              "componentName": "Shared Layout"
+            }
+          ]
+        }
+      ],
+      "allIssueGroups": [
+        {
+          "criterion": "1.4.3",
+          "title": "Contrast (Minimum)",
+          "wcagUrl": "https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum",
+          "count": 1,
+          "templateCount": 1,
+          "totalCount": 4,
+          "errorCount": 2,
+          "warningCount": 0,
+          "noticeCount": 0,
+          "pageCount": 3,
+          "isRegulatory": true,
+          "hasTemplate": true,
+          "hasBrandIssues": true,
+          "brandCount": 1,
+          "regulations": [
+            {
+              "shortName": "TAA",
+              "obligation": "mandatory",
+              "jurisdictionId": "EU",
+              "regulationName": "Test Accessibility Act"
+            }
+          ],
+          "components": [
+            "Shared Layout"
+          ],
+          "issues": [
+            {
+              "type": "error",
+              "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+              "message": "Insufficient contrast ratio on the footer note",
+              "selector": "#fabrikam-footer-note",
+              "context": "<p id=\"fabrikam-footer-note\">Footer text</p>",
+              "brandMatch": {
+                "matched": true,
+                "strategy": "color-pair",
+                "matchDetail": "Brand grey pair"
+              },
+              "wcagCriterion": "1.4.3",
+              "wcagTitle": "Contrast (Minimum)",
+              "wcagDescription": "Text must have a contrast ratio of at least 4.5:1 against its background (3:1 for large text).",
+              "wcagImpact": "Users with low vision or color blindness cannot read text with insufficient contrast.",
+              "wcagUrl": "https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum",
+              "regulations": [
+                {
+                  "shortName": "TAA",
+                  "obligation": "mandatory",
+                  "jurisdictionId": "EU",
+                  "regulationName": "Test Accessibility Act"
+                }
+              ]
+            }
+          ],
+          "templateItems": [
+            {
+              "type": "error",
+              "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+              "message": "Insufficient contrast ratio on the promo note",
+              "selector": "#fabrikam-promo-note",
+              "context": "<p id=\"fabrikam-promo-note\">Promo text</p>",
+              "brandMatch": {
+                "matched": true,
+                "strategy": "color-pair",
+                "matchDetail": "Brand blue pair"
+              },
+              "wcagCriterion": "1.4.3",
+              "wcagTitle": "Contrast (Minimum)",
+              "wcagDescription": "Text must have a contrast ratio of at least 4.5:1 against its background (3:1 for large text).",
+              "wcagImpact": "Users with low vision or color blindness cannot read text with insufficient contrast.",
+              "wcagUrl": "https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum",
+              "regulations": [
+                {
+                  "shortName": "TAA",
+                  "obligation": "mandatory",
+                  "jurisdictionId": "EU",
+                  "regulationName": "Test Accessibility Act"
+                }
+              ],
+              "affectedPages": [
+                "https://fabrikam.example/shop/",
+                "https://fabrikam.example/shop/about",
+                "https://fabrikam.example/shop/contact"
+              ],
+              "affectedCount": 3,
+              "componentName": "Shared Layout"
+            }
+          ]
+        },
+        {
+          "criterion": "2.4.4",
+          "title": "Link Purpose (In Context)",
+          "wcagUrl": "https://www.w3.org/WAI/WCAG21/Understanding/link-purpose-in-context",
+          "count": 2,
+          "templateCount": 0,
+          "totalCount": 2,
+          "errorCount": 0,
+          "warningCount": 2,
+          "noticeCount": 0,
+          "pageCount": 2,
+          "isRegulatory": true,
+          "hasTemplate": false,
+          "hasBrandIssues": false,
+          "brandCount": 0,
+          "regulations": [
+            {
+              "shortName": "TAA",
+              "obligation": "recommended",
+              "jurisdictionId": "EU",
+              "regulationName": "Test Accessibility Act"
+            }
+          ],
+          "components": [],
+          "issues": [
+            {
+              "type": "warning",
+              "code": "WCAG2A.Principle2.Guideline2_4.2_4_4.H77",
+              "message": "Link purpose is unclear from the link text alone",
+              "selector": "#fabrikam-more-link",
+              "context": "<a id=\"fabrikam-more-link\" href=\"/more\">More</a>",
+              "wcagCriterion": "2.4.4",
+              "wcagTitle": "Link Purpose (In Context)",
+              "wcagDescription": "The purpose of each link must be clear from the link text alone, or from the link text together with its context.",
+              "wcagImpact": "Screen reader users navigating a list of links cannot determine where vague links go.",
+              "wcagUrl": "https://www.w3.org/WAI/WCAG21/Understanding/link-purpose-in-context",
+              "regulations": [
+                {
+                  "shortName": "TAA",
+                  "obligation": "recommended",
+                  "jurisdictionId": "EU",
+                  "regulationName": "Test Accessibility Act"
+                }
+              ]
+            },
+            {
+              "type": "warning",
+              "code": "WCAG2A.Principle2.Guideline2_4.2_4_4.H77",
+              "message": "Link purpose is unclear from the link text alone",
+              "selector": "#fabrikam-more-link",
+              "context": "<a id=\"fabrikam-more-link\" href=\"/more\">More</a>",
+              "wcagCriterion": "2.4.4",
+              "wcagTitle": "Link Purpose (In Context)",
+              "wcagDescription": "The purpose of each link must be clear from the link text alone, or from the link text together with its context.",
+              "wcagImpact": "Screen reader users navigating a list of links cannot determine where vague links go.",
+              "wcagUrl": "https://www.w3.org/WAI/WCAG21/Understanding/link-purpose-in-context",
+              "regulations": [
+                {
+                  "shortName": "TAA",
+                  "obligation": "recommended",
+                  "jurisdictionId": "EU",
+                  "regulationName": "Test Accessibility Act"
+                }
+              ]
+            }
+          ],
+          "templateItems": []
+        },
+        {
+          "criterion": "1.1.1",
+          "title": "Non-text Content",
+          "wcagUrl": "https://www.w3.org/WAI/WCAG21/Understanding/non-text-content",
+          "count": 1,
+          "templateCount": 0,
+          "totalCount": 1,
+          "errorCount": 1,
+          "warningCount": 0,
+          "noticeCount": 0,
+          "pageCount": 1,
+          "isRegulatory": true,
+          "hasTemplate": false,
+          "hasBrandIssues": true,
+          "brandCount": 1,
+          "regulations": [
+            {
+              "shortName": "TAA",
+              "obligation": "mandatory",
+              "jurisdictionId": "EU",
+              "regulationName": "Test Accessibility Act"
+            }
+          ],
+          "components": [],
+          "issues": [
+            {
+              "type": "error",
+              "code": "WCAG2A.Principle1.Guideline1_1.1_1_1.H37",
+              "message": "Image is missing a text alternative",
+              "selector": "#fabrikam-hero-img",
+              "context": "<img id=\"fabrikam-hero-img\" src=\"hero.png\">",
+              "brandMatch": {
+                "matched": true,
+                "strategy": "selector",
+                "matchDetail": "Hero image token"
+              },
+              "wcagCriterion": "1.1.1",
+              "wcagTitle": "Non-text Content",
+              "wcagDescription": "All images, icons, and non-text content must have text alternatives that describe their purpose.",
+              "wcagImpact": "Screen reader users cannot understand what images convey without alt text.",
+              "wcagUrl": "https://www.w3.org/WAI/WCAG21/Understanding/non-text-content",
+              "regulations": [
+                {
+                  "shortName": "TAA",
+                  "obligation": "mandatory",
+                  "jurisdictionId": "EU",
+                  "regulationName": "Test Accessibility Act"
+                }
+              ]
+            }
+          ],
+          "templateItems": []
+        },
+        {
+          "criterion": "lighthouse.fallback",
+          "title": "lighthouse.fallback",
+          "count": 1,
+          "templateCount": 0,
+          "totalCount": 1,
+          "errorCount": 0,
+          "warningCount": 0,
+          "noticeCount": 1,
+          "pageCount": 1,
+          "isRegulatory": false,
+          "hasTemplate": false,
+          "hasBrandIssues": false,
+          "brandCount": 0,
+          "regulations": [],
+          "components": [],
+          "issues": [
+            {
+              "type": "notice",
+              "code": "lighthouse.fallback",
+              "message": "Engine fallback finding for the whole page",
+              "selector": "html",
+              "context": ""
+            }
+          ],
+          "templateItems": []
+        }
+      ],
+      "regulatoryIssueCount": 7,
+      "templateIssueTotal": 3,
+      "topActionItems": [
+        {
+          "severity": "error",
+          "count": 2,
+          "criterion": "1.4.3",
+          "title": "Contrast (Minimum)",
+          "pageCount": 3,
+          "regulations": [
+            {
+              "shortName": "TAA",
+              "obligation": "mandatory",
+              "jurisdictionId": "EU",
+              "regulationName": "Test Accessibility Act"
+            }
+          ]
+        },
+        {
+          "severity": "warning",
+          "count": 2,
+          "criterion": "2.4.4",
+          "title": "Link Purpose (In Context)",
+          "pageCount": 2,
+          "regulations": [
+            {
+              "shortName": "TAA",
+              "obligation": "recommended",
+              "jurisdictionId": "EU",
+              "regulationName": "Test Accessibility Act"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "count": 1,
+          "criterion": "1.1.1",
+          "title": "Non-text Content",
+          "pageCount": 1,
+          "regulations": [
+            {
+              "shortName": "TAA",
+              "obligation": "mandatory",
+              "jurisdictionId": "EU",
+              "regulationName": "Test Accessibility Act"
+            }
+          ]
+        }
+      ],
+      "behaviorallyEvaluatedCriteria": []
+    }
+  },
+  "vpat-model": {
+    "siteUrl": "https://fabrikam.example/shop/",
+    "standard": "WCAG2AA",
+    "level": "AA",
+    "generatedAt": "2026-10-01",
+    "tablesByLevel": [
+      {
+        "level": "A",
+        "rows": [
+          {
+            "criterion": "1.1.1",
+            "title": "Non-text Content",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/text-equiv-all.html",
+            "conformance": "Does Not Support",
+            "remarks": "1 error across 1 page — regulations: TAA"
+          },
+          {
+            "criterion": "1.2.1",
+            "title": "Audio-only and Video-only (Prerecorded)",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/media-equiv-av-only-alt.html",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.2.2",
+            "title": "Captions (Prerecorded)",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/media-equiv-captions.html",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.2.3",
+            "title": "Audio Description or Media Alternative (Prerecorded)",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/media-equiv-audio-desc.html",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.3.1",
+            "title": "Info and Relationships",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/content-structure-separation-programmatic.html",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.3.2",
+            "title": "Meaningful Sequence",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/content-structure-separation-sequence.html",
+            "conformance": "Supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "1.3.3",
+            "title": "Sensory Characteristics",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/content-structure-separation-understanding.html",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.4.1",
+            "title": "Use of Color",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/visual-audio-contrast-without-color.html",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.4.2",
+            "title": "Audio Control",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/visual-audio-contrast-dis-audio.html",
+            "conformance": "Supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.1.1",
+            "title": "Keyboard",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/keyboard-operation-keyboard-operable.html",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.1.2",
+            "title": "No Keyboard Trap",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/keyboard-operation-trapping.html",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.1.4",
+            "title": "Character Key Shortcuts",
+            "level": "A",
+            "version": "2.1",
+            "url": "https://www.w3.org/WAI/WCAG21/Understanding/character-key-shortcuts",
+            "conformance": "Supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.2.1",
+            "title": "Timing Adjustable",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/time-limits-required-behaviors.html",
+            "conformance": "Supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.2.2",
+            "title": "Pause, Stop, Hide",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/time-limits-pause.html",
+            "conformance": "Supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.3.1",
+            "title": "Three Flashes or Below Threshold",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/seizure-does-not-violate.html",
+            "conformance": "Supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.4.1",
+            "title": "Bypass Blocks",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/navigation-mechanisms-skip.html",
+            "conformance": "Supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.4.2",
+            "title": "Page Titled",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/navigation-mechanisms-title.html",
+            "conformance": "Supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.4.3",
+            "title": "Focus Order",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/navigation-mechanisms-focus-order.html",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.4.4",
+            "title": "Link Purpose (In Context)",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/navigation-mechanisms-refs.html",
+            "conformance": "Partially Supports",
+            "remarks": "2 warnings, 0 notices across 2 pages — regulations: TAA"
+          },
+          {
+            "criterion": "2.5.1",
+            "title": "Pointer Gestures",
+            "level": "A",
+            "version": "2.1",
+            "url": "https://www.w3.org/WAI/WCAG21/Understanding/pointer-gestures",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.5.2",
+            "title": "Pointer Cancellation",
+            "level": "A",
+            "version": "2.1",
+            "url": "https://www.w3.org/WAI/WCAG21/Understanding/pointer-cancellation",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.5.3",
+            "title": "Label in Name",
+            "level": "A",
+            "version": "2.1",
+            "url": "https://www.w3.org/WAI/WCAG21/Understanding/label-in-name",
+            "conformance": "Supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.5.4",
+            "title": "Motion Actuation",
+            "level": "A",
+            "version": "2.1",
+            "url": "https://www.w3.org/WAI/WCAG21/Understanding/motion-actuation",
+            "conformance": "Supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "3.1.1",
+            "title": "Language of Page",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/meaning-doc-lang-id.html",
+            "conformance": "Supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "3.2.1",
+            "title": "On Focus",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/consistent-behavior-receive-focus.html",
+            "conformance": "Supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "3.2.2",
+            "title": "On Input",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/consistent-behavior-unpredictable-change.html",
+            "conformance": "Supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "3.2.6",
+            "title": "Consistent Help",
+            "level": "A",
+            "version": "2.2",
+            "url": "https://www.w3.org/WAI/WCAG22/Understanding/consistent-help",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "3.3.1",
+            "title": "Error Identification",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/minimize-error-identified.html",
+            "conformance": "Supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "3.3.2",
+            "title": "Labels or Instructions",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/minimize-error-cues.html",
+            "conformance": "Supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "3.3.7",
+            "title": "Redundant Entry",
+            "level": "A",
+            "version": "2.2",
+            "url": "https://www.w3.org/WAI/WCAG22/Understanding/redundant-entry",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "4.1.1",
+            "title": "Parsing",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/ensure-compat-parses.html",
+            "conformance": "Supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "4.1.2",
+            "title": "Name, Role, Value",
+            "level": "A",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/ensure-compat-rsv.html",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          }
+        ]
+      },
+      {
+        "level": "AA",
+        "rows": [
+          {
+            "criterion": "1.2.4",
+            "title": "Captions (Live)",
+            "level": "AA",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/media-equiv-real-time-captions.html",
+            "conformance": "Supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "1.2.5",
+            "title": "Audio Description (Prerecorded)",
+            "level": "AA",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/media-equiv-audio-desc-only.html",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.3.4",
+            "title": "Orientation",
+            "level": "AA",
+            "version": "2.1",
+            "url": "https://www.w3.org/WAI/WCAG21/Understanding/orientation",
+            "conformance": "Supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "1.3.5",
+            "title": "Identify Input Purpose",
+            "level": "AA",
+            "version": "2.1",
+            "url": "https://www.w3.org/WAI/WCAG21/Understanding/identify-input-purpose",
+            "conformance": "Supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "1.4.3",
+            "title": "Contrast (Minimum)",
+            "level": "AA",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/visual-audio-contrast-contrast.html",
+            "conformance": "Does Not Support",
+            "remarks": "2 errors across 3 pages — regulations: TAA"
+          },
+          {
+            "criterion": "1.4.4",
+            "title": "Resize Text",
+            "level": "AA",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/visual-audio-contrast-scale.html",
+            "conformance": "Supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "1.4.5",
+            "title": "Images of Text",
+            "level": "AA",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/visual-audio-contrast-text-presentation.html",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.4.10",
+            "title": "Reflow",
+            "level": "AA",
+            "version": "2.1",
+            "url": "https://www.w3.org/WAI/WCAG21/Understanding/reflow",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.4.11",
+            "title": "Non-text Contrast",
+            "level": "AA",
+            "version": "2.1",
+            "url": "https://www.w3.org/WAI/WCAG21/Understanding/non-text-contrast",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.4.12",
+            "title": "Text Spacing",
+            "level": "AA",
+            "version": "2.1",
+            "url": "https://www.w3.org/WAI/WCAG21/Understanding/text-spacing",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.4.13",
+            "title": "Content on Hover or Focus",
+            "level": "AA",
+            "version": "2.1",
+            "url": "https://www.w3.org/WAI/WCAG21/Understanding/content-on-hover-or-focus",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.4.5",
+            "title": "Multiple Ways",
+            "level": "AA",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/navigation-mechanisms-mult-loc.html",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.4.6",
+            "title": "Headings and Labels",
+            "level": "AA",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/navigation-mechanisms-descriptive.html",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.4.7",
+            "title": "Focus Visible",
+            "level": "AA",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/navigation-mechanisms-focus-visible.html",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.4.11",
+            "title": "Focus Not Obscured (Minimum)",
+            "level": "AA",
+            "version": "2.2",
+            "url": "https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.5.7",
+            "title": "Dragging Movements",
+            "level": "AA",
+            "version": "2.2",
+            "url": "https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.5.8",
+            "title": "Target Size (Minimum)",
+            "level": "AA",
+            "version": "2.2",
+            "url": "https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "3.1.2",
+            "title": "Language of Parts",
+            "level": "AA",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/meaning-other-lang-id.html",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "3.2.3",
+            "title": "Consistent Navigation",
+            "level": "AA",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/consistent-behavior-consistent-locations.html",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "3.2.4",
+            "title": "Consistent Identification",
+            "level": "AA",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/consistent-behavior-consistent-functionality.html",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "3.3.3",
+            "title": "Error Suggestion",
+            "level": "AA",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/minimize-error-suggestions.html",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "3.3.4",
+            "title": "Error Prevention (Legal, Financial, Data)",
+            "level": "AA",
+            "version": "2.0",
+            "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/minimize-error-reversible.html",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "3.3.8",
+            "title": "Accessible Authentication (Minimum)",
+            "level": "AA",
+            "version": "2.2",
+            "url": "https://www.w3.org/WAI/WCAG22/Understanding/accessible-authentication-minimum",
+            "conformance": "Not Evaluated",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "4.1.3",
+            "title": "Status Messages",
+            "level": "AA",
+            "version": "2.1",
+            "url": "https://www.w3.org/WAI/WCAG21/Understanding/status-messages",
+            "conformance": "Supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          }
+        ]
+      }
+    ],
+    "summary": {
+      "supports": 21,
+      "partial": 1,
+      "doesNotSupport": 2,
+      "notApplicable": 0,
+      "notEvaluated": 32,
+      "total": 56
+    },
+    "section508": {
+      "functionalPerformance": [
+        {
+          "id": "302.1",
+          "need": "Without vision",
+          "conformance": "Does Not Support",
+          "remarks": "Related success criteria not supported: 1.1.1. End-to-end confirmation requires manual testing with assistive technology.",
+          "relatedCriteria": [
+            "1.1.1",
+            "1.2.1",
+            "1.2.3",
+            "1.2.5",
+            "1.3.1",
+            "1.3.2",
+            "1.3.3",
+            "1.4.1",
+            "2.1.1",
+            "2.1.2",
+            "2.4.1",
+            "2.4.2",
+            "2.4.3",
+            "2.4.4",
+            "2.4.6",
+            "3.1.1",
+            "3.1.2",
+            "3.2.1",
+            "3.2.2",
+            "3.3.1",
+            "3.3.2",
+            "4.1.2"
+          ]
+        },
+        {
+          "id": "302.2",
+          "need": "With limited vision",
+          "conformance": "Does Not Support",
+          "remarks": "Related success criteria not supported: 1.4.3. End-to-end confirmation requires manual testing with assistive technology.",
+          "relatedCriteria": [
+            "1.4.3",
+            "1.4.4",
+            "1.4.5",
+            "1.4.10",
+            "1.4.11",
+            "1.4.12",
+            "1.4.13",
+            "2.4.7"
+          ]
+        },
+        {
+          "id": "302.3",
+          "need": "Without perception of color",
+          "conformance": "Not Evaluated",
+          "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it.",
+          "relatedCriteria": [
+            "1.3.3",
+            "1.4.1"
+          ]
+        },
+        {
+          "id": "302.4",
+          "need": "Without hearing",
+          "conformance": "Not Evaluated",
+          "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it.",
+          "relatedCriteria": [
+            "1.2.1",
+            "1.2.2",
+            "1.2.4",
+            "1.4.2"
+          ]
+        },
+        {
+          "id": "302.5",
+          "need": "With limited hearing",
+          "conformance": "Not Evaluated",
+          "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it.",
+          "relatedCriteria": [
+            "1.2.2",
+            "1.2.4",
+            "1.4.7"
+          ]
+        },
+        {
+          "id": "302.6",
+          "need": "Without speech",
+          "conformance": "Not Evaluated",
+          "remarks": "The evaluated web content does not require speech for operation; end-to-end confirmation still requires manual testing.",
+          "relatedCriteria": []
+        },
+        {
+          "id": "302.7",
+          "need": "With limited manipulation",
+          "conformance": "Not Evaluated",
+          "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it.",
+          "relatedCriteria": [
+            "2.1.1",
+            "2.1.2",
+            "2.4.7",
+            "2.5.1",
+            "2.5.2",
+            "2.5.4"
+          ]
+        },
+        {
+          "id": "302.8",
+          "need": "With limited reach and strength",
+          "conformance": "Not Evaluated",
+          "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it.",
+          "relatedCriteria": [
+            "2.5.1",
+            "2.5.2",
+            "2.5.4"
+          ]
+        },
+        {
+          "id": "302.9",
+          "need": "With limited language, cognitive, and learning abilities",
+          "conformance": "Not Evaluated",
+          "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it.",
+          "relatedCriteria": [
+            "1.3.1",
+            "2.4.2",
+            "2.4.6",
+            "3.1.1",
+            "3.1.2",
+            "3.2.1",
+            "3.2.2",
+            "3.2.3",
+            "3.2.4",
+            "3.3.1",
+            "3.3.2",
+            "3.3.3",
+            "3.3.4"
+          ]
+        }
+      ]
+    },
+    "legalFramings": [
+      {
+        "id": "generic",
+        "heading": "Applicable laws & standards",
+        "body": "This report was generated for the following selected jurisdictions and regulations: EU. Conformance is assessed against WCAG; consult the applicable local standard for any jurisdiction-specific requirements. This report supports a good-faith remediation effort; it is not legal advice and does not certify compliance.",
+        "shortLabel": "EU"
+      }
+    ],
+    "evaluatedStandards": [],
+    "includeFunctionalPerformance": false,
+    "functionalPerformanceHeading": "EN 301 549 — Functional Performance Statements (clause 4)",
+    "remediation": {
+      "events": [],
+      "summary": {
+        "aiProposed": 0,
+        "developerVerified": 0,
+        "manualVerified": 0,
+        "total": 0,
+        "firstActivity": null,
+        "lastActivity": null
+      },
+      "scanTrend": [
+        {
+          "date": "2026-10-01",
+          "totalIssues": 8,
+          "errors": 5
+        }
+      ],
+      "isEmpty": true
+    },
+    "attestation": {
+      "evaluationDate": "2026-10-01",
+      "pagesEvaluated": 3,
+      "methods": [
+        "Automated testing (Pa11y / axe-core)",
+        "Behavioral checks (keyboard, focus, dynamic state) where enabled"
+      ],
+      "standardsLabel": "WCAG 2.2 (incl. 2.0/2.1) · EU",
+      "manualTestingRecorded": false
+    }
+  },
+  "acr-view-en": {
+    "strings": {
+      "title": "Accessibility Conformance Report (VPAT®)",
+      "generatedAt": "Generated",
+      "identityContact": "Contact",
+      "tallySupports": "Supports",
+      "tallyPartial": "Partially Supports",
+      "tallyDoesNotSupport": "Does Not Support",
+      "tallyNotApplicable": "Not Applicable",
+      "tallyNotEvaluated": "Not Evaluated",
+      "tallyTotal": "Total criteria",
+      "methodologyHeading": "Methodology & scope",
+      "methodologyBody": "Conformance is derived from automated testing (Pa11y / axe-core) combined with any recorded manual test results. Automated testing reliably detects only a portion of WCAG success criteria (industry estimates ~30–40%); it can confirm machine-verifiable failures but cannot, on its own, prove that a criterion requiring human judgement (such as meaningful alternative text, logical reading order, or keyboard operability) is fully met. Criteria that automated testing cannot conclusively verify are reported as “Not Evaluated” until a manual test is recorded — they are not assumed to pass. Where AI-assisted fixes were applied, they were reviewed and merged under human developer supervision.",
+      "methodologyCaveat": "This report is a transparency and remediation-planning document. It is not a certificate of compliance and does not constitute legal advice or a guarantee against accessibility claims. No automated tool or report can make a site “lawsuit-proof”; ongoing manual testing and remediation are required.",
+      "attestationHeading": "Evaluation methodology & attestation",
+      "attestationStatement": "This report reflects a good-faith evaluation of the site as of the evaluation date, performed using the methods listed above. It records the state of conformance at that time and the ongoing remediation effort; it is not a certification and does not guarantee conformance.",
+      "attLabelEvaluationDate": "Evaluation date",
+      "attLabelScope": "Scope",
+      "attLabelStandards": "Standards assessed",
+      "attLabelMethods": "Methods",
+      "attLabelEvaluator": "Evaluator",
+      "attLabelReasonedChanges": "Documented verdict changes (with reasons)",
+      "standardsHeading": "Standards & laws evaluated against",
+      "standardsIntro": "This report was evaluated explicitly against each of the following standards and laws, as selected for this scan. Each is named in full so the scope of coverage is unambiguous.",
+      "standardsDisclaimer": "These descriptions summarise the cited standards and laws for context only; they do not constitute legal advice, and this report records a good-faith evaluation rather than a certification of compliance.",
+      "standardReference": "Reference",
+      "standardEnforced": "in force since",
+      "colCriteria": "Criteria",
+      "colConformance": "Conformance Level",
+      "colRemarks": "Remarks and Explanations",
+      "fpcHeading": "Functional Performance Criteria (§302)",
+      "fpcIntro": "The WCAG tables above constitute the success-criteria evidence. The functional needs below describe end-to-end outcomes and are reported conservatively: a related WCAG failure marks a need “Does Not Support”, while a clean scan leaves it “Not Evaluated” pending manual testing with assistive technology.",
+      "fpcColId": "Criterion",
+      "fpcColNeed": "Functional need",
+      "remediationHeading": "Remediation record",
+      "remediationIntro": "A dated, good-faith record of remediation activity for this site. In this workflow Luqen's AI only drafts candidate fixes; a human developer reviews each one, and a change takes effect only when a person accepts and merges it. The AI assists drafting under human supervision — it never applies changes on its own, and it is not the basis of the conformance verdicts in this report. This section evidences an ongoing remediation effort; it does not assert conformance.",
+      "remediationCaveat": "What these figures mean: “AI-proposed (draft)” counts fixes the AI drafted as candidate code changes for a developer to review — they are drafts, not applied or accepted changes. “Developer-verified” counts the changes a human developer actually reviewed and merged. The remaining figures are the total recorded remediation steps and the number of re-scans run over time.",
+      "remediationDisclaimer": "This record reflects logged remediation actions and scan history only. It is evidence of good-faith effort, not a guarantee that every issue has been resolved or that the site is compliant.",
+      "remLabelAiProposed": "AI-proposed (draft)",
+      "remLabelDeveloperVerified": "Developer-verified",
+      "remLabelTotal": "Total actions",
+      "remLabelScans": "Completed scans",
+      "remColDate": "Date",
+      "remColAction": "Action",
+      "remColCriterion": "Criterion",
+      "remColDetail": "Detail",
+      "remColActor": "By",
+      "auditHeading": "Audit history",
+      "auditIntro": "A dated trail of every manual-test verdict change, with the recorded reason and who made it — evidence of an ongoing, reasoned evaluation process.",
+      "auditColCriterion": "Criterion",
+      "auditColChange": "Verdict change",
+      "auditColReason": "Reason",
+      "auditColActor": "By",
+      "auditColDate": "Date",
+      "evidenceHeading": "Manual test evidence",
+      "evidenceIntro": "Supporting evidence files recorded during manual testing, organised by success criterion. These artifacts — screenshots and documents — substantiate the manual verdicts recorded above and form part of the dated, good-faith testing record. They are provided for transparency and do not constitute a certification of conformance.",
+      "evidenceDownload": "Download",
+      "downloadPack": "Download evidence pack (.zip)",
+      "downloadPdf": "Download PDF",
+      "viewLiveReport": "View the live report",
+      "verifiedBadge": "Verified by Luqen",
+      "viewDashboardReport": "View on the Luqen dashboard",
+      "wordingStandardLabel": "Standard VPAT wording",
+      "wordingCustomLabel": "Custom wording",
+      "footer": "Generated by Luqen — VPAT is a registered trademark of the Information Technology Industry Council (ITI)."
+    },
+    "wording": {
+      "anyCustom": false,
+      "anyUnreviewed": false
+    },
+    "meta": {
+      "siteUrl": "https://fabrikam.example/shop/",
+      "standardLabel": "WCAG2AA",
+      "generatedAt": "2026-10-01"
+    },
+    "verdict": {
+      "line": "fabrikam.example partially conforms to WCAG2AA across 3 page(s).",
+      "meta": "Evaluated 2026-10-01 · 21 of 56 criteria supported · 2 not supported · 32 pending manual evaluation"
+    },
+    "tally": {
+      "supports": 21,
+      "partial": 1,
+      "doesNotSupport": 2,
+      "notApplicable": 0,
+      "notEvaluated": 32,
+      "total": 56
+    },
+    "attestation": [
+      {
+        "label": "Evaluation date",
+        "value": "2026-10-01"
+      },
+      {
+        "label": "Scope",
+        "value": "3 · https://fabrikam.example/shop/"
+      },
+      {
+        "label": "Standards assessed",
+        "value": "WCAG 2.2 (incl. 2.0/2.1) · EU"
+      },
+      {
+        "label": "Methods",
+        "value": "Automated testing (Pa11y / axe-core); Behavioral checks (keyboard, focus, dynamic state) where enabled"
+      }
+    ],
+    "hasStandards": false,
+    "standards": [],
+    "tables": [
+      {
+        "level": "A",
+        "levelLabel": "WCAG Level A",
+        "rows": [
+          {
+            "criterion": "1.1.1",
+            "title": "Non-text Content",
+            "conformance": "Does Not Support",
+            "conformanceClass": "none",
+            "remarks": "1 error across 1 page — regulations: TAA"
+          },
+          {
+            "criterion": "1.2.1",
+            "title": "Audio-only and Video-only (Prerecorded)",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.2.2",
+            "title": "Captions (Prerecorded)",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.2.3",
+            "title": "Audio Description or Media Alternative (Prerecorded)",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.3.1",
+            "title": "Info and Relationships",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.3.2",
+            "title": "Meaningful Sequence",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "1.3.3",
+            "title": "Sensory Characteristics",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.4.1",
+            "title": "Use of Color",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.4.2",
+            "title": "Audio Control",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.1.1",
+            "title": "Keyboard",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.1.2",
+            "title": "No Keyboard Trap",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.1.4",
+            "title": "Character Key Shortcuts",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.2.1",
+            "title": "Timing Adjustable",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.2.2",
+            "title": "Pause, Stop, Hide",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.3.1",
+            "title": "Three Flashes or Below Threshold",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.4.1",
+            "title": "Bypass Blocks",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.4.2",
+            "title": "Page Titled",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.4.3",
+            "title": "Focus Order",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.4.4",
+            "title": "Link Purpose (In Context)",
+            "conformance": "Partially Supports",
+            "conformanceClass": "partial",
+            "remarks": "2 warnings, 0 notices across 2 pages — regulations: TAA"
+          },
+          {
+            "criterion": "2.5.1",
+            "title": "Pointer Gestures",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.5.2",
+            "title": "Pointer Cancellation",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.5.3",
+            "title": "Label in Name",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.5.4",
+            "title": "Motion Actuation",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "3.1.1",
+            "title": "Language of Page",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "3.2.1",
+            "title": "On Focus",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "3.2.2",
+            "title": "On Input",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "3.2.6",
+            "title": "Consistent Help",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "3.3.1",
+            "title": "Error Identification",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "3.3.2",
+            "title": "Labels or Instructions",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "3.3.7",
+            "title": "Redundant Entry",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "4.1.1",
+            "title": "Parsing",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "4.1.2",
+            "title": "Name, Role, Value",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          }
+        ]
+      },
+      {
+        "level": "AA",
+        "levelLabel": "WCAG Level AA",
+        "rows": [
+          {
+            "criterion": "1.2.4",
+            "title": "Captions (Live)",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "1.2.5",
+            "title": "Audio Description (Prerecorded)",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.3.4",
+            "title": "Orientation",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "1.3.5",
+            "title": "Identify Input Purpose",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "1.4.3",
+            "title": "Contrast (Minimum)",
+            "conformance": "Does Not Support",
+            "conformanceClass": "none",
+            "remarks": "2 errors across 3 pages — regulations: TAA"
+          },
+          {
+            "criterion": "1.4.4",
+            "title": "Resize Text",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "1.4.5",
+            "title": "Images of Text",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.4.10",
+            "title": "Reflow",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.4.11",
+            "title": "Non-text Contrast",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.4.12",
+            "title": "Text Spacing",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.4.13",
+            "title": "Content on Hover or Focus",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.4.5",
+            "title": "Multiple Ways",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.4.6",
+            "title": "Headings and Labels",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.4.7",
+            "title": "Focus Visible",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.4.11",
+            "title": "Focus Not Obscured (Minimum)",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.5.7",
+            "title": "Dragging Movements",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.5.8",
+            "title": "Target Size (Minimum)",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "3.1.2",
+            "title": "Language of Parts",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "3.2.3",
+            "title": "Consistent Navigation",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "3.2.4",
+            "title": "Consistent Identification",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "3.3.3",
+            "title": "Error Suggestion",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "3.3.4",
+            "title": "Error Prevention (Legal, Financial, Data)",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "3.3.8",
+            "title": "Accessible Authentication (Minimum)",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "4.1.3",
+            "title": "Status Messages",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          }
+        ]
+      }
+    ],
+    "fpc": {
+      "include": false,
+      "rows": [
+        {
+          "id": "302.1",
+          "need": "Without vision",
+          "conformance": "Does Not Support",
+          "conformanceClass": "none",
+          "remarks": "Related success criteria not supported: 1.1.1. End-to-end confirmation requires manual testing with assistive technology."
+        },
+        {
+          "id": "302.2",
+          "need": "With limited vision",
+          "conformance": "Does Not Support",
+          "conformanceClass": "none",
+          "remarks": "Related success criteria not supported: 1.4.3. End-to-end confirmation requires manual testing with assistive technology."
+        },
+        {
+          "id": "302.3",
+          "need": "Without perception of color",
+          "conformance": "Not Evaluated",
+          "conformanceClass": "eval",
+          "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it."
+        },
+        {
+          "id": "302.4",
+          "need": "Without hearing",
+          "conformance": "Not Evaluated",
+          "conformanceClass": "eval",
+          "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it."
+        },
+        {
+          "id": "302.5",
+          "need": "With limited hearing",
+          "conformance": "Not Evaluated",
+          "conformanceClass": "eval",
+          "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it."
+        },
+        {
+          "id": "302.6",
+          "need": "Without speech",
+          "conformance": "Not Evaluated",
+          "conformanceClass": "eval",
+          "remarks": "The evaluated web content does not require speech for operation; end-to-end confirmation still requires manual testing."
+        },
+        {
+          "id": "302.7",
+          "need": "With limited manipulation",
+          "conformance": "Not Evaluated",
+          "conformanceClass": "eval",
+          "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it."
+        },
+        {
+          "id": "302.8",
+          "need": "With limited reach and strength",
+          "conformance": "Not Evaluated",
+          "conformanceClass": "eval",
+          "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it."
+        },
+        {
+          "id": "302.9",
+          "need": "With limited language, cognitive, and learning abilities",
+          "conformance": "Not Evaluated",
+          "conformanceClass": "eval",
+          "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it."
+        }
+      ]
+    },
+    "remediation": {
+      "present": false,
+      "hasEvents": false,
+      "intro": "A dated, good-faith record of remediation activity for this site. In this workflow Luqen's AI only drafts candidate fixes; a human developer reviews each one, and a change takes effect only when a person accepts and merges it. The AI assists drafting under human supervision — it never applies changes on its own, and it is not the basis of the conformance verdicts in this report. This section evidences an ongoing remediation effort; it does not assert conformance.",
+      "stats": {
+        "aiProposed": 0,
+        "developerVerified": 0,
+        "total": 0,
+        "completedScans": 0
+      },
+      "events": []
+    },
+    "hasAuditHistory": false,
+    "auditHistory": [],
+    "hasEvidence": false,
+    "evidence": [],
+    "links": {},
+    "hasLinks": false
+  },
+  "acr-view-it": {
+    "strings": {
+      "title": "Rapporto di conformità all’accessibilità (VPAT®)",
+      "generatedAt": "Generato il",
+      "identityContact": "Contatto",
+      "tallySupports": "Supporta",
+      "tallyPartial": "Supporta parzialmente",
+      "tallyDoesNotSupport": "Non supporta",
+      "tallyNotApplicable": "Non applicabile",
+      "tallyNotEvaluated": "Non valutato",
+      "tallyTotal": "Criteri totali",
+      "methodologyHeading": "Metodologia e ambito",
+      "methodologyBody": "La conformità è derivata da test automatici (Pa11y / axe-core) combinati con eventuali risultati di test manuali registrati. I test automatici rilevano in modo affidabile solo una parte dei criteri di successo WCAG (stime di settore ~30–40%); possono confermare guasti verificabili dalla macchina, ma non possono, da soli, dimostrare che un criterio che richiede un giudizio umano (come un testo alternativo significativo, un ordine di lettura logico o l’operabilità da tastiera) sia pienamente soddisfatto. I criteri che i test automatici non possono verificare in modo conclusivo sono riportati come «Non valutato» finché non viene registrato un test manuale: non si presumono superati. Dove sono state applicate correzioni assistite dall’IA, sono state riviste e integrate sotto la supervisione umana di sviluppatori.",
+      "methodologyCaveat": "Questo report è un documento di trasparenza e di pianificazione della remediation. Non è un certificato di conformità e non costituisce consulenza legale né una garanzia contro reclami in materia di accessibilità. Nessuno strumento o report automatico può rendere un sito «a prova di causa legale»; sono necessari test manuali e attività di remediation continui.",
+      "attestationHeading": "Metodologia di valutazione e attestazione",
+      "attestationStatement": "Questo report riflette una valutazione in buona fede del sito alla data di valutazione, eseguita con i metodi sopra elencati. Documenta lo stato di conformità in quel momento e l’attività di remediation in corso; non è una certificazione e non garantisce la conformità.",
+      "attLabelEvaluationDate": "Data di valutazione",
+      "attLabelScope": "Ambito",
+      "attLabelStandards": "Standard valutati",
+      "attLabelMethods": "Metodi",
+      "attLabelEvaluator": "Valutatore",
+      "attLabelReasonedChanges": "Modifiche di esito documentate (con motivazione)",
+      "standardsHeading": "Norme e leggi valutate",
+      "standardsIntro": "Questo report è stato valutato esplicitamente rispetto a ciascuna delle seguenti norme e leggi, selezionate per questa scansione. Ognuna è indicata per esteso affinché l’ambito di copertura sia inequivocabile.",
+      "standardsDisclaimer": "Queste descrizioni riassumono le norme e le leggi citate solo a scopo informativo; non costituiscono consulenza legale e questo report documenta una valutazione in buona fede, non una certificazione di conformità.",
+      "standardReference": "Riferimento",
+      "standardEnforced": "in vigore dal",
+      "colCriteria": "Criteri",
+      "colConformance": "Livello di conformità",
+      "colRemarks": "Note e spiegazioni",
+      "fpcHeading": "Criteri di Prestazione Funzionale (§302)",
+      "fpcIntro": "Le tabelle WCAG sopra costituiscono la prova a livello di criteri di successo. Le esigenze funzionali seguenti descrivono risultati end-to-end e sono riportate in modo prudente: un errore WCAG correlato segna un’esigenza come «Non supporta», mentre una scansione senza problemi la lascia «Non valutata» in attesa di test manuali con tecnologia assistiva.",
+      "fpcColId": "Criterio",
+      "fpcColNeed": "Esigenza funzionale",
+      "remediationHeading": "Registro di remediation",
+      "remediationIntro": "Un registro datato e in buona fede dell’attività di remediation per questo sito. In questo flusso l’IA di Luqen si limita a redigere bozze di correzioni candidate; uno sviluppatore umano esamina ciascuna e una modifica ha effetto solo quando una persona la accetta e la integra. L’IA assiste nella stesura sotto supervisione umana — non applica mai modifiche da sola e non è la base dei giudizi di conformità di questo report. Questa sezione attesta un’attività di remediation continua; non attesta la conformità.",
+      "remediationCaveat": "Cosa significano questi dati: «Proposto dall’IA (bozza)» conta le correzioni che l’IA ha redatto come modifiche candidate da far esaminare a uno sviluppatore — sono bozze, non modifiche applicate o accettate. «Verificato dallo sviluppatore» conta le modifiche che uno sviluppatore umano ha effettivamente esaminato e integrato. I restanti valori sono il totale dei passaggi di remediation registrati e il numero di nuove scansioni eseguite nel tempo.",
+      "remediationDisclaimer": "Questo registro riflette solo le azioni di remediation registrate e lo storico delle scansioni. È prova di un impegno in buona fede, non una garanzia che ogni problema sia stato risolto o che il sito sia conforme.",
+      "remLabelAiProposed": "Proposto dall’IA (bozza)",
+      "remLabelDeveloperVerified": "Verificato dallo sviluppatore",
+      "remLabelTotal": "Azioni totali",
+      "remLabelScans": "Scansioni completate",
+      "remColDate": "Data",
+      "remColAction": "Azione",
+      "remColCriterion": "Criterio",
+      "remColDetail": "Dettaglio",
+      "remColActor": "Da",
+      "auditHeading": "Cronologia di audit",
+      "auditIntro": "Un registro datato di ogni modifica del verdetto dei test manuali, con la motivazione registrata e chi l’ha effettuata: prova di un processo di valutazione continuo e motivato.",
+      "auditColCriterion": "Criterio",
+      "auditColChange": "Modifica del verdetto",
+      "auditColReason": "Motivo",
+      "auditColActor": "Da",
+      "auditColDate": "Data",
+      "evidenceHeading": "Evidenze dei test manuali",
+      "evidenceIntro": "File di evidenza raccolti durante i test manuali, organizzati per criterio di successo. Questi elementi — schermate e documenti — comprovano i giudizi manuali riportati sopra e fanno parte del registro di test datato e in buona fede. Sono forniti a scopo di trasparenza e non costituiscono una certificazione di conformità.",
+      "evidenceDownload": "Scarica",
+      "downloadPack": "Scarica pacchetto evidenze (.zip)",
+      "downloadPdf": "Scarica PDF",
+      "viewLiveReport": "Visualizza il report in tempo reale",
+      "verifiedBadge": "Verificato da Luqen",
+      "viewDashboardReport": "Visualizza nella dashboard Luqen",
+      "wordingStandardLabel": "Testo VPAT standard",
+      "wordingCustomLabel": "Testo personalizzato",
+      "footer": "Generato da Luqen — VPAT è un marchio registrato dell’Information Technology Industry Council (ITI)."
+    },
+    "wording": {
+      "anyCustom": false,
+      "anyUnreviewed": true
+    },
+    "meta": {
+      "siteUrl": "https://fabrikam.example/shop/",
+      "standardLabel": "WCAG2AA",
+      "generatedAt": "2026-10-01"
+    },
+    "verdict": {
+      "line": "fabrikam.example è parzialmente conforme a WCAG2AA su 3 pagina/e.",
+      "meta": "Valutato il 2026-10-01 · 21 di 56 criteri supportati · 2 non supportati · 32 in attesa di valutazione manuale"
+    },
+    "tally": {
+      "supports": 21,
+      "partial": 1,
+      "doesNotSupport": 2,
+      "notApplicable": 0,
+      "notEvaluated": 32,
+      "total": 56
+    },
+    "attestation": [
+      {
+        "label": "Data di valutazione",
+        "value": "2026-10-01"
+      },
+      {
+        "label": "Ambito",
+        "value": "3 · https://fabrikam.example/shop/"
+      },
+      {
+        "label": "Standard valutati",
+        "value": "WCAG 2.2 (incl. 2.0/2.1) · EU"
+      },
+      {
+        "label": "Metodi",
+        "value": "Automated testing (Pa11y / axe-core); Behavioral checks (keyboard, focus, dynamic state) where enabled"
+      }
+    ],
+    "hasStandards": false,
+    "standards": [],
+    "tables": [
+      {
+        "level": "A",
+        "levelLabel": "Livello WCAG A",
+        "rows": [
+          {
+            "criterion": "1.1.1",
+            "title": "Non-text Content",
+            "conformance": "Does Not Support",
+            "conformanceClass": "none",
+            "remarks": "1 error across 1 page — regulations: TAA"
+          },
+          {
+            "criterion": "1.2.1",
+            "title": "Audio-only and Video-only (Prerecorded)",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.2.2",
+            "title": "Captions (Prerecorded)",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.2.3",
+            "title": "Audio Description or Media Alternative (Prerecorded)",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.3.1",
+            "title": "Info and Relationships",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.3.2",
+            "title": "Meaningful Sequence",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "1.3.3",
+            "title": "Sensory Characteristics",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.4.1",
+            "title": "Use of Color",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.4.2",
+            "title": "Audio Control",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.1.1",
+            "title": "Keyboard",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.1.2",
+            "title": "No Keyboard Trap",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.1.4",
+            "title": "Character Key Shortcuts",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.2.1",
+            "title": "Timing Adjustable",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.2.2",
+            "title": "Pause, Stop, Hide",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.3.1",
+            "title": "Three Flashes or Below Threshold",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.4.1",
+            "title": "Bypass Blocks",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.4.2",
+            "title": "Page Titled",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.4.3",
+            "title": "Focus Order",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.4.4",
+            "title": "Link Purpose (In Context)",
+            "conformance": "Partially Supports",
+            "conformanceClass": "partial",
+            "remarks": "2 warnings, 0 notices across 2 pages — regulations: TAA"
+          },
+          {
+            "criterion": "2.5.1",
+            "title": "Pointer Gestures",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.5.2",
+            "title": "Pointer Cancellation",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.5.3",
+            "title": "Label in Name",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "2.5.4",
+            "title": "Motion Actuation",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "3.1.1",
+            "title": "Language of Page",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "3.2.1",
+            "title": "On Focus",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "3.2.2",
+            "title": "On Input",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "3.2.6",
+            "title": "Consistent Help",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "3.3.1",
+            "title": "Error Identification",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "3.3.2",
+            "title": "Labels or Instructions",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "3.3.7",
+            "title": "Redundant Entry",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "4.1.1",
+            "title": "Parsing",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "4.1.2",
+            "title": "Name, Role, Value",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          }
+        ]
+      },
+      {
+        "level": "AA",
+        "levelLabel": "Livello WCAG AA",
+        "rows": [
+          {
+            "criterion": "1.2.4",
+            "title": "Captions (Live)",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "1.2.5",
+            "title": "Audio Description (Prerecorded)",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.3.4",
+            "title": "Orientation",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "1.3.5",
+            "title": "Identify Input Purpose",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "1.4.3",
+            "title": "Contrast (Minimum)",
+            "conformance": "Does Not Support",
+            "conformanceClass": "none",
+            "remarks": "2 errors across 3 pages — regulations: TAA"
+          },
+          {
+            "criterion": "1.4.4",
+            "title": "Resize Text",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          },
+          {
+            "criterion": "1.4.5",
+            "title": "Images of Text",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.4.10",
+            "title": "Reflow",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.4.11",
+            "title": "Non-text Contrast",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.4.12",
+            "title": "Text Spacing",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "1.4.13",
+            "title": "Content on Hover or Focus",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.4.5",
+            "title": "Multiple Ways",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.4.6",
+            "title": "Headings and Labels",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.4.7",
+            "title": "Focus Visible",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.4.11",
+            "title": "Focus Not Obscured (Minimum)",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.5.7",
+            "title": "Dragging Movements",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "2.5.8",
+            "title": "Target Size (Minimum)",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "3.1.2",
+            "title": "Language of Parts",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "3.2.3",
+            "title": "Consistent Navigation",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "3.2.4",
+            "title": "Consistent Identification",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "3.3.3",
+            "title": "Error Suggestion",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "3.3.4",
+            "title": "Error Prevention (Legal, Financial, Data)",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "3.3.8",
+            "title": "Accessible Authentication (Minimum)",
+            "conformance": "Not Evaluated",
+            "conformanceClass": "eval",
+            "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+          },
+          {
+            "criterion": "4.1.3",
+            "title": "Status Messages",
+            "conformance": "Supports",
+            "conformanceClass": "supports",
+            "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+          }
+        ]
+      }
+    ],
+    "fpc": {
+      "include": false,
+      "rows": [
+        {
+          "id": "302.1",
+          "need": "Without vision",
+          "conformance": "Does Not Support",
+          "conformanceClass": "none",
+          "remarks": "Related success criteria not supported: 1.1.1. End-to-end confirmation requires manual testing with assistive technology."
+        },
+        {
+          "id": "302.2",
+          "need": "With limited vision",
+          "conformance": "Does Not Support",
+          "conformanceClass": "none",
+          "remarks": "Related success criteria not supported: 1.4.3. End-to-end confirmation requires manual testing with assistive technology."
+        },
+        {
+          "id": "302.3",
+          "need": "Without perception of color",
+          "conformance": "Not Evaluated",
+          "conformanceClass": "eval",
+          "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it."
+        },
+        {
+          "id": "302.4",
+          "need": "Without hearing",
+          "conformance": "Not Evaluated",
+          "conformanceClass": "eval",
+          "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it."
+        },
+        {
+          "id": "302.5",
+          "need": "With limited hearing",
+          "conformance": "Not Evaluated",
+          "conformanceClass": "eval",
+          "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it."
+        },
+        {
+          "id": "302.6",
+          "need": "Without speech",
+          "conformance": "Not Evaluated",
+          "conformanceClass": "eval",
+          "remarks": "The evaluated web content does not require speech for operation; end-to-end confirmation still requires manual testing."
+        },
+        {
+          "id": "302.7",
+          "need": "With limited manipulation",
+          "conformance": "Not Evaluated",
+          "conformanceClass": "eval",
+          "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it."
+        },
+        {
+          "id": "302.8",
+          "need": "With limited reach and strength",
+          "conformance": "Not Evaluated",
+          "conformanceClass": "eval",
+          "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it."
+        },
+        {
+          "id": "302.9",
+          "need": "With limited language, cognitive, and learning abilities",
+          "conformance": "Not Evaluated",
+          "conformanceClass": "eval",
+          "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it."
+        }
+      ]
+    },
+    "remediation": {
+      "present": false,
+      "hasEvents": false,
+      "intro": "Un registro datato e in buona fede dell’attività di remediation per questo sito. In questo flusso l’IA di Luqen si limita a redigere bozze di correzioni candidate; uno sviluppatore umano esamina ciascuna e una modifica ha effetto solo quando una persona la accetta e la integra. L’IA assiste nella stesura sotto supervisione umana — non applica mai modifiche da sola e non è la base dei giudizi di conformità di questo report. Questa sezione attesta un’attività di remediation continua; non attesta la conformità.",
+      "stats": {
+        "aiProposed": 0,
+        "developerVerified": 0,
+        "total": 0,
+        "completedScans": 0
+      },
+      "events": []
+    },
+    "hasAuditHistory": false,
+    "auditHistory": [],
+    "hasEvidence": false,
+    "evidence": [],
+    "links": {},
+    "hasLinks": false
+  },
+  "public-acr-html": "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Accessibility Conformance Report</title><style>@font-face{font-family:'Inter';font-weight:400;font-display:block;src:url(data:font/ttf;base64,<font:ttf len:542744 sha256:56d1d54a89091965>) format('truetype')}\n@font-face{font-family:'Inter';font-weight:500;font-display:block;src:url(data:font/ttf;base64,<font:ttf len:551968 sha256:409e93e27f53f172>) format('truetype')}\n@font-face{font-family:'Inter';font-weight:600;font-display:block;src:url(data:font/ttf;base64,<font:ttf len:551968 sha256:409e93e27f53f172>) format('truetype')}\n@font-face{font-family:'Inter';font-weight:700;font-display:block;src:url(data:font/ttf;base64,<font:ttf len:551968 sha256:409e93e27f53f172>) format('truetype')}\n@font-face{font-family:'Inter Display';font-weight:600;font-display:block;src:url(data:font/ttf;base64,<font:ttf len:549640 sha256:b995b297b73a8636>) format('truetype')}\n@font-face{font-family:'Inter Display';font-weight:700;font-display:block;src:url(data:font/ttf;base64,<font:ttf len:549640 sha256:b995b297b73a8636>) format('truetype')}\n@font-face{font-family:'IBM Plex Mono';font-weight:400;font-display:block;src:url(data:font/ttf;base64,<font:ttf len:207920 sha256:beadefe6659cce75>) format('truetype')}\n@font-face{font-family:'IBM Plex Mono';font-weight:500;font-display:block;src:url(data:font/ttf;base64,<font:ttf len:207920 sha256:beadefe6659cce75>) format('truetype')}\n/*\n * Luqen — Accessibility Conformance Report (ACR / VPAT) stylesheet.\n *\n * SINGLE SOURCE OF TRUTH. This file is authored once and rendered identically by\n * every surface that produces an ACR: the dashboard (web view + HTML→PDF) and\n * the WordPress plugin (which vendors a synced copy). Edit here; sync to\n * consumers. Do not fork.\n *\n * Built strictly on the Luqen identity tokens from DESIGN.md — warm-red/oxblood\n * identity (hue 25), citron RESERVED for the \"Verified by Luqen\" evidence mark,\n * Inter / IBM Plex Mono. Light + AAA, because an ACR is a customer-shareable\n * artifact. It is a transparency and remediation document, never a compliance\n * certificate; the type carries the authority, decoration does not.\n */\n\n:root {\n\t/* Identity (light) */\n\t--acr-id-accent: oklch(0.34 0.09 25);\n\t--acr-id-accent-tint: oklch(0.96 0.02 25);\n\t--acr-evidence: oklch(0.84 0.18 105); /* citron — Verified-by-Luqen mark only */\n\n\t/* Surfaces — neutrals tinted toward hue 25, never pure #fff/#000 */\n\t--acr-bg-page: oklch(0.995 0.005 25);\n\t--acr-bg-surface: oklch(0.98 0.005 25);\n\t--acr-bg-muted: oklch(0.955 0.008 25);\n\t--acr-border-subtle: oklch(0.90 0.008 25);\n\t--acr-border-strong: oklch(0.82 0.012 25);\n\n\t/* Text */\n\t--acr-text-primary: oklch(0.18 0.015 25);\n\t--acr-text-secondary: oklch(0.42 0.012 25);\n\t--acr-text-muted: oklch(0.55 0.010 25);\n\n\t/* Status (semantic; paired with a text label, never colour alone) */\n\t--acr-success: oklch(0.42 0.13 150);\n\t--acr-warning: oklch(0.50 0.13 70);\n\t--acr-error: oklch(0.48 0.20 27);\n\t--acr-info: oklch(0.42 0.14 250);\n\n\t/* Type */\n\t--acr-font-display: 'Inter Display', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;\n\t--acr-font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;\n\t--acr-font-mono: 'IBM Plex Mono', 'SFMono-Regular', 'Cascadia Code', Consolas, monospace;\n\n\t/* Rhythm */\n\t--acr-space-1: 4px;\n\t--acr-space-2: 8px;\n\t--acr-space-3: 12px;\n\t--acr-space-4: 16px;\n\t--acr-space-5: 24px;\n\t--acr-space-6: 32px;\n}\n\n/* ── Page frame ─────────────────────────────────────────────────────────── */\n\n.acr {\n\tfont-family: var(--acr-font-sans);\n\tcolor: var(--acr-text-primary);\n\tbackground: var(--acr-bg-page);\n\tfont-size: 9.6pt;\n\tline-height: 1.5;\n\t-webkit-font-smoothing: antialiased;\n\tmax-width: 50rem;\n\tmargin: 0 auto;\n\tpadding: var(--acr-space-5);\n}\n\n@media print {\n\t@page { size: A4; margin: 14mm 12mm; }\n\t.acr { padding: 0; max-width: none; font-size: 9pt; }\n\t.acr__section { break-inside: avoid; }\n\t.acr tr { break-inside: avoid; }\n}\n\n.acr :is(h1, h2, h3, p, ul, table) { margin: 0; }\n\n/* ── Masthead ───────────────────────────────────────────────────────────── */\n\n.acr__wordmark {\n\tdisplay: flex;\n\talign-items: center;\n\tgap: var(--acr-space-2);\n\tfont-family: var(--acr-font-display);\n\tfont-weight: 700;\n\tfont-size: 8.5pt;\n\tletter-spacing: 0.14em;\n\tcolor: var(--acr-id-accent);\n\ttext-transform: uppercase;\n}\n\n/* The \"Verified by Luqen\" evidence mark — the one sanctioned use of citron. */\n.acr__mark {\n\tdisplay: inline-block;\n\twidth: 4px;\n\theight: 14px;\n\tbackground: var(--acr-evidence);\n\tborder-radius: 1px;\n}\n\n.acr__title {\n\tfont-family: var(--acr-font-display);\n\tfont-weight: 700;\n\tfont-size: 21pt;\n\tline-height: 1.1;\n\tletter-spacing: -0.022em;\n\tmargin-top: var(--acr-space-3);\n}\n\n.acr__meta {\n\tcolor: var(--acr-text-secondary);\n\tfont-size: 8.5pt;\n\tmargin-top: var(--acr-space-2);\n}\n.acr__meta .acr__dot { color: var(--acr-text-muted); padding: 0 0.4em; }\n\n/* Org identity (attribution only) */\n.acr__identity {\n\tdisplay: flex;\n\talign-items: flex-start;\n\tgap: var(--acr-space-4);\n\tmargin-top: var(--acr-space-4);\n}\n.acr__identity img { max-height: 44px; max-width: 160px; object-fit: contain; }\n.acr__identity-name { font-weight: 600; }\n.acr__identity p { font-size: 8.5pt; color: var(--acr-text-secondary); }\n\n.acr__rule {\n\tborder: 0;\n\tborder-top: 1px solid var(--acr-border-subtle);\n\tmargin: var(--acr-space-4) 0;\n}\n\n/* ── Verdict line — the primary evidence unit ───────────────────────────── */\n\n.acr__verdict {\n\tfont-size: 11pt;\n\tfont-weight: 600;\n\tline-height: 1.4;\n\tletter-spacing: -0.006em;\n}\n.acr__verdict-meta {\n\tmargin-top: var(--acr-space-1);\n\tfont-size: 8.5pt;\n\tcolor: var(--acr-text-secondary);\n}\n\n/* Conformance tally — typographic, not cards. Each count owns its label so\n   status never rides on colour alone. */\n.acr__tally {\n\tdisplay: flex;\n\tflex-wrap: wrap;\n\tgap: var(--acr-space-2) var(--acr-space-4);\n\tmargin-top: var(--acr-space-3);\n\tpadding-top: var(--acr-space-3);\n\tborder-top: 1px solid var(--acr-border-subtle);\n\tfont-size: 9pt;\n}\n.acr__tally-item { white-space: nowrap; color: var(--acr-text-secondary); }\n.acr__tally-n { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--acr-text-primary); }\n.acr__tally-item[data-k=\"supports\"] .acr__tally-n { color: var(--acr-success); }\n.acr__tally-item[data-k=\"does-not\"] .acr__tally-n { color: var(--acr-error); }\n.acr__tally-item[data-k=\"partial\"] .acr__tally-n { color: var(--acr-warning); }\n\n/* ── Sections ───────────────────────────────────────────────────────────── */\n\n.acr__section { margin-top: var(--acr-space-5); }\n\n/* Small eyebrow heading for the prose sections — restraint, calm authority. */\n.acr__eyebrow {\n\tfont-size: 8.5pt;\n\tfont-weight: 600;\n\tletter-spacing: 0.06em;\n\ttext-transform: uppercase;\n\tcolor: var(--acr-id-accent);\n\tmargin-bottom: var(--acr-space-2);\n}\n\n.acr__prose { font-size: 9pt; color: var(--acr-text-secondary); max-width: 68ch; }\n.acr__prose + .acr__prose { margin-top: var(--acr-space-2); }\n.acr__prose strong { color: var(--acr-text-primary); font-weight: 600; }\n\n/* Legal caveats sit quiet, in warning ink, never shouting. */\n.acr__caveat {\n\tfont-size: 8pt;\n\tcolor: var(--acr-warning);\n\tmax-width: 68ch;\n\tmargin-top: var(--acr-space-2);\n}\n\n/* Attestation: aligned label / value lines. */\n.acr__att { margin-top: var(--acr-space-1); font-size: 9pt; }\n.acr__att div { display: flex; gap: var(--acr-space-2); padding: 1px 0; }\n.acr__att dt { flex: 0 0 13rem; color: var(--acr-text-secondary); font-weight: 600; }\n.acr__att dd { margin: 0; color: var(--acr-text-primary); }\n\n/* Standards & laws — a list of programmatic per-regulation notes. */\n.acr__std { margin-top: var(--acr-space-3); }\n.acr__std-name { font-weight: 600; }\n.acr__std-token { color: var(--acr-text-muted); font-weight: 400; font-family: var(--acr-font-mono); font-size: 8pt; }\n.acr__std-cite { font-size: 7.5pt; color: var(--acr-text-muted); margin-top: 1px; }\n.acr__std-desc { font-size: 8.5pt; color: var(--acr-text-secondary); margin-top: 1px; }\n.acr__std a { color: var(--acr-id-accent); text-decoration: none; }\n\n/* ── Tables (borderless; row separators only) ───────────────────────────── */\n\n.acr__table-heading {\n\tfont-family: var(--acr-font-display);\n\tfont-size: 14pt;\n\tfont-weight: 600;\n\tletter-spacing: -0.012em;\n\tpadding-bottom: var(--acr-space-1);\n\tborder-bottom: 1px solid var(--acr-border-strong);\n\tmargin-bottom: 2px;\n}\n\n.acr table { width: 100%; border-collapse: collapse; font-size: 9pt; }\n.acr thead th {\n\ttext-align: left;\n\tfont-size: 7pt;\n\tfont-weight: 600;\n\tletter-spacing: 0.06em;\n\ttext-transform: uppercase;\n\tcolor: var(--acr-text-muted);\n\tbackground: var(--acr-bg-muted);\n\tpadding: var(--acr-space-2) var(--acr-space-2);\n}\n.acr tbody td {\n\tpadding: var(--acr-space-2);\n\tborder-bottom: 1px solid var(--acr-border-subtle);\n\tvertical-align: top;\n\tcolor: var(--acr-text-secondary);\n}\n.acr__crit { color: var(--acr-text-primary); font-weight: 600; font-family: var(--acr-font-mono); }\n.acr__crit-title { display: block; font-family: var(--acr-font-sans); font-weight: 400; color: var(--acr-text-secondary); font-size: 8pt; margin-top: 1px; }\n\n/* Conformance verdict cell: colour + the word, never colour alone. */\n.acr__verdict-cell { font-weight: 600; white-space: nowrap; }\n.acr__verdict-cell[data-c=\"supports\"] { color: var(--acr-success); }\n.acr__verdict-cell[data-c=\"partial\"] { color: var(--acr-warning); }\n.acr__verdict-cell[data-c=\"none\"] { color: var(--acr-error); }\n.acr__verdict-cell[data-c=\"na\"],\n.acr__verdict-cell[data-c=\"eval\"] { color: var(--acr-text-muted); }\n\n.acr__col-conf { width: 26%; }\n.acr__col-crit { width: 28%; }\n\n/* ── Evidence appendix ──────────────────────────────────────────────────── */\n\n.acr__evidence { margin-top: var(--acr-space-3); }\n.acr__evidence-crit { font-size: 9pt; margin-bottom: var(--acr-space-1); }\n.acr__evidence-items { display: flex; flex-wrap: wrap; gap: var(--acr-space-2); align-items: center; }\n.acr__evidence-thumb { max-width: 160px; max-height: 120px; border: 1px solid var(--acr-border-subtle); border-radius: 3px; }\n.acr__evidence-doc {\n\tdisplay: inline-block;\n\tfont-size: 8pt;\n\tpadding: 2px var(--acr-space-2);\n\tborder: 1px solid var(--acr-border-subtle);\n\tborder-radius: 3px;\n\tbackground: var(--acr-bg-surface);\n\tcolor: var(--acr-text-secondary);\n}\n\n/* ── Report links / badge (consumer chrome, not part of the legal text) ───── */\n\n.acr__links {\n\tdisplay: flex;\n\tflex-wrap: wrap;\n\tgap: var(--acr-space-2) var(--acr-space-3);\n\talign-items: center;\n\tmargin-top: var(--acr-space-4);\n}\n.acr__link {\n\tdisplay: inline-flex;\n\talign-items: center;\n\tgap: var(--acr-space-2);\n\tfont-size: 8.5pt;\n\tfont-weight: 600;\n\tcolor: var(--acr-id-accent);\n\ttext-decoration: none;\n\tpadding: var(--acr-space-1) var(--acr-space-3);\n\tborder: 1px solid var(--acr-border-subtle);\n\tborder-radius: 4px;\n}\n.acr__link--badge { border-color: var(--acr-border-strong); }\n.acr__badge { height: 18px; width: auto; }\n\n/* ── Stale-revision banner (Snapshot, non-latest revision) ────────────── */\n\n.acr__stale {\n\tdisplay: flex;\n\tflex-wrap: wrap;\n\talign-items: center;\n\tgap: var(--acr-space-2) var(--acr-space-3);\n\tmargin-top: var(--acr-space-4);\n\tpadding: var(--acr-space-3) var(--acr-space-4);\n\tfont-size: 9pt;\n\tcolor: var(--acr-text-primary);\n\tbackground: oklch(0.96 0.06 70);\n\tborder: 1px solid var(--acr-warning);\n\tborder-left-width: 4px;\n\tborder-radius: 4px;\n}\n.acr__stale span { font-weight: 600; color: var(--acr-warning); }\n.acr__stale a { color: var(--acr-id-accent); font-weight: 600; text-decoration: underline; }\n\n/* ── Remediation summary stats (typographic, not cards-with-shadows) ──────── */\n\n.acr__stats {\n\tdisplay: flex;\n\tflex-wrap: wrap;\n\tgap: var(--acr-space-3) var(--acr-space-5);\n\tmargin: var(--acr-space-3) 0;\n\tpadding: var(--acr-space-3) 0;\n\tborder-top: 1px solid var(--acr-border-subtle);\n\tborder-bottom: 1px solid var(--acr-border-subtle);\n}\n.acr__stat { display: flex; flex-direction: column; gap: 1px; }\n.acr__stat-n { font-size: 15pt; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--acr-text-primary); line-height: 1; }\n.acr__stat-l { font-size: 7.5pt; color: var(--acr-text-secondary); }\n\n/* Evidence download affordances (links, not bare names) */\n.acr__evidence-thumb-link { display: inline-block; line-height: 0; }\n.acr__evidence-doc { color: var(--acr-id-accent); text-decoration: none; }\n\n/* ── Footer ─────────────────────────────────────────────────────────────── */\n\n.acr__footer {\n\tmargin-top: var(--acr-space-6);\n\tpadding-top: var(--acr-space-3);\n\tborder-top: 1px solid var(--acr-border-subtle);\n\tfont-size: 7.5pt;\n\tcolor: var(--acr-text-muted);\n}\n.acr__wording-note {\n\tfont-family: var(--acr-font-mono);\n\tfont-size: 7pt;\n\tletter-spacing: 0.04em;\n\ttext-transform: uppercase;\n\tcolor: var(--acr-text-muted);\n\tmargin-bottom: var(--acr-space-1);\n}\n</style></head><body><!--\n  Luqen — Accessibility Conformance Report (ACR / VPAT) template.\n\n  SINGLE SOURCE OF TRUTH. Logic-less (Mustache) markup rendered identically by\n  the dashboard (mustache.js) and the WordPress plugin (a tiny PHP renderer).\n  It carries NO prose: every string comes from  (localized,\n  org-overridable wording). Only dynamic values +  are\n  interpolated. Pair with acr.css. Edit here; sync to consumers. Tags:\n   escaped,  raw HTML,  section, … inverted.\n-->\n<section class=\"acr\" aria-label=\"Accessibility Conformance Report\">\n\t<header>\n\t\t<div class=\"acr__wordmark\"><span class=\"acr__mark\" aria-hidden=\"true\"></span>LUQEN</div>\n\t\t<h1 class=\"acr__title\">Accessibility Conformance Report (VPAT®)</h1>\n\t\t<p class=\"acr__meta\">https:&#x2F;&#x2F;fabrikam.example&#x2F;shop&#x2F;<span class=\"acr__dot\">&middot;</span>WCAG2AA<span class=\"acr__dot\">&middot;</span>Generated 2026-10-01</p>\n\n\n\t\t<div class=\"acr__links\" role=\"group\" aria-label=\"Report links\">\n\t\t\t\n\t\t\t\n\t\t\t<a class=\"acr__link\" href=\"&#x2F;reports&#x2F;scan-fabrikam-golden-0001&#x2F;acr.pdf\">Download PDF</a>\n\t\t\t\n\t\t</div>\n\t</header>\n\n\n\t<hr class=\"acr__rule\">\n\n\t<!-- Verdict line — the primary evidence unit -->\n\t<p class=\"acr__verdict\">fabrikam.example partially conforms to WCAG2AA across 3 page(s).</p>\n\t<p class=\"acr__verdict-meta\">Evaluated 2026-10-01 · 21 of 56 criteria supported · 2 not supported · 32 pending manual evaluation</p>\n\n\t<div class=\"acr__tally\" role=\"group\" aria-label=\"Conformance summary\">\n\t\t<span class=\"acr__tally-item\" data-k=\"supports\"><span class=\"acr__tally-n\">21</span> Supports</span>\n\t\t<span class=\"acr__tally-item\" data-k=\"partial\"><span class=\"acr__tally-n\">1</span> Partially Supports</span>\n\t\t<span class=\"acr__tally-item\" data-k=\"does-not\"><span class=\"acr__tally-n\">2</span> Does Not Support</span>\n\t\t<span class=\"acr__tally-item\" data-k=\"na\"><span class=\"acr__tally-n\">0</span> Not Applicable</span>\n\t\t<span class=\"acr__tally-item\" data-k=\"eval\"><span class=\"acr__tally-n\">32</span> Not Evaluated</span>\n\t\t<span class=\"acr__tally-item\" data-k=\"total\"><span class=\"acr__tally-n\">56</span> Total criteria</span>\n\t</div>\n\n\t<!-- Methodology & scope -->\n\t<section class=\"acr__section\">\n\t\t<h2 class=\"acr__eyebrow\">Methodology &amp; scope</h2>\n\t\t<p class=\"acr__prose\">Conformance is derived from automated testing (Pa11y &#x2F; axe-core) combined with any recorded manual test results. Automated testing reliably detects only a portion of WCAG success criteria (industry estimates ~30–40%); it can confirm machine-verifiable failures but cannot, on its own, prove that a criterion requiring human judgement (such as meaningful alternative text, logical reading order, or keyboard operability) is fully met. Criteria that automated testing cannot conclusively verify are reported as “Not Evaluated” until a manual test is recorded — they are not assumed to pass. Where AI-assisted fixes were applied, they were reviewed and merged under human developer supervision.</p>\n\t\t<p class=\"acr__caveat\">This report is a transparency and remediation-planning document. It is not a certificate of compliance and does not constitute legal advice or a guarantee against accessibility claims. No automated tool or report can make a site “lawsuit-proof”; ongoing manual testing and remediation are required.</p>\n\t</section>\n\n\t<!-- Evaluation methodology & attestation -->\n\t<section class=\"acr__section\">\n\t\t<h2 class=\"acr__eyebrow\">Evaluation methodology &amp; attestation</h2>\n\t\t<dl class=\"acr__att\">\n\t\t\t<div><dt>Evaluation date</dt><dd>2026-10-01</dd></div><div><dt>Scope</dt><dd>3 · https:&#x2F;&#x2F;fabrikam.example&#x2F;shop&#x2F;</dd></div><div><dt>Standards assessed</dt><dd>WCAG 2.2 (incl. 2.0&#x2F;2.1) · EU</dd></div><div><dt>Methods</dt><dd>Automated testing (Pa11y &#x2F; axe-core); Behavioral checks (keyboard, focus, dynamic state) where enabled</dd></div>\n\t\t</dl>\n\t\t<p class=\"acr__caveat\">This report reflects a good-faith evaluation of the site as of the evaluation date, performed using the methods listed above. It records the state of conformance at that time and the ongoing remediation effort; it is not a certification and does not guarantee conformance.</p>\n\t</section>\n\n\t<!-- Standards & laws evaluated against -->\n\n\t<!-- WCAG conformance tables -->\n\t<section class=\"acr__section\">\n\t\t<h2 class=\"acr__table-heading\">WCAG Level A</h2>\n\t\t<table>\n\t\t\t<thead><tr>\n\t\t\t\t<th class=\"acr__col-crit\" scope=\"col\">Criteria</th>\n\t\t\t\t<th class=\"acr__col-conf\" scope=\"col\">Conformance Level</th>\n\t\t\t\t<th scope=\"col\">Remarks and Explanations</th>\n\t\t\t</tr></thead>\n\t\t\t<tbody>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">1.1.1</span><span class=\"acr__crit-title\">Non-text Content</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"none\">Does Not Support</span></td>\n\t\t\t\t\t<td>1 error across 1 page — regulations: TAA</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">1.2.1</span><span class=\"acr__crit-title\">Audio-only and Video-only (Prerecorded)</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">1.2.2</span><span class=\"acr__crit-title\">Captions (Prerecorded)</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">1.2.3</span><span class=\"acr__crit-title\">Audio Description or Media Alternative (Prerecorded)</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">1.3.1</span><span class=\"acr__crit-title\">Info and Relationships</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">1.3.2</span><span class=\"acr__crit-title\">Meaningful Sequence</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"supports\">Supports</span></td>\n\t\t\t\t\t<td>No issues detected by automated testing for this machine-verifiable criterion</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">1.3.3</span><span class=\"acr__crit-title\">Sensory Characteristics</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">1.4.1</span><span class=\"acr__crit-title\">Use of Color</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">1.4.2</span><span class=\"acr__crit-title\">Audio Control</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"supports\">Supports</span></td>\n\t\t\t\t\t<td>No issues detected by automated testing for this machine-verifiable criterion</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">2.1.1</span><span class=\"acr__crit-title\">Keyboard</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">2.1.2</span><span class=\"acr__crit-title\">No Keyboard Trap</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">2.1.4</span><span class=\"acr__crit-title\">Character Key Shortcuts</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"supports\">Supports</span></td>\n\t\t\t\t\t<td>No issues detected by automated testing for this machine-verifiable criterion</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">2.2.1</span><span class=\"acr__crit-title\">Timing Adjustable</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"supports\">Supports</span></td>\n\t\t\t\t\t<td>No issues detected by automated testing for this machine-verifiable criterion</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">2.2.2</span><span class=\"acr__crit-title\">Pause, Stop, Hide</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"supports\">Supports</span></td>\n\t\t\t\t\t<td>No issues detected by automated testing for this machine-verifiable criterion</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">2.3.1</span><span class=\"acr__crit-title\">Three Flashes or Below Threshold</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"supports\">Supports</span></td>\n\t\t\t\t\t<td>No issues detected by automated testing for this machine-verifiable criterion</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">2.4.1</span><span class=\"acr__crit-title\">Bypass Blocks</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"supports\">Supports</span></td>\n\t\t\t\t\t<td>No issues detected by automated testing for this machine-verifiable criterion</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">2.4.2</span><span class=\"acr__crit-title\">Page Titled</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"supports\">Supports</span></td>\n\t\t\t\t\t<td>No issues detected by automated testing for this machine-verifiable criterion</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">2.4.3</span><span class=\"acr__crit-title\">Focus Order</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">2.4.4</span><span class=\"acr__crit-title\">Link Purpose (In Context)</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"partial\">Partially Supports</span></td>\n\t\t\t\t\t<td>2 warnings, 0 notices across 2 pages — regulations: TAA</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">2.5.1</span><span class=\"acr__crit-title\">Pointer Gestures</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">2.5.2</span><span class=\"acr__crit-title\">Pointer Cancellation</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">2.5.3</span><span class=\"acr__crit-title\">Label in Name</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"supports\">Supports</span></td>\n\t\t\t\t\t<td>No issues detected by automated testing for this machine-verifiable criterion</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">2.5.4</span><span class=\"acr__crit-title\">Motion Actuation</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"supports\">Supports</span></td>\n\t\t\t\t\t<td>No issues detected by automated testing for this machine-verifiable criterion</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">3.1.1</span><span class=\"acr__crit-title\">Language of Page</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"supports\">Supports</span></td>\n\t\t\t\t\t<td>No issues detected by automated testing for this machine-verifiable criterion</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">3.2.1</span><span class=\"acr__crit-title\">On Focus</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"supports\">Supports</span></td>\n\t\t\t\t\t<td>No issues detected by automated testing for this machine-verifiable criterion</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">3.2.2</span><span class=\"acr__crit-title\">On Input</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"supports\">Supports</span></td>\n\t\t\t\t\t<td>No issues detected by automated testing for this machine-verifiable criterion</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">3.2.6</span><span class=\"acr__crit-title\">Consistent Help</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">3.3.1</span><span class=\"acr__crit-title\">Error Identification</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"supports\">Supports</span></td>\n\t\t\t\t\t<td>No issues detected by automated testing for this machine-verifiable criterion</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">3.3.2</span><span class=\"acr__crit-title\">Labels or Instructions</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"supports\">Supports</span></td>\n\t\t\t\t\t<td>No issues detected by automated testing for this machine-verifiable criterion</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">3.3.7</span><span class=\"acr__crit-title\">Redundant Entry</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">4.1.1</span><span class=\"acr__crit-title\">Parsing</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"supports\">Supports</span></td>\n\t\t\t\t\t<td>No issues detected by automated testing for this machine-verifiable criterion</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">4.1.2</span><span class=\"acr__crit-title\">Name, Role, Value</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t</tbody>\n\t\t</table>\n\t</section>\n\t<section class=\"acr__section\">\n\t\t<h2 class=\"acr__table-heading\">WCAG Level AA</h2>\n\t\t<table>\n\t\t\t<thead><tr>\n\t\t\t\t<th class=\"acr__col-crit\" scope=\"col\">Criteria</th>\n\t\t\t\t<th class=\"acr__col-conf\" scope=\"col\">Conformance Level</th>\n\t\t\t\t<th scope=\"col\">Remarks and Explanations</th>\n\t\t\t</tr></thead>\n\t\t\t<tbody>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">1.2.4</span><span class=\"acr__crit-title\">Captions (Live)</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"supports\">Supports</span></td>\n\t\t\t\t\t<td>No issues detected by automated testing for this machine-verifiable criterion</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">1.2.5</span><span class=\"acr__crit-title\">Audio Description (Prerecorded)</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">1.3.4</span><span class=\"acr__crit-title\">Orientation</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"supports\">Supports</span></td>\n\t\t\t\t\t<td>No issues detected by automated testing for this machine-verifiable criterion</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">1.3.5</span><span class=\"acr__crit-title\">Identify Input Purpose</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"supports\">Supports</span></td>\n\t\t\t\t\t<td>No issues detected by automated testing for this machine-verifiable criterion</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">1.4.3</span><span class=\"acr__crit-title\">Contrast (Minimum)</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"none\">Does Not Support</span></td>\n\t\t\t\t\t<td>2 errors across 3 pages — regulations: TAA</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">1.4.4</span><span class=\"acr__crit-title\">Resize Text</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"supports\">Supports</span></td>\n\t\t\t\t\t<td>No issues detected by automated testing for this machine-verifiable criterion</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">1.4.5</span><span class=\"acr__crit-title\">Images of Text</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">1.4.10</span><span class=\"acr__crit-title\">Reflow</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">1.4.11</span><span class=\"acr__crit-title\">Non-text Contrast</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">1.4.12</span><span class=\"acr__crit-title\">Text Spacing</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">1.4.13</span><span class=\"acr__crit-title\">Content on Hover or Focus</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">2.4.5</span><span class=\"acr__crit-title\">Multiple Ways</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">2.4.6</span><span class=\"acr__crit-title\">Headings and Labels</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">2.4.7</span><span class=\"acr__crit-title\">Focus Visible</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">2.4.11</span><span class=\"acr__crit-title\">Focus Not Obscured (Minimum)</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">2.5.7</span><span class=\"acr__crit-title\">Dragging Movements</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">2.5.8</span><span class=\"acr__crit-title\">Target Size (Minimum)</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">3.1.2</span><span class=\"acr__crit-title\">Language of Parts</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">3.2.3</span><span class=\"acr__crit-title\">Consistent Navigation</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">3.2.4</span><span class=\"acr__crit-title\">Consistent Identification</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">3.3.3</span><span class=\"acr__crit-title\">Error Suggestion</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">3.3.4</span><span class=\"acr__crit-title\">Error Prevention (Legal, Financial, Data)</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">3.3.8</span><span class=\"acr__crit-title\">Accessible Authentication (Minimum)</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"eval\">Not Evaluated</span></td>\n\t\t\t\t\t<td>Requires manual evaluation; automated testing alone cannot confirm conformance</td>\n\t\t\t\t</tr>\n\t\t\t\t<tr>\n\t\t\t\t\t<td><span class=\"acr__crit\">4.1.3</span><span class=\"acr__crit-title\">Status Messages</span></td>\n\t\t\t\t\t<td><span class=\"acr__verdict-cell\" data-c=\"supports\">Supports</span></td>\n\t\t\t\t\t<td>No issues detected by automated testing for this machine-verifiable criterion</td>\n\t\t\t\t</tr>\n\t\t\t</tbody>\n\t\t</table>\n\t</section>\n\n\t<!-- Section 508 Functional Performance Criteria -->\n\n\t<!-- Remediation record -->\n\n\t<!-- Audit history — the verdict-change trail (proving actions) -->\n\n\t<!-- Manual-test evidence appendix -->\n\n\t<footer class=\"acr__footer\">\n\t\t<p class=\"acr__wording-note\">Standard VPAT wording</p>\n\t\t<p>Generated by Luqen — VPAT is a registered trademark of the Information Technology Industry Council (ITI).</p>\n\t</footer>\n</section>\n</body></html>",
+  "statement-html": "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n  <title>Accessibility Statement — Fabrikam</title>\n  <style>\n    :root { color-scheme: light dark; }\n    * { box-sizing: border-box; }\n    body {\n      font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif;\n      line-height: 1.6; color: #1a1a1a; background: #fff;\n      max-width: 52rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem;\n    }\n    h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 .25rem; }\n    h2 { font-size: 1.25rem; margin: 2rem 0 .5rem; }\n    .meta { color: #555; font-size: .9rem; margin-bottom: 1.5rem; }\n    .status {\n      display: inline-block; padding: .35rem .75rem; border-radius: .5rem;\n      font-weight: 600; font-size: .95rem; margin: .5rem 0 1rem;\n    }\n    .status--partial { background: #fef3c7; color: #92400e; }\n    .status--none { background: #fee2e2; color: #991b1b; }\n    ul { padding-left: 1.25rem; }\n    li { margin: .35rem 0; }\n    .limitation { margin: .5rem 0; padding-left: .5rem; border-left: 3px solid #e5e7eb; }\n    .limitation code { font-size: .85rem; color: #374151; }\n    .contact { background: #f3f4f6; border-radius: .5rem; padding: 1rem 1.25rem; margin: 1rem 0; }\n    .contact a { color: #1d4ed8; }\n    .disclaimer { color: #555; font-size: .82rem; border-top: 1px solid #e5e7eb; margin-top: 2.5rem; padding-top: 1rem; }\n    @media (prefers-color-scheme: dark) {\n      body { color: #e5e7eb; background: #111; }\n      .meta, .disclaimer { color: #9ca3af; }\n      .contact { background: #1f2937; }\n      .limitation { border-left-color: #374151; }\n    }\n  </style>\n</head>\n<body>\n  <main>\n    <h1>Accessibility Statement for Fabrikam</h1>\n    <p class=\"meta\">Published on 2026-10-01</p>\n\n      <p>Fabrikam is committed to making its website accessible, in line with WCAG 2.1 level AA. We treat accessibility as an ongoing effort and continue to identify and remediate barriers.</p>\n\n    <h2>Conformance status</h2>\n      <p>\n        <span class=\"status status--partial\">Partially conformant</span>\n      </p>\n      <p>Fabrikam is partially conformant with WCAG 2.1 level AA. &quot;Partially conformant&quot; means that some parts of the content do not fully conform to the accessibility standard. The known issues are listed below, and we are working to address them.</p>\n\n        <h2>Known limitations</h2>\n        <p>Despite our best efforts, users may encounter the following barriers. We are actively working to resolve them:</p>\n        <div>\n            <div class=\"limitation\">\n              <strong>Non-text Content</strong> <code>(WCAG 1.1.1)</code><br>\n              <span>1 error across 1 page — regulations: TAA</span>\n            </div>\n            <div class=\"limitation\">\n              <strong>Link Purpose (In Context)</strong> <code>(WCAG 2.4.4)</code><br>\n              <span>2 warnings, 0 notices across 2 pages — regulations: TAA</span>\n            </div>\n            <div class=\"limitation\">\n              <strong>Contrast (Minimum)</strong> <code>(WCAG 1.4.3)</code><br>\n              <span>2 errors across 3 pages — regulations: TAA</span>\n            </div>\n        </div>\n        <p>In addition, 32 success criteria require manual evaluation that automated testing alone cannot confirm; these are under review.</p>\n\n    <h2>Measures to support accessibility</h2>\n    <ul>\n      <li>Automated WCAG scanning of pages against the target standard.</li>\n      <li>Real-browser behavioural checks (keyboard traps, focus visibility, dynamic-state and dialog focus) beyond static analysis.</li>\n      <li>Manual review of criteria that automated testing cannot confirm on its own.</li>\n      <li>Source-level remediation of confirmed issues — not an overlay or accessibility widget.</li>\n    </ul>\n\n\n    <h2>Feedback and contact</h2>\n    <div class=\"contact\">\n      <p>We welcome your feedback on the accessibility of Fabrikam. If you encounter a barrier, please tell us:</p>\n      <ul>\n        <li>Email: <a href=\"mailto:access@fabrikam.example\">access@fabrikam.example</a></li>\n        \n      </ul>\n      \n    </div>\n\n      <p class=\"meta\">Last assessed on 2026-10-01</p>\n\n    <p class=\"disclaimer\">This statement reflects automated and behavioural testing together with any recorded manual review. It is a good-faith record of our accessibility efforts and is not a legal certification of compliance, nor legal advice.</p>\n  </main>\n</body>\n</html>\n",
+  "fleet-vpat-input": {
+    "scanMeta": {
+      "siteUrl": "https://fabrikam.example/shop/",
+      "standard": "WCAG2AA",
+      "jurisdictions": "EU",
+      "regulations": "",
+      "createdAtDisplay": "<volatile:createdAtDisplay>"
+    },
+    "vpat": {
+      "siteUrl": "https://fabrikam.example/shop/",
+      "standard": "WCAG2AA",
+      "level": "AA",
+      "generatedAt": "2026-10-01",
+      "tablesByLevel": [
+        {
+          "level": "A",
+          "rows": [
+            {
+              "criterion": "1.1.1",
+              "title": "Non-text Content",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/text-equiv-all.html",
+              "conformance": "Does Not Support",
+              "remarks": "1 error across 1 page — regulations: TAA"
+            },
+            {
+              "criterion": "1.2.1",
+              "title": "Audio-only and Video-only (Prerecorded)",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/media-equiv-av-only-alt.html",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "1.2.2",
+              "title": "Captions (Prerecorded)",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/media-equiv-captions.html",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "1.2.3",
+              "title": "Audio Description or Media Alternative (Prerecorded)",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/media-equiv-audio-desc.html",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "1.3.1",
+              "title": "Info and Relationships",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/content-structure-separation-programmatic.html",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "1.3.2",
+              "title": "Meaningful Sequence",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/content-structure-separation-sequence.html",
+              "conformance": "Supports",
+              "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+            },
+            {
+              "criterion": "1.3.3",
+              "title": "Sensory Characteristics",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/content-structure-separation-understanding.html",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "1.4.1",
+              "title": "Use of Color",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/visual-audio-contrast-without-color.html",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "1.4.2",
+              "title": "Audio Control",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/visual-audio-contrast-dis-audio.html",
+              "conformance": "Supports",
+              "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+            },
+            {
+              "criterion": "2.1.1",
+              "title": "Keyboard",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/keyboard-operation-keyboard-operable.html",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "2.1.2",
+              "title": "No Keyboard Trap",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/keyboard-operation-trapping.html",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "2.1.4",
+              "title": "Character Key Shortcuts",
+              "level": "A",
+              "version": "2.1",
+              "url": "https://www.w3.org/WAI/WCAG21/Understanding/character-key-shortcuts",
+              "conformance": "Supports",
+              "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+            },
+            {
+              "criterion": "2.2.1",
+              "title": "Timing Adjustable",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/time-limits-required-behaviors.html",
+              "conformance": "Supports",
+              "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+            },
+            {
+              "criterion": "2.2.2",
+              "title": "Pause, Stop, Hide",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/time-limits-pause.html",
+              "conformance": "Supports",
+              "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+            },
+            {
+              "criterion": "2.3.1",
+              "title": "Three Flashes or Below Threshold",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/seizure-does-not-violate.html",
+              "conformance": "Supports",
+              "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+            },
+            {
+              "criterion": "2.4.1",
+              "title": "Bypass Blocks",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/navigation-mechanisms-skip.html",
+              "conformance": "Supports",
+              "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+            },
+            {
+              "criterion": "2.4.2",
+              "title": "Page Titled",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/navigation-mechanisms-title.html",
+              "conformance": "Supports",
+              "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+            },
+            {
+              "criterion": "2.4.3",
+              "title": "Focus Order",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/navigation-mechanisms-focus-order.html",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "2.4.4",
+              "title": "Link Purpose (In Context)",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/navigation-mechanisms-refs.html",
+              "conformance": "Partially Supports",
+              "remarks": "2 warnings, 0 notices across 2 pages — regulations: TAA"
+            },
+            {
+              "criterion": "2.5.1",
+              "title": "Pointer Gestures",
+              "level": "A",
+              "version": "2.1",
+              "url": "https://www.w3.org/WAI/WCAG21/Understanding/pointer-gestures",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "2.5.2",
+              "title": "Pointer Cancellation",
+              "level": "A",
+              "version": "2.1",
+              "url": "https://www.w3.org/WAI/WCAG21/Understanding/pointer-cancellation",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "2.5.3",
+              "title": "Label in Name",
+              "level": "A",
+              "version": "2.1",
+              "url": "https://www.w3.org/WAI/WCAG21/Understanding/label-in-name",
+              "conformance": "Supports",
+              "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+            },
+            {
+              "criterion": "2.5.4",
+              "title": "Motion Actuation",
+              "level": "A",
+              "version": "2.1",
+              "url": "https://www.w3.org/WAI/WCAG21/Understanding/motion-actuation",
+              "conformance": "Supports",
+              "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+            },
+            {
+              "criterion": "3.1.1",
+              "title": "Language of Page",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/meaning-doc-lang-id.html",
+              "conformance": "Supports",
+              "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+            },
+            {
+              "criterion": "3.2.1",
+              "title": "On Focus",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/consistent-behavior-receive-focus.html",
+              "conformance": "Supports",
+              "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+            },
+            {
+              "criterion": "3.2.2",
+              "title": "On Input",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/consistent-behavior-unpredictable-change.html",
+              "conformance": "Supports",
+              "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+            },
+            {
+              "criterion": "3.2.6",
+              "title": "Consistent Help",
+              "level": "A",
+              "version": "2.2",
+              "url": "https://www.w3.org/WAI/WCAG22/Understanding/consistent-help",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "3.3.1",
+              "title": "Error Identification",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/minimize-error-identified.html",
+              "conformance": "Supports",
+              "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+            },
+            {
+              "criterion": "3.3.2",
+              "title": "Labels or Instructions",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/minimize-error-cues.html",
+              "conformance": "Supports",
+              "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+            },
+            {
+              "criterion": "3.3.7",
+              "title": "Redundant Entry",
+              "level": "A",
+              "version": "2.2",
+              "url": "https://www.w3.org/WAI/WCAG22/Understanding/redundant-entry",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "4.1.1",
+              "title": "Parsing",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/ensure-compat-parses.html",
+              "conformance": "Supports",
+              "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+            },
+            {
+              "criterion": "4.1.2",
+              "title": "Name, Role, Value",
+              "level": "A",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/ensure-compat-rsv.html",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            }
+          ]
+        },
+        {
+          "level": "AA",
+          "rows": [
+            {
+              "criterion": "1.2.4",
+              "title": "Captions (Live)",
+              "level": "AA",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/media-equiv-real-time-captions.html",
+              "conformance": "Supports",
+              "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+            },
+            {
+              "criterion": "1.2.5",
+              "title": "Audio Description (Prerecorded)",
+              "level": "AA",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/media-equiv-audio-desc-only.html",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "1.3.4",
+              "title": "Orientation",
+              "level": "AA",
+              "version": "2.1",
+              "url": "https://www.w3.org/WAI/WCAG21/Understanding/orientation",
+              "conformance": "Supports",
+              "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+            },
+            {
+              "criterion": "1.3.5",
+              "title": "Identify Input Purpose",
+              "level": "AA",
+              "version": "2.1",
+              "url": "https://www.w3.org/WAI/WCAG21/Understanding/identify-input-purpose",
+              "conformance": "Supports",
+              "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+            },
+            {
+              "criterion": "1.4.3",
+              "title": "Contrast (Minimum)",
+              "level": "AA",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/visual-audio-contrast-contrast.html",
+              "conformance": "Does Not Support",
+              "remarks": "2 errors across 3 pages — regulations: TAA"
+            },
+            {
+              "criterion": "1.4.4",
+              "title": "Resize Text",
+              "level": "AA",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/visual-audio-contrast-scale.html",
+              "conformance": "Supports",
+              "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+            },
+            {
+              "criterion": "1.4.5",
+              "title": "Images of Text",
+              "level": "AA",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/visual-audio-contrast-text-presentation.html",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "1.4.10",
+              "title": "Reflow",
+              "level": "AA",
+              "version": "2.1",
+              "url": "https://www.w3.org/WAI/WCAG21/Understanding/reflow",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "1.4.11",
+              "title": "Non-text Contrast",
+              "level": "AA",
+              "version": "2.1",
+              "url": "https://www.w3.org/WAI/WCAG21/Understanding/non-text-contrast",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "1.4.12",
+              "title": "Text Spacing",
+              "level": "AA",
+              "version": "2.1",
+              "url": "https://www.w3.org/WAI/WCAG21/Understanding/text-spacing",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "1.4.13",
+              "title": "Content on Hover or Focus",
+              "level": "AA",
+              "version": "2.1",
+              "url": "https://www.w3.org/WAI/WCAG21/Understanding/content-on-hover-or-focus",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "2.4.5",
+              "title": "Multiple Ways",
+              "level": "AA",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/navigation-mechanisms-mult-loc.html",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "2.4.6",
+              "title": "Headings and Labels",
+              "level": "AA",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/navigation-mechanisms-descriptive.html",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "2.4.7",
+              "title": "Focus Visible",
+              "level": "AA",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/navigation-mechanisms-focus-visible.html",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "2.4.11",
+              "title": "Focus Not Obscured (Minimum)",
+              "level": "AA",
+              "version": "2.2",
+              "url": "https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "2.5.7",
+              "title": "Dragging Movements",
+              "level": "AA",
+              "version": "2.2",
+              "url": "https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "2.5.8",
+              "title": "Target Size (Minimum)",
+              "level": "AA",
+              "version": "2.2",
+              "url": "https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "3.1.2",
+              "title": "Language of Parts",
+              "level": "AA",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/meaning-other-lang-id.html",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "3.2.3",
+              "title": "Consistent Navigation",
+              "level": "AA",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/consistent-behavior-consistent-locations.html",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "3.2.4",
+              "title": "Consistent Identification",
+              "level": "AA",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/consistent-behavior-consistent-functionality.html",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "3.3.3",
+              "title": "Error Suggestion",
+              "level": "AA",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/minimize-error-suggestions.html",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "3.3.4",
+              "title": "Error Prevention (Legal, Financial, Data)",
+              "level": "AA",
+              "version": "2.0",
+              "url": "https://www.w3.org/TR/UNDERSTANDING-WCAG20/minimize-error-reversible.html",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "3.3.8",
+              "title": "Accessible Authentication (Minimum)",
+              "level": "AA",
+              "version": "2.2",
+              "url": "https://www.w3.org/WAI/WCAG22/Understanding/accessible-authentication-minimum",
+              "conformance": "Not Evaluated",
+              "remarks": "Requires manual evaluation; automated testing alone cannot confirm conformance"
+            },
+            {
+              "criterion": "4.1.3",
+              "title": "Status Messages",
+              "level": "AA",
+              "version": "2.1",
+              "url": "https://www.w3.org/WAI/WCAG21/Understanding/status-messages",
+              "conformance": "Supports",
+              "remarks": "No issues detected by automated testing for this machine-verifiable criterion"
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "supports": 21,
+        "partial": 1,
+        "doesNotSupport": 2,
+        "notApplicable": 0,
+        "notEvaluated": 32,
+        "total": 56
+      },
+      "section508": {
+        "functionalPerformance": [
+          {
+            "id": "302.1",
+            "need": "Without vision",
+            "conformance": "Does Not Support",
+            "remarks": "Related success criteria not supported: 1.1.1. End-to-end confirmation requires manual testing with assistive technology.",
+            "relatedCriteria": [
+              "1.1.1",
+              "1.2.1",
+              "1.2.3",
+              "1.2.5",
+              "1.3.1",
+              "1.3.2",
+              "1.3.3",
+              "1.4.1",
+              "2.1.1",
+              "2.1.2",
+              "2.4.1",
+              "2.4.2",
+              "2.4.3",
+              "2.4.4",
+              "2.4.6",
+              "3.1.1",
+              "3.1.2",
+              "3.2.1",
+              "3.2.2",
+              "3.3.1",
+              "3.3.2",
+              "4.1.2"
+            ]
+          },
+          {
+            "id": "302.2",
+            "need": "With limited vision",
+            "conformance": "Does Not Support",
+            "remarks": "Related success criteria not supported: 1.4.3. End-to-end confirmation requires manual testing with assistive technology.",
+            "relatedCriteria": [
+              "1.4.3",
+              "1.4.4",
+              "1.4.5",
+              "1.4.10",
+              "1.4.11",
+              "1.4.12",
+              "1.4.13",
+              "2.4.7"
+            ]
+          },
+          {
+            "id": "302.3",
+            "need": "Without perception of color",
+            "conformance": "Not Evaluated",
+            "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it.",
+            "relatedCriteria": [
+              "1.3.3",
+              "1.4.1"
+            ]
+          },
+          {
+            "id": "302.4",
+            "need": "Without hearing",
+            "conformance": "Not Evaluated",
+            "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it.",
+            "relatedCriteria": [
+              "1.2.1",
+              "1.2.2",
+              "1.2.4",
+              "1.4.2"
+            ]
+          },
+          {
+            "id": "302.5",
+            "need": "With limited hearing",
+            "conformance": "Not Evaluated",
+            "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it.",
+            "relatedCriteria": [
+              "1.2.2",
+              "1.2.4",
+              "1.4.7"
+            ]
+          },
+          {
+            "id": "302.6",
+            "need": "Without speech",
+            "conformance": "Not Evaluated",
+            "remarks": "The evaluated web content does not require speech for operation; end-to-end confirmation still requires manual testing.",
+            "relatedCriteria": []
+          },
+          {
+            "id": "302.7",
+            "need": "With limited manipulation",
+            "conformance": "Not Evaluated",
+            "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it.",
+            "relatedCriteria": [
+              "2.1.1",
+              "2.1.2",
+              "2.4.7",
+              "2.5.1",
+              "2.5.2",
+              "2.5.4"
+            ]
+          },
+          {
+            "id": "302.8",
+            "need": "With limited reach and strength",
+            "conformance": "Not Evaluated",
+            "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it.",
+            "relatedCriteria": [
+              "2.5.1",
+              "2.5.2",
+              "2.5.4"
+            ]
+          },
+          {
+            "id": "302.9",
+            "need": "With limited language, cognitive, and learning abilities",
+            "conformance": "Not Evaluated",
+            "remarks": "Functional performance is an end-to-end outcome that requires manual testing with assistive technology (e.g. screen reader, magnification, voice control); automated scanning alone cannot confirm it.",
+            "relatedCriteria": [
+              "1.3.1",
+              "2.4.2",
+              "2.4.6",
+              "3.1.1",
+              "3.1.2",
+              "3.2.1",
+              "3.2.2",
+              "3.2.3",
+              "3.2.4",
+              "3.3.1",
+              "3.3.2",
+              "3.3.3",
+              "3.3.4"
+            ]
+          }
+        ]
+      },
+      "legalFramings": [
+        {
+          "id": "generic",
+          "heading": "Applicable laws & standards",
+          "body": "This report was generated for the following selected jurisdictions and regulations: EU. Conformance is assessed against WCAG; consult the applicable local standard for any jurisdiction-specific requirements. This report supports a good-faith remediation effort; it is not legal advice and does not certify compliance.",
+          "shortLabel": "EU"
+        }
+      ],
+      "evaluatedStandards": [],
+      "includeFunctionalPerformance": false,
+      "functionalPerformanceHeading": "EN 301 549 — Functional Performance Statements (clause 4)",
+      "remediation": {
+        "events": [],
+        "summary": {
+          "aiProposed": 0,
+          "developerVerified": 0,
+          "manualVerified": 0,
+          "total": 0,
+          "firstActivity": null,
+          "lastActivity": null
+        },
+        "scanTrend": [
+          {
+            "date": "2026-10-01",
+            "totalIssues": 8,
+            "errors": 5
+          }
+        ],
+        "isEmpty": true
+      },
+      "attestation": {
+        "evaluationDate": "2026-10-01",
+        "pagesEvaluated": 3,
+        "methods": [
+          "Automated testing (Pa11y / axe-core)",
+          "Behavioral checks (keyboard, focus, dynamic state) where enabled"
+        ],
+        "standardsLabel": "WCAG 2.2 (incl. 2.0/2.1) · EU",
+        "manualTestingRecorded": false
+      }
+    }
+  }
+}
