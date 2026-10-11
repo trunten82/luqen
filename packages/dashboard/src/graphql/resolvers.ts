@@ -45,6 +45,20 @@ function requirePerm(ctx: GraphQLContext, ...perms: readonly string[]): void {
   }
 }
 
+/**
+ * Load a scan only if it belongs to the caller's org. An out-of-org scan
+ * resolves exactly as a missing one (null), mirroring the REST rule in
+ * routes/api/data.ts GET /api/v1/scans/:id and /:id/issues
+ * (`scan === null || scan.orgId !== orgId` → 404, no admin bypass).
+ */
+async function getScanInOrg(ctx: GraphQLContext, id: string): Promise<ScanRecord | null> {
+  const scan = await ctx.storage.scans.getScan(id);
+  if (scan === null || scan === undefined || scan.orgId !== ctx.orgId) {
+    return null;
+  }
+  return scan;
+}
+
 function clamp(value: number | undefined | null, min: number, max: number, fallback: number): number {
   if (value === undefined || value === null) return fallback;
   if (value < min) return min;
@@ -148,7 +162,7 @@ export const resolvers = {
       ctx: GraphQLContext,
     ) => {
       requireAuth(ctx);
-      return await ctx.storage.scans.getScan(args.id) ?? null;
+      return await getScanInOrg(ctx, args.id);
     },
 
     // ── Issues ─────────────────────────────────────────────────────────
@@ -160,7 +174,7 @@ export const resolvers = {
     ) => {
       requireAuth(ctx);
 
-      const scan = await ctx.storage.scans.getScan(args.scanId);
+      const scan = await getScanInOrg(ctx, args.scanId);
       if (scan === null) {
         return { nodes: [], totalCount: 0, pageInfo: buildPageInfo(0, 0, 0) };
       }
