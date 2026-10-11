@@ -129,6 +129,32 @@ describe('scan-end dismissals: a dismissal marked while compliance runs (W3)', (
   });
 });
 
+describe('scan-end dismissals: a dismissal lookup failure never fails the scan (WR-03)', () => {
+  const RAW = { errors: 5, warnings: 2, notices: 1, totalIssues: 8 };
+
+  for (const path of ['standard', 'incremental'] as const) {
+    it(`${path} path completes and persists the scanner's raw counts when the lookup throws`, async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      try {
+        const output = await driveOrchestratorScanDetailed({
+          path,
+          report: surfaceReport(),
+          dismissals: [activeDismissalRow(DISMISS_PARTIAL)],
+          dismissalLookupError: new TypeError('db is locked: SECRET-DETAIL-9f3'),
+        });
+        expect(output.columns).toMatchObject({ ...RAW, status: 'completed' });
+        expect((output.completeEvent as { issues: unknown }).issues).toEqual({ errors: 5, warnings: 2, notices: 1 });
+        const logged = JSON.stringify(warn.mock.calls);
+        expect(logged).toContain('TypeError');
+        expect(logged).toContain('dismissal');
+        expect(logged).not.toContain('SECRET-DETAIL');
+      } finally {
+        warn.mockRestore();
+      }
+    });
+  }
+});
+
 describe('scan-end dismissals: identity and the third path', () => {
   it("zero dismissals: persisted counts are the scanner's own byLevel even when it disagrees with the pages", async () => {
     // Foreign dismissals only: nothing applies to the scanned org + site. The scanner says

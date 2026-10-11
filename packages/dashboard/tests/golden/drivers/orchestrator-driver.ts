@@ -80,6 +80,11 @@ export interface DriveOrchestratorOptions {
    * derived from the pages, to make the scanner's counts disagree with its pages.
    */
   readonly scannerByLevel?: { readonly error: number; readonly warning: number; readonly notice: number };
+  /**
+   * Optional (WR-03): the fake issueDismissals repository throws this error on every lookup,
+   * as a busy database or a missing table would. Absent, behaviour is exactly as before.
+   */
+  readonly dismissalLookupError?: Error;
 }
 
 /** The scan-end output plus what a golden does not capture: the stored report's pages. */
@@ -153,7 +158,11 @@ function reportPages(report: Record<string, unknown>): readonly ReportPage[] {
   return report['pages'] as readonly ReportPage[];
 }
 
-function buildStorage(dismissals: IssueDismissal[], hashedUnchanged: Map<string, string>): {
+function buildStorage(
+  dismissals: IssueDismissal[],
+  hashedUnchanged: Map<string, string>,
+  lookupError?: Error,
+): {
   readonly storage: StorageAdapter;
   readonly updateScan: ReturnType<typeof vi.fn>;
 } {
@@ -166,9 +175,10 @@ function buildStorage(dismissals: IssueDismissal[], hashedUnchanged: Map<string,
       upsertPageHashes: vi.fn().mockResolvedValue(undefined),
     },
     issueDismissals: {
-      listActiveForSite: vi.fn(async (orgId: string, siteKey: string) =>
-        dismissals.filter((d) => d.status === 'active' && d.orgId === orgId && d.siteKey === siteKey),
-      ),
+      listActiveForSite: vi.fn(async (orgId: string, siteKey: string) => {
+        if (lookupError !== undefined) throw lookupError;
+        return dismissals.filter((d) => d.status === 'active' && d.orgId === orgId && d.siteKey === siteKey);
+      }),
     },
     branding: {},
     notificationTemplates: {},
@@ -276,7 +286,7 @@ export async function driveOrchestratorScanDetailed(
     configureStandard(opts.report, opts.scannerByLevel);
   }
 
-  const { storage, updateScan } = buildStorage(rows, unchanged);
+  const { storage, updateScan } = buildStorage(rows, unchanged, opts.dismissalLookupError);
   const orchestrator = new ScanOrchestrator(storage, GOLDEN_REPORTS_DIR, {
     maxConcurrent: 1,
     pluginManager: {} as unknown as PluginManager,

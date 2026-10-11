@@ -38,6 +38,29 @@ function reportPagesOf(
     : [{ url: siteUrl, issues: [...allIssues], issueCount: allIssues.length }];
 }
 
+/**
+ * The counts to persist, fail-open for the SCAN and fail-closed for the columns' meaning (WR-03):
+ * the count columns are derived data and a stored report is the source of truth, so a dismissal
+ * lookup that throws at scan end must not throw away a fully crawled scan. The scanner's own counts
+ * (exactly what zero dismissals persist) are written instead; a later mark/revoke recompute repairs
+ * the columns. Logs the scan id and the error NAME only.
+ */
+async function persistedCountsOrRaw(
+  scanId: string,
+  compute: () => Promise<IssueCounts>,
+  rawCounts: IssueCounts,
+): Promise<IssueCounts> {
+  try {
+    return await compute();
+  } catch (err) {
+    console.warn(
+      { scanId, errorName: err instanceof Error ? err.name : 'Error' },
+      'Scan end: dismissal lookup failed, persisting the scanner counts',
+    );
+    return rawCounts;
+  }
+}
+
 export interface ScanProgressEvent {
   readonly type: 'discovery' | 'discovery_progress' | 'scan_start' | 'scan_complete' | 'scan_error' | 'compliance' | 'complete' | 'failed';
   readonly timestamp: string;
@@ -546,7 +569,11 @@ export class ScanOrchestrator {
           const incrementalPages = reportPagesOf(scanPages, allIssues, config.siteUrl);
           const incrementalRaw: IssueCounts = { errors, warnings, notices, total: errors + warnings + notices };
           computePersistedCounts = () =>
-            persistedCountsFor(this.storage, { orgId, siteUrl: config.siteUrl }, incrementalPages, incrementalRaw);
+            persistedCountsOrRaw(
+              scanId,
+              () => persistedCountsFor(this.storage, { orgId, siteUrl: config.siteUrl }, incrementalPages, incrementalRaw),
+              incrementalRaw,
+            );
         } else {
           // --- Standard (non-incremental) scan ---
           // Phase 84: resolve an org-scoped vision analyzer for the behavioral
@@ -620,10 +647,15 @@ export class ScanOrchestrator {
           const standardPages = reportPagesOf(scanPages, allIssues, config.siteUrl);
           const standardRaw: IssueCounts = { errors, warnings, notices, total: errors + warnings + notices };
           computePersistedCounts = () =>
-            persistedCountsFor(
-              this.storage,
-              { orgId: config.orgId ?? 'system', siteUrl: config.siteUrl },
-              standardPages,
+            persistedCountsOrRaw(
+              scanId,
+              () =>
+                persistedCountsFor(
+                  this.storage,
+                  { orgId: config.orgId ?? 'system', siteUrl: config.siteUrl },
+                  standardPages,
+                  standardRaw,
+                ),
               standardRaw,
             );
         }
