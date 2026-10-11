@@ -255,9 +255,12 @@ Plans:
   4. A later scan applies active dismissals on BOTH orchestrator paths (standard and incremental). The counts persisted at scan end exclude them, and so do the webhook, plugin and completion payloads. Break-test per path: removing the apply call from one path turns red only that path's test (FP-13).
   5. With zero active dismissals, every surface above produces the same output as before the change, ACR included. A golden comparison on real stored reports proves it, which makes the merge safe to auto-deploy while the permission is dark.
 
-**Plans**: 10/18 plans executed (wave 1: 01, 02, 13; wave 2: 03, 04, 05, 06, 11, 15, 16; wave 3: 07, 08, 09, 10, 14, 17, 18; wave 4: 12)
+**Plans**: 18/19 plans executed (wave 1: 01, 02, 13; wave 2: 03, 04, 05, 06, 11, 15, 16; wave 3: 07, 08, 09, 10, 14, 17, 18; wave 4: 12)
 
 Plans:
+
+- [x] 88-19-PLAN.md
+
 **Wave 1**
 
 - [x] 88-01-PLAN.md — shared fixture + pre-wiring golden baseline for render, export and ACR surfaces (SC5 window; tests only) (FP-06, FP-07, FP-10)
@@ -276,13 +279,13 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 88-07-PLAN.md — accessibility statement disclosure section (eighth ACR path) (FP-07)
-- [ ] 88-08-PLAN.md — REST x4 and GraphQL scanIssues wired (FP-11, FP-12)
-- [ ] 88-09-PLAN.md — compare, fix-PR, repos fixes view, bulk-fix candidates wired (FP-11)
-- [ ] 88-10-PLAN.md — orchestrator: per-branch deferred persistedCountsFor read right before updateScan on standard + incremental, raw json_report, per-path break-tests (FP-13, FP-08)
-- [ ] 88-14-PLAN.md — remaining shared ACR paths + fleet report, D-11 break-tests per path and per call site (FP-07)
-- [ ] 88-17-PLAN.md — MCP get_report/resource/fleet wired; dashboard_query_issues filters every shape it reads (FP-11, FP-12)
-- [ ] 88-18-PLAN.md — SC3 cross-surface agreement after a real mark (FP-08)
+- [x] 88-07-PLAN.md — accessibility statement disclosure section (eighth ACR path) (FP-07)
+- [x] 88-08-PLAN.md — REST x4 and GraphQL scanIssues wired (FP-11, FP-12)
+- [x] 88-09-PLAN.md — compare, fix-PR, repos fixes view, bulk-fix candidates wired (FP-11)
+- [x] 88-10-PLAN.md — orchestrator: per-branch deferred persistedCountsFor read right before updateScan on standard + incremental, raw json_report, per-path break-tests (FP-13, FP-08)
+- [x] 88-14-PLAN.md — remaining shared ACR paths + fleet report, D-11 break-tests per path and per call site (FP-07)
+- [x] 88-17-PLAN.md — MCP get_report/resource/fleet wired; dashboard_query_issues filters every shape it reads (FP-11, FP-12)
+- [x] 88-18-PLAN.md — SC3 cross-surface agreement after a real mark (FP-08)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -314,7 +317,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 87. Dismissal store, domain model and permission | v3.8.0 | 5/5 | Complete | 2026-10-08 |
-| 88. Dismissals applied on every surface | v3.8.0 | 10/18 | In Progress|  |
+| 88. Dismissals applied on every surface | v3.8.0 | 18/19 | In Progress|  |
 | 89. Dismissal UI, dark launch and role grant | v3.8.0 | 0/? | Not started | - |
 
 **Risks carried into planning (read from source 2026-10-08; not exercised live):**
