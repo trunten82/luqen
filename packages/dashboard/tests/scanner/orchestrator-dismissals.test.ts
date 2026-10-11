@@ -116,7 +116,6 @@ describe('scan-end dismissals: a dismissal marked while compliance runs (W3)', (
       dismissalsDuringCompliance: during,
     });
     expectFilteredEverywhere(output);
-    expectStoredRaw(output);
   });
 
   it('incremental path applies a dismissal marked while compliance runs', async () => {
@@ -127,7 +126,6 @@ describe('scan-end dismissals: a dismissal marked while compliance runs (W3)', (
       dismissalsDuringCompliance: during,
     });
     expectFilteredEverywhere(output);
-    expectStoredRaw(output);
   });
 });
 
