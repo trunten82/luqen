@@ -596,7 +596,9 @@ export async function exportRoutes(
           return reply.code(404).send({ error: 'Report data not available' });
         }
 
-        const reportData = normalizeReportData(reportJson, scan);
+        // D-05: the scan's own org + site active dismissals; no new PDF section (D-19).
+        const applied = await applyActiveDismissals(storage, scan, reportJson);
+        const reportData = normalizeReportData(applied.report, scan);
 
         const scanMeta: PdfScanMeta = {
           siteUrl: scan.siteUrl,
