@@ -20,6 +20,10 @@ import { registerSession } from '../../../src/auth/session.js';
 import { dataApiRoutes } from '../../../src/routes/api/data.js';
 import { resolvers, type GraphQLContext } from '../../../src/graphql/resolvers.js';
 import { compareRoutes } from '../../../src/routes/compare.js';
+import { fixPrRoutes } from '../../../src/routes/fix-pr.js';
+import { repoRoutes } from '../../../src/routes/repos.js';
+import { computeBulkFixCandidates } from '../../../src/services/bulk-fix-candidates.js';
+import { encryptSecret } from '../../../src/plugins/crypto.js';
 import type { DashboardConfig } from '../../../src/config.js';
 import type { SurfaceContext } from './render-drivers.js';
 import type { ScanOrchestrator } from '../../../src/scanner/orchestrator.js';
@@ -45,6 +49,7 @@ import {
   surfaceReport,
 } from '../../helpers/dismissal-surface-fixture.js';
 import type { Literals } from '../golden-io.js';
+import { capturedProposerCalls, resetProposerCapture } from './proposer-capture.js';
 
 
 // ── Scan ids / dates used by drivers that need more than the main scan ───────
@@ -58,6 +63,10 @@ export const API_RESULTS_CREATED_AT = '2026-08-01T10:00:00.000Z';
 export const API_RESULTS_COMPLETED_AT = '2026-08-01T10:05:00.000Z';
 export const FLEET_SINCE = '2026-01-01T00:00:00.000Z';
 const TEST_SESSION_SECRET = 'test-session-secret-at-least-32b';
+const TEST_ENCRYPTION_KEY = 'fabrikam-golden-encryption-key-0001';
+const FABRIKAM_USER_ID = 'user-fabrikam-admin';
+const FABRIKAM_GIT_HOST = 'https://git.fabrikam.example';
+const FABRIKAM_REPO_URL = 'https://git.fabrikam.example/fabrikam/shop';
 
 /** Every permission the API/agent drivers' Fabrikam admin identity holds. */
 export const API_ADMIN_PERMISSIONS = [
@@ -321,7 +330,7 @@ export async function makeApiServer(
   });
   server.addHook('preHandler', async (request) => {
     request.user = {
-      id: 'user-fabrikam-admin',
+      id: FABRIKAM_USER_ID,
       username: 'fabrikam-admin',
       role: 'admin',
       currentOrgId: ctx.orgs.fabrikamOrgId,
@@ -409,4 +418,86 @@ export async function driveCompare(ctx: SurfaceContext): Promise<unknown> {
   return withServer(ctx, (server) => compareRoutes(server, ctx.storage), (server) =>
     getJson(server, `/reports/compare?a=${API_PRIOR_SCAN_ID}&b=${ctx.scanId}`),
   );
+}
+
+// ── Fix-PR proposer input, repos fixes view, bulk-fix candidates ─────────────
+const apiConfig = { encryptionKey: TEST_ENCRYPTION_KEY } as unknown as DashboardConfig;
+
+/**
+ * Connect FABRIKAM_SITE to a Fabrikam repo on a Fabrikam git host and give the
+ * Fabrikam admin a decryptable credential (what fix-pr.ts checks before it
+ * reads the report). Idempotent per context.
+ */
+async function ensureConnectedRepo(ctx: SurfaceContext): Promise<void> {
+  const orgId = ctx.orgs.fabrikamOrgId;
+  const existing = await ctx.storage.repos.findRepoForUrl(FABRIKAM_SITE, orgId);
+  if (existing !== null) return;
+  const host = await ctx.storage.gitHosts.createConfig({
+    orgId,
+    pluginType: 'github',
+    hostUrl: FABRIKAM_GIT_HOST,
+    displayName: 'Fabrikam Git',
+  });
+  await ctx.storage.repos.createRepo({
+    id: 'repo-fabrikam-golden',
+    siteUrlPattern: `${FABRIKAM_SITE}%`,
+    repoUrl: FABRIKAM_REPO_URL,
+    branch: 'main',
+    gitHostConfigId: host.id,
+    createdBy: 'fabrikam-seed',
+    orgId,
+  });
+  await ctx.storage.gitHosts.storeCredential({
+    userId: FABRIKAM_USER_ID,
+    gitHostConfigId: host.id,
+    encryptedToken: encryptSecret('fabrikam-golden-token', TEST_ENCRYPTION_KEY),
+    tokenHint: '••••oken',
+    validatedUsername: 'fabrikam-admin',
+  });
+}
+
+/**
+ * POST /reports/:id/fixes/create-pr with the proposer recorded (vi.mock in the
+ * calling test file): the observable is the report argument handed to
+ * proposeFixesFromReport plus the route's response. collectIssuesFromReport is
+ * module-local to fix-pr.ts (not exported), so its result is not separately
+ * observable; it receives the same rawReport.
+ */
+export async function driveFixPrProposerInput(ctx: SurfaceContext, scanId: string = ctx.scanId): Promise<unknown> {
+  await ensureConnectedRepo(ctx);
+  resetProposerCapture();
+  return withServer(ctx, (server) => fixPrRoutes(server, ctx.storage, apiConfig), async (server) => {
+    const response = await server.inject({
+      method: 'POST',
+      url: `/reports/${scanId}/fixes/create-pr`,
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: 'fixIndices=0',
+    });
+    return {
+      status: response.statusCode,
+      body: response.json() as unknown,
+      proposerCalls: capturedProposerCalls(),
+    };
+  });
+}
+
+/** GET /reports/:id/fixes with no connected repo: the local fix-suggestion engine over the report. */
+export function driveReposFixesView(ctx: SurfaceContext, scanId: string = ctx.scanId): Promise<unknown> {
+  return withServer(ctx, (server) => repoRoutes(server, ctx.storage, apiConfig), (server) =>
+    getJson(server, `/reports/${scanId}/fixes`),
+  );
+}
+
+/** computeBulkFixCandidates for the Fabrikam org, per criterion. */
+export async function driveBulkFixCandidates(ctx: SurfaceContext): Promise<unknown> {
+  const out: Record<string, unknown> = {};
+  for (const criterion of ['1.4.3', '1.1.1', '2.4.4']) {
+    out[criterion] = await computeBulkFixCandidates(ctx.storage, {
+      id: 'bulk-fix-golden',
+      orgId: ctx.orgs.fabrikamOrgId,
+      teamId: null,
+      criterion,
+    });
+  }
+  return out;
 }

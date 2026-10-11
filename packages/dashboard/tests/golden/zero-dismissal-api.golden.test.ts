@@ -12,19 +12,36 @@
  * Capture: GOLDEN_CAPTURE=1 (adds a missing surface, never overwrites one).
  * The orchestrator's two paths are Plan 16's.
  */
-import { afterEach, beforeEach, describe, it } from 'vitest';
+import { afterEach, beforeEach, describe, it, vi } from 'vitest';
 
 process.env['TZ'] ??= 'UTC';
+
+// The fix-PR route reaches proposeFixesFromReport and getGitHostPlugin; record the former's
+// ARGUMENTS (never a real proposal) and hand the latter a fake plugin. Everything else in
+// '@luqen/core' and the registry stays real.
+vi.mock('@luqen/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@luqen/core')>();
+  const capture = await import('./drivers/proposer-capture.js');
+  return { ...actual, proposeFixesFromReport: capture.recordProposeFixesFromReport };
+});
+vi.mock('../../src/git-hosts/registry.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/git-hosts/registry.js')>();
+  const capture = await import('./drivers/proposer-capture.js');
+  return { ...actual, getGitHostPlugin: () => capture.fakeGitHostPlugin };
+});
 
 import { goldenCheck } from './golden-io.js';
 import {
   createApiContext,
+  driveBulkFixCandidates,
   driveCompare,
+  driveFixPrProposerInput,
   driveGraphqlScanIssues,
   driveMcpFleetCounts,
   driveMcpGetReport,
   driveMcpQueryIssues,
   driveMcpReportResource,
+  driveReposFixesView,
   driveRestComplianceSummary,
   driveRestScan,
   driveRestScanFixes,
@@ -90,5 +107,17 @@ describe('zero-dismissal API goldens', () => {
 
   it('golden: compare (/reports/compare) zero-dismissal output is unchanged', async () => {
     goldenCheck(FILE, 'compare', await driveCompare(ctx), ctx.literals());
+  });
+
+  it('golden: fix-PR proposer input (proposeFixesFromReport report argument) zero-dismissal output is unchanged', async () => {
+    goldenCheck(FILE, 'fix-pr-proposer-input', await driveFixPrProposerInput(ctx), ctx.literals());
+  });
+
+  it('golden: repos fixes view (/reports/:id/fixes) zero-dismissal output is unchanged', async () => {
+    goldenCheck(FILE, 'repos-fixes-view', await driveReposFixesView(ctx), ctx.literals());
+  });
+
+  it('golden: bulk-fix candidates (computeBulkFixCandidates) zero-dismissal output is unchanged', async () => {
+    goldenCheck(FILE, 'bulk-fix-candidates', await driveBulkFixCandidates(ctx), ctx.literals());
   });
 });
