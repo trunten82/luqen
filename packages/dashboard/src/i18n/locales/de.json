@@ -1600,7 +1600,19 @@
     "verdictPartial": "{{site}} entspricht {{standard}} teilweise über {{pages}} Seite(n).",
     "verdictMeta": "Bewertet am {{date}} · {{supports}} von {{total}} Kriterien unterstützt · {{doesNotSupport}} nicht unterstützt · {{notEvaluated}} ausstehende manuelle Bewertung",
     "staleNotice": "Eine neuere Version dieses Berichts ist verfügbar.",
-    "staleNoticeLink": "Aktuellen Bericht ansehen"
+    "staleNoticeLink": "Aktuellen Bericht ansehen",
+    "dismissedDisclosureOne": "1 automatisch erkanntes Problem wurde nach Prüfung als Fehlalarm verworfen.",
+    "dismissedDisclosureOther": "{{count}} automatisch erkannte Probleme wurden nach Prüfung als Fehlalarme verworfen."
+  },
+  "dismissalsExport": {
+    "sheetName": "Verworfen",
+    "colPageUrl": "Seiten-URL",
+    "colRuleCode": "Regelcode",
+    "colSelector": "Selektor",
+    "colLevel": "Stufe",
+    "colReason": "Begründung",
+    "colDismissedBy": "Verworfen von",
+    "colDismissedAt": "Verworfen am"
   },
   "reportPage": {
     "revisionsHeading": "Berichtsverlauf",

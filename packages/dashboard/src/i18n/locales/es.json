@@ -1600,7 +1600,19 @@
     "verdictPartial": "{{site}} cumple parcialmente con {{standard}} en {{pages}} página(s).",
     "verdictMeta": "Evaluado el {{date}} · {{supports}} de {{total}} criterios compatibles · {{doesNotSupport}} no compatibles · {{notEvaluated}} pendientes de evaluación manual",
     "staleNotice": "Hay disponible una versión más reciente de este informe.",
-    "staleNoticeLink": "Ver el informe más reciente"
+    "staleNoticeLink": "Ver el informe más reciente",
+    "dismissedDisclosureOne": "1 hallazgo automático se descartó como falso positivo tras la revisión.",
+    "dismissedDisclosureOther": "{{count}} hallazgos automáticos se descartaron como falsos positivos tras la revisión."
+  },
+  "dismissalsExport": {
+    "sheetName": "Descartados",
+    "colPageUrl": "URL de la página",
+    "colRuleCode": "Código de regla",
+    "colSelector": "Selector",
+    "colLevel": "Nivel",
+    "colReason": "Motivo",
+    "colDismissedBy": "Descartado por",
+    "colDismissedAt": "Descartado el"
   },
   "reportPage": {
     "revisionsHeading": "Historial del informe",

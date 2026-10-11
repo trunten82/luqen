@@ -1600,7 +1600,19 @@
     "verdictPartial": "{{site}} est partiellement conforme à {{standard}} sur {{pages}} page(s).",
     "verdictMeta": "Évalué le {{date}} · {{supports}} critères pris en charge sur {{total}} · {{doesNotSupport}} non pris en charge · {{notEvaluated}} en attente d’évaluation manuelle",
     "staleNotice": "Une version plus récente de ce rapport est disponible.",
-    "staleNoticeLink": "Voir le rapport le plus récent"
+    "staleNoticeLink": "Voir le rapport le plus récent",
+    "dismissedDisclosureOne": "1 constat automatique a été écarté comme faux positif après examen.",
+    "dismissedDisclosureOther": "{{count}} constats automatiques ont été écartés comme faux positifs après examen."
+  },
+  "dismissalsExport": {
+    "sheetName": "Écartés",
+    "colPageUrl": "URL de la page",
+    "colRuleCode": "Code de règle",
+    "colSelector": "Sélecteur",
+    "colLevel": "Niveau",
+    "colReason": "Motif",
+    "colDismissedBy": "Écarté par",
+    "colDismissedAt": "Écarté le"
   },
   "reportPage": {
     "revisionsHeading": "Historique du rapport",

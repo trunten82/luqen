@@ -1600,7 +1600,19 @@
     "verdictPartial": "{{site}} está parcialmente em conformidade com {{standard}} em {{pages}} página(s).",
     "verdictMeta": "Avaliado em {{date}} · {{supports}} de {{total}} critérios compatíveis · {{doesNotSupport}} não compatíveis · {{notEvaluated}} a aguardar avaliação manual",
     "staleNotice": "Está disponível uma versão mais recente deste relatório.",
-    "staleNoticeLink": "Ver o relatório mais recente"
+    "staleNoticeLink": "Ver o relatório mais recente",
+    "dismissedDisclosureOne": "1 constatação automática foi descartada como falso positivo após revisão.",
+    "dismissedDisclosureOther": "{{count}} constatações automáticas foram descartadas como falsos positivos após revisão."
+  },
+  "dismissalsExport": {
+    "sheetName": "Descartados",
+    "colPageUrl": "URL da página",
+    "colRuleCode": "Código da regra",
+    "colSelector": "Seletor",
+    "colLevel": "Nível",
+    "colReason": "Motivo",
+    "colDismissedBy": "Descartado por",
+    "colDismissedAt": "Descartado em"
   },
   "reportPage": {
     "revisionsHeading": "Histórico do relatório",

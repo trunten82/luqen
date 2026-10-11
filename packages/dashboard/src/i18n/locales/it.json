@@ -1613,6 +1613,16 @@
     "dismissedDisclosureOne": "1 rilevamento automatico è stato escluso come falso positivo dopo la revisione.",
     "dismissedDisclosureOther": "{{count}} rilevamenti automatici sono stati esclusi come falsi positivi dopo la revisione."
   },
+  "dismissalsExport": {
+    "sheetName": "Esclusi",
+    "colPageUrl": "URL pagina",
+    "colRuleCode": "Codice regola",
+    "colSelector": "Selettore",
+    "colLevel": "Livello",
+    "colReason": "Motivo",
+    "colDismissedBy": "Escluso da",
+    "colDismissedAt": "Escluso il"
+  },
   "reportPage": {
     "revisionsHeading": "Cronologia del rapporto",
     "revisionsIntro": "Ogni scansione completata viene conservata come revisione datata di questo rapporto.",

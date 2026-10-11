@@ -2074,6 +2074,16 @@
     "dismissedDisclosureOne": "1 automated finding was dismissed as a false positive after review.",
     "dismissedDisclosureOther": "{{count}} automated findings were dismissed as false positives after review."
   },
+  "dismissalsExport": {
+    "sheetName": "Dismissed",
+    "colPageUrl": "Page URL",
+    "colRuleCode": "Rule Code",
+    "colSelector": "Selector",
+    "colLevel": "Level",
+    "colReason": "Reason",
+    "colDismissedBy": "Dismissed By",
+    "colDismissedAt": "Dismissed At"
+  },
   "acrWording": {
     "admin": {
       "title": "ACR wording",
