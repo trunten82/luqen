@@ -285,6 +285,22 @@ export function appendDismissalNote(remarks: string, count: number): string {
 }
 
 /**
+ * Swap the trailing English disclosure sentence of a row's remarks for a localised one.
+ * Fail-safe (P3): a row without a dismissal, or whose remarks do not end with the English
+ * sentence for its count, is returned unchanged — the disclosure is never dropped.
+ */
+export function localizeDismissalRemarks(
+  row: Pick<VpatRow, 'remarks' | 'dismissedCount'>,
+  sentence: (count: number) => string,
+): string {
+  const count = row.dismissedCount;
+  if (count === undefined || count <= 0) return row.remarks;
+  const english = dismissalNoteEn(count);
+  if (!row.remarks.endsWith(english)) return row.remarks;
+  return `${row.remarks.slice(0, row.remarks.length - english.length)}${sentence(count)}`;
+}
+
+/**
  * Derives the conformance verdict + remark for a single catalog criterion.
  */
 function deriveRow(
