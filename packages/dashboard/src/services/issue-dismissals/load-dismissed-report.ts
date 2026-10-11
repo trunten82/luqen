@@ -22,6 +22,7 @@ import type { IssueDismissal } from '../../db/interfaces/issue-dismissal-reposit
 import { extractCriterion } from '../../routes/wcag-enrichment.js';
 import { countIssues, type IssueCounts } from '../count-issues.js';
 import { applyDismissals, type DismissedOccurrence } from './apply-dismissals.js';
+import { filterComplianceForDismissals } from './filter-compliance.js';
 import { toSiteKey } from './site-key.js';
 
 export interface AppliedActiveDismissals<R> {
@@ -48,7 +49,8 @@ export async function applyActiveDismissals<R>(
   if (active.length === 0) return { report: raw, dismissed: [], active: [] };
   const applied = applyDismissals(raw, active, siteKey);
   if (applied.dismissed.length === 0) return { report: raw, dismissed: [], active };
-  return { report: applied.report, dismissed: applied.dismissed, active };
+  // D-08: the matrices follow the dismissals; only when something was actually dismissed.
+  return { report: filterComplianceForDismissals(raw, applied.report), dismissed: applied.dismissed, active };
 }
 
 /** DB report first, then the jsonReportPath file. Never carries err.message. */
