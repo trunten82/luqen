@@ -1,0 +1,383 @@
+{
+  "mcp-get-report": {
+    "status": "completed",
+    "scanId": "scan-fabrikam-golden-0001",
+    "scan": {
+      "id": "scan-fabrikam-golden-0001",
+      "siteUrl": "https://fabrikam.example/shop/",
+      "status": "completed",
+      "standard": "WCAG2AA",
+      "jurisdictions": [
+        "EU"
+      ],
+      "regulations": [],
+      "createdBy": "fabrikam-seed",
+      "createdAt": "2026-10-01T10:00:00.000Z",
+      "orgId": "<org:fabrikam>",
+      "completedAt": "2026-10-01T10:05:00.000Z",
+      "pagesScanned": 3,
+      "totalIssues": 8,
+      "errors": 5,
+      "warnings": 2,
+      "notices": 1,
+      "confirmedViolations": 0,
+      "jsonReportPath": "<reportsDir>/report-scan-fabrikam-golden-0001.json",
+      "jsonReport": "{\"scanId\":\"scan-fabrikam-golden-0001\",\"siteUrl\":\"https://fabrikam.example/shop/\",\"standard\":\"WCAG2AA\",\"completedAt\":\"2026-10-01T10:05:00.000Z\",\"summary\":{\"pagesScanned\":3,\"totalIssues\":8,\"byLevel\":{\"error\":5,\"warning\":2,\"notice\":1},\"pagesFailed\":0},\"pages\":[{\"url\":\"https://fabrikam.example/shop/\",\"issues\":[{\"type\":\"error\",\"code\":\"WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail\",\"message\":\"Insufficient contrast: the contrast ratio on the promo note is less than 4.5:1\",\"selector\":\"#fabrikam-promo-note\",\"context\":\"<p id=\\\"fabrikam-promo-note\\\">Promo text</p>\",\"brandMatch\":{\"matched\":true,\"strategy\":\"color-pair\",\"matchDetail\":\"Brand blue pair\"},\"wcagCriterion\":\"1.4.3\",\"wcagTitle\":\"Contrast (Minimum)\"},{\"type\":\"error\",\"code\":\"WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail\",\"message\":\"Insufficient contrast: the contrast ratio on the footer note is less than 4.5:1\",\"selector\":\"#fabrikam-footer-note\",\"context\":\"<p id=\\\"fabrikam-footer-note\\\">Footer text</p>\",\"brandMatch\":{\"matched\":true,\"strategy\":\"color-pair\",\"matchDetail\":\"Brand grey pair\"},\"wcagCriterion\":\"1.4.3\",\"wcagTitle\":\"Contrast (Minimum)\"},{\"type\":\"warning\",\"code\":\"WCAG2A.Principle2.Guideline2_4.2_4_4.H77\",\"message\":\"Link purpose is unclear from the link text alone\",\"selector\":\"#fabrikam-more-link\",\"context\":\"<a id=\\\"fabrikam-more-link\\\" href=\\\"/more\\\">More</a>\",\"wcagCriterion\":\"2.4.4\",\"wcagTitle\":\"Link Purpose (In Context)\"}],\"issueCount\":3},{\"url\":\"https://fabrikam.example/shop/about\",\"issues\":[{\"type\":\"error\",\"code\":\"WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail\",\"message\":\"Insufficient contrast: the contrast ratio on the promo note is less than 4.5:1\",\"selector\":\"#fabrikam-promo-note\",\"context\":\"<p id=\\\"fabrikam-promo-note\\\">Promo text</p>\",\"brandMatch\":{\"matched\":true,\"strategy\":\"color-pair\",\"matchDetail\":\"Brand blue pair\"},\"wcagCriterion\":\"1.4.3\",\"wcagTitle\":\"Contrast (Minimum)\"},{\"type\":\"error\",\"code\":\"WCAG2A.Principle1.Guideline1_1.1_1_1.H37\",\"message\":\"Img element missing an alt attribute on the hero image\",\"selector\":\"#fabrikam-hero-img\",\"context\":\"<img id=\\\"fabrikam-hero-img\\\" src=\\\"hero.png\\\">\",\"brandMatch\":{\"matched\":true,\"strategy\":\"selector\",\"matchDetail\":\"Hero image token\"},\"wcagCriterion\":\"1.1.1\",\"wcagTitle\":\"Non-text Content\"},{\"type\":\"warning\",\"code\":\"WCAG2A.Principle2.Guideline2_4.2_4_4.H77\",\"message\":\"Link purpose is unclear from the link text alone\",\"selector\":\"#fabrikam-more-link\",\"context\":\"<a id=\\\"fabrikam-more-link\\\" href=\\\"/more\\\">More</a>\",\"wcagCriterion\":\"2.4.4\",\"wcagTitle\":\"Link Purpose (In Context)\"}],\"issueCount\":3},{\"url\":\"https://fabrikam.example/shop/contact\",\"issues\":[{\"type\":\"error\",\"code\":\"WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail\",\"message\":\"Insufficient contrast: the contrast ratio on the promo note is less than 4.5:1\",\"selector\":\"#fabrikam-promo-note\",\"context\":\"<p id=\\\"fabrikam-promo-note\\\">Promo text</p>\",\"brandMatch\":{\"matched\":true,\"strategy\":\"color-pair\",\"matchDetail\":\"Brand blue pair\"},\"wcagCriterion\":\"1.4.3\",\"wcagTitle\":\"Contrast (Minimum)\"},{\"type\":\"notice\",\"code\":\"lighthouse.fallback\",\"message\":\"Engine fallback finding for the whole page\",\"selector\":\"html\",\"context\":\"\"}],\"issueCount\":2}],\"errors\":[],\"compliance\":{\"matrix\":{\"EU\":{\"jurisdictionId\":\"EU\",\"jurisdictionName\":\"Test Union\",\"status\":\"fail\",\"mandatoryViolations\":2,\"recommendedViolations\":1,\"optionalViolations\":0,\"regulations\":[{\"regulationId\":\"TEST-REG\",\"regulationName\":\"Test Accessibility Act\",\"shortName\":\"TAA\",\"status\":\"fail\",\"enforcementDate\":\"2025-06-28\",\"scope\":\"public\",\"violations\":[{\"wcagCriterion\":\"1.1.1\",\"obligation\":\"mandatory\",\"issueCount\":1},{\"wcagCriterion\":\"1.4.3\",\"obligation\":\"mandatory\",\"issueCount\":1},{\"wcagCriterion\":\"2.4.4\",\"obligation\":\"recommended\",\"issueCount\":1}]}]}},\"regulationMatrix\":{\"TEST-REG\":{\"regulationId\":\"TEST-REG\",\"regulationName\":\"Test Accessibility Act\",\"shortName\":\"TAA\",\"jurisdictionId\":\"EU\",\"status\":\"fail\",\"mandatoryViolations\":2,\"recommendedViolations\":1,\"optionalViolations\":0,\"violatedRequirements\":[{\"wcagCriterion\":\"1.1.1\",\"obligation\":\"mandatory\",\"issueCount\":1},{\"wcagCriterion\":\"1.4.3\",\"obligation\":\"mandatory\",\"issueCount\":1},{\"wcagCriterion\":\"2.4.4\",\"obligation\":\"recommended\",\"issueCount\":1}]}},\"annotatedIssues\":[{\"code\":\"WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail\",\"wcagCriterion\":\"1.4.3\",\"wcagLevel\":\"AA\",\"originalIssue\":{\"type\":\"error\",\"code\":\"WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail\",\"message\":\"Insufficient contrast ratio on the promo note\",\"selector\":\"#fabrikam-promo-note\",\"context\":\"<p id=\\\"fabrikam-promo-note\\\">Promo text</p>\",\"brandMatch\":{\"matched\":true,\"strategy\":\"color-pair\",\"matchDetail\":\"Brand blue pair\"}},\"regulations\":[{\"regulationId\":\"TEST-REG\",\"regulationName\":\"Test Accessibility Act\",\"shortName\":\"TAA\",\"jurisdictionId\":\"EU\",\"obligation\":\"mandatory\",\"enforcementDate\":\"2025-06-28\"}]},{\"code\":\"WCAG2A.Principle1.Guideline1_1.1_1_1.H37\",\"wcagCriterion\":\"1.1.1\",\"wcagLevel\":\"A\",\"originalIssue\":{\"type\":\"error\",\"code\":\"WCAG2A.Principle1.Guideline1_1.1_1_1.H37\",\"message\":\"Image is missing a text alternative\",\"selector\":\"#fabrikam-hero-img\",\"context\":\"<img id=\\\"fabrikam-hero-img\\\" src=\\\"hero.png\\\">\",\"brandMatch\":{\"matched\":true,\"strategy\":\"selector\",\"matchDetail\":\"Hero image token\"}},\"regulations\":[{\"regulationId\":\"TEST-REG\",\"regulationName\":\"Test Accessibility Act\",\"shortName\":\"TAA\",\"jurisdictionId\":\"EU\",\"obligation\":\"mandatory\",\"enforcementDate\":\"2025-06-28\"}]},{\"code\":\"WCAG2A.Principle2.Guideline2_4.2_4_4.H77\",\"wcagCriterion\":\"2.4.4\",\"wcagLevel\":\"A\",\"originalIssue\":{\"type\":\"warning\",\"code\":\"WCAG2A.Principle2.Guideline2_4.2_4_4.H77\",\"message\":\"Link purpose is unclear from the link text alone\",\"selector\":\"#fabrikam-more-link\",\"context\":\"<a id=\\\"fabrikam-more-link\\\" href=\\\"/more\\\">More</a>\"},\"regulations\":[{\"regulationId\":\"TEST-REG\",\"regulationName\":\"Test Accessibility Act\",\"shortName\":\"TAA\",\"jurisdictionId\":\"EU\",\"obligation\":\"recommended\",\"enforcementDate\":\"2025-06-28\"}]}],\"summary\":{\"totalJurisdictions\":1,\"passing\":0,\"failing\":1,\"totalMandatoryViolations\":2,\"totalOptionalViolations\":0}},\"complianceMatrix\":[{\"jurisdictionId\":\"EU\",\"jurisdictionName\":\"Test Union\",\"status\":\"fail\",\"mandatoryViolations\":2,\"recommendedViolations\":1,\"optionalViolations\":0,\"regulations\":[{\"regulationId\":\"TEST-REG\",\"regulationName\":\"Test Accessibility Act\",\"shortName\":\"TAA\",\"status\":\"fail\",\"enforcementDate\":\"2025-06-28\",\"scope\":\"public\",\"violations\":[{\"wcagCriterion\":\"1.1.1\",\"obligation\":\"mandatory\",\"issueCount\":1},{\"wcagCriterion\":\"1.4.3\",\"obligation\":\"mandatory\",\"issueCount\":1},{\"wcagCriterion\":\"2.4.4\",\"obligation\":\"recommended\",\"issueCount\":1}]}]}],\"regulationMatrix\":[{\"regulationId\":\"TEST-REG\",\"regulationName\":\"Test Accessibility Act\",\"shortName\":\"TAA\",\"jurisdictionId\":\"EU\",\"status\":\"fail\",\"mandatoryViolations\":2,\"recommendedViolations\":1,\"optionalViolations\":0,\"violatedRequirements\":[{\"wcagCriterion\":\"1.1.1\",\"obligation\":\"mandatory\",\"issueCount\":1},{\"wcagCriterion\":\"1.4.3\",\"obligation\":\"mandatory\",\"issueCount\":1},{\"wcagCriterion\":\"2.4.4\",\"obligation\":\"recommended\",\"issueCount\":1}]}]}",
+      "brandRelatedCount": 0,
+      "publicShareEnabled": false,
+      "publicShareEnabledAt": null,
+      "publicShareEnabledBy": null
+    },
+    "report": {
+      "scanId": "scan-fabrikam-golden-0001",
+      "siteUrl": "https://fabrikam.example/shop/",
+      "standard": "WCAG2AA",
+      "completedAt": "2026-10-01T10:05:00.000Z",
+      "summary": {
+        "pagesScanned": 3,
+        "totalIssues": 8,
+        "byLevel": {
+          "error": 5,
+          "warning": 2,
+          "notice": 1
+        },
+        "pagesFailed": 0
+      },
+      "pages": [
+        {
+          "url": "https://fabrikam.example/shop/",
+          "issues": [
+            {
+              "type": "error",
+              "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+              "message": "Insufficient contrast: the contrast ratio on the promo note is less than 4.5:1",
+              "selector": "#fabrikam-promo-note",
+              "context": "<p id=\"fabrikam-promo-note\">Promo text</p>",
+              "brandMatch": {
+                "matched": true,
+                "strategy": "color-pair",
+                "matchDetail": "Brand blue pair"
+              },
+              "wcagCriterion": "1.4.3",
+              "wcagTitle": "Contrast (Minimum)"
+            },
+            {
+              "type": "error",
+              "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+              "message": "Insufficient contrast: the contrast ratio on the footer note is less than 4.5:1",
+              "selector": "#fabrikam-footer-note",
+              "context": "<p id=\"fabrikam-footer-note\">Footer text</p>",
+              "brandMatch": {
+                "matched": true,
+                "strategy": "color-pair",
+                "matchDetail": "Brand grey pair"
+              },
+              "wcagCriterion": "1.4.3",
+              "wcagTitle": "Contrast (Minimum)"
+            },
+            {
+              "type": "warning",
+              "code": "WCAG2A.Principle2.Guideline2_4.2_4_4.H77",
+              "message": "Link purpose is unclear from the link text alone",
+              "selector": "#fabrikam-more-link",
+              "context": "<a id=\"fabrikam-more-link\" href=\"/more\">More</a>",
+              "wcagCriterion": "2.4.4",
+              "wcagTitle": "Link Purpose (In Context)"
+            }
+          ],
+          "issueCount": 3
+        },
+        {
+          "url": "https://fabrikam.example/shop/about",
+          "issues": [
+            {
+              "type": "error",
+              "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+              "message": "Insufficient contrast: the contrast ratio on the promo note is less than 4.5:1",
+              "selector": "#fabrikam-promo-note",
+              "context": "<p id=\"fabrikam-promo-note\">Promo text</p>",
+              "brandMatch": {
+                "matched": true,
+                "strategy": "color-pair",
+                "matchDetail": "Brand blue pair"
+              },
+              "wcagCriterion": "1.4.3",
+              "wcagTitle": "Contrast (Minimum)"
+            },
+            {
+              "type": "error",
+              "code": "WCAG2A.Principle1.Guideline1_1.1_1_1.H37",
+              "message": "Img element missing an alt attribute on the hero image",
+              "selector": "#fabrikam-hero-img",
+              "context": "<img id=\"fabrikam-hero-img\" src=\"hero.png\">",
+              "brandMatch": {
+                "matched": true,
+                "strategy": "selector",
+                "matchDetail": "Hero image token"
+              },
+              "wcagCriterion": "1.1.1",
+              "wcagTitle": "Non-text Content"
+            },
+            {
+              "type": "warning",
+              "code": "WCAG2A.Principle2.Guideline2_4.2_4_4.H77",
+              "message": "Link purpose is unclear from the link text alone",
+              "selector": "#fabrikam-more-link",
+              "context": "<a id=\"fabrikam-more-link\" href=\"/more\">More</a>",
+              "wcagCriterion": "2.4.4",
+              "wcagTitle": "Link Purpose (In Context)"
+            }
+          ],
+          "issueCount": 3
+        },
+        {
+          "url": "https://fabrikam.example/shop/contact",
+          "issues": [
+            {
+              "type": "error",
+              "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+              "message": "Insufficient contrast: the contrast ratio on the promo note is less than 4.5:1",
+              "selector": "#fabrikam-promo-note",
+              "context": "<p id=\"fabrikam-promo-note\">Promo text</p>",
+              "brandMatch": {
+                "matched": true,
+                "strategy": "color-pair",
+                "matchDetail": "Brand blue pair"
+              },
+              "wcagCriterion": "1.4.3",
+              "wcagTitle": "Contrast (Minimum)"
+            },
+            {
+              "type": "notice",
+              "code": "lighthouse.fallback",
+              "message": "Engine fallback finding for the whole page",
+              "selector": "html",
+              "context": ""
+            }
+          ],
+          "issueCount": 2
+        }
+      ],
+      "errors": [],
+      "compliance": {
+        "matrix": {
+          "EU": {
+            "jurisdictionId": "EU",
+            "jurisdictionName": "Test Union",
+            "status": "fail",
+            "mandatoryViolations": 2,
+            "recommendedViolations": 1,
+            "optionalViolations": 0,
+            "regulations": [
+              {
+                "regulationId": "TEST-REG",
+                "regulationName": "Test Accessibility Act",
+                "shortName": "TAA",
+                "status": "fail",
+                "enforcementDate": "2025-06-28",
+                "scope": "public",
+                "violations": [
+                  {
+                    "wcagCriterion": "1.1.1",
+                    "obligation": "mandatory",
+                    "issueCount": 1
+                  },
+                  {
+                    "wcagCriterion": "1.4.3",
+                    "obligation": "mandatory",
+                    "issueCount": 1
+                  },
+                  {
+                    "wcagCriterion": "2.4.4",
+                    "obligation": "recommended",
+                    "issueCount": 1
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "regulationMatrix": {
+          "TEST-REG": {
+            "regulationId": "TEST-REG",
+            "regulationName": "Test Accessibility Act",
+            "shortName": "TAA",
+            "jurisdictionId": "EU",
+            "status": "fail",
+            "mandatoryViolations": 2,
+            "recommendedViolations": 1,
+            "optionalViolations": 0,
+            "violatedRequirements": [
+              {
+                "wcagCriterion": "1.1.1",
+                "obligation": "mandatory",
+                "issueCount": 1
+              },
+              {
+                "wcagCriterion": "1.4.3",
+                "obligation": "mandatory",
+                "issueCount": 1
+              },
+              {
+                "wcagCriterion": "2.4.4",
+                "obligation": "recommended",
+                "issueCount": 1
+              }
+            ]
+          }
+        },
+        "annotatedIssues": [
+          {
+            "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+            "wcagCriterion": "1.4.3",
+            "wcagLevel": "AA",
+            "originalIssue": {
+              "type": "error",
+              "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+              "message": "Insufficient contrast ratio on the promo note",
+              "selector": "#fabrikam-promo-note",
+              "context": "<p id=\"fabrikam-promo-note\">Promo text</p>",
+              "brandMatch": {
+                "matched": true,
+                "strategy": "color-pair",
+                "matchDetail": "Brand blue pair"
+              }
+            },
+            "regulations": [
+              {
+                "regulationId": "TEST-REG",
+                "regulationName": "Test Accessibility Act",
+                "shortName": "TAA",
+                "jurisdictionId": "EU",
+                "obligation": "mandatory",
+                "enforcementDate": "2025-06-28"
+              }
+            ]
+          },
+          {
+            "code": "WCAG2A.Principle1.Guideline1_1.1_1_1.H37",
+            "wcagCriterion": "1.1.1",
+            "wcagLevel": "A",
+            "originalIssue": {
+              "type": "error",
+              "code": "WCAG2A.Principle1.Guideline1_1.1_1_1.H37",
+              "message": "Image is missing a text alternative",
+              "selector": "#fabrikam-hero-img",
+              "context": "<img id=\"fabrikam-hero-img\" src=\"hero.png\">",
+              "brandMatch": {
+                "matched": true,
+                "strategy": "selector",
+                "matchDetail": "Hero image token"
+              }
+            },
+            "regulations": [
+              {
+                "regulationId": "TEST-REG",
+                "regulationName": "Test Accessibility Act",
+                "shortName": "TAA",
+                "jurisdictionId": "EU",
+                "obligation": "mandatory",
+                "enforcementDate": "2025-06-28"
+              }
+            ]
+          },
+          {
+            "code": "WCAG2A.Principle2.Guideline2_4.2_4_4.H77",
+            "wcagCriterion": "2.4.4",
+            "wcagLevel": "A",
+            "originalIssue": {
+              "type": "warning",
+              "code": "WCAG2A.Principle2.Guideline2_4.2_4_4.H77",
+              "message": "Link purpose is unclear from the link text alone",
+              "selector": "#fabrikam-more-link",
+              "context": "<a id=\"fabrikam-more-link\" href=\"/more\">More</a>"
+            },
+            "regulations": [
+              {
+                "regulationId": "TEST-REG",
+                "regulationName": "Test Accessibility Act",
+                "shortName": "TAA",
+                "jurisdictionId": "EU",
+                "obligation": "recommended",
+                "enforcementDate": "2025-06-28"
+              }
+            ]
+          }
+        ],
+        "summary": {
+          "totalJurisdictions": 1,
+          "passing": 0,
+          "failing": 1,
+          "totalMandatoryViolations": 2,
+          "totalOptionalViolations": 0
+        }
+      },
+      "complianceMatrix": [
+        {
+          "jurisdictionId": "EU",
+          "jurisdictionName": "Test Union",
+          "status": "fail",
+          "mandatoryViolations": 2,
+          "recommendedViolations": 1,
+          "optionalViolations": 0,
+          "regulations": [
+            {
+              "regulationId": "TEST-REG",
+              "regulationName": "Test Accessibility Act",
+              "shortName": "TAA",
+              "status": "fail",
+              "enforcementDate": "2025-06-28",
+              "scope": "public",
+              "violations": [
+                {
+                  "wcagCriterion": "1.1.1",
+                  "obligation": "mandatory",
+                  "issueCount": 1
+                },
+                {
+                  "wcagCriterion": "1.4.3",
+                  "obligation": "mandatory",
+                  "issueCount": 1
+                },
+                {
+                  "wcagCriterion": "2.4.4",
+                  "obligation": "recommended",
+                  "issueCount": 1
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "regulationMatrix": [
+        {
+          "regulationId": "TEST-REG",
+          "regulationName": "Test Accessibility Act",
+          "shortName": "TAA",
+          "jurisdictionId": "EU",
+          "status": "fail",
+          "mandatoryViolations": 2,
+          "recommendedViolations": 1,
+          "optionalViolations": 0,
+          "violatedRequirements": [
+            {
+              "wcagCriterion": "1.1.1",
+              "obligation": "mandatory",
+              "issueCount": 1
+            },
+            {
+              "wcagCriterion": "1.4.3",
+              "obligation": "mandatory",
+              "issueCount": 1
+            },
+            {
+              "wcagCriterion": "2.4.4",
+              "obligation": "recommended",
+              "issueCount": 1
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
