@@ -21,7 +21,7 @@ import {
 import { driveStatementHtml } from '../golden/drivers/acr-export-drivers.js';
 import { accessibilityStatementRoutes } from '../../src/routes/accessibility-statement.js';
 import { buildAccessibilityStatement } from '../../src/services/accessibility-statement-service.js';
-import type { VpatReport, VpatRow } from '../../src/services/vpat-service.js';
+import { dismissalNoteEn, type VpatReport, type VpatRow } from '../../src/services/vpat-service.js';
 import type { AccessibilityStatementRecord } from '../../src/db/interfaces/accessibility-statement-repository.js';
 import {
   DISMISS_PARTIAL,
@@ -47,10 +47,11 @@ async function dismiss(match: { readonly code: string; readonly selector: string
 }
 
 const DISMISSED_HEADING = 'Automated findings dismissed after review';
+const IT_DISMISSED_HEADING = 'Rilevamenti automatici esclusi dopo la revisione';
 
 /** The dismissed-findings section: from its heading to the next <h2>, or '' when absent. */
-function dismissedSection(html: string): string {
-  const start = html.indexOf(DISMISSED_HEADING);
+function dismissedSection(html: string, heading: string = DISMISSED_HEADING): string {
+  const start = html.indexOf(heading);
   if (start === -1) return '';
   const next = html.indexOf('<h2', start);
   return html.slice(start, next === -1 ? undefined : next);
@@ -259,5 +260,112 @@ describe('admin preview template and locales', () => {
       // The count placeholder must survive translation (double-brace).
       expect(block['public']?.['dismissedItem'], `${locale} dismissedItem placeholder`).toContain('{{count}}');
     }
+  });
+});
+
+// Orchestrator-added item (88-14): a limitation's remark must not repeat the English
+// dismissal sentence, because the dedicated (localised) section already discloses it.
+describe('statement limitations do not repeat the English dismissal sentence', () => {
+  const SENTENCE_THREE = dismissalNoteEn(3);
+  const baseRow: VpatRow = {
+    criterion: '1.4.3',
+    title: 'Contrast (Minimum)',
+    level: 'AA',
+    version: '2.1',
+    url: 'https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html',
+    conformance: 'Does Not Support',
+    remarks: '',
+  };
+
+  async function italianStatementHtml(): Promise<string> {
+    await ctx.storage.accessibilityStatements.upsert(
+      ctx.orgs.fabrikamOrgId,
+      {
+        enabled: true,
+        wcagVersion: '2.1',
+        wcagLevel: 'AA',
+        entityName: 'Fabrikam',
+        siteUrl: FABRIKAM_SITE,
+        contactEmail: 'access@fabrikam.example',
+      },
+      'fabrikam-admin',
+    );
+    const server = await makeServer(ctx, async (s) => {
+      s.addHook('preHandler', async (request) => {
+        (request.session as unknown as { set(k: string, v: unknown): void }).set('locale', 'it');
+      });
+      await accessibilityStatementRoutes(s, ctx.storage);
+    });
+    try {
+      const res = await server.inject({ method: 'GET', url: '/accessibility-statement/fabrikam' });
+      expect(res.statusCode).toBe(200);
+      return res.body;
+    } finally {
+      await server.close();
+    }
+  }
+
+  it('Italian statement limitations carry no English dismissal sentence and the count stays in the dedicated section', async () => {
+    await dismiss(DISMISS_PARTIAL);
+    await dismiss(DISMISS_WHOLE);
+    const html = await italianStatementHtml();
+
+    // Sanity: the page really is the Italian one, and 1.4.3 is still a limitation.
+    expect(dismissedSection(html, IT_DISMISSED_HEADING)).not.toBe('');
+    const contrast = limitationBlocks(html).find((l) => l.includes('(WCAG 1.4.3)'));
+    expect(contrast).toBeDefined();
+
+    expect(contrast).not.toContain('dismissed as');
+    expect(html).not.toContain(SENTENCE_THREE);
+    expect(html).not.toContain(dismissalNoteEn(1));
+    // The count is still disclosed, once, in the dedicated localised section.
+    expect(dismissedSection(html, IT_DISMISSED_HEADING)).toContain(
+      '3 rilevamento/i automatico/i escluso/i come falso positivo dopo la revisione',
+    );
+  });
+
+  it('English statement discloses the count once: in the dedicated section, not in the limitation remark', async () => {
+    await dismiss(DISMISS_PARTIAL);
+    await dismiss(DISMISS_WHOLE);
+    const html = await driveStatementHtml(ctx);
+    const contrast = limitationBlocks(html).find((l) => l.includes('(WCAG 1.4.3)'));
+    expect(contrast).toBeDefined();
+    expect(contrast).not.toContain('dismissed as');
+    expect(dismissedSection(html)).toContain('3 automated finding(s) dismissed as false positives after review');
+  });
+
+  it('strips exactly the trailing sentence and keeps an earlier evidence note', () => {
+    const row: VpatRow = { ...baseRow, remarks: `2 manual evidence files — ${SENTENCE_THREE}`, dismissedCount: 3 };
+    const view = buildAccessibilityStatement(configRecord(), plainVpat([row]), { generatedAt: '2026-10-01' });
+    expect(view.knownLimitations[0]?.remarks).toBe('2 manual evidence files');
+  });
+
+  it('a remark that is only the sentence becomes empty', () => {
+    const row: VpatRow = { ...baseRow, remarks: SENTENCE_THREE, dismissedCount: 3 };
+    const view = buildAccessibilityStatement(configRecord(), plainVpat([row]), { generatedAt: '2026-10-01' });
+    expect(view.knownLimitations[0]?.remarks).toBe('');
+  });
+
+  it('leaves a remark alone unless it ends with the exact sentence for its own count (no fuzzy match)', () => {
+    const wrongCount: VpatRow = { ...baseRow, remarks: `Colour pairs fail — ${SENTENCE_THREE}`, dismissedCount: 2 };
+    const lookalike: VpatRow = {
+      ...baseRow,
+      criterion: '1.4.11',
+      remarks: '3 automated findings were dismissed as false positives by a reviewer.',
+      dismissedCount: 3,
+    };
+    const noCount: VpatRow = { ...baseRow, criterion: '1.4.12', remarks: SENTENCE_THREE };
+    const view = buildAccessibilityStatement(
+      configRecord(),
+      plainVpat([wrongCount, lookalike, noCount]),
+      { generatedAt: '2026-10-01' },
+    );
+    expect(view.knownLimitations.map((l) => l.remarks)).toEqual([wrongCount.remarks, lookalike.remarks, noCount.remarks]);
+  });
+
+  it('zero dismissals leaves every remark exactly as the row carries it', () => {
+    const row: VpatRow = { ...baseRow, remarks: 'Contrast fails on the footer.' };
+    const view = buildAccessibilityStatement(configRecord(), plainVpat([row]), { generatedAt: '2026-10-01' });
+    expect(view.knownLimitations[0]?.remarks).toBe('Contrast fails on the footer.');
   });
 });
