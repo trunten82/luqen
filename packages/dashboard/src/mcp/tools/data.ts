@@ -36,6 +36,8 @@ import {
   applyActiveDismissals,
   withDismissalsInRawBlob,
 } from '../../services/issue-dismissals/load-dismissed-report.js';
+import { filterDismissedIssues } from '../../services/issue-dismissals/apply-dismissals.js';
+import { toSiteKey } from '../../services/issue-dismissals/site-key.js';
 
 /**
  * Slim projection of ScanRecord for list responses. Explicitly OMITS the
@@ -550,10 +552,13 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
       if (lookup.ok === false) {
         return errorEnvelope(lookup.error);
       }
-      const report = await storage.scans.getReport(args.scanId);
-      if (report === null) {
+      const rawReport = await storage.scans.getReport(args.scanId);
+      if (rawReport === null) {
         return errorEnvelope('Report not available');
       }
+      // Phase 88 (W2, FP-11): the shapes read below are not the `pages` shape the loader filters,
+      // so the extracted list is filtered with the SAME matcher over the scan's own active rows.
+      const { report, active } = await applyActiveDismissals(storage, lookup.scan, rawReport);
       // Report shape from pa11y/orchestrator: either { issues: [...] } or
       // { results: [{ issues: [...] }] } (one-page vs multi-page scan).
       // Flatten defensively; corresponding test exercises both shapes.
@@ -568,7 +573,8 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
               ] as Array<{ issues?: Array<Record<string, unknown>> }>
             ).flatMap((r) => r.issues ?? [])
           : [];
-      const filtered = rawIssues.filter((issue) => {
+      const visible = filterDismissedIssues(rawIssues, active, toSiteKey(lookup.scan.siteUrl));
+      const filtered = visible.filter((issue) => {
         if (args.type !== undefined && issue['type'] !== args.type) return false;
         if (args.codePrefix !== undefined) {
           const code = typeof issue['code'] === 'string' ? (issue['code'] as string) : '';

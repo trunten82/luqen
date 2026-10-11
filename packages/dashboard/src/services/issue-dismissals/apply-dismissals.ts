@@ -13,6 +13,10 @@
  *
  * Out of scope on purpose: compliance, complianceMatrix, regulationMatrix and
  * confirmedViolations are left untouched (Phase 88, FP-12).
+ *
+ * filterDismissedIssues (Phase 88 Plan 17, W2 / FP-11) serves the list shapes
+ * applyDismissals never reads (`issues`, `results[].issues`, as dashboard_query_issues
+ * extracts them). It is built on the same buildMatcher, never a second matcher.
  */
 import { flattenIssueOccurrences } from '../issue-occurrences.js';
 import { countIssues, sanitizeReportParts } from '../count-issues.js';
@@ -116,4 +120,19 @@ export function applyDismissals<R>(
     next.templateIssues = rawReport.templateIssues.filter((t) => matcher(t) === undefined);
   }
   return { report: withRecomputedSummary(next) as R, dismissed };
+}
+
+/**
+ * Drop the issues an active dismissal of this site covers from an already-extracted list.
+ * Same rules as applyDismissals (this site's dismissals only; code AND selector strictly
+ * equal). Returns the input array itself when nothing matches; never mutates its inputs.
+ */
+export function filterDismissedIssues<T>(
+  issues: readonly T[],
+  activeDismissals: readonly DismissalMatch[],
+  siteKey: string,
+): readonly T[] {
+  const matcher = buildMatcher(activeDismissals, siteKey);
+  const kept = issues.filter((issue) => matcher(issue) === undefined);
+  return kept.length === issues.length ? issues : kept;
 }
