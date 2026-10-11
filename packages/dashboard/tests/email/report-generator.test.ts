@@ -4,6 +4,7 @@ import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import type { ScanRecord } from '../../src/db/types.js';
+import type { StorageAdapter } from '../../src/db/index.js';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -36,6 +37,9 @@ import { generateReportHtml, generateIssuesCsv, buildEmailBody } from '../../src
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/** A storage without an issueDismissals repository: the dismissal loader is identity. */
+const NO_DISMISSALS_STORAGE = {} as unknown as StorageAdapter;
 
 function makeScan(overrides: Partial<ScanRecord> = {}): ScanRecord {
   return {
@@ -168,20 +172,20 @@ describe('generateIssuesCsv', () => {
   });
 
   it('returns null when the report file does not exist', async () => {
-    const result = await generateIssuesCsv(makeScan(), '/nonexistent/path.json');
+    const result = await generateIssuesCsv(makeScan(), '/nonexistent/path.json', NO_DISMISSALS_STORAGE);
     expect(result).toBeNull();
   });
 
   it('returns null when the file contains invalid JSON', async () => {
     const filePath = createTempJsonFile('not valid json');
     writeFileSync(filePath, 'not valid json', 'utf-8');
-    const result = await generateIssuesCsv(makeScan(), filePath);
+    const result = await generateIssuesCsv(makeScan(), filePath, NO_DISMISSALS_STORAGE);
     expect(result).toBeNull();
   });
 
   it('returns CSV headers even when there are no issues', async () => {
     const filePath = createTempJsonFile({ pages: [] });
-    const result = await generateIssuesCsv(makeScan(), filePath);
+    const result = await generateIssuesCsv(makeScan(), filePath, NO_DISMISSALS_STORAGE);
     expect(result).not.toBeNull();
     expect(result!).toContain('Severity');
     expect(result!).toContain('WCAG Criterion');
@@ -206,7 +210,7 @@ describe('generateIssuesCsv', () => {
       ],
     };
     const filePath = createTempJsonFile(data);
-    const result = await generateIssuesCsv(makeScan(), filePath);
+    const result = await generateIssuesCsv(makeScan(), filePath, NO_DISMISSALS_STORAGE);
 
     expect(result).not.toBeNull();
     expect(result!).toContain('error');
@@ -229,7 +233,7 @@ describe('generateIssuesCsv', () => {
       ],
     };
     const filePath = createTempJsonFile(data);
-    const result = await generateIssuesCsv(makeScan(), filePath);
+    const result = await generateIssuesCsv(makeScan(), filePath, NO_DISMISSALS_STORAGE);
 
     expect(result).not.toBeNull();
     expect(result!).toContain('warning');
@@ -249,7 +253,7 @@ describe('generateIssuesCsv', () => {
       ],
     };
     const filePath = createTempJsonFile(data);
-    const result = await generateIssuesCsv(makeScan({ siteUrl: 'https://scan-url.com' }), filePath);
+    const result = await generateIssuesCsv(makeScan({ siteUrl: 'https://scan-url.com' }), filePath, NO_DISMISSALS_STORAGE);
 
     expect(result).not.toBeNull();
     expect(result!).toContain('https://scan-url.com');
@@ -278,7 +282,7 @@ describe('generateIssuesCsv', () => {
       },
     };
     const filePath = createTempJsonFile(data);
-    const result = await generateIssuesCsv(makeScan(), filePath);
+    const result = await generateIssuesCsv(makeScan(), filePath, NO_DISMISSALS_STORAGE);
 
     expect(result).not.toBeNull();
     expect(result!).toContain('EAA');
@@ -310,7 +314,7 @@ describe('generateIssuesCsv', () => {
       },
     };
     const filePath = createTempJsonFile(data);
-    const result = await generateIssuesCsv(makeScan(), filePath);
+    const result = await generateIssuesCsv(makeScan(), filePath, NO_DISMISSALS_STORAGE);
 
     expect(result).not.toBeNull();
     expect(result!).toContain('ADA');
@@ -335,7 +339,7 @@ describe('generateIssuesCsv', () => {
       },
     };
     const filePath = createTempJsonFile(data);
-    const result = await generateIssuesCsv(makeScan(), filePath);
+    const result = await generateIssuesCsv(makeScan(), filePath, NO_DISMISSALS_STORAGE);
 
     expect(result).not.toBeNull();
     // EAA should appear only once per row
@@ -367,7 +371,7 @@ describe('generateIssuesCsv', () => {
       ],
     };
     const filePath = createTempJsonFile(data);
-    const result = await generateIssuesCsv(makeScan(), filePath);
+    const result = await generateIssuesCsv(makeScan(), filePath, NO_DISMISSALS_STORAGE);
 
     expect(result).not.toBeNull();
     expect(result!).toContain('4.1.2');
@@ -393,7 +397,7 @@ describe('generateIssuesCsv', () => {
       ],
     };
     const filePath = createTempJsonFile(data);
-    const result = await generateIssuesCsv(makeScan(), filePath);
+    const result = await generateIssuesCsv(makeScan(), filePath, NO_DISMISSALS_STORAGE);
 
     expect(result).not.toBeNull();
     expect(result!).toContain('AODA');
@@ -417,7 +421,7 @@ describe('generateIssuesCsv', () => {
       ],
     };
     const filePath = createTempJsonFile(data);
-    const result = await generateIssuesCsv(makeScan(), filePath);
+    const result = await generateIssuesCsv(makeScan(), filePath, NO_DISMISSALS_STORAGE);
 
     expect(result).not.toBeNull();
     expect(result!).toContain('"This message has, a comma"');
@@ -441,7 +445,7 @@ describe('generateIssuesCsv', () => {
       ],
     };
     const filePath = createTempJsonFile(data);
-    const result = await generateIssuesCsv(makeScan(), filePath);
+    const result = await generateIssuesCsv(makeScan(), filePath, NO_DISMISSALS_STORAGE);
 
     expect(result).not.toBeNull();
     expect(result!).toContain('""quotes""');
@@ -465,7 +469,7 @@ describe('generateIssuesCsv', () => {
       ],
     };
     const filePath = createTempJsonFile(data);
-    const result = await generateIssuesCsv(makeScan(), filePath);
+    const result = await generateIssuesCsv(makeScan(), filePath, NO_DISMISSALS_STORAGE);
 
     expect(result).not.toBeNull();
     expect(result!).toContain('"Line1\nLine2"');
@@ -496,7 +500,7 @@ describe('inferComponent (via CSV)', () => {
 
   async function getComponent(selector: string, context: string): Promise<string> {
     const filePath = createTempJsonFile(makeIssueData(selector, context));
-    const result = await generateIssuesCsv(makeScan(), filePath);
+    const result = await generateIssuesCsv(makeScan(), filePath, NO_DISMISSALS_STORAGE);
     const lines = result!.split('\r\n');
     const cols = lines[1].split(',');
     return cols[cols.length - 1]; // Component is the last column

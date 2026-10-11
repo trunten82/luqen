@@ -2,10 +2,12 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { StorageAdapter } from '../db/index.js';
 import type { ScanRecord } from '../db/types.js';
 import { extractCriterion, getWcagDescription } from '../routes/wcag-enrichment.js';
 import { normalizeReportData, inferComponent } from '../services/report-service.js';
 import type { JsonReportFile } from '../services/report-service.js';
+import { applyActiveDismissals } from '../services/issue-dismissals/load-dismissed-report.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -79,12 +81,16 @@ function toCsv(headers: readonly string[], rows: readonly (readonly string[])[])
 export async function generateIssuesCsv(
   scan: ScanRecord,
   reportJsonPath: string,
+  // Required (not optional): an optional storage would let a caller skip the scan org's
+  // active dismissals silently (Phase 88, D-05).
+  storage: StorageAdapter,
 ): Promise<string | null> {
   if (!existsSync(reportJsonPath)) return null;
 
   let raw: JsonReportFile;
   try {
     raw = JSON.parse(await readFile(reportJsonPath, 'utf-8')) as JsonReportFile;
+    raw = (await applyActiveDismissals(storage, scan, raw)).report;
   } catch {
     return null;
   }

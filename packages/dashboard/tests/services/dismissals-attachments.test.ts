@@ -11,6 +11,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 process.env['TZ'] ??= 'UTC';
 
+import { generateIssuesCsv } from '../../src/email/report-generator.js';
+import type { StorageAdapter } from '../../src/db/index.js';
 import {
   createSurfaceContext,
   driveEmailCsv,
@@ -66,5 +68,32 @@ describe('notification attachments apply the scan org active dismissals', () => 
     assertDismissedAbsent(text, 'partial');
     assertSiblingPresent(text);
     expect(call.reportData.summary.totalIssues).toBe(AFTER_PARTIAL.total);
+  });
+
+  it('email CSV attachment omits a dismissed finding', async () => {
+    await dismiss(DISMISS_PARTIAL);
+    const attachments = await driveEmailCsv(ctx);
+    expect(attachments).toHaveLength(1);
+    const csv = attachments[0]!.content;
+    assertDismissedAbsent(csv, 'partial');
+    assertSiblingPresent(csv);
+    // Header row unchanged (P2: no reason/actor column), one data row per surviving occurrence.
+    const lines = csv.trimEnd().split('\r\n');
+    expect(lines[0]).toBe('Severity,WCAG Criterion,WCAG Title,Message,Selector,Page URL,Regulations,Component');
+    expect(lines.length - 1).toBe(AFTER_PARTIAL.total);
+  });
+
+  it('email CSV attachment is withheld, never sent unfiltered, when the dismissal lookup fails', async () => {
+    await dismiss(DISMISS_PARTIAL);
+    const scan = await ctx.storage.scans.getScan(ctx.scanId);
+    const failing = {
+      issueDismissals: {
+        listActiveForSite: async () => {
+          throw new Error('lookup unavailable');
+        },
+      },
+    } as unknown as StorageAdapter;
+    const csv = await generateIssuesCsv(scan!, scan!.jsonReportPath!, failing);
+    expect(csv).toBeNull();
   });
 });

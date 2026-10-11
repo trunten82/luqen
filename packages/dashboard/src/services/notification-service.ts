@@ -146,8 +146,9 @@ export async function buildPdfAttachment(
 export async function buildCsvAttachment(
   scan: ScanRecord,
   reportPath: string,
+  storage: StorageAdapter,
 ): Promise<EmailAttachment | null> {
-  const csv = await generateIssuesCsv(scan, reportPath);
+  const csv = await generateIssuesCsv(scan, reportPath, storage);
   if (csv === null) return null;
 
   const hostname = extractHostname(scan.siteUrl);
@@ -183,7 +184,7 @@ export async function buildAttachments(
   }
 
   if (wantsCsv) {
-    const csv = await buildCsvAttachment(scan, reportPath);
+    const csv = await buildCsvAttachment(scan, reportPath, storage);
     if (csv !== null) {
       attachments.push(csv);
     }
