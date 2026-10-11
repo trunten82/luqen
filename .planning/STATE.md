@@ -5,17 +5,17 @@ milestone_name: Mark as false positive
 current_phase: 88
 current_phase_name: Dismissals applied on every surface
 status: executing
-stopped_at: Phase 88 context gathered
-last_updated: "2026-10-11T20:16:06.998Z"
-last_activity: 2026-10-08
-last_activity_desc: "2026-10-08: Phase 87 shipped; owner-ruled FULL public-history purge of client names/scan reports (filter-repo, all branches+tags force-pushed, master a22150bb before #103); refs/pull purge pending GitHub Support"
-state_head: 48bed410e41a6f05106de3223a0edbded764f3d0
+stopped_at: Completed 88-13-PLAN.md
+last_updated: "2026-10-11T20:40:23.399Z"
+last_activity: 2026-10-11
+last_activity_desc: Phase 88 execution started
+state_head: 244aa02a21e4ff690af63155962f90e7edfe2aee
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 23
-  completed_plans: 5
-  percent: 22
+  completed_plans: 8
+  percent: 33
 ---
 
 # Project State
@@ -104,14 +104,14 @@ verdict and resurfaces automatically if its file changes.
 See: .planning/PROJECT.md (updated 2026-09-28 — v3.7.0 archived)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** none — dormant by choice, awaiting a new milestone (owner instruction 2026-09-28)
+**Current focus:** Phase 88 — Dismissals applied on every surface
 
 ## Current Position
 
-Phase: 88 (Dismissals applied on every surface) — READY TO EXECUTE
-Plan: —
+Phase: 88 (Dismissals applied on every surface) — EXECUTING
+Plan: 4 of 18
 Status: Ready to execute
-Last activity: 2026-10-08 — Milestone v3.8.0 started
+Last activity: 2026-10-11 — Phase 88 execution started
 
 ## Phase Map (v3.7.0 — AI output quality)
 
@@ -190,9 +190,9 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-11T18:42:26.156Z
-Stopped at: Phase 88 context gathered
-Resume file: .planning/phases/88-dismissals-applied-on-every-surface/88-CONTEXT.md
+Last session: 2026-10-11T20:40:23.344Z
+Stopped at: Completed 88-13-PLAN.md
+Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
 ## Operator Next Steps
@@ -217,3 +217,16 @@ Next action: none until the owner opens a new milestone. If woken with one, star
   host (blind SSRF via Node fetch; after 260928-g6k their page URLs are scope-filtered, the fetch itself
   is not). Needs its own decision.
 - Next-milestone candidates recorded (NOT started): grow the reference sets (the lever on power); behavioral a11y testing beyond Pa11y.
+
+## Performance Metrics
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 88 P01 | 75min | 3 tasks | 9 files |
+| Phase 88 P02 | 7 min | 3 tasks | 5 files |
+| Phase 88 P13 | 10 min | 2 tasks | 7 files |
+
+## Decisions
+
+- [Phase 88]: 88-01: golden baselines use exact-literal replacement for per-run ids and dates; TZ defaults to UTC only when unset so the TZ determinism check is not vacuous
+- [Phase 88]: 88-02: D-04 Case A measured on prod (340 completed scans: confirmed_violations NULL 203, 0 137, non-zero 0); D-13 largest site 138 completed scans, synchronous recompute stays

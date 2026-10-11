@@ -255,14 +255,14 @@ Plans:
   4. A later scan applies active dismissals on BOTH orchestrator paths (standard and incremental). The counts persisted at scan end exclude them, and so do the webhook, plugin and completion payloads. Break-test per path: removing the apply call from one path turns red only that path's test (FP-13).
   5. With zero active dismissals, every surface above produces the same output as before the change, ACR included. A golden comparison on real stored reports proves it, which makes the merge safe to auto-deploy while the permission is dark.
 
-**Plans**: 18 plans (wave 1: 01, 02, 13; wave 2: 03, 04, 05, 06, 11, 15, 16; wave 3: 07, 08, 09, 10, 14, 17, 18; wave 4: 12)
+**Plans**: 3/18 plans executed (wave 1: 01, 02, 13; wave 2: 03, 04, 05, 06, 11, 15, 16; wave 3: 07, 08, 09, 10, 14, 17, 18; wave 4: 12)
 
 Plans:
 **Wave 1**
 
-- [ ] 88-01-PLAN.md — shared fixture + pre-wiring golden baseline for render, export and ACR surfaces (SC5 window; tests only) (FP-06, FP-07, FP-10)
-- [ ] 88-02-PLAN.md — applyActiveDismissals loader, D-08 compliance-matrix filter, persistedCountsFor; read-only prod D-04 + per-site sizing (FP-08, FP-09, FP-12)
-- [ ] 88-13-PLAN.md — every Phase 88 locale key for the ACR disclosure and the Dismissed sheet, all 6 locales, additions-only (FP-07, FP-10)
+- [x] 88-01-PLAN.md — shared fixture + pre-wiring golden baseline for render, export and ACR surfaces (SC5 window; tests only) (FP-06, FP-07, FP-10)
+- [x] 88-02-PLAN.md — applyActiveDismissals loader, D-08 compliance-matrix filter, persistedCountsFor; read-only prod D-04 + per-site sizing (FP-08, FP-09, FP-12)
+- [x] 88-13-PLAN.md — every Phase 88 locale key for the ACR disclosure and the Dismissed sheet, all 6 locales, additions-only (FP-07, FP-10)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -314,7 +314,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 87. Dismissal store, domain model and permission | v3.8.0 | 5/5 | Complete | 2026-10-08 |
-| 88. Dismissals applied on every surface | v3.8.0 | 0/? | Not started | - |
+| 88. Dismissals applied on every surface | v3.8.0 | 3/18 | In Progress|  |
 | 89. Dismissal UI, dark launch and role grant | v3.8.0 | 0/? | Not started | - |
 
 **Risks carried into planning (read from source 2026-10-08; not exercised live):**
