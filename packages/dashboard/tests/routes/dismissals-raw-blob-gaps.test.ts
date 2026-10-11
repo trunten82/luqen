@@ -116,6 +116,22 @@ describe('REST GET /api/v1/scans (list) applies the scan org active dismissals',
     expect(main?.jsonReport).toContain(SEL_SIBLING.replace(/^#/, ''));
   });
 
+  it('IN-01: REST scan list drops an unparseable blob of a site with an active dismissal (fail closed)', async () => {
+    await dismiss();
+    const unparseable = await seedSameSiteScan();
+    await ctx.storage.scans.updateScan(unparseable, { jsonReport: '{"pages": BROKEN-BLOB-7c1d' });
+    const careersId = await seedUnaffectedSiteScan();
+    await ctx.storage.scans.updateScan(careersId, { jsonReport: '{"pages": BROKEN-BLOB-9e4f' });
+    const out = await listScans();
+
+    const dismissedSite = out.rows.find((r) => r.id === unparseable);
+    expect(dismissedSite).toBeDefined();
+    expect(dismissedSite?.jsonReport).toBeUndefined();
+    expect(out.text).not.toContain('BROKEN-BLOB-7c1d');
+    // Zero dismissals for the site: the row is served exactly as stored, parseable or not.
+    expect(out.rows.find((r) => r.id === careersId)?.jsonReport).toBe('{"pages": BROKEN-BLOB-9e4f');
+  });
+
   it('REST scan list looks up dismissals once per org and site, not once per row', async () => {
     await dismiss();
     await seedSameSiteScan();

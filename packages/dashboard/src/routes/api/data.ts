@@ -327,7 +327,9 @@ export async function dataApiRoutes(
           const active = await lookupActive(record);
           if (active.length === 0) return toPublicScan(record);
           const blob = parseRowBlob(record);
-          if (blob === null) return toPublicScan(record);
+          // IN-01: a blob that cannot be parsed cannot be filtered, so it is not served (fail closed,
+          // same as repos.ts); an absent blob has nothing to leak.
+          if (blob === null) return toPublicScan({ ...record, jsonReport: undefined });
           return toPublicScan(withDismissalsInRawBlob(record, applyLoadedDismissals(record, active, blob)));
         }),
       );
