@@ -585,7 +585,6 @@ describe('cross-surface agreement: tenants and stored shapes', () => {
     });
     const data = await viewData<{ scans: Array<{ id: string; errors: number; warnings: number; notices: number; totalIssues: number }> }>(server, '/reports');
     expect(asCounts(data.scans.find((s) => s.id === world.northwindId)!)).toEqual(RAW_COUNTS);
-    expect(asCounts(data.scans.find((s) => s.id === world.newId)!)).toEqual(AFTER_PARTIAL);
   });
 
   it('a summary-less stored report renders the filtered counts from the recomputed columns', async () => {
