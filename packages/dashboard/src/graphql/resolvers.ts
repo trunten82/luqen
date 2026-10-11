@@ -13,6 +13,7 @@ import { VERSION } from '../version.js';
 import { validatePassword, validateUsername } from '../validation.js';
 import { validateScanUrl, VALID_STANDARDS } from '../services/scan-service.js';
 import { retagScansForSite } from '../services/branding-retag.js';
+import { applyActiveDismissals } from '../services/issue-dismissals/load-dismissed-report.js';
 import type { BrandingOrchestrator } from '../services/branding/branding-orchestrator.js';
 
 // ---------------------------------------------------------------------------
@@ -165,7 +166,8 @@ export const resolvers = {
         return { nodes: [], totalCount: 0, pageInfo: buildPageInfo(0, 0, 0) };
       }
 
-      const report = await readReport(scan.jsonReportPath);
+      const rawReport = await readReport(scan.jsonReportPath);
+      const report = (await applyActiveDismissals(ctx.storage, scan, rawReport)).report;
       if (report === null || report.pages === undefined) {
         return { nodes: [], totalCount: 0, pageInfo: buildPageInfo(0, 0, 0) };
       }
