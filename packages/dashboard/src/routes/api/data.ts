@@ -7,6 +7,7 @@ import type { StorageAdapter, ScanRecord } from '../../db/index.js';
 import { SqliteStorageAdapter } from '../../db/sqlite/index.js';
 import { getFixSuggestion } from '../../fix-suggestions.js';
 import { ErrorEnvelope } from '../../api/schemas/envelope.js';
+import { applyActiveDismissals } from '../../services/issue-dismissals/load-dismissed-report.js';
 
 // Data API responds with bare JSON ({ data, total } / { data, ... }) — schemas
 // mirror that shape directly rather than going through LuqenResponse.
@@ -361,7 +362,8 @@ export async function dataApiRoutes(
         return reply.code(404).send({ error: 'Scan not found' });
       }
 
-      const report = await readReport(scan.jsonReportPath);
+      const rawReport = await readReport(scan.jsonReportPath);
+      const report = (await applyActiveDismissals(storage, scan, rawReport)).report;
       if (report === null || report.pages === undefined) {
         return reply.send({ data: [], total: 0 });
       }
