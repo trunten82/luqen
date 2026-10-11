@@ -14,9 +14,10 @@ import { validatePassword, validateUsername } from '../validation.js';
 import { validateScanUrl, VALID_STANDARDS } from '../services/scan-service.js';
 import { retagScansForSite } from '../services/branding-retag.js';
 import type { BrandingOrchestrator } from '../services/branding/branding-orchestrator.js';
+import { bypassesOrgScope } from '../permissions.js';
 import {
   getScanInOrg, getScanForDelete, getScanForAssignment, getAssignmentInOrg, getTeamInOrg,
-  getGuidelineInOrg, requireGuidelineInOrg, requireBrandChildInOrg,
+  getGuidelineInOrg, requireGuidelineInOrg, requireBrandChildInOrg, requireCanManageUser,
 } from './org-scope.js';
 
 // ---------------------------------------------------------------------------
@@ -289,7 +290,12 @@ export const resolvers = {
       ctx: GraphQLContext,
     ) => {
       requirePerm(ctx, 'users.create', 'users.delete', 'users.activate', 'users.reset_password', 'users.roles');
-      return await ctx.storage.users.listUsers();
+      // Mirrors GET /admin/dashboard-users: non-global-admins see their org's users.
+      const currentOrgId = ctx.user?.currentOrgId;
+      if (bypassesOrgScope(ctx.user) || !currentOrgId) {
+        return await ctx.storage.users.listUsers();
+      }
+      return await ctx.storage.users.listUsersForOrg(currentOrgId);
     },
 
     // ── Teams ──────────────────────────────────────────────────────────
@@ -555,7 +561,10 @@ export const resolvers = {
       if (!passwordCheck.valid) {
         throw new Error(passwordCheck.error ?? 'Invalid password');
       }
-      return await ctx.storage.users.createUser(args.username, args.password, args.role ?? 'user');
+      // Mirrors POST /admin/dashboard-users: only a global admin may create an admin.
+      const requestedRole = args.role ?? 'user';
+      const role = requestedRole === 'admin' && !bypassesOrgScope(ctx.user) ? 'user' : requestedRole;
+      return await ctx.storage.users.createUser(args.username, args.password, role);
     },
 
     deleteUser: async (
@@ -565,6 +574,7 @@ export const resolvers = {
     ) => {
       requirePerm(ctx, 'users.delete');
 
+      await requireCanManageUser(ctx, args.id);
       const user = await ctx.storage.users.getUserById(args.id);
       if (user === null) {
         throw new Error(`User not found: ${args.id}`);
@@ -580,6 +590,7 @@ export const resolvers = {
     ) => {
       requirePerm(ctx, 'users.activate');
 
+      await requireCanManageUser(ctx, args.id);
       const user = await ctx.storage.users.getUserById(args.id);
       if (user === null) {
         throw new Error(`User not found: ${args.id}`);
@@ -601,6 +612,7 @@ export const resolvers = {
     ) => {
       requirePerm(ctx, 'users.activate');
 
+      await requireCanManageUser(ctx, args.id);
       const user = await ctx.storage.users.getUserById(args.id);
       if (user === null) {
         throw new Error(`User not found: ${args.id}`);
@@ -622,6 +634,7 @@ export const resolvers = {
     ) => {
       requirePerm(ctx, 'users.reset_password');
 
+      await requireCanManageUser(ctx, args.id);
       const user = await ctx.storage.users.getUserById(args.id);
       if (user === null) {
         throw new Error(`User not found: ${args.id}`);

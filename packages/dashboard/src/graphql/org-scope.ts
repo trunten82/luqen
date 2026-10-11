@@ -7,6 +7,7 @@
  * with the error that REST's status code stands for.
  */
 import { bypassesOrgScope } from '../permissions.js';
+import { canManageUser } from '../services/user-scope.js';
 import type {
   ScanRecord, IssueAssignment, BrandingGuidelineRecord, Team,
 } from '../db/index.js';
@@ -123,4 +124,13 @@ export async function requireBrandChildInOrg(
     if (children.some((c) => c.id === childId)) return;
   }
   throw new Error(`${CHILD_LABEL[kind]} not found`);
+}
+
+// ── Users (routes/admin/dashboard-users.ts) ─────────────────────────────
+
+/** REST checks canManageUser BEFORE existence and answers 403. */
+export async function requireCanManageUser(ctx: GraphQLContext, targetUserId: string): Promise<void> {
+  if (!await canManageUser(ctx.storage, ctx.user, targetUserId)) {
+    throw new Error('Forbidden: You can only manage users in your organization.');
+  }
 }
