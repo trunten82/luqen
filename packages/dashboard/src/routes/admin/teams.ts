@@ -267,7 +267,8 @@ export async function teamRoutes(
       const { id } = request.params as { id: string };
       const team = await storage.teams.getTeam(id);
 
-      if (team === null) {
+      // Out-of-org teams answer exactly like missing ones (canMutateTeam rule).
+      if (team === null || !canMutateTeam(request, team.orgId)) {
         return reply.code(404).send({ error: 'Team not found' });
       }
 
