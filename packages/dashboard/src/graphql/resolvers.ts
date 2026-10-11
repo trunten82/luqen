@@ -14,6 +14,10 @@ import { validatePassword, validateUsername } from '../validation.js';
 import { validateScanUrl, VALID_STANDARDS } from '../services/scan-service.js';
 import { retagScansForSite } from '../services/branding-retag.js';
 import type { BrandingOrchestrator } from '../services/branding/branding-orchestrator.js';
+import {
+  getScanInOrg, getScanForDelete, getScanForAssignment, getAssignmentInOrg, getTeamInOrg,
+  getGuidelineInOrg, requireGuidelineInOrg, requireBrandChildInOrg,
+} from './org-scope.js';
 
 // ---------------------------------------------------------------------------
 // Context typing
@@ -21,7 +25,13 @@ import type { BrandingOrchestrator } from '../services/branding/branding-orchest
 
 export interface GraphQLContext {
   readonly storage: StorageAdapter;
-  readonly user: { id: string; username: string; role: string } | undefined;
+  readonly user: {
+    id: string;
+    username: string;
+    role: string;
+    readonly currentOrgId?: string;
+    readonly orgScopedApiKey?: boolean;
+  } | undefined;
   readonly permissions: Set<string>;
   readonly orgId: string;
   readonly brandingOrchestrator: BrandingOrchestrator;
@@ -43,20 +53,6 @@ function requirePerm(ctx: GraphQLContext, ...perms: readonly string[]): void {
   if (!hasAny) {
     throw new Error(`Forbidden: requires ${perms.join(' or ')}`);
   }
-}
-
-/**
- * Load a scan only if it belongs to the caller's org. An out-of-org scan
- * resolves exactly as a missing one (null), mirroring the REST rule in
- * routes/api/data.ts GET /api/v1/scans/:id and /:id/issues
- * (`scan === null || scan.orgId !== orgId` → 404, no admin bypass).
- */
-async function getScanInOrg(ctx: GraphQLContext, id: string): Promise<ScanRecord | null> {
-  const scan = await ctx.storage.scans.getScan(id);
-  if (scan === null || scan === undefined || scan.orgId !== ctx.orgId) {
-    return null;
-  }
-  return scan;
 }
 
 function clamp(value: number | undefined | null, min: number, max: number, fallback: number): number {
@@ -313,7 +309,7 @@ export const resolvers = {
       ctx: GraphQLContext,
     ) => {
       requireAuth(ctx);
-      return await ctx.storage.teams.getTeam(args.id) ?? null;
+      return await getTeamInOrg(ctx, args.id);
     },
 
     // ── Organizations ──────────────────────────────────────────────────
@@ -391,7 +387,7 @@ export const resolvers = {
 
     async brandingGuideline(_: unknown, args: { id: string }, ctx: GraphQLContext) {
       requirePerm(ctx, 'branding.view');
-      const g = await ctx.storage.branding.getGuideline(args.id);
+      const g = await getGuidelineInOrg(ctx, args.id);
       if (!g) return null;
       return {
         ...g,
@@ -459,11 +455,7 @@ export const resolvers = {
     ) => {
       requirePerm(ctx, 'reports.delete');
 
-      const scan = await ctx.storage.scans.getScan(args.id);
-      if (scan === null) {
-        throw new Error(`Scan not found: ${args.id}`);
-      }
-
+      await getScanForDelete(ctx, args.id);
       await ctx.storage.scans.deleteScan(args.id);
       return true;
     },
@@ -489,6 +481,7 @@ export const resolvers = {
       ctx: GraphQLContext,
     ) => {
       requirePerm(ctx, 'issues.assign');
+      await getScanForAssignment(ctx, args.input.scanId);
 
       const id = randomUUID();
       const now = new Date().toISOString();
@@ -518,10 +511,7 @@ export const resolvers = {
     ) => {
       requirePerm(ctx, 'issues.assign');
 
-      const existing = await ctx.storage.assignments.getAssignment(args.id);
-      if (existing === null) {
-        throw new Error(`Assignment not found: ${args.id}`);
-      }
+      await getAssignmentInOrg(ctx, args.id);
 
       await ctx.storage.assignments.updateAssignment(args.id, {
         status: args.status as 'open' | 'assigned' | 'in-progress' | 'fixed' | 'verified' | undefined,
@@ -543,10 +533,7 @@ export const resolvers = {
     ) => {
       requirePerm(ctx, 'issues.assign');
 
-      const existing = await ctx.storage.assignments.getAssignment(args.id);
-      if (existing === null) {
-        throw new Error(`Assignment not found: ${args.id}`);
-      }
+      await getAssignmentInOrg(ctx, args.id);
 
       await ctx.storage.assignments.deleteAssignment(args.id);
       return true;
@@ -674,14 +661,14 @@ export const resolvers = {
 
     async deleteBrandingGuideline(_: unknown, args: { id: string }, ctx: GraphQLContext) {
       requirePerm(ctx, 'branding.manage');
+      await requireGuidelineInOrg(ctx, args.id);
       await ctx.storage.branding.deleteGuideline(args.id);
       return true;
     },
 
     async toggleBrandingGuideline(_: unknown, args: { id: string }, ctx: GraphQLContext) {
       requirePerm(ctx, 'branding.manage');
-      const existing = await ctx.storage.branding.getGuideline(args.id);
-      if (!existing) throw new Error('Guideline not found');
+      const existing = await requireGuidelineInOrg(ctx, args.id);
       const updated = await ctx.storage.branding.updateGuideline(args.id, { active: !existing.active });
       return {
         ...updated,
@@ -698,6 +685,7 @@ export const resolvers = {
       ctx: GraphQLContext,
     ) {
       requirePerm(ctx, 'branding.manage');
+      await requireGuidelineInOrg(ctx, args.guidelineId);
       return ctx.storage.branding.addColor(args.guidelineId, {
         id: randomUUID(),
         name: args.input.name,
@@ -709,6 +697,7 @@ export const resolvers = {
 
     async removeBrandColor(_: unknown, args: { id: string }, ctx: GraphQLContext) {
       requirePerm(ctx, 'branding.manage');
+      await requireBrandChildInOrg(ctx, 'color', args.id);
       await ctx.storage.branding.removeColor(args.id);
       return true;
     },
@@ -719,6 +708,7 @@ export const resolvers = {
       ctx: GraphQLContext,
     ) {
       requirePerm(ctx, 'branding.manage');
+      await requireGuidelineInOrg(ctx, args.guidelineId);
       return ctx.storage.branding.addFont(args.guidelineId, {
         id: randomUUID(),
         family: args.input.family,
@@ -730,6 +720,7 @@ export const resolvers = {
 
     async removeBrandFont(_: unknown, args: { id: string }, ctx: GraphQLContext) {
       requirePerm(ctx, 'branding.manage');
+      await requireBrandChildInOrg(ctx, 'font', args.id);
       await ctx.storage.branding.removeFont(args.id);
       return true;
     },
@@ -740,6 +731,7 @@ export const resolvers = {
       ctx: GraphQLContext,
     ) {
       requirePerm(ctx, 'branding.manage');
+      await requireGuidelineInOrg(ctx, args.guidelineId);
       return ctx.storage.branding.addSelector(args.guidelineId, {
         id: randomUUID(),
         pattern: args.input.pattern,
@@ -749,6 +741,7 @@ export const resolvers = {
 
     async removeBrandSelector(_: unknown, args: { id: string }, ctx: GraphQLContext) {
       requirePerm(ctx, 'branding.manage');
+      await requireBrandChildInOrg(ctx, 'selector', args.id);
       await ctx.storage.branding.removeSelector(args.id);
       return true;
     },
@@ -759,6 +752,7 @@ export const resolvers = {
       ctx: GraphQLContext,
     ) {
       requirePerm(ctx, 'branding.manage');
+      await requireGuidelineInOrg(ctx, args.guidelineId);
       await ctx.storage.branding.assignToSite(args.guidelineId, args.siteUrl, ctx.orgId);
       // Retag existing scans
       try {

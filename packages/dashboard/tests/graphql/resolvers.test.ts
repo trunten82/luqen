@@ -724,6 +724,7 @@ describe('GraphQL resolvers', () => {
   describe('Mutation.assignIssue', () => {
     it('creates an assignment', async () => {
       const ctx = makeCtx();
+      ctx.storage.scans.getScan.mockResolvedValue({ id: 's1', orgId: 'org-1' });
       const input = {
         scanId: 's1',
         issueFingerprint: 'fp1',
