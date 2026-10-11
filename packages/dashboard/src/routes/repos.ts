@@ -13,6 +13,10 @@ import { hasPermission } from '../permissions.js';
 import { getGitHostPlugin } from '../git-hosts/registry.js';
 import { decryptSecret } from '../plugins/crypto.js';
 import { RemoteFileReader } from '../git-hosts/remote-file-reader.js';
+import {
+  applyActiveDismissals,
+  withDismissalsInRawBlob,
+} from '../services/issue-dismissals/load-dismissed-report.js';
 import { HtmlPageSchema } from '../api/schemas/envelope.js';
 
 const RepoIdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
@@ -381,6 +385,30 @@ export async function repoRoutes(
         });
       }
 
+      // Never list a fix for a dismissed issue (the scan's own org + site). A lookup failure shows
+      // the same empty state as an unreadable report rather than the unfiltered list.
+      let appliedDismissals: Awaited<ReturnType<typeof applyActiveDismissals<JsonReportForFixes>>>;
+      try {
+        appliedDismissals = await applyActiveDismissals(storage, scan, raw);
+      } catch {
+        return reply.view('fixes.hbs', {
+          pageTitle: `Fix Proposals — ${scan.siteUrl}`,
+          currentPath: `/reports/${id}/fixes`,
+          user: request.user,
+          scan: {
+            ...scan,
+            jsonReport: undefined,
+            jurisdictions: scan.jurisdictions.join(', '),
+          },
+          fixes: [],
+          fixCount: 0,
+          connectedRepo,
+          canCreatePr,
+          noReport: true,
+        });
+      }
+      raw = appliedDismissals.report;
+
       // Collect all issues for both core proposer and local fallback
       const allIssues = collectIssuesFromReport(raw, scan.siteUrl);
 
@@ -532,8 +560,9 @@ export async function repoRoutes(
         pageTitle: `Fix Proposals — ${scan.siteUrl}`,
         currentPath: `/reports/${id}/fixes`,
         user: request.user,
+        // The row carries the whole raw report: it follows the filtered report when a dismissal applied.
         scan: {
-          ...scan,
+          ...withDismissalsInRawBlob(scan, appliedDismissals),
           jurisdictions: scan.jurisdictions.join(', '),
         },
         fixes,

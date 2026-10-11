@@ -15,6 +15,7 @@ import { getFixSuggestion } from '../fix-suggestions.js';
 import { toastHtml } from './admin/helpers.js';
 import type { GitHostFile } from '../git-hosts/types.js';
 import { RemoteFileReader } from '../git-hosts/remote-file-reader.js';
+import { applyActiveDismissals } from '../services/issue-dismissals/load-dismissed-report.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -324,6 +325,18 @@ export async function fixPrRoutes(
         rawReport = JSON.parse(await readFile(scan.jsonReportPath, 'utf-8')) as JsonReportForFixes;
       } catch {
         const msg = 'Failed to parse scan report';
+        return isHtmx
+          ? reply.code(422).send(toastHtml(msg, 'error'))
+          : reply.code(422).send({ error: msg });
+      }
+
+      // Never propose a fix for a dismissed issue: the filtered report feeds BOTH the core
+      // proposer and the local fix list below. A lookup failure fails closed with a fixed
+      // message (no error text echoed) rather than proposing from the unfiltered report.
+      try {
+        rawReport = (await applyActiveDismissals(storage, scan, rawReport)).report;
+      } catch {
+        const msg = 'Failed to apply issue dismissals to the scan report';
         return isHtmx
           ? reply.code(422).send(toastHtml(msg, 'error'))
           : reply.code(422).send({ error: msg });
