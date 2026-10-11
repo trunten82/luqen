@@ -92,3 +92,97 @@ describe('scan-end dismissals: standard path', () => {
     expectStoredRaw(await drive('standard'));
   });
 });
+
+describe('scan-end dismissals: incremental path', () => {
+  it('incremental path persists and announces counts without dismissed issues', async () => {
+    expectFilteredEverywhere(await drive('incremental'));
+  });
+
+  it('the stored report keeps raw counts and every raw occurrence (incremental)', async () => {
+    expectStoredRaw(await drive('incremental'));
+  });
+});
+
+describe('scan-end dismissals: a dismissal marked while compliance runs (W3)', () => {
+  // The fake repository is EMPTY when the branch ends; the mocked checkCompliance adds the
+  // dismissal. Only a read made after the compliance step can see it.
+  const during = [activeDismissalRow(DISMISS_PARTIAL)];
+
+  it('standard path applies a dismissal marked while compliance runs', async () => {
+    const output = await driveOrchestratorScanDetailed({
+      path: 'standard',
+      report: surfaceReport(),
+      dismissals: foreignDismissalRows(),
+      dismissalsDuringCompliance: during,
+    });
+    expectFilteredEverywhere(output);
+    expectStoredRaw(output);
+  });
+
+  it('incremental path applies a dismissal marked while compliance runs', async () => {
+    const output = await driveOrchestratorScanDetailed({
+      path: 'incremental',
+      report: surfaceReport(),
+      dismissals: foreignDismissalRows(),
+      dismissalsDuringCompliance: during,
+    });
+    expectFilteredEverywhere(output);
+    expectStoredRaw(output);
+  });
+});
+
+describe('scan-end dismissals: identity and the third path', () => {
+  it("zero dismissals: persisted counts are the scanner's own byLevel even when it disagrees with the pages", async () => {
+    // Foreign dismissals only: nothing applies to the scanned org + site. The scanner says
+    // 7 errors while its pages hold 5; the scanner's number stays authoritative (D-16 / SC5).
+    const output = await driveOrchestratorScanDetailed({
+      path: 'standard',
+      report: surfaceReport(),
+      dismissals: foreignDismissalRows(),
+      scannerByLevel: { error: 7, warning: 2, notice: 1 },
+    });
+    expect(output.columns).toMatchObject({ errors: 7, warnings: 2, notices: 1, totalIssues: 10 });
+    expect((output.completeEvent as { issues: unknown }).issues).toEqual({ errors: 7, warnings: 2, notices: 1 });
+  });
+
+  it('core-unavailable path still persists zero counts', async () => {
+    // A fresh module graph in which importing @luqen/core throws: runScan's .catch yields null.
+    // The other mocks are re-registered so they hand out the SAME fresh orchestrator-mocks
+    // instance the fresh driver reads (a factory result cached before the reset would not).
+    vi.resetModules();
+    vi.doMock('@luqen/core', () => {
+      throw new Error('module not found');
+    });
+    vi.doMock('../../src/compliance-client.js', async () => {
+      const m = await import('../golden/drivers/orchestrator-mocks.js');
+      return { ...m.complianceMocks };
+    });
+    vi.doMock('node:fs/promises', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('node:fs/promises')>();
+      const m = await import('../golden/drivers/orchestrator-mocks.js');
+      return { ...actual, ...m.fsMocks };
+    });
+    vi.doMock('../../src/notifications/dispatcher.js', async () => {
+      const m = await import('../golden/drivers/orchestrator-mocks.js');
+      return { NotificationDispatcher: m.RecordingNotificationDispatcher };
+    });
+    try {
+      const fresh = await import('../golden/drivers/orchestrator-driver.js');
+      const output = await fresh.driveOrchestratorScanDetailed({
+        path: 'standard',
+        report: surfaceReport(),
+        dismissals: [fresh.activeDismissalRow(DISMISS_PARTIAL)],
+      });
+      expect(output.columns).toMatchObject({ errors: 0, warnings: 0, notices: 0, totalIssues: 0 });
+      expect((output.completeEvent as { issues: unknown }).issues).toEqual({ errors: 0, warnings: 0, notices: 0 });
+    } finally {
+      vi.doUnmock('@luqen/core');
+      vi.resetModules();
+      // Restore the file-level factories for any later test.
+      vi.doMock('@luqen/core', async () => {
+        const m = await import('../golden/drivers/orchestrator-mocks.js');
+        return { ...m.coreMocks };
+      });
+    }
+  });
+});
