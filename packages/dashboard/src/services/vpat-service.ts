@@ -51,6 +51,13 @@ export interface VpatRow {
   readonly url: string;
   readonly conformance: VpatConformance;
   readonly remarks: string;
+  /**
+   * Number of automated finding OCCURRENCES on this criterion that were dismissed as
+   * false positives after review. Set only when > 0 (absent otherwise, so a row with no
+   * dismissal is structurally unchanged). Counts only — never a reason, actor or date.
+   * `remarks` already ends with the English disclosure sentence; acr-view localises it.
+   */
+  readonly dismissedCount?: number;
 }
 
 export interface VpatLevelTable {
@@ -148,6 +155,13 @@ export interface BuildVpatOptions {
    * on record"). Slice C.
    */
   readonly evidenceCounts?: ReadonlyMap<string, number>;
+  /**
+   * Per-criterion count of finding OCCURRENCES dismissed as false positives after review
+   * (Phase 88, FP-07). A criterion with a count > 0 gets the disclosure sentence appended
+   * to its remark (last, after any evidence note) and a `dismissedCount` on its row.
+   * Absent, empty or zero → no change to any row. Counts only: no reason or actor.
+   */
+  readonly dismissedByCriterion?: ReadonlyMap<string, number>;
   /**
    * Count of manual-test verdict changes recorded WITH a documented reason
    * (from the verdict audit trail). Surfaced in the attestation as evidence of
@@ -250,6 +264,23 @@ function pluralise(count: number, singular: string): string {
 /** Append a manual-test evidence-count note to a VPAT remark (Slice C). */
 function appendEvidenceNote(remarks: string, count: number): string {
   const note = `${pluralise(count, 'evidence file')} on record`;
+  return remarks ? `${remarks} — ${note}` : note;
+}
+
+/**
+ * The English disclosure sentence for `count` dismissed occurrences (count >= 1). The ACR
+ * view replaces it with the localised acr.dismissedDisclosure* string; PDFKit and any
+ * remarks-only reader show this one. Must equal t('acr.dismissedDisclosure*', 'en').
+ */
+export function dismissalNoteEn(count: number): string {
+  return count === 1
+    ? '1 automated finding was dismissed as a false positive after review.'
+    : `${count} automated findings were dismissed as false positives after review.`;
+}
+
+/** Append the dismissal disclosure LAST on a VPAT remark (after any evidence note). */
+export function appendDismissalNote(remarks: string, count: number): string {
+  const note = dismissalNoteEn(count);
   return remarks ? `${remarks} — ${note}` : note;
 }
 
@@ -415,6 +446,7 @@ export function buildVpat(
   const requiresManual = requiresManualJudgement();
   const behaviorallyEvaluated = opts.behaviorallyEvaluatedCriteria ?? new Set<string>();
   const evidenceCounts = opts.evidenceCounts;
+  const dismissedByCriterion = opts.dismissedByCriterion;
 
   const rows: VpatRow[] = catalogForLevel(level)
     .map((entry) => {
@@ -422,9 +454,15 @@ export function buildVpat(
       const evidence = evidenceCounts?.get(entry.criterion) ?? 0;
       // Append the evidence count to the remark — a defensibility signal that
       // the manual verdict for this criterion is backed by uploaded artifacts.
-      return evidence > 0
+      const withEvidence = evidence > 0
         ? { ...row, remarks: appendEvidenceNote(row.remarks, evidence) }
         : row;
+      // Phase 88 (FP-07, D-09): disclose how many automated findings were dismissed as
+      // false positives after review. Last on the remark; the same row object when 0.
+      const dismissed = dismissedByCriterion?.get(entry.criterion) ?? 0;
+      return dismissed > 0
+        ? { ...withEvidence, remarks: appendDismissalNote(withEvidence.remarks, dismissed), dismissedCount: dismissed }
+        : withEvidence;
     })
     .sort((a, b) => compareCriteria(a.criterion, b.criterion));
 
