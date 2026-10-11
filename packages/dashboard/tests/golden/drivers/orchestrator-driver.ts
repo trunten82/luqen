@@ -69,6 +69,46 @@ export interface DriveOrchestratorOptions {
   readonly report: Record<string, unknown>;
   /** Rows the fake issueDismissals repository holds. */
   readonly dismissals: readonly IssueDismissal[];
+  /**
+   * Optional (Plan 10 timing tests): rows pushed into the fake repository from INSIDE the
+   * mocked checkCompliance call, i.e. a dismissal marked while the scan's compliance step
+   * runs. Absent, the driver behaves exactly as Plan 16 captured it.
+   */
+  readonly dismissalsDuringCompliance?: readonly IssueDismissal[];
+  /**
+   * Optional (standard path only): the scanner's own summary.byLevel, overriding the value
+   * derived from the pages, to make the scanner's counts disagree with its pages.
+   */
+  readonly scannerByLevel?: { readonly error: number; readonly warning: number; readonly notice: number };
+}
+
+/** The scan-end output plus what a golden does not capture: the stored report's pages. */
+export interface DetailedOrchestratorOutput extends OrchestratorScanOutput {
+  readonly storedPages: unknown;
+}
+
+/** An ACTIVE dismissal of `match` for the scanned org and site (the scan's own, not foreign). */
+export function activeDismissalRow(
+  match: { readonly code: string; readonly selector: string },
+  n = 1,
+): IssueDismissal {
+  return {
+    id: `dismissal-active-${n}`,
+    orgId: GOLDEN_FABRIKAM_ORG_ID,
+    siteUrl: FABRIKAM_SITE,
+    siteKey: toSiteKey(FABRIKAM_SITE),
+    code: match.code,
+    selector: match.selector,
+    reason: REASON_TOKEN,
+    status: 'active',
+    createdBy: 'fabrikam-admin',
+    createdById: null,
+    createdAt: FIXED_CREATED_AT,
+    revokedBy: null,
+    revokedById: null,
+    revokedAt: null,
+    revokeComment: null,
+  };
 }
 
 /** Dismissals that must never apply to a Fabrikam scan of FABRIKAM_SITE. */
@@ -113,7 +153,7 @@ function reportPages(report: Record<string, unknown>): readonly ReportPage[] {
   return report['pages'] as readonly ReportPage[];
 }
 
-function buildStorage(dismissals: readonly IssueDismissal[], hashedUnchanged: Map<string, string>): {
+function buildStorage(dismissals: IssueDismissal[], hashedUnchanged: Map<string, string>): {
   readonly storage: StorageAdapter;
   readonly updateScan: ReturnType<typeof vi.fn>;
 } {
@@ -143,15 +183,19 @@ function complianceAnswer(report: Record<string, unknown>): Record<string, unkno
   return { ...compliance, summary: { ...summary, totalConfirmedViolations: 2 } };
 }
 
-function configureStandard(report: Record<string, unknown>): void {
+function configureStandard(
+  report: Record<string, unknown>,
+  byLevelOverride?: DriveOrchestratorOptions['scannerByLevel'],
+): void {
   const pages = reportPages(report);
   const counts = countIssues({ pages });
+  const byLevel = byLevelOverride ?? { error: counts.errors, warning: counts.warnings, notice: counts.notices };
   coreMocks.createScanner.mockReturnValue({
     scan: async () => ({
       pages,
       summary: {
         pagesScanned: pages.length,
-        byLevel: { error: counts.errors, warning: counts.warnings, notice: counts.notices },
+        byLevel,
       },
     }),
   });
@@ -202,18 +246,37 @@ function onlyCall(calls: readonly unknown[][], event: string): unknown[] {
 }
 
 export async function driveOrchestratorScan(opts: DriveOrchestratorOptions): Promise<OrchestratorScanOutput> {
+  const { storedPages: _storedPages, ...output } = await driveOrchestratorScanDetailed(opts);
+  void _storedPages;
+  return output;
+}
+
+export async function driveOrchestratorScanDetailed(
+  opts: DriveOrchestratorOptions,
+): Promise<DetailedOrchestratorOutput> {
   resetOrchestratorMocks();
-  complianceMocks.checkCompliance.mockResolvedValue(complianceAnswer(opts.report));
+  // A copy: the optional compliance-time hook appends to it; the caller's array is never touched.
+  const rows: IssueDismissal[] = [...opts.dismissals];
+  const answer = complianceAnswer(opts.report);
+  if (opts.dismissalsDuringCompliance !== undefined) {
+    const during = opts.dismissalsDuringCompliance;
+    complianceMocks.checkCompliance.mockImplementation(async () => {
+      rows.push(...during);
+      return answer;
+    });
+  } else {
+    complianceMocks.checkCompliance.mockResolvedValue(answer);
+  }
 
   const unchanged = new Map<string, string>();
   if (opts.path === 'incremental') {
     unchanged.set(INCREMENTAL_SKIPPED_PAGE, 'hash-archive');
     configureIncremental(opts.report);
   } else {
-    configureStandard(opts.report);
+    configureStandard(opts.report, opts.scannerByLevel);
   }
 
-  const { storage, updateScan } = buildStorage(opts.dismissals, unchanged);
+  const { storage, updateScan } = buildStorage(rows, unchanged);
   const orchestrator = new ScanOrchestrator(storage, GOLDEN_REPORTS_DIR, {
     maxConcurrent: 1,
     pluginManager: {} as unknown as PluginManager,
@@ -254,11 +317,13 @@ export async function driveOrchestratorScan(opts: DriveOrchestratorOptions): Pro
   const plugin = recordedPluginDispatches().filter((d) => d.type === 'scan.complete');
   if (plugin.length !== 1) throw new Error(`expected one scan.complete plugin dispatch, saw ${plugin.length}`);
 
+  const stored = JSON.parse(String(jsonReport)) as { summary: unknown; pages: unknown };
   return {
     columns,
-    storedSummary: (JSON.parse(String(jsonReport)) as { summary: unknown }).summary,
+    storedSummary: stored.summary,
     completeEvent: completeEvent.data,
     webhook: { event: webhookCall[2], payload: webhookCall[3] },
     plugin: plugin[0],
+    storedPages: stored.pages,
   };
 }
