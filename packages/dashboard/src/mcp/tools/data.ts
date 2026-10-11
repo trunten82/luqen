@@ -32,6 +32,10 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { StorageAdapter } from '../../db/index.js';
 import type { ScanRecord } from '../../db/types.js';
 import type { ScanService } from '../../services/scan-service.js';
+import {
+  applyActiveDismissals,
+  withDismissalsInRawBlob,
+} from '../../services/issue-dismissals/load-dismissed-report.js';
 
 /**
  * Slim projection of ScanRecord for list responses. Explicitly OMITS the
@@ -413,7 +417,10 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
           ],
         };
       }
-      const report = await storage.scans.getReport(args.scanId);
+      const raw = await storage.scans.getReport(args.scanId);
+      // Phase 88 (FP-11, FP-12): the scan's own org + site dismissals. The row carries the
+      // whole raw blob as `jsonReport`, so it follows the filtered report (D-05).
+      const applied = await applyActiveDismissals(storage, lookup.scan, raw);
       return {
         content: [
           {
@@ -422,8 +429,8 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
               {
                 status: 'completed',
                 scanId: args.scanId,
-                scan: lookup.scan,
-                report,
+                scan: withDismissalsInRawBlob(lookup.scan, applied),
+                report: applied.report,
               },
               null,
               2,
