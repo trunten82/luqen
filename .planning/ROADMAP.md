@@ -255,7 +255,7 @@ Plans:
   4. A later scan applies active dismissals on BOTH orchestrator paths (standard and incremental). The counts persisted at scan end exclude them, and so do the webhook, plugin and completion payloads. Break-test per path: removing the apply call from one path turns red only that path's test (FP-13).
   5. With zero active dismissals, every surface above produces the same output as before the change, ACR included. A golden comparison on real stored reports proves it, which makes the merge safe to auto-deploy while the permission is dark.
 
-**Plans**: 3/18 plans executed (wave 1: 01, 02, 13; wave 2: 03, 04, 05, 06, 11, 15, 16; wave 3: 07, 08, 09, 10, 14, 17, 18; wave 4: 12)
+**Plans**: 10/18 plans executed (wave 1: 01, 02, 13; wave 2: 03, 04, 05, 06, 11, 15, 16; wave 3: 07, 08, 09, 10, 14, 17, 18; wave 4: 12)
 
 Plans:
 **Wave 1**
@@ -266,13 +266,13 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 88-03-PLAN.md — pre-wiring golden baseline for MCP/REST/GraphQL/compare/fix/bulk-fix (FP-11)
-- [ ] 88-04-PLAN.md — report detail/print/public/AI-summary/brand drilldown + digest wired, matrices follow FP-12, per-site break-tests (FP-06, FP-12)
-- [ ] 88-05-PLAN.md — issues.xlsx (+ localised Dismissed sheet), report.pdf, notification PDF and email CSV attachments (FP-10, FP-06)
-- [ ] 88-06-PLAN.md — shared ACR disclosure (buildVpat + loadVpatForScan + localised ACR view), proven on the public ACR path (FP-07)
-- [ ] 88-11-PLAN.md — recompute on mark/revoke (streaming, loud failures, duration logged), OpenAPI regen (FP-08, FP-09)
-- [ ] 88-15-PLAN.md — golden specificity suite: every Plan-01 golden proven to fail for its own surface (FP-06, FP-07, FP-10)
-- [ ] 88-16-PLAN.md — pre-wiring golden baseline for both orchestrator paths, per-path specificity (FP-13)
+- [x] 88-03-PLAN.md — pre-wiring golden baseline for MCP/REST/GraphQL/compare/fix/bulk-fix (FP-11)
+- [x] 88-04-PLAN.md — report detail/print/public/AI-summary/brand drilldown + digest wired, matrices follow FP-12, per-site break-tests (FP-06, FP-12)
+- [x] 88-05-PLAN.md — issues.xlsx (+ localised Dismissed sheet), report.pdf, notification PDF and email CSV attachments (FP-10, FP-06)
+- [x] 88-06-PLAN.md — shared ACR disclosure (buildVpat + loadVpatForScan + localised ACR view), proven on the public ACR path (FP-07)
+- [x] 88-11-PLAN.md — recompute on mark/revoke (streaming, loud failures, duration logged), OpenAPI regen (FP-08, FP-09)
+- [x] 88-15-PLAN.md — golden specificity suite: every Plan-01 golden proven to fail for its own surface (FP-06, FP-07, FP-10)
+- [x] 88-16-PLAN.md — pre-wiring golden baseline for both orchestrator paths, per-path specificity (FP-13)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -314,7 +314,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 87. Dismissal store, domain model and permission | v3.8.0 | 5/5 | Complete | 2026-10-08 |
-| 88. Dismissals applied on every surface | v3.8.0 | 3/18 | In Progress|  |
+| 88. Dismissals applied on every surface | v3.8.0 | 10/18 | In Progress|  |
 | 89. Dismissal UI, dark launch and role grant | v3.8.0 | 0/? | Not started | - |
 
 **Risks carried into planning (read from source 2026-10-08; not exercised live):**
