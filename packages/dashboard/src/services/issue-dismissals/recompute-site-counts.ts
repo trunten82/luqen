@@ -80,6 +80,15 @@ export async function recomputeSiteCounts(
         );
         continue;
       }
+      // WR-01: countIssues only reads `pages`/`templateIssues`. A report without a pages array
+      // (legacy flat shape) would count as 0/0/0/0 and the write would destroy the only record of its
+      // original counts, so it is unmeasurable: failed, columns untouched.
+      const shape = loaded.report as { pages?: unknown } | null;
+      if (shape === null || typeof shape !== 'object' || !Array.isArray(shape.pages)) {
+        failed += 1;
+        log.warn({ scanId: scan.id, errorName: 'UnsupportedReportShape' }, 'Dismissal recompute: report not countable');
+        continue;
+      }
       // Read the active set NOW, after the report is parsed: a dismissal committed meanwhile applies.
       const active = (await storage.issueDismissals?.listActiveForSite(orgId, siteKey)) ?? [];
       const counts = countIssues(applyDismissals(loaded.report, active, siteKey).report);

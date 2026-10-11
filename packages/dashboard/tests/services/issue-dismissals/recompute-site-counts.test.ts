@@ -170,6 +170,27 @@ describe('recomputeSiteCounts failure semantics (D-14, IN-03)', () => {
     expect(log.warn.mock.calls[0][0]).toEqual({ scanId: id, errorName: 'NoReport' });
   });
 
+  it('WR-01: a stored report without a pages array is counted as failed and its columns are left untouched', async () => {
+    const good = await seedSurfaceScan(store.storage, { orgId: orgs.fabrikamOrgId, location: 'db' });
+    const flat = await seedSurfaceScan(store.storage, {
+      orgId: orgs.fabrikamOrgId,
+      location: 'db',
+      report: { siteUrl: FABRIKAM_SITE, issues: [{ code: 'x', type: 'error', selector: 'a', message: 'm' }] },
+    });
+    // The columns are the only record of the original counts for such a row: poison them to prove no write.
+    await store.storage.scans.updateScan(flat, { errors: 5, warnings: 4, notices: 3, totalIssues: 12 });
+    await seedSurfaceDismissal(store.storage, { orgId: orgs.fabrikamOrgId, match: DISMISS_PARTIAL });
+    const log = silentLog();
+
+    const result = await recomputeSiteCounts(store.storage, orgs.fabrikamOrgId, SITE_KEY, log);
+
+    expect(result).toMatchObject({ recomputedScans: 1, failedScans: 1, listed: true });
+    expect(await columnsOf(store.storage, good)).toEqual(AFTER_PARTIAL);
+    expect(await columnsOf(store.storage, flat)).toEqual({ errors: 5, warnings: 4, notices: 3, total: 12 });
+    expect(log.warn).toHaveBeenCalledTimes(1);
+    expect(log.warn.mock.calls[0][0]).toEqual({ scanId: flat, errorName: 'UnsupportedReportShape' });
+  });
+
   it('reports an incomplete recompute when the scan listing fails', async () => {
     await seedSurfaceScan(store.storage, { orgId: orgs.fabrikamOrgId, location: 'db' });
     const boom = withScans(store.storage, {
