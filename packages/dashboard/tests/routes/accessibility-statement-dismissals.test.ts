@@ -6,6 +6,9 @@
  * Drives the REAL public + admin routes with the REAL store (Plan 01 drivers).
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import handlebars from 'handlebars';
 
 process.env['TZ'] ??= 'UTC';
 
@@ -198,5 +201,63 @@ describe('admin accessibility statement preview', () => {
   it('accessibility statement preview has no disclosure key with zero dismissals', async () => {
     const preview = await previewOf();
     expect(Object.prototype.hasOwnProperty.call(preview, 'dismissedDisclosures')).toBe(false);
+  });
+});
+
+describe('admin preview template and locales', () => {
+  const adminTemplate = readFileSync(
+    join(import.meta.dirname, '..', '..', 'src', 'views', 'admin', 'accessibility-statement.hbs'),
+    'utf-8',
+  );
+
+  /** Render only the preview <aside> with the real translator. */
+  function renderPreview(preview: Record<string, unknown>): string {
+    const aside = adminTemplate.match(/<aside[\s\S]*?<\/aside>/);
+    if (aside === null) throw new Error('no preview <aside> in the admin statement template');
+    return handlebars.compile(aside[0])({ preview }, { data: { root: { locale: 'en' } } });
+  }
+
+  const basePreview = {
+    entityName: 'Fabrikam',
+    standardLabel: 'WCAG 2.1 level AA',
+    conformanceStatus: 'partially-conformant',
+    hasAssessment: true,
+    assessmentDate: '2026-10-01',
+    knownLimitations: [],
+    notEvaluatedCount: 4,
+  };
+
+  it('accessibility statement preview renders the dismissed-criteria count only when there is one', () => {
+    const withDismissals = renderPreview({
+      ...basePreview,
+      dismissedDisclosures: [
+        { criterion: '1.1.1', title: 'Non-text Content', count: 1 },
+        { criterion: '1.4.3', title: 'Contrast (Minimum)', count: 3 },
+      ],
+    });
+    expect(withDismissals).toMatch(/Criteria with dismissed findings:\s*<strong>2<\/strong>/);
+    expect(renderPreview(basePreview)).not.toContain('dismissed findings');
+  });
+
+  const LOCALES = ['en', 'de', 'es', 'fr', 'it', 'pt'] as const;
+  const KEYS: ReadonlyArray<readonly [string, string]> = [
+    ['public', 'dismissedHeading'],
+    ['public', 'dismissedItem'],
+    ['admin', 'previewDismissed'],
+  ];
+
+  it('statement dismissal keys exist in every locale', () => {
+    for (const locale of LOCALES) {
+      const file = join(import.meta.dirname, '..', '..', 'src', 'i18n', 'locales', `${locale}.json`);
+      const block = (JSON.parse(readFileSync(file, 'utf-8')) as {
+        a11yStatement: Record<string, Record<string, string>>;
+      }).a11yStatement;
+      for (const [section, key] of KEYS) {
+        const value = block[section]?.[key];
+        expect(typeof value === 'string' && value.trim() !== '', `${locale} a11yStatement.${section}.${key}`).toBe(true);
+      }
+      // The count placeholder must survive translation (double-brace).
+      expect(block['public']?.['dismissedItem'], `${locale} dismissedItem placeholder`).toContain('{{count}}');
+    }
   });
 });
