@@ -2,20 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v3.8.0
 milestone_name: Mark as false positive
-current_phase: "87"
-current_phase_name: Dismissal store, domain model and permission
-status: phase_complete
-stopped_at: "Phase 87 SHIPPED (PR #103 merged --merge 7d467ce8, deployed); code-review WR-01..03 fixed; D-09b prod 333/333 + migration 090 dry-run ok. Next: Phase 88 (discuss/plan)."
-last_activity_desc: "2026-10-08: Phase 87 shipped; owner-ruled FULL public-history purge of client names/scan reports (filter-repo, all branches+tags force-pushed, master a22150bb before #103); refs/pull purge pending GitHub Support"
-state_head: 7d467ce8  # last CODE commit. Re-checkable: `git diff --name-only b2df214c..HEAD` must list nothing outside .planning/.
-last_updated: "2026-10-08T19:30:00Z"
+current_phase: 88
+current_phase_name: Dismissals applied on every surface
+status: executing
+stopped_at: Phase 88 context gathered
+last_updated: "2026-10-11T20:16:06.998Z"
 last_activity: 2026-10-08
+last_activity_desc: "2026-10-08: Phase 87 shipped; owner-ruled FULL public-history purge of client names/scan reports (filter-repo, all branches+tags force-pushed, master a22150bb before #103); refs/pull purge pending GitHub Support"
+state_head: 48bed410e41a6f05106de3223a0edbded764f3d0
 progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 3
+  completed_phases: 1
+  total_plans: 23
+  completed_plans: 5
+  percent: 22
 ---
 
 # Project State
@@ -108,9 +108,9 @@ See: .planning/PROJECT.md (updated 2026-09-28 — v3.7.0 archived)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 88 (Dismissals applied on every surface) — READY TO EXECUTE
 Plan: —
-Status: Defining requirements
+Status: Ready to execute
 Last activity: 2026-10-08 — Milestone v3.8.0 started
 
 ## Phase Map (v3.7.0 — AI output quality)
@@ -190,9 +190,9 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-09-28
-Stopped at: v3.7.0 archived; tree clean; nothing in flight.
-Resume file: .planning/HANDOFF.json (untracked; see its own note on durability)
+Last session: 2026-10-11T18:42:26.156Z
+Stopped at: Phase 88 context gathered
+Resume file: .planning/phases/88-dismissals-applied-on-every-surface/88-CONTEXT.md
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
 ## Operator Next Steps
