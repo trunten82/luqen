@@ -40,7 +40,7 @@ function makeCtx(overrides: Partial<GraphQLContext> = {}): GraphQLContext {
     user: { id: 'user-1', username: 'testuser', role: 'admin' },
     permissions: new Set(['scans.create', 'reports.delete', 'issues.assign', 'trends.view',
       'users.create', 'users.delete', 'users.activate', 'users.reset_password', 'users.roles',
-      'audit.view']),
+      'audit.view', 'admin.teams']),
     orgId: 'org-1',
     ...overrides,
   };

@@ -305,7 +305,7 @@ export const resolvers = {
       _args: unknown,
       ctx: GraphQLContext,
     ) => {
-      requireAuth(ctx);
+      requirePerm(ctx, 'admin.teams');
       return await ctx.storage.teams.listTeams(ctx.orgId);
     },
 
@@ -314,7 +314,7 @@ export const resolvers = {
       args: { id: string },
       ctx: GraphQLContext,
     ) => {
-      requireAuth(ctx);
+      requirePerm(ctx, 'admin.teams');
       return await getTeamInOrg(ctx, args.id);
     },
 
