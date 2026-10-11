@@ -37,6 +37,21 @@ export const DismissalSchema = Type.Object({
   revoke_comment: NullableString,
 });
 
+/**
+ * The mark (201) and revoke (200) response: the dismissal plus the outcome of the same-request
+ * recompute of the site's stored count columns (Phase 88, D-13/D-14). snake_case, matching this
+ * route's contract. `recompute_complete` is false when any scan could not be recomputed or the
+ * scan listing failed; the dismissal itself is committed either way.
+ */
+export const DismissalMutationResponse = Type.Composite([
+  DismissalSchema,
+  Type.Object({
+    recomputed_scans: Type.Integer({ minimum: 0 }),
+    failed_scans: Type.Integer({ minimum: 0 }),
+    recompute_complete: Type.Boolean(),
+  }),
+]);
+
 export const DismissalEventSchema = Type.Object({
   id: Type.String(),
   action: Type.String(),
@@ -92,6 +107,18 @@ export function dismissalToJson(d: IssueDismissal): Static<typeof DismissalSchem
     revoked_by_id: d.revokedById,
     revoked_at: d.revokedAt,
     revoke_comment: d.revokeComment,
+  };
+}
+
+export function mutationToJson(
+  d: IssueDismissal,
+  r: { readonly recomputedScans: number; readonly failedScans: number; readonly listed: boolean },
+): Static<typeof DismissalMutationResponse> {
+  return {
+    ...dismissalToJson(d),
+    recomputed_scans: r.recomputedScans,
+    failed_scans: r.failedScans,
+    recompute_complete: r.listed && r.failedScans === 0,
   };
 }
 
