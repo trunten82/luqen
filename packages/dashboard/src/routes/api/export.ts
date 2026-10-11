@@ -20,6 +20,9 @@ import {
 } from '../../services/vpat-share-service.js';
 import { ErrorEnvelope } from '../../api/schemas/envelope.js';
 import { flattenIssueOccurrences } from '../../services/issue-occurrences.js';
+import { applyActiveDismissals, type AppliedActiveDismissals } from '../../services/issue-dismissals/load-dismissed-report.js';
+import { t } from '../../i18n/index.js';
+import type { Locale } from '../../i18n/index.js';
 
 // Export endpoints stream binary buffers — schemas declare a string body and
 // the correct `produces` content-type so the OpenAPI spec accurately reflects
@@ -83,6 +86,85 @@ export async function buildXlsx(
 
   const buffer = await wb.xlsx.writeBuffer();
   return Buffer.from(buffer as ArrayBuffer);
+}
+
+/** Bold 10pt header row on a pale fill — shared by every sheet built inline in this file. */
+function styleHeaderRow(ws: ExcelJS.Worksheet): void {
+  const headerRow = ws.getRow(1);
+  headerRow.font = { bold: true, size: 10 };
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFF5F6FA' },
+  };
+}
+
+/**
+ * Locale for translated export content: ?lang= override (validated) -> session UI
+ * locale -> 'en'. Same precedence as the vpat.pdf handler; reading ?lang= adds no
+ * route schema, so the OpenAPI snapshot is unaffected.
+ */
+function requestLocale(request: FastifyRequest): Locale {
+  const sess = request.session as { get?(key: string): unknown } | undefined;
+  const langQuery = (request.query as { lang?: string } | undefined)?.lang;
+  const sessionLocale =
+    typeof sess?.get === 'function' ? (sess.get('locale') as string | undefined) : undefined;
+  return resolveLocale(langQuery ?? sessionLocale ?? undefined) as Locale;
+}
+
+const DISMISSED_COLUMN_KEYS = [
+  'colPageUrl',
+  'colRuleCode',
+  'colSelector',
+  'colLevel',
+  'colReason',
+  'colDismissedBy',
+  'colDismissedAt',
+] as const;
+const DISMISSED_COLUMN_WIDTHS = [40, 30, 30, 10, 40, 20, 26] as const;
+
+type DismissedSheetSource = Pick<AppliedActiveDismissals<unknown>, 'dismissed' | 'active'>;
+
+interface DismissedIssueFields {
+  readonly code?: unknown;
+  readonly selector?: unknown;
+  readonly type?: unknown;
+}
+
+function text(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+/**
+ * The "Dismissed" worksheet (D-18): one row per dismissed occurrence with the
+ * reason, actor and date of the dismissal that hid it. Name and headers are
+ * translated for the request locale; every value is written as a plain string,
+ * so a reason beginning with "=" is text, never a formula.
+ */
+function addDismissedSheet(wb: ExcelJS.Workbook, applied: DismissedSheetSource, locale: Locale): void {
+  const ws = wb.addWorksheet(t('dismissalsExport.sheetName', locale));
+  ws.columns = DISMISSED_COLUMN_KEYS.map((key, i) => ({
+    header: t(`dismissalsExport.${key}`, locale),
+    key: `col${i}`,
+    width: DISMISSED_COLUMN_WIDTHS[i] ?? 20,
+  }));
+  styleHeaderRow(ws);
+  const byId = new Map(applied.active.map((d) => [d.id, d]));
+  for (const occurrence of applied.dismissed) {
+    const dismissal = byId.get(occurrence.dismissalId);
+    const issue = occurrence.issue as DismissedIssueFields;
+    ws.addRow([
+      occurrence.pageUrl,
+      text(issue.code),
+      text(issue.selector),
+      text(issue.type),
+      dismissal?.reason ?? '',
+      dismissal?.createdBy ?? '',
+      dismissal?.createdAt ?? '',
+    ]);
+  }
+  ws.autoFilter = { from: 'A1', to: `${String.fromCharCode(64 + DISMISSED_COLUMN_KEYS.length)}1` };
+  ws.views = [{ state: 'frozen', ySplit: 1 }];
 }
 
 function todayStamp(): string {
@@ -263,6 +345,7 @@ export async function exportRoutes(
       }
 
       let raw: ExportReportFile;
+      let applied: Awaited<ReturnType<typeof applyActiveDismissals<ExportReportFile>>>;
       try {
         const dbReport = await storage.scans.getReport(id);
         if (dbReport !== null) {
@@ -272,13 +355,15 @@ export async function exportRoutes(
         } else {
           return reply.code(404).send({ error: 'Report data not available' });
         }
+        // D-05: the scan's own org + site active dismissals; a lookup failure takes the 500 path.
+        applied = await applyActiveDismissals(storage, scan, raw);
       } catch {
         return reply.code(500).send({ error: 'Failed to read report data' });
       }
 
       // Use normalizeReportData as single source of truth for enriched
       // issues (includes WCAG metadata, regulation annotations, etc.)
-      const normalized = normalizeReportData(raw as JsonReportFile, scan);
+      const normalized = normalizeReportData(applied.report as JsonReportFile, scan);
 
       // One row per issue OCCURRENCE, template-deduplicated ones included —
       // otherwise the row count falls short of the PDF's TOTAL ISSUES by
@@ -375,13 +460,7 @@ export async function exportRoutes(
         key: `col${i}`,
         width: [8, 8, 10, 20, 40, 40, 30, 30, 40, 10, 20, 15, 30, 10][i] ?? 20,
       }));
-      const headerRow = ws.getRow(1);
-      headerRow.font = { bold: true, size: 10 };
-      headerRow.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFF5F6FA' },
-      };
+      styleHeaderRow(ws);
 
       for (const row of rows) {
         const dataRow = ws.addRow(row);
@@ -395,6 +474,11 @@ export async function exportRoutes(
 
       ws.autoFilter = { from: 'A1', to: `${String.fromCharCode(64 + headers.length)}1` };
       ws.views = [{ state: 'frozen', ySplit: 1 }];
+
+      // D-18: the judgement lives on its own sheet, and only when something is dismissed (SC5).
+      if (applied.dismissed.length > 0) {
+        addDismissedSheet(wb, applied, requestLocale(request));
+      }
 
       const buffer = await wb.xlsx.writeBuffer();
       return reply
