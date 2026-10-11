@@ -17,6 +17,26 @@ import type { BrandScoreRepository } from '../db/interfaces/brand-score-reposito
 import type { ScoreResult } from '../services/scoring/types.js';
 import type { BrandGuideline } from '@luqen/branding';
 import type { Issue, VisualContext } from '@luqen/core';
+import { persistedCountsFor } from '../services/issue-dismissals/load-dismissed-report.js';
+import type { IssueCounts } from '../services/count-issues.js';
+
+type ScanIssue = { code: string; type: string; message: string; selector: string; context: string };
+type ScanPage = { url: string; issueCount: number; issues: ScanIssue[] };
+
+/**
+ * The pages a scan's report persists: the scanner's own pages, or one synthetic page over
+ * every issue when the scanner returned none. Counted (dismissal-filtered) and persisted by
+ * the same code so the two can never describe different pages.
+ */
+function reportPagesOf(
+  scanPages: readonly ScanPage[],
+  allIssues: readonly ScanIssue[],
+  siteUrl: string,
+): readonly ScanPage[] {
+  return scanPages.length > 0
+    ? scanPages
+    : [{ url: siteUrl, issues: [...allIssues], issueCount: allIssues.length }];
+}
 
 export interface ScanProgressEvent {
   readonly type: 'discovery' | 'discovery_progress' | 'scan_start' | 'scan_complete' | 'scan_error' | 'compliance' | 'complete' | 'failed';
@@ -351,8 +371,14 @@ export class ScanOrchestrator {
       let errors = 0;
       let warnings = 0;
       let notices = 0;
-      let allIssues: Array<{ code: string; type: string; message: string; selector: string; context: string }> = [];
-      let scanPages: Array<{ url: string; issueCount: number; issues: Array<{ code: string; type: string; message: string; selector: string; context: string }> }> = [];
+      let allIssues: ScanIssue[] = [];
+      let scanPages: ScanPage[] = [];
+      // D-16 / D-17: each scan path assigns, at the end of its OWN branch, the computation of
+      // the counts to persist (its raw basis, through the one shared persistedCountsFor).
+      // Deliberately NO initializer: tsc rejects any branch that forgets to assign it. The tail
+      // invokes it immediately before the completion write, so a dismissal marked during the
+      // compliance / branding steps below is reflected (W3).
+      let computePersistedCounts: () => Promise<IssueCounts>;
       // Phase 84 C#2: WCAG criteria the LLM-vision pass evaluated definitively
       // during this scan (populated only on a behavioral standard scan). Persisted
       // on the report so buildVpat can elevate clean criteria to "Supports".
@@ -514,6 +540,10 @@ export class ScanOrchestrator {
           if (hashEntries.length > 0) {
             await this.storage.pageHashes.upsertPageHashes(hashEntries);
           }
+
+          // Placeholder until Plan 10 Task 2 wires this path's own persistedCountsFor call.
+          const incrementalRaw: IssueCounts = { errors, warnings, notices, total: errors + warnings + notices };
+          computePersistedCounts = async () => incrementalRaw;
         } else {
           // --- Standard (non-incremental) scan ---
           // Phase 84: resolve an org-scoped vision analyzer for the behavioral
@@ -581,7 +611,23 @@ export class ScanOrchestrator {
             issueCount: p.issueCount ?? p.issues.length,
             issues: p.issues,
           }));
+
+          // D-16 / D-17: this path's own call to the shared helper. The scanner's summary
+          // counts are the raw basis here; the closure is NOT invoked until the tail.
+          const standardPages = reportPagesOf(scanPages, allIssues, config.siteUrl);
+          const standardRaw: IssueCounts = { errors, warnings, notices, total: errors + warnings + notices };
+          computePersistedCounts = () =>
+            persistedCountsFor(
+              this.storage,
+              { orgId: config.orgId ?? 'system', siteUrl: config.siteUrl },
+              standardPages,
+              standardRaw,
+            );
         }
+      } else {
+        // The core scanner could not be loaded: nothing was scanned, so the counts are the
+        // zero counts the columns have always carried. Explicit, not a missing assignment.
+        computePersistedCounts = async () => ({ errors, warnings, notices, total: errors + warnings + notices });
       }
 
       const hostname = new URL(config.siteUrl).hostname;
@@ -605,9 +651,7 @@ export class ScanOrchestrator {
       };
 
       // Pages — preserve per-page structure from scanner if available
-      reportData.pages = scanPages.length > 0
-        ? scanPages
-        : [{ url: config.siteUrl, issues: allIssues, issueCount: allIssues.length }];
+      reportData.pages = reportPagesOf(scanPages, allIssues, config.siteUrl);
 
       reportData.errors = [];
 
@@ -878,15 +922,21 @@ export class ScanOrchestrator {
 
       const reportJson = JSON.stringify(reportData, null, 2);
 
+      // D-16: the counts to persist and announce exclude dismissed occurrences; the report
+      // above (summary, pages, FS copy) stays RAW (D-01). Read here, directly before the
+      // write, so the active set is as fresh as the write itself (W3). Nothing is awaited
+      // between this line and the updateScan below.
+      const persistedCounts = await computePersistedCounts();
+
       // Store report in DB (primary) and optionally on filesystem (backup)
       await this.storage.scans.updateScan(scanId, {
         status: 'completed',
         completedAt: new Date().toISOString(),
         pagesScanned,
-        totalIssues: errors + warnings + notices,
-        errors,
-        warnings,
-        notices,
+        totalIssues: persistedCounts.total,
+        errors: persistedCounts.errors,
+        warnings: persistedCounts.warnings,
+        notices: persistedCounts.notices,
         ...(confirmedViolations !== undefined ? { confirmedViolations } : {}),
         ...(brandingGuidelineId !== undefined ? { brandingGuidelineId, brandingGuidelineVersion, brandRelatedCount } : {}),
         jsonReport: reportJson,
@@ -908,7 +958,7 @@ export class ScanOrchestrator {
         data: {
           pagesScanned,
           ...(pagesSkipped > 0 ? { pagesSkipped } : {}),
-          issues: { errors, warnings, notices },
+          issues: { errors: persistedCounts.errors, warnings: persistedCounts.warnings, notices: persistedCounts.notices },
           confirmedViolations,
           reportUrl: `/reports/${scanId}`,
           ...(discoveryWarning !== undefined ? { discoveryWarning } : {}),
@@ -922,7 +972,7 @@ export class ScanOrchestrator {
           siteUrl: config.siteUrl,
           status: 'completed',
           pagesScanned,
-          issues: { errors, warnings, notices },
+          issues: { errors: persistedCounts.errors, warnings: persistedCounts.warnings, notices: persistedCounts.notices },
           confirmedViolations,
           orgId: config.orgId ?? 'system',
         });
@@ -933,7 +983,7 @@ export class ScanOrchestrator {
         scanId,
         siteUrl: config.siteUrl,
         pagesScanned,
-        issues: { errors, warnings, notices },
+        issues: { errors: persistedCounts.errors, warnings: persistedCounts.warnings, notices: persistedCounts.notices },
         confirmedViolations,
       });
     } catch (err) {
