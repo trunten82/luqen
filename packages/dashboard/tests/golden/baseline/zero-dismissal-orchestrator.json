@@ -62,5 +62,71 @@
         "orgId": "org-fabrikam"
       }
     }
+  },
+  "incremental": {
+    "columns": {
+      "status": "completed",
+      "pagesScanned": 4,
+      "totalIssues": 8,
+      "errors": 5,
+      "warnings": 2,
+      "notices": 1,
+      "confirmedViolations": 2,
+      "jsonReportPath": "/golden-reports/fabrikam.example-scan-fabrikam-golden-0001.json"
+    },
+    "storedSummary": {
+      "pagesScanned": 4,
+      "totalIssues": 8,
+      "byLevel": {
+        "error": 5,
+        "warning": 2,
+        "notice": 1
+      },
+      "pagesFailed": 0,
+      "pagesSkipped": 1
+    },
+    "completeEvent": {
+      "pagesScanned": 4,
+      "pagesSkipped": 1,
+      "issues": {
+        "errors": 5,
+        "warnings": 2,
+        "notices": 1
+      },
+      "confirmedViolations": 2,
+      "reportUrl": "/reports/scan-fabrikam-golden-0001"
+    },
+    "webhook": {
+      "event": "scan.completed",
+      "payload": {
+        "scanId": "scan-fabrikam-golden-0001",
+        "siteUrl": "https://fabrikam.example/shop/",
+        "status": "completed",
+        "pagesScanned": 4,
+        "issues": {
+          "errors": 5,
+          "warnings": 2,
+          "notices": 1
+        },
+        "confirmedViolations": 2,
+        "orgId": "org-fabrikam"
+      }
+    },
+    "plugin": {
+      "type": "scan.complete",
+      "orgId": "org-fabrikam",
+      "data": {
+        "scanId": "scan-fabrikam-golden-0001",
+        "siteUrl": "https://fabrikam.example/shop/",
+        "pagesScanned": 4,
+        "issues": {
+          "errors": 5,
+          "warnings": 2,
+          "notices": 1
+        },
+        "confirmedViolations": 2,
+        "orgId": "org-fabrikam"
+      }
+    }
   }
 }

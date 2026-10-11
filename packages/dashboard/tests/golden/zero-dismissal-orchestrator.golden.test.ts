@@ -51,4 +51,13 @@ describe('zero-dismissal orchestrator goldens', () => {
     });
     goldenCheck(FILE, 'standard', output);
   });
+
+  it('golden: orchestrator incremental path persisted counts and payloads zero-dismissal output is unchanged', async () => {
+    const output = await driveOrchestratorScan({
+      path: 'incremental',
+      report: surfaceReport(),
+      dismissals: foreignDismissalRows(),
+    });
+    goldenCheck(FILE, 'incremental', output);
+  });
 });

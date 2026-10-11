@@ -157,9 +157,26 @@ function configureStandard(report: Record<string, unknown>): void {
   });
 }
 
-function configureIncremental(_report: Record<string, unknown>): never {
-  // Filled in by the incremental task; the standard-path tracer does not reach it.
-  throw new Error('orchestrator-driver: the incremental path is not implemented yet');
+/**
+ * The real incremental branch: discover -> hash -> compare -> scanUrls. The three
+ * report pages are new (no stored hash), so they are "changed" and scanned; one
+ * extra discovered page (INCREMENTAL_SKIPPED_PAGE) has an unchanged stored hash,
+ * so the branch's own pagesSkipped / pagesScanned rule is part of the baseline.
+ */
+function configureIncremental(report: Record<string, unknown>): void {
+  const pages = reportPages(report);
+  const discovered = [
+    ...pages.map((p) => ({ url: p.url, discoveryMethod: 'crawl' })),
+    { url: INCREMENTAL_SKIPPED_PAGE, discoveryMethod: 'crawl' },
+  ];
+  coreMocks.discoverUrls.mockResolvedValue({ urls: discovered });
+  coreMocks.computeContentHashes.mockResolvedValue(
+    new Map(discovered.map((d) => [d.url, d.url === INCREMENTAL_SKIPPED_PAGE ? 'hash-archive' : `hash-${d.url}`])),
+  );
+  coreMocks.scanUrls.mockResolvedValue({
+    pages: pages.map((p) => ({ url: p.url, discoveryMethod: 'crawl', issueCount: p.issueCount, issues: p.issues })),
+    errors: [],
+  });
 }
 
 function collectUntilTerminal(orchestrator: ScanOrchestrator, scanId: string): Promise<ScanProgressEvent[]> {
