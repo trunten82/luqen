@@ -2070,7 +2070,9 @@
     "verdictPartial": "{{site}} partially conforms to {{standard}} across {{pages}} page(s).",
     "verdictMeta": "Evaluated {{date}} · {{supports}} of {{total}} criteria supported · {{doesNotSupport}} not supported · {{notEvaluated}} pending manual evaluation",
     "staleNotice": "A newer version of this report is available.",
-    "staleNoticeLink": "View the latest report"
+    "staleNoticeLink": "View the latest report",
+    "dismissedDisclosureOne": "1 automated finding was dismissed as a false positive after review.",
+    "dismissedDisclosureOther": "{{count}} automated findings were dismissed as false positives after review."
   },
   "acrWording": {
     "admin": {

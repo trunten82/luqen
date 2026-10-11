@@ -1609,7 +1609,9 @@
     "verdictPartial": "{{site}} è parzialmente conforme a {{standard}} su {{pages}} pagina/e.",
     "verdictMeta": "Valutato il {{date}} · {{supports}} di {{total}} criteri supportati · {{doesNotSupport}} non supportati · {{notEvaluated}} in attesa di valutazione manuale",
     "staleNotice": "È disponibile una versione più recente di questo rapporto.",
-    "staleNoticeLink": "Visualizza il rapporto più recente"
+    "staleNoticeLink": "Visualizza il rapporto più recente",
+    "dismissedDisclosureOne": "1 rilevamento automatico è stato escluso come falso positivo dopo la revisione.",
+    "dismissedDisclosureOther": "{{count}} rilevamenti automatici sono stati esclusi come falsi positivi dopo la revisione."
   },
   "reportPage": {
     "revisionsHeading": "Cronologia del rapporto",
