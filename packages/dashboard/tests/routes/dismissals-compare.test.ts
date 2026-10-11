@@ -66,9 +66,15 @@ function withoutSelector(selector: string): Record<string, unknown> {
     return { ...p, issues, issueCount: issues.length };
   });
   const counts = countIssues({ pages });
+  // A scan that never saw the finding carries no annotated copy of it either.
+  const compliance = report['compliance'] as { annotatedIssues: Array<{ originalIssue: { selector: string } }> };
   return {
     ...report,
     pages,
+    compliance: {
+      ...compliance,
+      annotatedIssues: compliance.annotatedIssues.filter((a) => a.originalIssue.selector !== selector),
+    },
     summary: {
       ...report.summary,
       totalIssues: counts.total,
