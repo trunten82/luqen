@@ -10,7 +10,7 @@ import { promisify } from 'node:util';
 import type { StorageAdapter } from '../../db/adapter.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { toastHtml, escapeHtml } from './helpers.js';
-import { requireGuidelineScope, requireGuidelineChild } from './branding-guideline-scope.js';
+import { requireGuidelineScope, requireGuidelineChild, guidelineInScope } from './branding-guideline-scope.js';
 import { t } from '../../i18n/index.js';
 import { retagScansForSite, retagAllSitesForGuideline } from '../../services/branding-retag.js';
 import type { BrandingOrchestrator } from '../../services/branding/branding-orchestrator.js';
@@ -74,6 +74,11 @@ const TabQuery = Type.Object(
   { tab: Type.Optional(Type.String()), from: Type.Optional(Type.String()) },
   { additionalProperties: true },
 );
+
+/** 403 for a write into a scope the caller may not write (see guidelineInScope). */
+function refuseScopeWrite(reply: FastifyReply): FastifyReply {
+  return reply.code(403).header('content-type', 'text/html').send(toastHtml('Access denied.', 'error'));
+}
 
 export async function brandingGuidelineRoutes(
   server: FastifyInstance,
@@ -144,6 +149,9 @@ export async function brandingGuidelineRoutes(
       }
 
       const orgId = request.user?.currentOrgId ?? 'system';
+      // Writing into the 'system' scope (an org-less caller resolves to it)
+      // needs a global admin; org users write into their own org as before.
+      if (!guidelineInScope(request.user, orgId, 'edit')) return refuseScopeWrite(reply);
       const { GuidelineParser } = await import('@luqen/branding');
       const parser = new GuidelineParser();
 
@@ -300,6 +308,9 @@ export async function brandingGuidelineRoutes(
       const { id } = request.params as { id: string };
       const body = request.body as { name?: string } | undefined;
       const orgId = request.user?.currentOrgId ?? 'system';
+      // Writing into the 'system' scope (an org-less caller resolves to it)
+      // needs a global admin; org users write into their own org as before.
+      if (!guidelineInScope(request.user, orgId, 'edit')) return refuseScopeWrite(reply);
       const cloneName = body?.name?.trim() || undefined;
 
       // Guard: source must exist and be system-scoped. An org-owned row
@@ -346,6 +357,9 @@ export async function brandingGuidelineRoutes(
       }
 
       const orgId = request.user?.currentOrgId ?? 'system';
+      // Writing into the 'system' scope (an org-less caller resolves to it)
+      // needs a global admin; org users write into their own org as before.
+      if (!guidelineInScope(request.user, orgId, 'edit')) return refuseScopeWrite(reply);
 
       try {
         const guideline = await storage.branding.createGuideline({
@@ -836,8 +850,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
 
       // Verify org ownership
       const orgId = request.user?.currentOrgId ?? 'system';
-      const isGlobalAdmin = bypassesOrgScope(request.user);
-      if (!isGlobalAdmin && guideline.orgId !== orgId) {
+      if (!guidelineInScope(request.user, guideline.orgId, 'edit')) {
         return reply
           .code(403)
           .header('content-type', 'text/html')
@@ -1234,6 +1247,9 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
       }
 
       const orgId = request.user?.currentOrgId ?? 'system';
+      // Writing into the 'system' scope (an org-less caller resolves to it)
+      // needs a global admin; org users write into their own org as before.
+      if (!guidelineInScope(request.user, orgId, 'edit')) return refuseScopeWrite(reply);
       const normalizedUrl = siteUrl.replace(/\/+$/, '');
 
       try {
@@ -1314,6 +1330,9 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
       }
 
       const orgId = request.user?.currentOrgId ?? 'system';
+      // Writing into the 'system' scope (an org-less caller resolves to it)
+      // needs a global admin; org users write into their own org as before.
+      if (!guidelineInScope(request.user, orgId, 'edit')) return refuseScopeWrite(reply);
 
       try {
         await storage.branding.unassignFromSite(siteUrl, orgId);
