@@ -30,7 +30,8 @@ import {
   type Store,
 } from '../../helpers/issue-dismissal-route-harness.js';
 
-const SITE = 'https://fabrikam.example/shop/';
+// No trailing slash and lower-case host: toSiteKey is the identity here, so only the variant test depends on it.
+const SITE = 'https://fabrikam.example/shop';
 
 describe('applyActiveDismissals (D-05)', () => {
   let store: Store;
