@@ -255,7 +255,7 @@ Plans:
   4. A later scan applies active dismissals on BOTH orchestrator paths (standard and incremental). The counts persisted at scan end exclude them, and so do the webhook, plugin and completion payloads. Break-test per path: removing the apply call from one path turns red only that path's test (FP-13).
   5. With zero active dismissals, every surface above produces the same output as before the change, ACR included. A golden comparison on real stored reports proves it, which makes the merge safe to auto-deploy while the permission is dark.
 
-**Plans**: 18/19 plans executed (wave 1: 01, 02, 13; wave 2: 03, 04, 05, 06, 11, 15, 16; wave 3: 07, 08, 09, 10, 14, 17, 18; wave 4: 12)
+**Plans**: 19/19 plans executed (wave 1: 01, 02, 13; wave 2: 03, 04, 05, 06, 11, 15, 16; wave 3: 07, 08, 09, 10, 14, 17, 18; wave 4: 12)
 
 Plans:
 
@@ -289,7 +289,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 88-12-PLAN.md — read-only prod golden (old vs new bundle + synthetic-dismissal conservation) and the phase gate (SC5)
+- [x] 88-12-PLAN.md — read-only prod golden (old vs new bundle + synthetic-dismissal conservation) and the phase gate (SC5)
 
 ### Phase 89: Dismissal UI, dark launch and role grant
 
@@ -317,7 +317,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 87. Dismissal store, domain model and permission | v3.8.0 | 5/5 | Complete | 2026-10-08 |
-| 88. Dismissals applied on every surface | v3.8.0 | 18/19 | In Progress|  |
+| 88. Dismissals applied on every surface | v3.8.0 | 19/19 | In Progress|  |
 | 89. Dismissal UI, dark launch and role grant | v3.8.0 | 0/? | Not started | - |
 
 **Risks carried into planning (read from source 2026-10-08; not exercised live):**
