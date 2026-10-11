@@ -21,6 +21,7 @@ import {
   registerViewHelpers,
   type SurfaceContext,
 } from '../../golden/drivers/render-drivers.js';
+import { driveReportPdfData } from '../../golden/drivers/acr-export-drivers.js';
 import { resetPdfCapture } from '../../golden/drivers/pdf-capture.js';
 import {
   AFTER_PARTIAL,
@@ -232,5 +233,27 @@ describe('issues.xlsx applies the scan org active dismissals', () => {
     const issuesText = sheetNamed(sheets, 0).rows.map((r) => r.map((c) => String(c.value)).join('|')).join('\n');
     assertDismissedAbsent(issuesText, 'partial');
     assertSiblingPresent(issuesText);
+  });
+});
+
+describe('report.pdf applies the scan org active dismissals', () => {
+  it('report.pdf data omits a dismissed finding', async () => {
+    const before = (await driveReportPdfData(ctx, ctx.scanId)) as { reportData: Record<string, unknown> };
+    resetPdfCapture();
+    await dismiss(DISMISS_PARTIAL);
+    const call = (await driveReportPdfData(ctx, ctx.scanId)) as {
+      reportData: { summary: { totalIssues: number; byLevel: Record<string, number> } };
+    };
+    // D-19: no new PDF section — the data has exactly the keys a zero-dismissal run has.
+    expect(Object.keys(call.reportData).sort()).toEqual(Object.keys(before.reportData).sort());
+    const text = JSON.stringify(call);
+    assertDismissedAbsent(text, 'partial');
+    assertSiblingPresent(text);
+    expect(call.reportData.summary.totalIssues).toBe(AFTER_PARTIAL.total);
+    expect(call.reportData.summary.byLevel).toMatchObject({
+      error: AFTER_PARTIAL.errors,
+      warning: AFTER_PARTIAL.warnings,
+      notice: AFTER_PARTIAL.notices,
+    });
   });
 });
