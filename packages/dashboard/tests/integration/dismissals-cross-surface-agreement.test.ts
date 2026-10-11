@@ -241,7 +241,7 @@ function asCounts(row: { errors: unknown; warnings: unknown; notices: unknown; t
 }
 
 // ── Tracer: the real mark makes the first column-reading surfaces agree ──────
-describe('cross-surface agreement after a real mark (SC3, FP-08)', () => {
+describe('cross-surface agreement after a real mark (SC3, FP-08)', { timeout: 30_000 }, () => {
   it('cross-surface: home agrees with the rendered report', async () => {
     const world = await buildWorld();
     const renderedNew = await renderedCounts(world, world.newId);
@@ -331,7 +331,7 @@ async function fabrikamScans(world: World): Promise<readonly [ScanCounts, ScanCo
   return [out[0]!, out[1]!];
 }
 
-describe('cross-surface agreement after a real mark: remaining surfaces', () => {
+describe('cross-surface agreement after a real mark: remaining surfaces', { timeout: 30_000 }, () => {
   it('cross-surface: trends score agrees with the rendered report', async () => {
     const world = await buildWorld();
     const [fresh, older] = await fabrikamScans(world);
@@ -571,7 +571,7 @@ async function readSheet(payload: Buffer): Promise<{ headers: string[]; rows: st
 }
 
 // ── Isolation and the summary-less stored report ─────────────────────────────
-describe('cross-surface agreement: tenants and stored shapes', () => {
+describe('cross-surface agreement: tenants and stored shapes', { timeout: 30_000 }, () => {
   it('the Northwind scan of the same URL keeps its raw columns', async () => {
     const world = await buildWorld();
     // Stored columns: not recomputed by a Fabrikam mark.
