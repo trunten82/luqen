@@ -214,4 +214,26 @@ describe('repos fixes view noReport branches never carry a dismissed occurrence'
     assertDismissedAbsent(text, 'partial');
     assertSiblingPresent(text);
   });
+  it('repos fixes view noReport drops a DB blob it cannot filter while a dismissal is active for the site', async () => {
+    const id = await dbOnlyScan();
+    await ctx.storage.scans.updateScan(id, { jsonReport: `not json ${SEL_DISMISSED}` });
+    await dismiss();
+    const out = (await driveReposFixesView(ctx, id)) as View;
+
+    expect(out.body.data.noReport).toBe(true);
+    expect(JSON.stringify(out)).not.toContain(SEL_DISMISSED.replace(/^#/, ''));
+  });
+
+  it('repos fixes view noReport drops the DB blob when the dismissal lookup fails', async () => {
+    const id = await dbOnlyScan();
+    const repo = ctx.storage.issueDismissals;
+    if (repo === undefined) throw new Error('fixture storage has no issueDismissals repository');
+    vi.spyOn(repo, 'listActiveForSite').mockRejectedValue(new Error('SECRET-DB-DETAIL-9913'));
+    const out = (await driveReposFixesView(ctx, id)) as View;
+
+    expect(out.body.data.noReport).toBe(true);
+    const text = JSON.stringify(out);
+    expect(text).not.toContain(SEL_DISMISSED.replace(/^#/, ''));
+    expect(text).not.toContain('SECRET-DB-DETAIL-9913');
+  });
 });
