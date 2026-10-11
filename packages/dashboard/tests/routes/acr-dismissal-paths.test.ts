@@ -1,25 +1,32 @@
 /**
  * Phase 88 Plan 06: the public ACR path applies active dismissals and discloses
  * them per criterion (FP-07, D-09..D-11). Plan 14 appends the report VPAT, the
- * share and the report-page paths to this file.
+ * share and the report-page paths to this file (they reach the same shared
+ * assembly through their own route, so each has its own disclosure test).
  *
  * Drives the REAL public route with the REAL store (Plan 01 drivers). Foreign
  * dismissals (Northwind on the same URL, Fabrikam on another site) are seeded
  * by createSurfaceContext and must never apply.
  */
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 process.env['TZ'] ??= 'UTC';
 
 import {
   createSurfaceContext,
+  makeServer,
   registerViewHelpers,
   type SurfaceContext,
 } from '../golden/drivers/render-drivers.js';
+import { reportRoutes } from '../../src/routes/reports.js';
+import { shareRoutes } from '../../src/routes/share.js';
+import { reportPageRoutes } from '../../src/routes/report-page.js';
 import { driveVpatModel, drivePublicAcrHtml } from '../golden/drivers/acr-export-drivers.js';
 import {
   DISMISS_PARTIAL,
   DISMISS_WHOLE,
+  FABRIKAM_SITE,
   REASON_TOKEN,
   seedSurfaceDismissal,
 } from '../helpers/dismissal-surface-fixture.js';
@@ -95,5 +102,79 @@ describe('public ACR (/reports/:id/acr) applies the scan org active dismissals',
     const html = await drivePublicAcrHtml(ctx, ctx.scanId);
     expect(html).not.toContain('dismissed as');
     expect(html).not.toContain(REASON_TOKEN);
+  });
+});
+
+function uploadsRootOf(): string {
+  return join(ctx.store.reportsDir, 'uploads');
+}
+
+/** The disclosure every HTML path must show: counts per criterion, verdicts follow the filtered report. */
+function expectHtmlDisclosure(html: string): void {
+  expect(html).toContain(SENTENCE_THREE);
+  expect(html).toContain(SENTENCE_ONE);
+
+  // 1.4.3 keeps failing through the same-code sibling; 1.1.1 lost its only finding.
+  const contrast = htmlRowOf(html, '1.4.3');
+  expect(contrast).toContain('Does Not Support');
+  expect(contrast).toContain(SENTENCE_THREE);
+  const alt = htmlRowOf(html, '1.1.1');
+  expect(alt).not.toContain('Does Not Support');
+  expect(alt).toContain(SENTENCE_ONE);
+
+  // Counts only: neither the reason nor the actor is on the document.
+  expect(html).not.toContain(REASON_TOKEN);
+  expect(html).not.toContain('fabrikam-admin');
+}
+
+async function getHtml(register: Parameters<typeof makeServer>[1], url: string): Promise<string> {
+  const server = await makeServer(ctx, register);
+  try {
+    const res = await server.inject({ method: 'GET', url, headers: { host: 'dashboard.example' } });
+    if (res.statusCode !== 200) throw new Error(`GET ${url}: expected 200, got ${res.statusCode}`);
+    return res.body.replace(/&#x2F;/g, '/');
+  } finally {
+    await server.close();
+  }
+}
+
+describe('report VPAT (/reports/:id/vpat) applies the scan org active dismissals', () => {
+  it('report VPAT discloses dismissed findings per criterion', async () => {
+    await dismiss(DISMISS_PARTIAL);
+    await dismiss(DISMISS_WHOLE);
+    const html = await getHtml(
+      (s) => reportRoutes(s, ctx.storage, () => null, { uploadsRoot: uploadsRootOf() }),
+      `/reports/${ctx.scanId}/vpat`,
+    );
+    expectHtmlDisclosure(html);
+  });
+});
+
+describe('token share (/share/:token) applies the scan org active dismissals', () => {
+  it('token share discloses dismissed findings per criterion', async () => {
+    await dismiss(DISMISS_PARTIAL);
+    await dismiss(DISMISS_WHOLE);
+    const share = await ctx.storage.reportShares.createShare({
+      scanId: ctx.scanId,
+      orgId: ctx.orgs.fabrikamOrgId,
+    });
+    const html = await getHtml(
+      (s) => shareRoutes(s, ctx.storage, uploadsRootOf()),
+      `/share/${share.token}`,
+    );
+    expectHtmlDisclosure(html);
+  });
+});
+
+describe('report page (/reports/live/:badgeId) applies the scan org active dismissals', () => {
+  it('report page ACR discloses dismissed findings per criterion', async () => {
+    await dismiss(DISMISS_PARTIAL);
+    await dismiss(DISMISS_WHOLE);
+    const badge = await ctx.storage.siteBadges.enable(ctx.orgs.fabrikamOrgId, FABRIKAM_SITE, 'fabrikam-admin-badge');
+    const html = await getHtml(
+      (s) => reportPageRoutes(s, ctx.storage, uploadsRootOf()),
+      `/reports/live/${badge.id}`,
+    );
+    expectHtmlDisclosure(html);
   });
 });

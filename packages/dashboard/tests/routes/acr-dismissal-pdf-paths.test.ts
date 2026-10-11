@@ -14,11 +14,13 @@ process.env['TZ'] ??= 'UTC';
 
 import {
   createSurfaceContext,
+  makeServer,
   registerViewHelpers,
   type SurfaceContext,
 } from '../golden/drivers/render-drivers.js';
 import { driveFleetVpatInput } from '../golden/drivers/acr-export-drivers.js';
 import { resetPdfCapture } from '../golden/drivers/pdf-capture.js';
+import { exportRoutes } from '../../src/routes/api/export.js';
 import {
   DISMISS_PARTIAL,
   DISMISS_WHOLE,
@@ -27,6 +29,8 @@ import {
   seedSurfaceDismissal,
   useFixedClock,
 } from '../helpers/dismissal-surface-fixture.js';
+
+const acrViews: unknown[] = [];
 
 // The vpat PDFKit generator (fleet report, and the fallback of the ACR PDF) records its arguments.
 vi.mock('../../src/pdf/generator.js', async (importOriginal) => {
@@ -39,6 +43,18 @@ vi.mock('../../src/pdf/generator.js', async (importOriginal) => {
   };
 });
 
+// The Chromium ACR PDF records the AcrView it is asked to print.
+vi.mock('../../src/services/acr-render.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/services/acr-render.js')>();
+  return {
+    ...actual,
+    generateAcrPdf: async (view: unknown): Promise<Buffer> => {
+      acrViews.push(JSON.parse(JSON.stringify(view)));
+      return Buffer.from('captured-acr-pdf');
+    },
+  };
+});
+
 const SENTENCE_THREE = '3 automated findings were dismissed as false positives after review.';
 const SENTENCE_ONE = '1 automated finding was dismissed as a false positive after review.';
 
@@ -47,6 +63,7 @@ let ctx: SurfaceContext;
 beforeEach(async () => {
   useFixedClock();
   resetPdfCapture();
+  acrViews.length = 0;
   registerViewHelpers();
   ctx = await createSurfaceContext();
 });
@@ -74,6 +91,13 @@ function vpatRow(captured: unknown, criterion: string): VpatRowShape {
   return row;
 }
 
+function viewRow(view: unknown, criterion: string): VpatRowShape {
+  const tables = (view as { tables: ReadonlyArray<{ rows: readonly VpatRowShape[] }> }).tables;
+  const row = tables.flatMap((t) => t.rows).find((r) => r.criterion === criterion);
+  if (row === undefined) throw new Error(`no ACR view row for ${criterion}`);
+  return row;
+}
+
 function expectDisclosure(contrast: VpatRowShape, alt: VpatRowShape): void {
   // 1.4.3 keeps failing through the same-code sibling; 1.1.1 lost its only finding.
   expect(contrast.conformance).toBe('Does Not Support');
@@ -95,6 +119,44 @@ describe('fleet report applies the scan org active dismissals', () => {
     expectDisclosure(contrast, alt);
 
     const text = JSON.stringify(captured);
+    expect(text).not.toContain(REASON_TOKEN);
+    expect(text).not.toContain('fabrikam-admin');
+  });
+});
+
+async function injectPdfPath(url: string): Promise<{ statusCode: number; rawPayload: Buffer }> {
+  const server = await makeServer(ctx, (s) => exportRoutes(s, ctx.storage));
+  try {
+    const res = await server.inject({ method: 'GET', url });
+    return { statusCode: res.statusCode, rawPayload: res.rawPayload };
+  } finally {
+    await server.close();
+  }
+}
+
+describe('export PDF paths apply the scan org active dismissals', () => {
+  it('vpat.pdf discloses dismissed findings per criterion', async () => {
+    await dismiss(DISMISS_PARTIAL);
+    await dismiss(DISMISS_WHOLE);
+    const res = await injectPdfPath(`/api/v1/export/scans/${ctx.scanId}/vpat.pdf`);
+    expect(res.statusCode).toBe(200);
+
+    expect(acrViews).toHaveLength(1);
+    expectDisclosure(viewRow(acrViews[0], '1.4.3'), viewRow(acrViews[0], '1.1.1'));
+    const text = JSON.stringify(acrViews[0]);
+    expect(text).not.toContain(REASON_TOKEN);
+    expect(text).not.toContain('fabrikam-admin');
+  });
+
+  it('vpat-pack.zip discloses dismissed findings per criterion', async () => {
+    await dismiss(DISMISS_PARTIAL);
+    await dismiss(DISMISS_WHOLE);
+    const res = await injectPdfPath(`/api/v1/export/scans/${ctx.scanId}/vpat-pack.zip`);
+    expect(res.statusCode).toBe(200);
+
+    expect(acrViews).toHaveLength(1);
+    expectDisclosure(viewRow(acrViews[0], '1.4.3'), viewRow(acrViews[0], '1.1.1'));
+    const text = JSON.stringify(acrViews[0]);
     expect(text).not.toContain(REASON_TOKEN);
     expect(text).not.toContain('fabrikam-admin');
   });
