@@ -53,6 +53,21 @@ export async function applyActiveDismissals<R>(
   return { report: filterComplianceForDismissals(raw, applied.report), dismissed: applied.dismissed, active };
 }
 
+/**
+ * A scan ROW carries the whole raw report as `jsonReport`, and several surfaces spread or
+ * serialise the row next to the (filtered) report. When, and only when, at least one
+ * dismissal applied, the row's raw blob is replaced by the filtered report's JSON so the
+ * dismissed occurrence is absent from the WHOLE output. Otherwise the caller's own row
+ * object is returned (identity: zero dismissals stay byte-identical, SC5). Never persists.
+ */
+export function withDismissalsInRawBlob<S extends { readonly jsonReport?: string }>(
+  row: S,
+  applied: Pick<AppliedActiveDismissals<unknown>, 'report' | 'dismissed'>,
+): S {
+  if (applied.dismissed.length === 0 || row.jsonReport === undefined) return row;
+  return { ...row, jsonReport: JSON.stringify(applied.report) };
+}
+
 /** DB report first, then the jsonReportPath file. Never carries err.message. */
 export async function loadReportForScan(
   storage: StorageAdapter,

@@ -10,6 +10,10 @@ import type { StorageAdapter } from '../db/index.js';
 import { extractCriterion, getWcagDescription } from './wcag-enrichment.js';
 import { MANUAL_CRITERIA } from '../manual-criteria.js';
 import { normalizeReportData, inferComponent } from '../services/report-service.js';
+import {
+  applyActiveDismissals,
+  withDismissalsInRawBlob,
+} from '../services/issue-dismissals/load-dismissed-report.js';
 import { isScanPublicShareable } from './badge.js';
 import type { JsonReportFile } from '../services/report-service.js';
 import { getFixSuggestion } from '../fix-suggestions.js';
@@ -351,17 +355,24 @@ export async function reportRoutes(
         });
       }
 
-      // Load report data — try DB first, then filesystem fallback
+      // Load report data — try DB first, then filesystem fallback. The scan's own
+      // org's active dismissals are applied at read time (Phase 88, D-05); the row's
+      // raw blob follows the filtered report so the view data carries no dismissed finding.
       let reportData: ReturnType<typeof normalizeReportData> | null = null;
+      let viewScan = scanMeta;
       try {
         const dbReport = await storage.scans.getReport(id);
         if (dbReport !== null) {
-          reportData = normalizeReportData(dbReport as JsonReportFile, scan);
+          const applied = await applyActiveDismissals(storage, scan, dbReport as JsonReportFile);
+          reportData = normalizeReportData(applied.report, scan);
+          viewScan = withDismissalsInRawBlob(scanMeta, applied);
         } else if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
           const raw = JSON.parse(
             await readFile(scan.jsonReportPath, 'utf-8'),
           ) as JsonReportFile;
-          reportData = normalizeReportData(raw, scan);
+          const applied = await applyActiveDismissals(storage, scan, raw);
+          reportData = normalizeReportData(applied.report, scan);
+          viewScan = withDismissalsInRawBlob(scanMeta, applied);
         }
       } catch {
         // Render without report data — template handles the missing case
@@ -567,7 +578,7 @@ export async function reportRoutes(
         pageTitle: `Report — ${scan.siteUrl}`,
         currentPath: `/reports/${id}`,
         user: request.user,
-        scan: scanMeta,
+        scan: viewScan,
         liveBadgeId,
         reportData,
         complianceStatus: verdictColourClass,
