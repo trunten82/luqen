@@ -15,6 +15,7 @@
  */
 
 import type { StorageAdapter } from '../db/index.js';
+import { applyActiveDismissals } from './issue-dismissals/load-dismissed-report.js';
 
 interface ScanIssueShape {
   readonly code?: string;
@@ -89,7 +90,10 @@ export async function computeBulkFixCandidates(
       const report = (await storage.scans.getReport(
         scan.id,
       )) as ScanReportShape | null;
-      if (!reportMatchesCriterion(report, bulkFix.criterion)) continue;
+      // A dismissed false positive is not a reason to queue a fix: match on the report as
+      // judged by THIS scan's own org and site (the loader tolerates a null report).
+      const applied = await applyActiveDismissals(storage, scan, report);
+      if (!reportMatchesCriterion(applied.report, bulkFix.criterion)) continue;
       seenSiteUrls.add(scan.siteUrl);
       // site_id semantics: we don't carry a stable wp_sites id here, so we
       // use scan.id as the per-site handle. Dispatch passes this through to
