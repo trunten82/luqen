@@ -17,7 +17,7 @@ import type { BrandingOrchestrator } from '../services/branding/branding-orchest
 import { bypassesOrgScope } from '../permissions.js';
 import {
   getScanInOrg, getScanForDelete, getScanForAssignment, getAssignmentInOrg, getTeamInOrg,
-  getGuidelineInOrg, requireGuidelineInOrg, requireBrandChildInOrg, requireCanManageUser,
+  getGuidelineInOrg, requireGuidelineInOrg, requireBrandChildInOrg, requireCanManageUser, listOrgsInScope,
 } from './org-scope.js';
 
 // ---------------------------------------------------------------------------
@@ -326,7 +326,7 @@ export const resolvers = {
       ctx: GraphQLContext,
     ) => {
       requireAuth(ctx);
-      return await ctx.storage.organizations.listOrgs();
+      return await listOrgsInScope(ctx);
     },
 
     // ── Roles ──────────────────────────────────────────────────────────

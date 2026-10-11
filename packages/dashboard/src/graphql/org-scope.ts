@@ -9,7 +9,7 @@
 import { bypassesOrgScope } from '../permissions.js';
 import { canManageUser } from '../services/user-scope.js';
 import type {
-  ScanRecord, IssueAssignment, BrandingGuidelineRecord, Team,
+  ScanRecord, IssueAssignment, BrandingGuidelineRecord, Team, Organization,
 } from '../db/index.js';
 import type { GraphQLContext } from './resolvers.js';
 
@@ -134,6 +134,20 @@ export async function requireBrandChildInOrg(
     if (children.some((c) => c.id === childId)) return;
   }
   throw new Error(`${CHILD_LABEL[kind]} not found`);
+}
+
+// ── Organizations ───────────────────────────────────────────────────────
+
+/**
+ * REST lists every org only behind admin.system (GET /admin/organizations).
+ * A global admin sees every org; anyone else only their current org ('system'
+ * is not an org row, so a caller without a current org sees none).
+ */
+export async function listOrgsInScope(ctx: GraphQLContext): Promise<readonly Organization[]> {
+  if (bypassesOrgScope(ctx.user)) return await ctx.storage.organizations.listOrgs();
+  if (ctx.orgId === 'system') return [];
+  const org = await ctx.storage.organizations.getOrg(ctx.orgId);
+  return org === null || org === undefined ? [] : [org];
 }
 
 // ── Users (routes/admin/dashboard-users.ts) ─────────────────────────────
