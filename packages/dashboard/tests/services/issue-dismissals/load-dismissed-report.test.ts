@@ -16,6 +16,7 @@ import {
   persistedCountsFor,
 } from '../../../src/services/issue-dismissals/load-dismissed-report.js';
 import { countIssues } from '../../../src/services/count-issues.js';
+import { normalizeReportData } from '../../../src/services/report-service.js';
 import type { DismissedOccurrence } from '../../../src/services/issue-dismissals/apply-dismissals.js';
 import {
   CODE,
@@ -117,6 +118,41 @@ describe('applyActiveDismissals (D-05)', () => {
     const result = await applyActiveDismissals(store.storage, { orgId: orgA, siteUrl: SITE }, raw);
     expect(result.report).toBe(raw);
     expect(result.dismissed.length).toBe(0);
+  });
+
+  it('applyActiveDismissals hands normalizeReportData a matrix without the fully dismissed criterion', async () => {
+    const violation = { wcagCriterion: '1.4.3', obligation: 'mandatory', issueCount: 1 };
+    const raw = {
+      ...defaultReport(SITE),
+      compliance: {
+        matrix: {
+          FAB: {
+            jurisdictionId: 'FAB',
+            jurisdictionName: 'Fabrikam Land',
+            status: 'fail',
+            mandatoryViolations: 1,
+            recommendedViolations: 0,
+            optionalViolations: 0,
+            regulations: [
+              { regulationId: 'R1', regulationName: 'Fabrikam Act', shortName: 'FA', status: 'fail', enforcementDate: '2025-01-01', scope: 'all', violations: [violation] },
+            ],
+          },
+        },
+        regulationMatrix: {},
+        annotatedIssues: [{ code: CODE, wcagCriterion: '1.4.3', wcagLevel: 'AA', originalIssue: { code: CODE, selector: SELECTOR }, regulations: [] }],
+        summary: { totalJurisdictions: 1, passing: 0, failing: 1, totalMandatoryViolations: 1, totalOptionalViolations: 0 },
+      },
+    };
+    const scan = { orgId: orgA, siteUrl: SITE, errors: 2 };
+    const before = normalizeReportData(raw as never, scan);
+    expect(before.complianceMatrix?.[0]?.violations.map((v: { wcagCriterion: string }) => v.wcagCriterion)).toEqual(['1.4.3']);
+    expect(before.complianceMatrix?.[0]?.reviewStatus).toBe('fail');
+
+    await seedDismissal(store.storage, { orgId: orgA, siteUrl: SITE });
+    const result = await applyActiveDismissals(store.storage, scan, raw);
+    const after = normalizeReportData(result.report as never, { ...scan, errors: 0 });
+    expect(after.complianceMatrix?.[0]?.violations).toEqual([]);
+    expect(after.complianceMatrix?.[0]?.reviewStatus).toBe('pass');
   });
 
   it('propagates a repository failure instead of returning the raw report', async () => {
