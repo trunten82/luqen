@@ -634,12 +634,15 @@ export async function reportRoutes(
       try {
         const dbReport = await storage.scans.getReport(id);
         if (dbReport !== null) {
-          reportData = normalizeReportData(dbReport as JsonReportFile, scan);
+          reportData = normalizeReportData(
+            (await applyActiveDismissals(storage, scan, dbReport as JsonReportFile)).report,
+            scan,
+          );
         } else if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
           const raw = JSON.parse(
             await readFile(scan.jsonReportPath, 'utf-8'),
           ) as JsonReportFile;
-          reportData = normalizeReportData(raw, scan);
+          reportData = normalizeReportData((await applyActiveDismissals(storage, scan, raw)).report, scan);
         }
       } catch {
         return reply.code(500).send({ error: 'Failed to read report data' });
@@ -980,10 +983,13 @@ export async function reportRoutes(
       try {
         const dbReport = await storage.scans.getReport(id);
         if (dbReport !== null) {
-          reportData = normalizeReportData(dbReport as JsonReportFile, scan);
+          reportData = normalizeReportData(
+            (await applyActiveDismissals(storage, scan, dbReport as JsonReportFile)).report,
+            scan,
+          );
         } else if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
           const raw = JSON.parse(await readFile(scan.jsonReportPath, 'utf-8')) as JsonReportFile;
-          reportData = normalizeReportData(raw, scan);
+          reportData = normalizeReportData((await applyActiveDismissals(storage, scan, raw)).report, scan);
         }
       } catch {
         return reply.code(500).send({ error: 'Failed to read report data' });
@@ -1213,12 +1219,15 @@ export async function reportRoutes(
       try {
         const dbReport = await storage.scans.getReport(id);
         if (dbReport !== null) {
-          reportData = normalizeReportData(dbReport as JsonReportFile, scan);
+          reportData = normalizeReportData(
+            (await applyActiveDismissals(storage, scan, dbReport as JsonReportFile)).report,
+            scan,
+          );
         } else if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
           const raw = JSON.parse(
             await readFile(scan.jsonReportPath, 'utf-8'),
           ) as JsonReportFile;
-          reportData = normalizeReportData(raw, scan);
+          reportData = normalizeReportData((await applyActiveDismissals(storage, scan, raw)).report, scan);
         }
       } catch {
         // Fall through — reportData stays null
@@ -1277,7 +1286,10 @@ export async function reportRoutes(
             try {
               const priorReport = await storage.scans.getReport(priorScan.id);
               if (priorReport !== null) {
-                const priorData = normalizeReportData(priorReport as JsonReportFile, priorScan);
+                const priorData = normalizeReportData(
+                  (await applyActiveDismissals(storage, priorScan, priorReport as JsonReportFile)).report,
+                  priorScan,
+                );
                 for (const group of (priorData as any).issueGroups ?? []) {
                   const c = group.criterion as string;
                   if (c) criteriaFrequency.set(c, (criteriaFrequency.get(c) ?? 0) + 1);
@@ -1399,12 +1411,15 @@ export async function reportRoutes(
       try {
         const dbReport = await storage.scans.getReport(id);
         if (dbReport !== null) {
-          reportData = normalizeReportData(dbReport as JsonReportFile, scan);
+          reportData = normalizeReportData(
+            (await applyActiveDismissals(storage, scan, dbReport as JsonReportFile)).report,
+            scan,
+          );
         } else if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
           const raw = JSON.parse(
             await readFile(scan.jsonReportPath, 'utf-8'),
           ) as JsonReportFile;
-          reportData = normalizeReportData(raw, scan);
+          reportData = normalizeReportData((await applyActiveDismissals(storage, scan, raw)).report, scan);
         }
       } catch {
         // Fall through

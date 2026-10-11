@@ -13,6 +13,10 @@ process.env['TZ'] ??= 'UTC';
 
 import {
   createSurfaceContext,
+  driveAiSummaryInput,
+  driveBrandDrilldown,
+  drivePrint,
+  drivePublicReport,
   driveReportDetail,
   makeServer,
   registerViewHelpers,
@@ -177,5 +181,75 @@ describe('report detail (/reports/:id) applies the scan org active dismissals', 
     } finally {
       await server.close();
     }
+  });
+});
+
+/** Visible text of an HTML document: scripts, styles and tags removed, whitespace collapsed. */
+function visibleText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/g, ' ')
+    .replace(/<script[\s\S]*?<\/script>/g, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ');
+}
+
+// The print and public templates carry counts and criterion rows, never selectors
+// (88-01 finding 3), so their dismissal sensitivity is observed through the counts.
+describe('print view (/reports/:id/print)', () => {
+  it('print view drops a dismissed finding', async () => {
+    await dismiss(DISMISS_PARTIAL);
+    const html = await drivePrint(ctx, ctx.scanId);
+    const text = visibleText(html);
+
+    expect(text).toContain(
+      `found ${AFTER_PARTIAL.errors} Errors , ${AFTER_PARTIAL.warnings} Warnings , and ${AFTER_PARTIAL.notices} Notices`,
+    );
+    expect(text).toContain(`${AFTER_PARTIAL.total} Total Issues`);
+    expect(text).not.toContain('found 5 Errors');
+    expect(text).not.toContain('8 Total Issues');
+    assertDismissedAbsent(html, 'partial');
+  });
+});
+
+describe('public report (/reports/:id/public)', () => {
+  it('public report drops a dismissed finding', async () => {
+    await dismiss(DISMISS_PARTIAL);
+    const html = await drivePublicReport(ctx, ctx.scanId);
+    const text = visibleText(html);
+
+    expect(text).toContain(
+      `Issues ${AFTER_PARTIAL.total} Errors ${AFTER_PARTIAL.errors} Warnings ${AFTER_PARTIAL.warnings} Notices ${AFTER_PARTIAL.notices}`,
+    );
+    expect(text).toContain(`${AFTER_PARTIAL.errors} WCAG errors across 3 pages`);
+    expect(text).not.toContain('Errors 5');
+    // T-88-04-02: the anonymous reader sees neither the finding nor the reviewer's reason.
+    assertDismissedAbsent(html, 'partial');
+    expect(html).not.toContain(REASON_TOKEN);
+  });
+});
+
+describe('AI summary input (/reports/:id/ai-summary)', () => {
+  it('AI summary input omits a dismissed finding', async () => {
+    await dismiss(DISMISS_PARTIAL);
+    const input = (await driveAiSummaryInput(ctx, ctx.scanId)) as { totalIssues: number };
+
+    // issuesList is always empty today (pre-existing: the handler reads `issueGroups`,
+    // which normalizeReportData never returns), so the dismissal reaches this input
+    // through totalIssues; the string-level absence check stays as the whole-input guard.
+    expect(input.totalIssues).toBe(AFTER_PARTIAL.total);
+    assertDismissedAbsent(JSON.stringify(input), 'partial');
+  });
+});
+
+describe('brand drilldown (/reports/:id/brand-drilldown)', () => {
+  it('brand drilldown omits a dismissed finding', async () => {
+    await dismiss(DISMISS_PARTIAL);
+    await dismiss(DISMISS_WHOLE);
+    const out = (await driveBrandDrilldown(ctx, ctx.scanId)) as Record<string, unknown>;
+    const whole = JSON.stringify(out);
+
+    assertDismissedAbsent(whole, 'both');
+    // The surviving brand-matched sibling (colour pair) is still drilled into.
+    expect(JSON.stringify(out['color'])).toContain(SEL_SIBLING.replace(/^#/, ''));
   });
 });
