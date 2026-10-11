@@ -73,6 +73,14 @@
           {{/each}}
         </div>
       {{/if}}
+      {{#if statement.dismissedDisclosures.length}}
+        <h2>{{t "a11yStatement.public.dismissedHeading"}}</h2>
+        <ul>
+          {{#each statement.dismissedDisclosures}}
+            <li><strong>{{this.title}}</strong> <code>(WCAG {{this.criterion}})</code>: {{t "a11yStatement.public.dismissedItem" count=this.count}}</li>
+          {{/each}}
+        </ul>
+      {{/if}}
       {{#if statement.notEvaluatedCount}}
         <p>{{t "a11yStatement.public.pendingNote" count=statement.notEvaluatedCount}}</p>
       {{/if}}

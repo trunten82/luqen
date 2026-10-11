@@ -1957,6 +1957,7 @@
       "previewAssessed": "Based on a scan from",
       "previewLimitations": "Known limitations:",
       "previewPending": "Pending manual review:",
+      "previewDismissed": "Criteria with dismissed findings:",
       "previewNoScan": "No completed scan found for the configured site yet — set a site URL and run a scan to populate known limitations.",
       "acrUrl": "Accessibility Conformance Report (ACR) link",
       "acrUrlHelp": "Optional. A public link to your full ACR/VPAT — shown on the statement as “View our Accessibility Conformance Report”."
@@ -1972,6 +1973,8 @@
       "limitationsHeading": "Known limitations",
       "limitationsIntro": "Despite our best efforts, users may encounter the following barriers. We are actively working to resolve them:",
       "pendingNote": "In addition, {{count}} success criteria require manual evaluation that automated testing alone cannot confirm; these are under review.",
+      "dismissedHeading": "Automated findings dismissed after review",
+      "dismissedItem": "{{count}} automated finding(s) dismissed as false positives after review",
       "noAssessment": "A full assessment of this site is currently in progress. This statement will be updated with specific findings once the assessment completes.",
       "measuresHeading": "Measures to support accessibility",
       "measureAutomated": "Automated WCAG scanning of pages against the target standard.",

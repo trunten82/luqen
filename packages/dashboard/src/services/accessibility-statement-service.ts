@@ -24,6 +24,13 @@ export interface StatementLimitation {
   readonly remarks: string;
 }
 
+/** Automated findings dismissed as false positives after review, per WCAG criterion. Counts only. */
+export interface StatementDismissalDisclosure {
+  readonly criterion: string;
+  readonly title: string;
+  readonly count: number;
+}
+
 export interface AccessibilityStatementView {
   readonly entityName: string;
   readonly siteUrl: string;
@@ -48,6 +55,11 @@ export interface AccessibilityStatementView {
   /** Criteria that automated testing alone cannot confirm (pending manual review). */
   readonly notEvaluatedCount: number;
   readonly summary?: VpatReport['summary'];
+  /**
+   * Criteria with dismissed findings (all levels, catalogue order). Present ONLY when
+   * non-empty, so a statement with no dismissals is structurally unchanged (SC5).
+   */
+  readonly dismissedDisclosures?: readonly StatementDismissalDisclosure[];
 }
 
 export interface BuildStatementOptions {
@@ -62,6 +74,14 @@ const MAX_LIMITATIONS = 50;
 
 function isLimitation(row: VpatRow): boolean {
   return row.conformance === 'Does Not Support' || row.conformance === 'Partially Supports';
+}
+
+function dismissedDisclosuresOf(vpat: VpatReport | null): readonly StatementDismissalDisclosure[] {
+  if (vpat === null) return [];
+  return vpat.tablesByLevel
+    .flatMap((t) => t.rows)
+    .filter((r) => r.dismissedCount !== undefined && r.dismissedCount > 0)
+    .map((r) => ({ criterion: r.criterion, title: r.title, count: r.dismissedCount as number }));
 }
 
 /**
@@ -96,6 +116,8 @@ export function buildAccessibilityStatement(
   const conformanceStatus: ConformanceStatus =
     vpat !== null && supports > 0 ? 'partially-conformant' : 'not-conformant';
 
+  const dismissedDisclosures = dismissedDisclosuresOf(vpat);
+
   return {
     entityName: (config.entityName ?? '').trim() || config.orgId,
     siteUrl: config.siteUrl ?? '',
@@ -113,5 +135,6 @@ export function buildAccessibilityStatement(
     ...(config.contactUrl !== undefined ? { contactUrl: config.contactUrl } : {}),
     ...(config.acrUrl !== undefined && config.acrUrl.trim() !== '' ? { acrUrl: config.acrUrl.trim() } : {}),
     ...(vpat !== null ? { summary: vpat.summary } : {}),
+    ...(dismissedDisclosures.length > 0 ? { dismissedDisclosures } : {}),
   };
 }

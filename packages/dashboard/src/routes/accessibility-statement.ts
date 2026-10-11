@@ -22,6 +22,11 @@ import { HtmlPageSchema } from '../api/schemas/envelope.js';
 import { normalizeReportData, type JsonReportFile } from '../services/report-service.js';
 import { buildVpat, type VpatReport } from '../services/vpat-service.js';
 import { buildAccessibilityStatement } from '../services/accessibility-statement-service.js';
+import {
+  applyActiveDismissals,
+  dismissedCountsByCriterion,
+} from '../services/issue-dismissals/load-dismissed-report.js';
+import type { DismissedOccurrence } from '../services/issue-dismissals/apply-dismissals.js';
 import type {
   AccessibilityStatementRecord,
   AccessibilityStatementInput,
@@ -50,13 +55,19 @@ async function loadVpatForSite(
   if (scan === null) return null;
 
   let reportData: ReturnType<typeof normalizeReportData> | null = null;
+  let dismissed: readonly DismissedOccurrence[] = [];
   try {
     const dbReport = await storage.scans.getReport(scan.id);
     if (dbReport !== null) {
-      reportData = normalizeReportData(dbReport as JsonReportFile, scan);
+      // Phase 88 (D-05, D-11): the verdicts follow the scan org's active dismissals.
+      const applied = await applyActiveDismissals(storage, scan, dbReport as JsonReportFile);
+      dismissed = applied.dismissed;
+      reportData = normalizeReportData(applied.report, scan);
     } else if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
       const raw = JSON.parse(await readFile(scan.jsonReportPath, 'utf-8')) as JsonReportFile;
-      reportData = normalizeReportData(raw, scan);
+      const applied = await applyActiveDismissals(storage, scan, raw);
+      dismissed = applied.dismissed;
+      reportData = normalizeReportData(applied.report, scan);
     }
   } catch {
     return null;
@@ -71,7 +82,10 @@ async function loadVpatForSite(
     reportData,
     { siteUrl: scan.siteUrl, standard: toStandard(wcagLevel) },
     manualResults,
-    { behaviorallyEvaluatedCriteria: new Set(reportData.behaviorallyEvaluatedCriteria ?? []) },
+    {
+      behaviorallyEvaluatedCriteria: new Set(reportData.behaviorallyEvaluatedCriteria ?? []),
+      dismissedByCriterion: dismissedCountsByCriterion(dismissed),
+    },
   );
   const assessmentDate = scan.completedAt
     ? scan.completedAt.slice(0, 10)
