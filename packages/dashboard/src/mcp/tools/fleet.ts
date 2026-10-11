@@ -29,6 +29,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ToolMetadata } from '@luqen/core/mcp';
 import type { StorageAdapter } from '../../db/index.js';
 import { computeBulkFixCandidates } from '../../services/bulk-fix-candidates.js';
+import { applyActiveDismissals } from '../../services/issue-dismissals/load-dismissed-report.js';
 
 export const FLEET_TOOL_NAMES = [
   'dashboard_list_fleet',
@@ -252,7 +253,9 @@ export function registerFleetTools(
         const lastSeen = scan.completedAt ?? scan.createdAt;
         const lastSeenMs = Date.parse(lastSeen);
         if (Number.isNaN(lastSeenMs) || lastSeenMs < sinceMs) continue;
-        const report = (await storage.scans.getReport(scan.id)) as {
+        const rawReport = await storage.scans.getReport(scan.id);
+        // Phase 88 (FP-11): each latest scan is filtered by its own org + site dismissals.
+        const report = (await applyActiveDismissals(storage, scan, rawReport)).report as {
           pages?: ReadonlyArray<{
             issues?: ReadonlyArray<{ code?: string; wcagCriterion?: string }>;
           }>;

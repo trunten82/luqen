@@ -26,6 +26,10 @@ import { getCurrentToolContext } from '@luqen/core/mcp';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ResourceMetadata as LuqenResourceMetadata } from '@luqen/core/mcp';
 import type { StorageAdapter } from '../db/index.js';
+import {
+  applyActiveDismissals,
+  withDismissalsInRawBlob,
+} from '../services/issue-dismissals/load-dismissed-report.js';
 
 /**
  * Re-export of the @luqen/core/mcp ResourceMetadata interface so existing
@@ -95,8 +99,10 @@ export function registerResources(server: McpServer, opts: RegisterResourcesOpti
       if (scan === null || scan.orgId !== orgId) {
         throw new Error(`Resource ${uri.toString()} not found`);
       }
-      const report = await storage.scans.getReport(id);
-      const payload = { scan, report };
+      const raw = await storage.scans.getReport(id);
+      // Phase 88 (FP-11): the scan's own org + site dismissals; the row's raw blob follows the report.
+      const applied = await applyActiveDismissals(storage, scan, raw);
+      const payload = { scan: withDismissalsInRawBlob(scan, applied), report: applied.report };
       return {
         contents: [
           {
