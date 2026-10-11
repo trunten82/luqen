@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { guidelineHasChild } from '../../services/branding-child.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../../db/index.js';
@@ -362,6 +363,10 @@ export async function brandingApiRoutes(
         return reply.code(404).send({ error: 'Guideline not found' });
       }
 
+      if (!await guidelineHasChild(storage, 'color', guideline.id, request.params.colorId)) {
+        return reply.code(404).send({ error: 'Color not found' });
+      }
+
       await storage.branding.removeColor(request.params.colorId);
       return reply.code(200).header('content-type', 'application/json').send({ success: true });
     },
@@ -439,6 +444,10 @@ export async function brandingApiRoutes(
         return reply.code(404).send({ error: 'Guideline not found' });
       }
 
+      if (!await guidelineHasChild(storage, 'font', guideline.id, request.params.fontId)) {
+        return reply.code(404).send({ error: 'Font not found' });
+      }
+
       await storage.branding.removeFont(request.params.fontId);
       return reply.code(200).header('content-type', 'application/json').send({ success: true });
     },
@@ -512,6 +521,10 @@ export async function brandingApiRoutes(
 
       if (guideline === null || guideline.orgId !== orgId) {
         return reply.code(404).send({ error: 'Guideline not found' });
+      }
+
+      if (!await guidelineHasChild(storage, 'selector', guideline.id, request.params.selectorId)) {
+        return reply.code(404).send({ error: 'Selector not found' });
       }
 
       await storage.branding.removeSelector(request.params.selectorId);

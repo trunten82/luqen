@@ -10,6 +10,7 @@ import { promisify } from 'node:util';
 import type { StorageAdapter } from '../../db/adapter.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { toastHtml, escapeHtml } from './helpers.js';
+import { requireGuidelineScope, requireGuidelineChild } from './branding-guideline-scope.js';
 import { t } from '../../i18n/index.js';
 import { retagScansForSite, retagAllSitesForGuideline } from '../../services/branding-retag.js';
 import type { BrandingOrchestrator } from '../../services/branding/branding-orchestrator.js';
@@ -372,7 +373,7 @@ export async function brandingGuidelineRoutes(
   server.get(
     '/admin/branding-guidelines/:id',
     {
-      preHandler: requirePermission('branding.view'),
+      preHandler: [requirePermission('branding.view'), requireGuidelineScope(storage, 'read')],
       schema: { ...HtmlPageSchema, params: IdParams },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -413,7 +414,7 @@ export async function brandingGuidelineRoutes(
   server.post(
     '/admin/branding-guidelines/:id',
     {
-      preHandler: requirePermission('branding.manage'),
+      preHandler: [requirePermission('branding.manage'), requireGuidelineScope(storage, 'edit')],
       schema: { params: IdParams, ...HtmlPartialResponse },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -456,7 +457,7 @@ export async function brandingGuidelineRoutes(
   server.post(
     '/admin/branding-guidelines/:id/toggle-active',
     {
-      preHandler: requirePermission('branding.manage'),
+      preHandler: [requirePermission('branding.manage'), requireGuidelineScope(storage, 'edit')],
       schema: { params: IdParams, ...HtmlPartialResponse },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -490,7 +491,7 @@ export async function brandingGuidelineRoutes(
   server.post(
     '/admin/branding-guidelines/:id/delete',
     {
-      preHandler: requirePermission('branding.manage'),
+      preHandler: [requirePermission('branding.manage'), requireGuidelineScope(storage, 'edit')],
       schema: { params: IdParams, ...HtmlPartialResponse },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -527,7 +528,7 @@ export async function brandingGuidelineRoutes(
   server.post(
     '/admin/branding-guidelines/:id/toggle',
     {
-      preHandler: requirePermission('branding.manage'),
+      preHandler: [requirePermission('branding.manage'), requireGuidelineScope(storage, 'edit')],
       schema: { params: IdParams, ...HtmlPartialResponse },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -602,7 +603,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
   server.post(
     '/admin/branding-guidelines/:id/discover-branding',
     {
-      preHandler: requirePermission('branding.manage'),
+      preHandler: [requirePermission('branding.manage'), requireGuidelineScope(storage, 'edit')],
       schema: { params: IdParams, ...HtmlPartialResponse },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -933,7 +934,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
   server.post(
     '/admin/branding-guidelines/:id/colors',
     {
-      preHandler: requirePermission('branding.manage'),
+      preHandler: [requirePermission('branding.manage'), requireGuidelineScope(storage, 'edit')],
       schema: { params: IdParams, ...HtmlPartialResponse },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -997,7 +998,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
   server.post(
     '/admin/branding-guidelines/:id/colors/:colorId/delete',
     {
-      preHandler: requirePermission('branding.manage'),
+      preHandler: [requirePermission('branding.manage'), requireGuidelineScope(storage, 'edit'), requireGuidelineChild(storage, 'color')],
       schema: { params: ColorParams, ...HtmlPartialResponse },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -1034,7 +1035,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
   server.post(
     '/admin/branding-guidelines/:id/fonts',
     {
-      preHandler: requirePermission('branding.manage'),
+      preHandler: [requirePermission('branding.manage'), requireGuidelineScope(storage, 'edit')],
       schema: { params: IdParams, ...HtmlPartialResponse },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -1094,7 +1095,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
   server.post(
     '/admin/branding-guidelines/:id/fonts/:fontId/delete',
     {
-      preHandler: requirePermission('branding.manage'),
+      preHandler: [requirePermission('branding.manage'), requireGuidelineScope(storage, 'edit'), requireGuidelineChild(storage, 'font')],
       schema: { params: FontParams, ...HtmlPartialResponse },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -1131,7 +1132,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
   server.post(
     '/admin/branding-guidelines/:id/selectors',
     {
-      preHandler: requirePermission('branding.manage'),
+      preHandler: [requirePermission('branding.manage'), requireGuidelineScope(storage, 'edit')],
       schema: { params: IdParams, ...HtmlPartialResponse },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -1180,7 +1181,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
   server.post(
     '/admin/branding-guidelines/:id/selectors/:selectorId/delete',
     {
-      preHandler: requirePermission('branding.manage'),
+      preHandler: [requirePermission('branding.manage'), requireGuidelineScope(storage, 'edit'), requireGuidelineChild(storage, 'selector')],
       schema: { params: SelectorParams, ...HtmlPartialResponse },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -1217,7 +1218,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
   server.post(
     '/admin/branding-guidelines/:id/sites',
     {
-      preHandler: requirePermission('branding.manage'),
+      preHandler: [requirePermission('branding.manage'), requireGuidelineScope(storage, 'read')],
       schema: { params: IdParams, querystring: TabQuery, ...HtmlPartialResponse },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -1298,7 +1299,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
   server.post(
     '/admin/branding-guidelines/:id/sites/unassign',
     {
-      preHandler: requirePermission('branding.manage'),
+      preHandler: [requirePermission('branding.manage'), requireGuidelineScope(storage, 'read')],
       schema: { params: IdParams, querystring: TabQuery, ...HtmlPartialResponse },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -1339,7 +1340,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
   server.post(
     '/admin/branding-guidelines/:id/image',
     {
-      preHandler: requirePermission('branding.manage'),
+      preHandler: [requirePermission('branding.manage'), requireGuidelineScope(storage, 'edit')],
       schema: { params: IdParams, ...HtmlPartialResponse },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
