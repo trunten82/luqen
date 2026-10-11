@@ -18,13 +18,14 @@ const STRONG_PASSWORD = 'Placeholder-Pass-2026!x';
 
 const NW_USER = { id: 'user-nw-member', username: 'northwind-member', role: 'user', active: true, createdAt: '2026-01-01' };
 const FB_USER = { id: 'user-fb-member', username: 'fabrikam-member', role: 'user', active: true, createdAt: '2026-01-01' };
+const GA_USER = { id: 'user-global-admin', username: 'global-admin', role: 'admin', active: true, createdAt: '2026-01-01' };
 const TEAMS: Record<string, { id: string; orgId: string; members: Array<{ userId: string }> }> = {
-  'team-fb': { id: 'team-fb', orgId: FABRIKAM_ORG, members: [{ userId: FB_USER.id }] },
+  'team-fb': { id: 'team-fb', orgId: FABRIKAM_ORG, members: [{ userId: FB_USER.id }, { userId: GA_USER.id }] },
   'team-nw': { id: 'team-nw', orgId: NORTHWIND_ORG, members: [{ userId: NW_USER.id }] },
 };
 
 function makeStorage() {
-  const users = [NW_USER, FB_USER];
+  const users = [NW_USER, FB_USER, GA_USER];
   return {
     teams: {
       listTeamsByOrgId: vi.fn(async (orgId: string) => Object.values(TEAMS).filter((t) => t.orgId === orgId)),
@@ -80,6 +81,12 @@ describe('GraphQL user org scoping', () => {
         expect(storage.users[c.write]).toHaveBeenCalled();
       });
 
+      it('refuses an org owner acting on a global admin who sits in their team (admin target)', async () => {
+        const storage = makeStorage();
+        await expect(c.run(GA_USER.id, orgOwner(storage))).rejects.toThrow('Forbidden');
+        expect(storage.users[c.write]).not.toHaveBeenCalled();
+      });
+
       it('lets a global admin act on any user, as REST does', async () => {
         const storage = makeStorage();
         await c.run(NW_USER.id, makeGlobalAdminCtx(storage, PERMS));
@@ -115,7 +122,7 @@ describe('GraphQL user org scoping', () => {
     it('lists every user to a global admin, as REST does', async () => {
       const storage = makeStorage();
       const result = await resolvers.Query.dashboardUsers({}, {}, makeGlobalAdminCtx(storage, PERMS));
-      expect(result).toHaveLength(2);
+      expect(result).toHaveLength(3);
     });
   });
 });
