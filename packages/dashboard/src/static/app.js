@@ -121,7 +121,7 @@
   document.addEventListener('htmx:afterSwap', function () {
     var tc = document.getElementById('toast-container');
     if (!tc) return;
-    tc.querySelectorAll('.toast').forEach(function (t) {
+    tc.querySelectorAll('.toast:not([data-toast-persist])').forEach(function (t) {
       setTimeout(function () {
         t.style.opacity = '0'; t.style.transition = 'opacity 300ms ease';
         setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 300);
@@ -133,7 +133,7 @@
   (function () {
     var tc = document.getElementById('toast-container');
     if (!tc) return;
-    tc.querySelectorAll('.toast').forEach(function (t) {
+    tc.querySelectorAll('.toast:not([data-toast-persist])').forEach(function (t) {
       setTimeout(function () {
         t.style.opacity = '0'; t.style.transition = 'opacity 300ms ease';
         setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 300);

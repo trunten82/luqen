@@ -120,7 +120,7 @@
     state.criterion = btn.getAttribute('data-criterion') || '';
     state.tab = panelTab(btn);
     state.previewOk = false;
-    state.inFlight = false;
+    setInFlight(d, false);
     reasonEl(d).value = '';
     setText(d.querySelector('[data-reason-count]'), '0');
     setText(d.querySelector('#issue-dismiss-error'), '');
@@ -134,7 +134,7 @@
 
   window.rptDismissCancel = function () {
     var d = dialogEl();
-    if (d) d.close();
+    if (d && !state.inFlight) d.close();
   };
 
   window.rptDismissRetryPreview = function () {
@@ -151,8 +151,39 @@
 
   /* ── Confirm ─────────────────────────────────────────────────────── */
 
+  /* HTTP status -> data attribute holding the translated text (UD-11). The server's own
+     English error string is never displayed. */
+  var ERR_ATTR = {
+    400: 'data-err-invalid',
+    401: 'data-err-session',
+    403: 'data-err-forbidden',
+    404: 'data-err-not-found',
+    409: 'data-err-conflict',
+    422: 'data-err-no-match',
+    429: 'data-err-rate-limited',
+    503: 'data-err-unavailable'
+  };
+
   function showError(d, text) {
     setText(d.querySelector('#issue-dismiss-error'), text);
+  }
+
+  /* UD-12: while the request is in flight Confirm shows the saving label and both buttons
+     are disabled; the cancel (Escape) handler below refuses to close the dialog. */
+  function setInFlight(d, on) {
+    state.inFlight = on;
+    var confirm = confirmBtn(d);
+    var cancel = d.querySelector('[data-action="rptDismissCancel"]');
+    setText(confirm, msg(d, on ? 'data-msg-saving' : 'data-msg-confirm'));
+    if (cancel) cancel.disabled = on;
+    updateConfirm(d);
+  }
+
+  /* Failure: translated message, dialog stays open, typed reason kept, focus back to it. */
+  function failWith(d, httpStatus) {
+    setInFlight(d, false);
+    showError(d, msg(d, ERR_ATTR[httpStatus] || 'data-err-generic'));
+    reasonEl(d).focus();
   }
 
   function storeFlash(flash) {
@@ -178,10 +209,10 @@
 
   window.rptDismissConfirm = function () {
     var d = dialogEl();
-    if (!d || confirmBtn(d).disabled) return;
+    if (!d || state.inFlight || confirmBtn(d).disabled) return;
     var reason = trimmedReason(d);
-    state.inFlight = true;
-    updateConfirm(d);
+    showError(d, '');
+    setInFlight(d, true);
     fetch('/api/v1/scans/' + encodeURIComponent(d.getAttribute('data-scan-id') || '') + '/dismissals', {
       method: 'POST',
       credentials: 'include',
@@ -189,12 +220,7 @@
       body: JSON.stringify({ code: state.code, selector: state.selector, reason: reason })
     })
       .then(function (res) {
-        if (res.status !== 201) {
-          state.inFlight = false;
-          showError(d, msg(d, 'data-err-generic'));
-          updateConfirm(d);
-          return null;
-        }
+        if (res.status !== 201) { failWith(d, res.status); return null; }
         return res.json().then(function (body) { return body; }, function () { return {}; });
       })
       .then(function (body) {
@@ -202,11 +228,7 @@
         storeFlash(flashFor(d, body));
         api.reload();
       })
-      .catch(function () {
-        state.inFlight = false;
-        showError(d, msg(d, 'data-err-generic'));
-        updateConfirm(d);
-      });
+      .catch(function () { failWith(d, 0); });
   };
 
   /* ── Result toast after the reload ───────────────────────────────── */
@@ -221,23 +243,70 @@
     } catch (_e) { return null; }
   }
 
-  function showFlashToast(flash) {
+  function removeToast(toast) {
+    if (toast && toast.parentNode) toast.parentNode.removeChild(toast);
+  }
+
+  function showFlashToast(flash, closeLabel) {
     var tc = document.getElementById('toast-container');
     if (!tc) return;
+    var warning = flash.kind === 'warning';
     var toast = document.createElement('div');
-    toast.className = 'toast toast--success';
-    toast.setAttribute('role', 'status');
+    toast.className = warning ? 'toast toast--warning' : 'toast toast--success';
+    toast.setAttribute('role', warning ? 'alert' : 'status');
     toast.appendChild(document.createTextNode(flash.message));
+    if (warning) {
+      /* Persistent: app.js's toast sweeps skip data-toast-persist; the user closes it. */
+      toast.setAttribute('data-toast-persist', '');
+      var close = document.createElement('button');
+      close.type = 'button';
+      close.className = 'toast__close';
+      close.setAttribute('data-action', 'rptToastClose');
+      close.setAttribute('aria-label', closeLabel);
+      close.appendChild(document.createTextNode('\u00d7'));
+      toast.appendChild(close);
+    }
     tc.appendChild(toast);
-    setTimeout(function () {
-      toast.style.opacity = '0'; toast.style.transition = 'opacity 300ms ease';
-      setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
-    }, 5000);
+    if (!warning) {
+      setTimeout(function () {
+        toast.style.opacity = '0'; toast.style.transition = 'opacity 300ms ease';
+        setTimeout(function () { removeToast(toast); }, 300);
+      }, 5000);
+    }
+  }
+
+  window.rptToastClose = function (btn) {
+    removeToast(btn && btn.closest ? btn.closest('.toast') : null);
+  };
+
+  /* UD-10: back to the saved tab (Issues when its panel no longer exists) and, on the Issues
+     tab, open the criterion group the user was working in. */
+  function restorePlace(flash) {
+    var wanted = typeof flash.tab === 'string' && flash.tab !== '' ? flash.tab : 'issues';
+    var tab = document.getElementById('panel-' + wanted) ? wanted : 'issues';
+    if (typeof window.rptSwitchTab === 'function') window.rptSwitchTab(tab);
+    if (tab !== 'issues' || typeof flash.criterion !== 'string' || flash.criterion === '') return;
+    var groups = document.querySelectorAll('[data-issue-group]');
+    for (var i = 0; i < groups.length; i += 1) {
+      if (groups[i].getAttribute('data-criterion') !== flash.criterion) continue;
+      groups[i].classList.remove('rpt-group--collapsed');
+      var header = groups[i].querySelector('.rpt-group__header');
+      if (header) header.setAttribute('aria-expanded', 'true');
+      if (typeof groups[i].scrollIntoView === 'function') groups[i].scrollIntoView();
+      return;
+    }
   }
 
   function onLoad() {
+    var d = dialogEl();
+    /* The cancel event (Escape) does not bubble, so it is attached to the dialog itself. */
+    if (d) {
+      d.addEventListener('cancel', function (e) { if (state.inFlight) e.preventDefault(); });
+    }
     var flash = readFlash();
-    if (flash) showFlashToast(flash);
+    if (!flash) return;
+    showFlashToast(flash, d ? msg(d, 'data-label-close') : '');
+    restorePlace(flash);
   }
 
   if (document.readyState === 'loading') {

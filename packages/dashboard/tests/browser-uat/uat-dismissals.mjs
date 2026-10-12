@@ -205,6 +205,9 @@ const SCENARIOS = {
     );
     check(S, 'the preview shows 2 occurrences on 2 pages', true);
 
+    // Evidence for a human reader: the dialog as rendered (gitignored .tmp).
+    await page.screenshot({ path: path.join(TMP, 'uat-dismissals-dialog.png') });
+
     const disabledBefore = await page.$eval('[data-action="rptDismissConfirm"]', (b) => b.disabled);
     check(S, 'confirm is disabled before a reason is typed', disabledBefore === true);
 
