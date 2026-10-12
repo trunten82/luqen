@@ -9,7 +9,7 @@ import path from 'node:path';
 import {
   DASHBOARD_DIR, BROWSER_UAT_DIR, TMP, SHOTS, track, log, waitFor, discoverChromium, requireFromRepo,
 } from './lib.mjs';
-import { SITE, BACKFILL_SITE, buildReport, buildSmallReport, REASON } from './fixture.mjs';
+import { SITE, BACKFILL_SITE, buildReport, buildSmallReport, REASON, HERO, PROMO } from './fixture.mjs';
 
 const config = JSON.parse(fs.readFileSync(path.join(BROWSER_UAT_DIR, 'uat.config.json'), 'utf8'));
 export const PORT = config.port;
@@ -75,7 +75,26 @@ function insertUser(raw, bcrypt, creds, role, orgId, now) {
   return id;
 }
 
-export async function bootLocal({ keepShots = true } = {}) {
+/**
+ * 89-11 attribution world: two API keys (one of the Fabrikam org, one system key) and two active
+ * dismissals whose actor is `api-key:<id>`. They are written through the storage adapter because
+ * the dark build lets no org key mark through the API (issues.dismiss is global-admin only).
+ * Placeholder labels only.
+ */
+async function seedApiKeyActors(storage, orgId, toSiteKey) {
+  const fabrikamKeyId = await storage.apiKeys.storeKey(`uat-${randomUUID()}`, 'Fabrikam CI', orgId);
+  const systemKeyId = await storage.apiKeys.storeKey(`uat-${randomUUID()}`, 'Northwind Ops');
+  for (const [f, keyId] of [[PROMO, fabrikamKeyId], [HERO, systemKeyId]]) {
+    const res = await storage.issueDismissals.mark({
+      orgId, siteUrl: SITE, siteKey: toSiteKey(SITE), code: f.code, selector: f.selector,
+      reason: 'Marked by an API key (seeded).', actor: `api-key:${keyId}`,
+    });
+    if (res.kind !== 'created') throw new Error('api-key actor mark did not create a row');
+  }
+  return { fabrikamKeyId, systemKeyId, fabrikamCode: PROMO.code, systemCode: HERO.code };
+}
+
+export async function bootLocal({ keepShots = true, apiKeyActors = false } = {}) {
   log('resetting .tmp workspace');
   resetWorkspace({ keepShots });
   const dbPath = await startDashboard();
@@ -134,8 +153,9 @@ export async function bootLocal({ keepShots = true } = {}) {
     });
     if (res.kind !== 'created') throw new Error('backfill mark did not create a row');
   }
+  const keyActors = apiKeyActors ? await seedApiKeyActors(storage, orgId, toSiteKey) : null;
   await storage.disconnect();
-  return { base: LOCAL_BASE, scanId, bigScanId, orgId, personas: PERSONAS };
+  return { base: LOCAL_BASE, scanId, bigScanId, orgId, personas: PERSONAS, ...(keyActors ? { keyActors } : {}) };
 }
 
 /** The env object the remote code path reads, built in-process from a booted local world. */

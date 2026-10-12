@@ -797,6 +797,22 @@ describe('revoke — errors', () => {
     expect(revokeError(h)).not.toBe(attr(h, 'data-err-conflict')); // the mark dialog's own 409 text
     expect(attr(h, 'data-err-conflict')).toContain('already dismissed');
   });
+
+  // 89-11 item 1 (D-15 Q1): the 400 slot of the revoke dialog said "This finding cannot be
+  // dismissed, or the reason is not valid" - mark wording for a revoke request.
+  it('a 400 on revoke shows the revoke-specific invalid text, not the mark one', async () => {
+    const h = await make();
+    openRevoke(h);
+    typeComment(h, 'My comment stays');
+    call(h, 'rptRevokeConfirm', revokeConfirm(h));
+    h.pending[0].resolve(res(400, { error: SERVER_TEXT }));
+    await flush();
+    expect(revokeError(h)).toBe(t('issueDismissals.error.invalidRevoke', 'en'));
+    expect(revokeError(h)).not.toBe(attr(h, 'data-err-invalid')); // the mark dialog's own 400 text
+    expect(attr(h, 'data-err-invalid')).toBe(t('issueDismissals.error.invalid', 'en'));
+    expect(comment(h).value).toBe('My comment stays');
+    expect(revokeDialog(h).hasAttribute('open')).toBe(true);
+  });
 });
 
 describe('revoke — in-flight lock', () => {

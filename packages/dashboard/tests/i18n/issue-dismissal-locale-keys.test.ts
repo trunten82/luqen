@@ -35,6 +35,7 @@ const REQUIRED_KEYS: readonly string[] = [
   'dialog.preview.retry',
   'dialog.preview.refused',
   'dialog.preview.alreadyDismissed',
+  'dialog.preview.together',
   'dialog.revoke.title',
   'dialog.revoke.body',
   'dialog.revoke.commentLabel',
@@ -56,12 +57,14 @@ const REQUIRED_KEYS: readonly string[] = [
   'col.comment',
   'col.actions',
   'actor.apiKey',
+  'actor.apiKeyNamed',
   'allDismissed',
   'toast.marked',
   'toast.revoked',
   'toast.recomputeFailed',
   'toast.recomputeIncomplete',
   'error.invalid',
+  'error.invalidRevoke',
   'error.session',
   'error.forbidden',
   'error.notFound',
@@ -94,9 +97,9 @@ beforeAll(() => {
 });
 
 describe('issueDismissals namespace parity through the real loader', () => {
-  it('the required list is 59 distinct keys', () => {
-    expect(REQUIRED_KEYS.length).toBe(59);
-    expect(new Set(REQUIRED_KEYS).size).toBe(59);
+  it('the required list is 62 distinct keys', () => {
+    expect(REQUIRED_KEYS.length).toBe(62);
+    expect(new Set(REQUIRED_KEYS).size).toBe(62);
   });
 
   it('all six locales load as their own dictionary (a missing file would silently fall back to English)', () => {
@@ -139,8 +142,8 @@ describe('issueDismissals namespace parity through the real loader', () => {
         expect(new Set(actual).size, `${locale}: ${full} repeats a placeholder`).toBe(actual.length);
         expect((data[full] ?? '').replace(/\{\{[^}]*\}\}/g, '').includes('{'), `${locale}: ${full} stray brace`).toBe(false);
       }
-      // Positive control: the loop must have met the six placeholder-carrying keys.
-      expect(withPlaceholder).toBe(6);
+      // Positive control: the loop must have met the seven placeholder-carrying keys.
+      expect(withPlaceholder).toBe(7);
     });
 
     it(`sentences are translated, not copied from English (${locale})`, () => {
@@ -168,6 +171,7 @@ describe('issueDismissals namespace parity through the real loader', () => {
     expect(found).toEqual({
       'action.dismissAria': ['code'],
       'action.revokeAria': ['code'],
+      'actor.apiKeyNamed': ['name'],
       'section.summary': ['active', 'revoked'],
       'toast.marked': ['count'],
       'toast.revoked': ['count'],

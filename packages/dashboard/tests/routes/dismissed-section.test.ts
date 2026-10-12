@@ -6,7 +6,7 @@
  * `dismissalRefused` and ALL real partials. Only what server.ts merges at runtime (perm, locale)
  * is added to the context by hand.
  */
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -366,32 +366,149 @@ describe('free text is data, never markup', () => {
   });
 });
 
-describe('actor label', () => {
-  it('an api key actor shows as API key with the full value in the title', async () => {
-    const keyed = await markRaw({ actor: 'api-key:key-7f3a' });
-    await markRaw({ code: CODE_ALT, selector: SEL_ALT, actor: 'api-key' }); // legacy bare form
-    await markRaw({ code: 'WCAG2A.Other.H1', selector: '#other', actor: 'api-keyboard' }); // not a key
-    await revokeRaw(keyed.id, 'api-key:key-9c01');
-    const { doc } = await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId));
+// 89-11 item 2 (D-12; D-15 Q1 reverses the UI-SPEC UD-16 title clause): the stored actor
+// `api-key:<row id>` is an identifier, not a name. The page names a key by its label, and only
+// when the key row belongs to the SCAN's org; every other key actor reads as the generic label.
+// Nothing in the section carries the stored identifier; the stored row itself is unchanged.
+async function storeKeyIn(label: string, orgId?: string): Promise<string> {
+  return ctx.storage.apiKeys.storeKey(`placeholder-${label.replace(/\W/g, '')}-${Math.random()}`, label, orgId);
+}
 
-    const byActor = new Map<string, { label: string; title: string | null }>();
-    for (const td of doc.querySelectorAll('#rpt-dismissed td[data-label="Dismissed by"], #rpt-dismissed td[data-label="Revoked by"]')) {
-      byActor.set(td.getAttribute('title') ?? '', { label: cellText(td), title: td.getAttribute('title') });
-    }
-    expect(byActor.get('api-key:key-7f3a')?.label).toBe('API key');
-    expect(byActor.get('api-key')?.label).toBe('API key');
-    expect(byActor.get('api-key:key-9c01')?.label).toBe('API key');
-    // A user whose name merely starts with the same letters is shown as stored.
-    expect(byActor.get('api-keyboard')?.label).toBe('api-keyboard');
+function actorCells(doc: Document, locale: Locale = 'en'): Map<string, { by: string; byTitle: string | null; revokedBy?: string; revokedTitle?: string | null }> {
+  const out = new Map<string, { by: string; byTitle: string | null; revokedBy?: string; revokedTitle?: string | null }>();
+  for (const tr of doc.querySelectorAll('#rpt-dismissed tbody tr')) {
+    const code = cellText(tr.querySelector('td')!);
+    const by = tr.querySelector(`td[data-label="${t('issueDismissals.col.dismissedBy', locale)}"]`)!;
+    const rev = tr.querySelector(`td[data-label="${t('issueDismissals.col.revokedBy', locale)}"]`);
+    out.set(code, {
+      by: cellText(by),
+      byTitle: by.getAttribute('title'),
+      ...(rev !== null ? { revokedBy: cellText(rev), revokedTitle: rev.getAttribute('title') } : {}),
+    });
+  }
+  return out;
+}
+
+describe('actor label', () => {
+  it("an API-key actor whose key belongs to the scan's org shows as API key: <label>", async () => {
+    const keyId = await storeKeyIn('Fabrikam CI', ctx.orgs.fabrikamOrgId);
+    await markRaw({ actor: `api-key:${keyId}` });
+    const gone = await markRaw({ code: CODE_ALT, selector: SEL_ALT, actor: `api-key:${keyId}` });
+    await revokeRaw(gone.id, `api-key:${keyId}`);
+    const cells = actorCells((await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId))).doc);
+
+    // Text only: that no attribute carries the stored identifier is its own test below.
+    expect(cells.get(CODE_CONTRAST)!.by).toBe('API key: Fabrikam CI');
+    expect(cells.get(CODE_ALT)!.by).toBe('API key: Fabrikam CI');
+    expect(cells.get(CODE_ALT)!.revokedBy).toBe('API key: Fabrikam CI');
   });
 
-  it('the label is translated', async () => {
-    await markRaw({ actor: 'api-key:key-7f3a' });
+  it("the named label is translated: the German prefix of a key that belongs to the scan's org", async () => {
+    const keyId = await storeKeyIn('Fabrikam CI', ctx.orgs.fabrikamOrgId);
+    await markRaw({ actor: `api-key:${keyId}` });
     const { doc } = await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId, { locale: 'de' }));
-    const td = doc.querySelector('#rpt-dismissed td[title="api-key:key-7f3a"]')!;
-    expect(cellText(td)).toBe(t('issueDismissals.actor.apiKey', 'de'));
-    expect(cellText(td)).not.toBe('API key');
-    expect(cellText(td)).not.toContain('issueDismissals');
+    const text = actorCells(doc, 'de').get(CODE_CONTRAST)!.by;
+    expect(text).toBe(`${t('issueDismissals.actor.apiKey', 'de')}: Fabrikam CI`);
+    expect(text).not.toContain('API key');
+    expect(text).not.toContain('issueDismissals');
+  });
+
+  it('a system key, another org key, a deleted key, api-key:session and the legacy bare api-key show the generic API key label', async () => {
+    const systemKey = await storeKeyIn('Northwind Ops'); // org 'system'
+    const otherOrgKey = await storeKeyIn('Northwind CI', ctx.orgs.northwindOrgId);
+    const fabrikamKey = await storeKeyIn('Fabrikam CI', ctx.orgs.fabrikamOrgId); // makes the map non-empty
+    const actors: ReadonlyArray<readonly [string, string]> = [
+      ['WCAG2A.Sys.H1', `api-key:${systemKey}`],
+      ['WCAG2A.Other.H2', `api-key:${otherOrgKey}`],
+      ['WCAG2A.Deleted.H3', 'api-key:0123456789abcdef0123456789abcdef'],
+      ['WCAG2A.Session.H4', 'api-key:session'],
+      ['WCAG2A.Bare.H5', 'api-key'],
+      ['WCAG2A.Own.H6', `api-key:${fabrikamKey}`],
+      ['WCAG2A.User.H7', 'api-keyboard'], // a user whose name merely starts with the same letters
+    ];
+    for (const [code, actor] of actors) await markRaw({ code, selector: `#${code.split('.')[1]}`, actor });
+    const cells = actorCells((await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId))).doc);
+
+    expect(cells.size).toBe(actors.length); // positive control: every row rendered
+    for (const code of ['WCAG2A.Sys.H1', 'WCAG2A.Other.H2', 'WCAG2A.Deleted.H3', 'WCAG2A.Session.H4', 'WCAG2A.Bare.H5']) {
+      expect(cells.get(code)!.by, code).toBe('API key');
+    }
+    // A user whose name merely starts with the same letters is shown as stored. (That the org's own
+    // key IS named is the test above; this one holds while the label map is empty too.)
+    expect(cells.get('WCAG2A.User.H7')).toEqual({ by: 'api-keyboard', byTitle: 'api-keyboard' });
+  });
+
+  it('no attribute or text of the Dismissed section contains the stored api-key identifier or the key id', async () => {
+    const own = await storeKeyIn('Fabrikam CI', ctx.orgs.fabrikamOrgId);
+    const sys = await storeKeyIn('Northwind Ops');
+    await markRaw({ actor: `api-key:${own}` });
+    const gone = await markRaw({ code: CODE_ALT, selector: SEL_ALT, actor: `api-key:${sys}` });
+    await revokeRaw(gone.id, `api-key:${own}`);
+    await markRaw({ code: 'WCAG2A.Session.H4', selector: '#session', actor: 'api-key:session' });
+    const { doc } = await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId));
+    const section = doc.getElementById('rpt-dismissed')!.outerHTML;
+
+    expect(doc.querySelectorAll('#rpt-dismissed tbody tr')).toHaveLength(3); // positive control: the rows rendered
+    expect(section).not.toContain('api-key:');
+    expect(section).not.toContain(own);
+    expect(section).not.toContain(sys);
+  });
+
+  it('the stored attribution is unchanged', async () => {
+    const own = await storeKeyIn('Fabrikam CI', ctx.orgs.fabrikamOrgId);
+    const gone = await markRaw({ actor: `api-key:${own}` });
+    await revokeRaw(gone.id, `api-key:${own}`);
+    await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId));
+    const rows = await ctx.storage.issueDismissals!.listForSite(ctx.orgs.fabrikamOrgId, toSiteKey(FABRIKAM_SITE));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.createdBy).toBe(`api-key:${own}`);
+    expect(rows[0]!.revokedBy).toBe(`api-key:${own}`);
+  });
+
+  it('a key label containing markup is shown as text', async () => {
+    const keyId = await storeKeyIn('<b>ops</b><img src=x>', ctx.orgs.fabrikamOrgId);
+    await markRaw({ actor: `api-key:${keyId}` });
+    const { doc, html } = await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId));
+    expect(actorCells(doc).get(CODE_CONTRAST)!.by).toBe('API key: <b>ops</b><img src=x>');
+    expect(html).toContain('&lt;b&gt;ops&lt;/b&gt;');
+    expect(html).not.toContain('<b>ops</b>');
+    expect(html).not.toContain('<img src=x>');
+  });
+
+  it('a user actor keeps its name and its title', async () => {
+    await markRaw({ actor: 'fabrikam-admin' });
+    const gone = await markRaw({ code: CODE_ALT, selector: SEL_ALT, actor: 'fabrikam-admin' });
+    await revokeRaw(gone.id, 'northwind-owner');
+    const cells = actorCells((await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId))).doc);
+    expect(cells.get(CODE_CONTRAST)).toEqual({ by: 'fabrikam-admin', byTitle: 'fabrikam-admin' });
+    expect(cells.get(CODE_ALT)).toEqual({
+      by: 'fabrikam-admin', byTitle: 'fabrikam-admin', revokedBy: 'northwind-owner', revokedTitle: 'northwind-owner',
+    });
+  });
+
+  it('the key lookup reads only the scan org, once, and only when a row carries an API-key actor', async () => {
+    const spy = vi.spyOn(ctx.storage.apiKeys, 'listKeys');
+    await markRaw({ actor: 'fabrikam-admin' });
+    await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId));
+    expect(spy).not.toHaveBeenCalled();
+
+    await markRaw({ code: CODE_ALT, selector: SEL_ALT, actor: 'api-key:session' });
+    await markRaw({ code: 'WCAG2A.Bare.H5', selector: '#bare', actor: 'api-key' });
+    await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId));
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith(ctx.orgs.fabrikamOrgId);
+    spy.mockRestore();
+  });
+
+  it('a failing key lookup still renders the section with generic labels', async () => {
+    const keyId = await storeKeyIn('Fabrikam CI', ctx.orgs.fabrikamOrgId);
+    const spy = vi.spyOn(ctx.storage.apiKeys, 'listKeys').mockRejectedValue(new Error('driver said SELECT secret'));
+    await markRaw({ actor: `api-key:${keyId}` });
+    const { doc } = await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId));
+    expect(spy).toHaveBeenCalledTimes(1); // positive control: the failure path ran
+    expect(doc.getElementById('rpt-dismissed')).not.toBeNull();
+    expect(actorCells(doc).get(CODE_CONTRAST)!.by).toBe('API key');
+    spy.mockRestore();
   });
 });
 

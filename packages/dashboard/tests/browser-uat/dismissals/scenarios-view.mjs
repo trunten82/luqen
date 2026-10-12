@@ -36,6 +36,44 @@ async function dialogButtonsReachable(page, dialogId) {
   }, dialogId);
 }
 
+/**
+ * 89-11 item 1: with the revoke dialog OPEN, its 400 slot carries the revoke wording of this locale
+ * (not the mark sentence), and a revoke answered 400 by request interception (the POST never reaches
+ * the server) shows that text while the dialog stays open with the comment kept.
+ */
+async function revokeInvalidCopy(page, S, locale) {
+  const want = localeString(locale, 'issueDismissals.error.invalidRevoke');
+  const markText = localeString(locale, 'issueDismissals.error.invalid');
+  const attr = await page.$eval('#issue-revoke-dialog', (d) => d.getAttribute('data-err-invalid'));
+  check(S, `${locale}: the revoke dialog's 400 text is the revoke wording, not the mark one`, typeof want === 'string' && attr === want && attr !== markText, String(attr).slice(0, 120));
+  const comment = `Kept after a 400 (${locale}).`;
+  const seen = { revokePosts: 0 };
+  const onRequest = (req) => {
+    if (req.method() === 'POST' && /\/api\/v1\/dismissals\/[^/]+\/revoke$/.test(new URL(req.url()).pathname)) {
+      seen.revokePosts += 1;
+      req.respond({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'SERVER-DETAIL-NOT-SHOWN' }) });
+    } else req.continue();
+  };
+  await page.setRequestInterception(true);
+  page.on('request', onRequest);
+  try {
+    await page.$eval('#issue-revoke-comment', (t) => { t.value = ''; });
+    await page.type('#issue-revoke-comment', comment);
+    await page.click('[data-action="rptRevokeConfirm"]');
+    await page.waitForFunction(() => (document.getElementById('issue-revoke-error').textContent || '').trim() !== '', { timeout: WAIT });
+  } finally {
+    page.off('request', onRequest);
+    await page.setRequestInterception(false);
+  }
+  const after = await page.evaluate(() => ({
+    error: document.getElementById('issue-revoke-error').textContent.trim(),
+    open: document.getElementById('issue-revoke-dialog').open,
+    comment: document.getElementById('issue-revoke-comment').value,
+  }));
+  check(S, `${locale}: an intercepted 400 on revoke shows the revoke wording, keeps the dialog open and the comment`,
+    seen.revokePosts === 1 && after.error === want && after.open && after.comment === comment, JSON.stringify({ ...after, posts: seen.revokePosts }).slice(0, 240));
+}
+
 async function setPhone(page) { await page.setViewport(PHONE); }
 async function setDesktop(page) { await page.setViewport(DESKTOP); }
 
@@ -154,6 +192,13 @@ export const viewScenarios = {
     await openReport(page, base, scanId);
     const m = await markApi(page, scanId, PROMO, 'Reason kept in the original language.');
     await markApi(page, scanId, HERO, 'Second dismissal for the revoke dialog.');
+    // 89-11 item 1 in English first (the session starts in en).
+    await openReport(page, base, scanId, 'issues');
+    await openDismissedSection(page);
+    await page.click('#rpt-dismissed [data-action="rptRevokeIssue"]');
+    await page.waitForSelector('#issue-revoke-dialog[open]', { timeout: WAIT });
+    await revokeInvalidCopy(page, S, 'en');
+    await page.click('[data-action="rptRevokeCancel"]');
     for (const locale of ['de', 'it']) {
       await setLocale(page, locale);
       await openReport(page, base, scanId, 'issues');
@@ -187,6 +232,7 @@ export const viewScenarios = {
       const rv = await page.evaluate(() => ({ title: document.querySelector('#issue-revoke-dialog .modal__title').textContent.trim(), body: document.getElementById('issue-revoke-dialog').innerText }));
       check(S, `${locale}: the revoke dialog title is the translation, no raw key`, rv.title === want.revokeTitle && !/issueDismissals\.|common\./.test(rv.body), JSON.stringify(rv).slice(0, 200));
       await shot(page, `locale-${locale}-revoke`);
+      await revokeInvalidCopy(page, S, locale);
       await page.click('[data-action="rptRevokeCancel"]');
       await scrollToInstant(page, '#rpt-dismissed');
       await shot(page, `locale-${locale}-section`);
