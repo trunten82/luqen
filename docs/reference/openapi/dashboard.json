@@ -39093,6 +39093,9 @@
                       "enum": [
                         "selector"
                       ]
+                    },
+                    "alreadyDismissed": {
+                      "type": "boolean"
                     }
                   }
                 }

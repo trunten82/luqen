@@ -2247,7 +2247,8 @@
         "none": "This scan has no finding that matches this rule and element, so there is nothing to dismiss.",
         "error": "Could not check what this covers. Try again.",
         "retry": "Try again",
-        "refused": "This finding has no specific element and cannot be dismissed."
+        "refused": "This finding has no specific element and cannot be dismissed.",
+        "alreadyDismissed": "This rule on this exact element is already dismissed for this site, so there is nothing to dismiss. Reload the page to see it under Dismissed findings."
       },
       "revoke": {
         "title": "Revoke dismissal",

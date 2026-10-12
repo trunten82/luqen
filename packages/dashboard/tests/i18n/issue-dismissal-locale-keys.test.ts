@@ -34,6 +34,7 @@ const REQUIRED_KEYS: readonly string[] = [
   'dialog.preview.error',
   'dialog.preview.retry',
   'dialog.preview.refused',
+  'dialog.preview.alreadyDismissed',
   'dialog.revoke.title',
   'dialog.revoke.body',
   'dialog.revoke.commentLabel',
@@ -93,9 +94,9 @@ beforeAll(() => {
 });
 
 describe('issueDismissals namespace parity through the real loader', () => {
-  it('the required list is 58 distinct keys', () => {
-    expect(REQUIRED_KEYS.length).toBe(58);
-    expect(new Set(REQUIRED_KEYS).size).toBe(58);
+  it('the required list is 59 distinct keys', () => {
+    expect(REQUIRED_KEYS.length).toBe(59);
+    expect(new Set(REQUIRED_KEYS).size).toBe(59);
   });
 
   it('all six locales load as their own dictionary (a missing file would silently fall back to English)', () => {

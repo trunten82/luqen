@@ -1751,7 +1751,8 @@
         "none": "Dieser Scan enthält keinen Befund, der zu dieser Regel und diesem Element passt, daher gibt es nichts zu verwerfen.",
         "error": "Die Abdeckung konnte nicht geprüft werden. Versuchen Sie es erneut.",
         "retry": "Erneut versuchen",
-        "refused": "Dieser Befund hat kein bestimmtes Element und kann nicht verworfen werden."
+        "refused": "Dieser Befund hat kein bestimmtes Element und kann nicht verworfen werden.",
+        "alreadyDismissed": "Diese Regel ist für dieses Element dieser Website bereits verworfen, daher gibt es nichts zu verwerfen. Laden Sie die Seite neu, um sie unter „Verworfene Befunde“ zu sehen."
       },
       "revoke": {
         "title": "Verwerfen widerrufen",

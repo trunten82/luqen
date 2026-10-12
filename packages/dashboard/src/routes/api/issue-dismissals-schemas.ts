@@ -110,6 +110,8 @@ export const PreviewResponse = Type.Object({
   pages: Type.Integer({ minimum: 0 }),
   refused: Type.Optional(Type.Boolean()),
   reason: Type.Optional(Type.Literal('selector')),
+  /** Present (true) only when this rule + element is ALREADY actively dismissed for the site. */
+  alreadyDismissed: Type.Optional(Type.Boolean()),
 });
 
 export const ScanParams = Type.Object({ scanId: Type.String() });

@@ -232,7 +232,7 @@ export async function issueDismissalRoutes(
   // ── GET /api/v1/scans/:scanId/dismissals/preview ────────────────────────
   // Phase 89 (D-04, FP-14): what would this dismissal cover in THIS scan? Read-only: no
   // repository write, no recompute, no audit row. Counts are over the RAW stored report, so an
-  // already-dismissed key previews non-zero and then 409s on confirm (the dialog copy covers it).
+  // already-dismissed key previews non-zero and then 409s on confirm; it is flagged alreadyDismissed.
   server.get(
     '/api/v1/scans/:scanId/dismissals/preview',
     {
@@ -257,7 +257,8 @@ export async function issueDismissalRoutes(
       request: FastifyRequest<{ Params: { scanId: string }; Querystring: PreviewQueryPayload }>,
       reply,
     ) => {
-      if (repo() === undefined) return reply.code(503).send({ error: NOT_SUPPORTED });
+      const dismissals = repo();
+      if (dismissals === undefined) return reply.code(503).send({ error: NOT_SUPPORTED });
 
       const scan = await storage.scans.getScan(request.params.scanId);
       if (scan === null || !mayTouchDismissalOrg(request.user, scan.orgId)) {
@@ -292,9 +293,17 @@ export async function issueDismissalRoutes(
         [{ id: 'preview', code: code.value, selector: selector.value, siteKey }],
         siteKey,
       );
+      // The counts are over the RAW report, so a key that is already dismissed previews non-zero
+      // and would 409 on confirm. Say so: the dialog must not offer a count it cannot act on.
+      // Same key the mark conflict uses: this org, this site, exact code + selector, active only.
+      const active = await dismissals.listActiveForSite(scan.orgId, siteKey);
+      const alreadyDismissed = active.some(
+        (d) => d.code === code.value && d.selector === selector.value,
+      );
       return reply.code(200).send({
         occurrences: dismissed.length,
         pages: new Set(dismissed.map((o) => o.pageUrl)).size,
+        ...(alreadyDismissed ? { alreadyDismissed: true } : {}),
       });
     },
   );

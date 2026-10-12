@@ -233,11 +233,55 @@ describe('GET .../dismissals/preview — read-only', () => {
     for (let i = 0; i < 3; i += 1) {
       expect((await preview(srv, scan)).statusCode).toBe(200);
     }
-    // Also the already-dismissed key: preview reads the RAW report, so it is non-zero and still writes nothing.
+    // Also the already-dismissed key: preview reads the RAW report, so it is non-zero (and flagged) and still writes nothing.
     const dismissedKey = await preview(srv, scan, 'WCAG2AA.Principle2.Other', '#nav a');
-    expect(dismissedKey.json()).toEqual({ occurrences: 2, pages: 2 });
+    expect(dismissedKey.json()).toEqual({ occurrences: 2, pages: 2, alreadyDismissed: true });
 
     expect(await snapshot()).toEqual(before);
     expect(before.counts).toEqual([7, 5, 3, 15]);
+  });
+});
+
+describe('GET .../dismissals/preview — already dismissed (89-04)', () => {
+  const OTHER = { code: 'WCAG2AA.Principle2.Other', selector: '#nav a' };
+
+  it('preview flags a rule and element that is already actively dismissed for the site', async () => {
+    const org = await seedOrg(store.storage, 'org_a');
+    const scan = await seedScan(store.storage, { orgId: org });
+    await seedDismissal(store.storage, { orgId: org, ...OTHER });
+    const srv = await as({ role: 'user', currentOrgId: org });
+    const res = await preview(srv, scan, OTHER.code, OTHER.selector);
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ occurrences: 2, pages: 2, alreadyDismissed: true });
+  });
+
+  it('preview does not flag a key that is not dismissed (the key is absent, not false)', async () => {
+    const org = await seedOrg(store.storage, 'org_a');
+    const scan = await seedScan(store.storage, { orgId: org });
+    await seedDismissal(store.storage, { orgId: org, ...OTHER });
+    const srv = await as({ role: 'user', currentOrgId: org });
+    const res = await preview(srv, scan);
+    expect(res.json()).toEqual({ occurrences: 2, pages: 2 });
+    expect('alreadyDismissed' in (res.json() as object)).toBe(false);
+  });
+
+  it('preview does not flag a dismissal that was revoked', async () => {
+    const org = await seedOrg(store.storage, 'org_a');
+    const scan = await seedScan(store.storage, { orgId: org });
+    const d = await seedDismissal(store.storage, { orgId: org, ...OTHER });
+    await store.storage.issueDismissals!.revoke({ id: d.id, orgId: org, actor: 'seed', comment: null });
+    const srv = await as({ role: 'user', currentOrgId: org });
+    const res = await preview(srv, scan, OTHER.code, OTHER.selector);
+    expect(res.json()).toEqual({ occurrences: 2, pages: 2 });
+  });
+
+  it('preview does not flag a dismissal that belongs to another org', async () => {
+    const org = await seedOrg(store.storage, 'org_a');
+    const other = await seedOrg(store.storage, 'org_b');
+    const scan = await seedScan(store.storage, { orgId: org });
+    await seedDismissal(store.storage, { orgId: other, ...OTHER });
+    const srv = await as({ role: 'user', currentOrgId: org });
+    const res = await preview(srv, scan, OTHER.code, OTHER.selector);
+    expect(res.json()).toEqual({ occurrences: 2, pages: 2 });
   });
 });

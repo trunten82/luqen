@@ -1760,7 +1760,8 @@
         "none": "Questa scansione non contiene alcun rilevamento che corrisponda a questa regola e a questo elemento, quindi non c'è nulla da escludere.",
         "error": "Impossibile verificare ciò che questo copre. Riprova.",
         "retry": "Riprova",
-        "refused": "Questo rilevamento non ha un elemento specifico e non può essere escluso."
+        "refused": "Questo rilevamento non ha un elemento specifico e non può essere escluso.",
+        "alreadyDismissed": "Questa regola è già esclusa per questo elemento di questo sito, quindi non c'è nulla da escludere. Ricarica la pagina per vederla in Rilevamenti esclusi."
       },
       "revoke": {
         "title": "Revoca esclusione",

@@ -1751,7 +1751,8 @@
         "none": "Este escaneo no tiene ningún hallazgo que coincida con esta regla y este elemento, así que no hay nada que descartar.",
         "error": "No se pudo comprobar qué cubre esto. Inténtalo de nuevo.",
         "retry": "Intentar de nuevo",
-        "refused": "Este hallazgo no tiene un elemento concreto y no se puede descartar."
+        "refused": "Este hallazgo no tiene un elemento concreto y no se puede descartar.",
+        "alreadyDismissed": "Esta regla ya está descartada para este elemento de este sitio, así que no hay nada que descartar. Recarga la página para verla en Hallazgos descartados."
       },
       "revoke": {
         "title": "Revocar descarte",

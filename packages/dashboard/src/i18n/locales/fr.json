@@ -1751,7 +1751,8 @@
         "none": "Cette analyse ne contient aucun constat correspondant à cette règle et à cet élément, il n'y a donc rien à écarter.",
         "error": "Impossible de vérifier ce que cela couvre. Réessayez.",
         "retry": "Réessayer",
-        "refused": "Ce constat n'a pas d'élément précis et ne peut pas être écarté."
+        "refused": "Ce constat n'a pas d'élément précis et ne peut pas être écarté.",
+        "alreadyDismissed": "Cette règle est déjà écartée pour cet élément de ce site, il n'y a donc rien à écarter. Rechargez la page pour la voir dans Constats écartés."
       },
       "revoke": {
         "title": "Révoquer l'écartement",

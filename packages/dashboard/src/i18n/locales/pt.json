@@ -1751,7 +1751,8 @@
         "none": "Esta varredura não tem nenhuma constatação que corresponda a esta regra e a este elemento, então não há nada a descartar.",
         "error": "Não foi possível verificar o que isto abrange. Tente novamente.",
         "retry": "Tentar novamente",
-        "refused": "Esta constatação não tem um elemento específico e não pode ser descartada."
+        "refused": "Esta constatação não tem um elemento específico e não pode ser descartada.",
+        "alreadyDismissed": "Esta regra já foi descartada para este elemento deste site, então não há nada a descartar. Recarregue a página para vê-la em Constatações descartadas."
       },
       "revoke": {
         "title": "Revogar descarte",
