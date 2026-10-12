@@ -132,20 +132,24 @@ describe('at-rest key-invariant (PBH-A)', () => {
     // (+1 more for R8-R10): 313->314, 355->356, 1117->1118, 1314->1316, 1315->1317,
     // 1432->1434. Phase 88-09 then wired dismissals into fix-pr.ts and repos.ts above
     // their decrypt calls: R5 repos.ts 405->460, R6 fix-pr.ts 306->307.
-    // The /graphql CSRF guard then added its import (+1 for every site)
-    // and a 3-line registration above R10 (+3 more for R10): 314->315, 356->357,
-    // 1118->1119, 1316->1317, 1317->1318, 1434->1438. The startup-check's own `encryptionKey: config.encryptionKey`
+    // Phase 89-04 then added the isWholePageSelector import and the exported dismissalRefused
+    // predicate above createServer (+11 for every server.ts site) and its registerHelper line
+    // below R3 (+2 more for R7-R10): R1 314->325, R3 356->367, R7 1118->1131, R8 1316->1329,
+    // R9 1317->1330, R10 1434->1447. Measured by watching this test go red first.
+    // The /graphql CSRF guard then added its import (+1 for every site) and a 3-line
+    // registration above R10 (+3 more for R10): 325->326, 367->368, 1131->1132,
+    // 1329->1330, 1330->1331, 1447->1451. The startup-check's own `encryptionKey: config.encryptionKey`
     // reference (server.ts ~289) is NOT a new wiring site requiring a list
     // update — it is the read-only decrypt CHECK, not a write/consumer path,
     // and this test asserts an exact fixed-position list, not a generic scan.
     // A NEW at-rest call site forces a conscious update of this list.
     const EXPECTED_WIRING_SITES: readonly WiringSite[] = [
-      { file: SERVER_TS, line: 315, label: 'R1 PluginManager options' },
-      { file: SERVER_TS, line: 357, label: 'R3 SqliteServiceConnectionsRepository' },
-      { file: SERVER_TS, line: 1119, label: 'R7 registerOauthKeysRoutes' },
-      { file: SERVER_TS, line: 1317, label: 'R8 ensureInitialSigningKey' },
-      { file: SERVER_TS, line: 1318, label: 'R9 createDashboardSigner' },
-      { file: SERVER_TS, line: 1438, label: 'R10 startKeyHousekeeping' },
+      { file: SERVER_TS, line: 326, label: 'R1 PluginManager options' },
+      { file: SERVER_TS, line: 368, label: 'R3 SqliteServiceConnectionsRepository' },
+      { file: SERVER_TS, line: 1132, label: 'R7 registerOauthKeysRoutes' },
+      { file: SERVER_TS, line: 1330, label: 'R8 ensureInitialSigningKey' },
+      { file: SERVER_TS, line: 1331, label: 'R9 createDashboardSigner' },
+      { file: SERVER_TS, line: 1451, label: 'R10 startKeyHousekeeping' },
       { file: REL('cli.ts'), line: 219, label: 'R2 cli.ts PluginManager options' },
       { file: REL('routes', 'git-credentials.ts'), line: 32, label: 'R4 git-credentials encryptionKey local' },
       { file: REL('routes', 'repos.ts'), line: 460, label: 'R5 repos.ts decryptSecret' },

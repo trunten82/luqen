@@ -20,6 +20,8 @@ import {
   type HarnessUser,
 } from '../helpers/issue-dismissal-route-harness.js';
 
+import { DISMISSAL_COMMENT_MAX_LENGTH } from '../../src/services/issue-dismissals/validate-input.js';
+
 let store: Store;
 let server: FastifyInstance | undefined;
 
@@ -93,6 +95,24 @@ describe('POST /api/v1/dismissals/:id/revoke', () => {
     const d = await seedDismissal(store.storage, { orgId: org });
     const srv = await as({ role: 'user', currentOrgId: org });
     const res = await revoke(srv, d.id, { comment: 'x'.repeat(1001) });
+    expect(res.statusCode).toBe(400);
+    expect((await store.storage.issueDismissals!.getById(d.id))?.status).toBe('active');
+  });
+
+  it('revoke refuses a comment over the limit (400)', async () => {
+    const org = await seedOrg(store.storage, 'org_a');
+    const d = await seedDismissal(store.storage, { orgId: org });
+    const srv = await as({ role: 'user', currentOrgId: org });
+    const res = await revoke(srv, d.id, { comment: 'x'.repeat(DISMISSAL_COMMENT_MAX_LENGTH + 1) });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('revoke refuses a limit-length comment padded with spaces at the schema (400)', async () => {
+    // IN-04 / D-13: raw length counts at the schema; before D-13 the 4000 cap let this through.
+    const org = await seedOrg(store.storage, 'org_a');
+    const d = await seedDismissal(store.storage, { orgId: org });
+    const srv = await as({ role: 'user', currentOrgId: org });
+    const res = await revoke(srv, d.id, { comment: ` ${'x'.repeat(DISMISSAL_COMMENT_MAX_LENGTH)} ` });
     expect(res.statusCode).toBe(400);
     expect((await store.storage.issueDismissals!.getById(d.id))?.status).toBe('active');
   });

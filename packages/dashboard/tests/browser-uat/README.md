@@ -71,3 +71,61 @@ Everything the run produces lands in `.tmp/` (git-ignored): `dashboard.log`,
 `issues-api.json`, `report-text.txt`, `vpat-text.txt`, and the three evidence
 screenshots `01-newscan-ticked.png`, `02-report-behavioral.png`,
 `03-vpat-212.png`.
+
+## Dismissal UI UAT (`uat-dismissals.mjs`, Phase 89)
+
+A real-browser UAT of the false-positive dismissal UI (mark dialog, Dismissed section, revoke dialog,
+toast), written against the UI-SPEC "Browser UAT Contract". It lives next to `run.mjs` but is
+self-contained: the entry point is `uat-dismissals.mjs`, the helpers are in `dismissals/`.
+
+```bash
+cd packages/dashboard && npm run build        # the script runs dist/, so build first
+node tests/browser-uat/uat-dismissals.mjs [--mode local|remote|remote-selftest]
+     [--expect dark|granted] [--scenario <name>|all] [--leave-active]
+```
+
+Output is one `PASS <scenario>: <check>` or `FAIL <scenario>: <check> :: <detail>` line per check and a
+final `UAT GREEN: <n> checks`. It stops at the first FAIL (exit 1); bad arguments or a missing remote
+environment exit 2. Browser waits are 90 s.
+
+### Modes
+
+| Mode | What it does |
+|------|--------------|
+| `local` (default) | Per scenario: boots a fresh-DB dashboard from `dist/` on the `uat.config.json` port, seeds a Fabrikam test org, five personas, a four-page scan and a site with 150 dismissals, then drives Chromium. Each scenario gets its own world (they mark and revoke real data). |
+| `remote` | Drives an already-running dashboard from environment variables only. Never seeds. Never prints a value (check output carries names only, details are withheld, no screenshots are written, and every credential value is redacted from the process output; a leak fails the run). Writes one mark, one revoke and, with `--leave-active`, one re-mark of the same finding. Persona write probes use a refused selector, so a missing 403 shows up as a FAIL and never as a stray row. |
+| `remote-selftest` | Boots and seeds exactly like `local`, then runs the remote code path against that server with an in-process env object (no files). This is how the remote path is proven without production. |
+
+### `--expect`
+
+`dark` (default): only global admins hold `issues.dismiss`. An org Owner sees no Dismiss control, gets 403
+from a direct mark, preview and revoke request, and `/admin/roles/new` offers no `issues.dismiss`; a
+`reports.view`-only user sees the Dismissed section with no Revoke button and no Element column.
+`granted`: the Owner sees the control and can mark; Member and Viewer see none and get 403. A local
+`granted` run needs a build that has the grant (Phase 89 Plan 09).
+
+### Local scenarios (`--scenario`)
+
+`tracer`, `permissions`, `dialog`, `refused`, `mark`, `surfaces`, `revoke`, `conflict`, `public`, `mobile`
+(375x812), `longtext` (1000-char reason, 600-char selector, 1000-char comment at 375 and 1280),
+`locales` (de, it), `theme` (dark), `keyboard` (real key presses, real Escape), `overflow` (150 rows).
+`all` runs them in that order.
+
+### Remote environment variables
+
+Names only; values are never printed and must never be committed. All ten are required or the script
+exits 2 naming the missing ones.
+
+```
+LUQEN_UAT_BASE_URL   LUQEN_UAT_SCAN_ID
+LUQEN_UAT_ADMIN_USER LUQEN_UAT_ADMIN_PASS
+LUQEN_UAT_OWNER_USER LUQEN_UAT_OWNER_PASS
+LUQEN_UAT_MEMBER_USER LUQEN_UAT_MEMBER_PASS
+LUQEN_UAT_VIEWER_USER LUQEN_UAT_VIEWER_PASS
+```
+
+### Artifacts
+
+Everything the local modes write lands in `.tmp/` (git-ignored by `.tmp/.gitignore`): `dashboard.log`, the
+database, and the screenshots under `.tmp/shots/`. The login rate limit is 10 per 15 minutes per IP; each
+scenario logs each persona in once.

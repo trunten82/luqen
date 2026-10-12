@@ -9,6 +9,12 @@ import type {
   IssueDismissal,
   IssueDismissalEvent,
 } from '../../db/interfaces/issue-dismissal-repository.js';
+import {
+  DISMISSAL_CODE_MAX_LENGTH,
+  DISMISSAL_COMMENT_MAX_LENGTH,
+  DISMISSAL_REASON_MAX_LENGTH,
+  DISMISSAL_SELECTOR_MAX_LENGTH,
+} from '../../services/issue-dismissals/validate-input.js';
 
 export const ErrorResponse = Type.Object({ error: Type.String() });
 
@@ -68,25 +74,53 @@ export const DismissalWithEventsSchema = Type.Composite([
 
 export const ListResponse = Type.Object({ dismissals: Type.Array(DismissalWithEventsSchema) });
 
+/**
+ * Length limits come from validate-input.ts (D-13 / IN-04): one source of truth. The schema caps the
+ * RAW string and the validator trims first, so a limit-length value padded with spaces is refused
+ * here with a generic 400 (browsers trim before sending).
+ */
 export const MarkBody = Type.Object(
   {
-    code: Type.String({ maxLength: 300 }),
-    selector: Type.String({ maxLength: 4000 }),
-    reason: Type.String({ maxLength: 4000 }),
+    code: Type.String({ maxLength: DISMISSAL_CODE_MAX_LENGTH }),
+    selector: Type.String({ maxLength: DISMISSAL_SELECTOR_MAX_LENGTH }),
+    reason: Type.String({ maxLength: DISMISSAL_REASON_MAX_LENGTH }),
   },
   { additionalProperties: false },
 );
 
 export const RevokeBody = Type.Object(
-  { comment: Type.Optional(Type.String({ maxLength: 4000 })) },
+  { comment: Type.Optional(Type.String({ maxLength: DISMISSAL_COMMENT_MAX_LENGTH })) },
   { additionalProperties: false },
 );
+
+/**
+ * Phase 89 (D-04): the read-only coverage preview behind the mark dialog. `refused` (with
+ * `reason: 'selector'`) answers a selector that matches the whole page (FP-04); the UI translates it.
+ */
+export const PreviewQuery = Type.Object(
+  {
+    code: Type.String({ maxLength: DISMISSAL_CODE_MAX_LENGTH }),
+    selector: Type.String({ maxLength: DISMISSAL_SELECTOR_MAX_LENGTH }),
+  },
+  { additionalProperties: false },
+);
+
+export const PreviewResponse = Type.Object({
+  occurrences: Type.Integer({ minimum: 0 }),
+  pages: Type.Integer({ minimum: 0 }),
+  refused: Type.Optional(Type.Boolean()),
+  reason: Type.Optional(Type.Literal('selector')),
+  /** Present (true) only when this rule + element is ALREADY actively dismissed for the site. */
+  alreadyDismissed: Type.Optional(Type.Boolean()),
+});
 
 export const ScanParams = Type.Object({ scanId: Type.String() });
 export const IdParams = Type.Object({ id: Type.String() });
 
 export type MarkPayload = Static<typeof MarkBody>;
 export type RevokePayload = Static<typeof RevokeBody>;
+export type PreviewQueryPayload = Static<typeof PreviewQuery>;
+export type PreviewResponsePayload = Static<typeof PreviewResponse>;
 
 export const RATE_LIMIT = { rateLimit: { max: 60, timeWindow: '1 minute' } } as const;
 

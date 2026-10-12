@@ -37,6 +37,7 @@
     "switchOrganization": "Changer d'organisation",
     "edit": "Modifier",
     "close": "Fermer",
+    "revoke": "Révoquer",
     "create": "Créer",
     "scope": "Portée",
     "owner": "Propriétaire",
@@ -1722,5 +1723,86 @@
   "reportCompare.noResolvedIssuesDesc": "Aucun problème de l’analyse de référence n’a été résolu dans cette analyse.",
   "reportCompare.noSharedIssuesTitle": "Aucun problème commun",
   "reportCompare.noSharedIssuesDesc": "Les deux analyses n’ont aucun problème en commun.",
-  "exposure.band": "Niveau de risque"
+  "exposure.band": "Niveau de risque",
+  "issueDismissals": {
+    "action": {
+      "dismiss": "Écarter",
+      "dismissTitle": "Écarter comme faux positif",
+      "dismissAria": "Écarter comme faux positif : règle {{code}}",
+      "refusedTitle": "Ce constat n'a pas d'élément précis et ne peut pas être écarté.",
+      "revokeAria": "Révoquer l'écartement de la règle {{code}}"
+    },
+    "dialog": {
+      "mark": {
+        "title": "Écarter comme faux positif",
+        "ruleLabel": "Règle",
+        "elementLabel": "Élément",
+        "messageLabel": "Constat",
+        "scope": "Cet écartement s'applique à cette règle sur cet élément exact, sur toutes les pages de ce site, dans cette analyse et dans les analyses futures. Il cesse de correspondre si le sélecteur de l'élément change.",
+        "effect": "Les constats écartés ne comptent plus dans les totaux, les scores et les résultats de conformité. Les rapports de conformité (ACR) indiquent combien de constats ont été écartés comme faux positifs. Vous pouvez révoquer l'écartement plus tard depuis la section Constats écartés.",
+        "reasonLabel": "Motif",
+        "reasonHint": "Obligatoire. Expliquez pourquoi il s'agit d'un faux positif. Votre nom et ce motif sont visibles par toute personne pouvant consulter ce rapport.",
+        "confirm": "Écarter comme faux positif",
+        "saving": "Enregistrement…"
+      },
+      "preview": {
+        "occurrences": "Occurrences dans cette analyse",
+        "pages": "Pages dans cette analyse",
+        "loading": "Vérification de ce que cela couvre dans cette analyse…",
+        "none": "Cette analyse ne contient aucun constat correspondant à cette règle et à cet élément, il n'y a donc rien à écarter.",
+        "error": "Impossible de vérifier ce que cela couvre. Réessayez.",
+        "retry": "Réessayer",
+        "refused": "Ce constat n'a pas d'élément précis et ne peut pas être écarté.",
+        "alreadyDismissed": "Cette règle est déjà écartée pour cet élément de ce site, il n'y a donc rien à écarter. Rechargez la page pour la voir dans Constats écartés."
+      },
+      "revoke": {
+        "title": "Révoquer l'écartement",
+        "body": "Le constat réintègre les totaux, les scores, les résultats de conformité et les rapports de conformité de ce site, y compris ceux des analyses précédentes.",
+        "commentLabel": "Commentaire (facultatif)",
+        "commentHint": "Indiquez pourquoi vous révoquez. Affiché dans la section Constats écartés.",
+        "confirm": "Révoquer l'écartement",
+        "saving": "Révocation…"
+      }
+    },
+    "section": {
+      "summary": "Constats écartés — actifs : {{active}}, révoqués : {{revoked}}",
+      "intro": "Constats écartés comme faux positifs pour ce site. Ils ne comptent pas dans les totaux, les scores ni les résultats de conformité. Chaque écartement correspond à une règle sur un élément exact.",
+      "activeHeading": "Écartements actifs",
+      "revokedHeading": "Écartements révoqués",
+      "noActive": "Aucun écartement actif."
+    },
+    "col": {
+      "rule": "Règle",
+      "element": "Élément",
+      "reason": "Motif",
+      "dismissedBy": "Écarté par",
+      "dismissedOn": "Écarté le",
+      "revokedBy": "Révoqué par",
+      "revokedOn": "Révoqué le",
+      "comment": "Commentaire",
+      "actions": "Actions"
+    },
+    "actor": {
+      "apiKey": "Clé API"
+    },
+    "allDismissed": "Tous les constats de ce rapport ont été écartés comme faux positifs. Voir Constats écartés ci-dessous.",
+    "toast": {
+      "marked": "Constat écarté. Analyses de ce site mises à jour : {{count}}.",
+      "revoked": "Écartement révoqué. Analyses de ce site mises à jour : {{count}}.",
+      "recomputeFailed": "Enregistré, mais {{failed}} analyses de ce site n'ont pas pu être mises à jour. Les totaux de la page d'accueil et les tendances peuvent être obsolètes pour elles.",
+      "recomputeIncomplete": "Enregistré, mais les autres analyses de ce site n'ont pas pu être entièrement mises à jour. Les totaux de la page d'accueil et les tendances peuvent être obsolètes."
+    },
+    "error": {
+      "invalid": "Ce constat ne peut pas être écarté, ou le motif n'est pas valide. Vérifiez le motif et réessayez.",
+      "session": "Votre session a expiré. Reconnectez-vous, puis recommencez.",
+      "forbidden": "Vous n'avez pas l'autorisation d'effectuer cette action.",
+      "notFound": "Ce rapport ou cet écartement n'existe plus. Rechargez la page.",
+      "conflictMark": "Ce constat est déjà écarté. Rechargez la page pour le voir dans Constats écartés.",
+      "conflictRevoke": "Cet écartement a déjà été révoqué. Rechargez la page.",
+      "noMatch": "Ce rapport ne contient aucun constat correspondant à écarter.",
+      "rateLimited": "Trop de requêtes. Attendez une minute et réessayez.",
+      "unavailable": "Les écartements ne sont pas disponibles sur ce serveur.",
+      "generic": "Une erreur s'est produite. Vérifiez votre connexion et réessayez."
+    }
+  }
 }

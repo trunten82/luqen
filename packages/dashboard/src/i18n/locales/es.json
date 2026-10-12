@@ -37,6 +37,7 @@
     "switchOrganization": "Cambiar organización",
     "edit": "Editar",
     "close": "Cerrar",
+    "revoke": "Revocar",
     "create": "Crear",
     "scope": "Ámbito",
     "owner": "Propietario",
@@ -1722,5 +1723,86 @@
   "reportCompare.noResolvedIssuesDesc": "Ningún problema del escaneo de referencia se resolvió en este escaneo.",
   "reportCompare.noSharedIssuesTitle": "Sin problemas comunes",
   "reportCompare.noSharedIssuesDesc": "Los dos escaneos no tienen problemas en común.",
-  "exposure.band": "Nivel de riesgo"
+  "exposure.band": "Nivel de riesgo",
+  "issueDismissals": {
+    "action": {
+      "dismiss": "Descartar",
+      "dismissTitle": "Descartar como falso positivo",
+      "dismissAria": "Descartar como falso positivo: regla {{code}}",
+      "refusedTitle": "Este hallazgo no tiene un elemento concreto y no se puede descartar.",
+      "revokeAria": "Revocar el descarte de la regla {{code}}"
+    },
+    "dialog": {
+      "mark": {
+        "title": "Descartar como falso positivo",
+        "ruleLabel": "Regla",
+        "elementLabel": "Elemento",
+        "messageLabel": "Hallazgo",
+        "scope": "Este descarte se aplica a esta regla en este elemento exacto, en todas las páginas de este sitio, en este escaneo y en escaneos futuros. Deja de coincidir si cambia el selector del elemento.",
+        "effect": "Los hallazgos descartados dejan de contar en los totales, las puntuaciones y los resultados de cumplimiento. Los informes de conformidad (ACR) indican cuántos hallazgos se descartaron como falsos positivos. Puedes revocar el descarte más tarde desde la sección Hallazgos descartados.",
+        "reasonLabel": "Motivo",
+        "reasonHint": "Obligatorio. Explica por qué es un falso positivo. Tu nombre y este motivo se muestran a todas las personas que pueden ver este informe.",
+        "confirm": "Descartar como falso positivo",
+        "saving": "Guardando…"
+      },
+      "preview": {
+        "occurrences": "Apariciones en este escaneo",
+        "pages": "Páginas en este escaneo",
+        "loading": "Comprobando qué cubre esto en este escaneo…",
+        "none": "Este escaneo no tiene ningún hallazgo que coincida con esta regla y este elemento, así que no hay nada que descartar.",
+        "error": "No se pudo comprobar qué cubre esto. Inténtalo de nuevo.",
+        "retry": "Intentar de nuevo",
+        "refused": "Este hallazgo no tiene un elemento concreto y no se puede descartar.",
+        "alreadyDismissed": "Esta regla ya está descartada para este elemento de este sitio, así que no hay nada que descartar. Recarga la página para verla en Hallazgos descartados."
+      },
+      "revoke": {
+        "title": "Revocar descarte",
+        "body": "El hallazgo vuelve a contar en los totales, las puntuaciones, los resultados de cumplimiento y los informes de conformidad de este sitio, incluidos los escaneos anteriores.",
+        "commentLabel": "Comentario (opcional)",
+        "commentHint": "Explica por qué lo revocas. Se muestra en la sección Hallazgos descartados.",
+        "confirm": "Revocar descarte",
+        "saving": "Revocando…"
+      }
+    },
+    "section": {
+      "summary": "Hallazgos descartados — activos: {{active}}, revocados: {{revoked}}",
+      "intro": "Hallazgos descartados como falsos positivos para este sitio. No cuentan en los totales, las puntuaciones ni los resultados de cumplimiento. Cada descarte coincide con una regla en un elemento exacto.",
+      "activeHeading": "Descartes activos",
+      "revokedHeading": "Descartes revocados",
+      "noActive": "No hay descartes activos."
+    },
+    "col": {
+      "rule": "Regla",
+      "element": "Elemento",
+      "reason": "Motivo",
+      "dismissedBy": "Descartado por",
+      "dismissedOn": "Descartado el",
+      "revokedBy": "Revocado por",
+      "revokedOn": "Revocado el",
+      "comment": "Comentario",
+      "actions": "Acciones"
+    },
+    "actor": {
+      "apiKey": "Clave API"
+    },
+    "allDismissed": "Todos los hallazgos de este informe se han descartado como falsos positivos. Consulta Hallazgos descartados más abajo.",
+    "toast": {
+      "marked": "Hallazgo descartado. Escaneos de este sitio actualizados: {{count}}.",
+      "revoked": "Descarte revocado. Escaneos de este sitio actualizados: {{count}}.",
+      "recomputeFailed": "Guardado, pero {{failed}} escaneos de este sitio no se pudieron actualizar. Los totales de la página de inicio y las tendencias pueden estar desactualizados para ellos.",
+      "recomputeIncomplete": "Guardado, pero los demás escaneos de este sitio no se pudieron actualizar por completo. Los totales de la página de inicio y las tendencias pueden estar desactualizados."
+    },
+    "error": {
+      "invalid": "Este hallazgo no se puede descartar, o el motivo no es válido. Revisa el motivo e inténtalo de nuevo.",
+      "session": "Tu sesión ha caducado. Inicia sesión de nuevo y repite esta acción.",
+      "forbidden": "No tienes permiso para hacer esto.",
+      "notFound": "Este informe o descarte ya no existe. Recarga la página.",
+      "conflictMark": "Este hallazgo ya está descartado. Recarga la página para verlo en Hallazgos descartados.",
+      "conflictRevoke": "Este descarte ya se revocó. Recarga la página.",
+      "noMatch": "Este informe no tiene ningún hallazgo coincidente que descartar.",
+      "rateLimited": "Demasiadas solicitudes. Espera un minuto e inténtalo de nuevo.",
+      "unavailable": "Los descartes no están disponibles en este servidor.",
+      "generic": "Algo salió mal. Comprueba tu conexión e inténtalo de nuevo."
+    }
+  }
 }

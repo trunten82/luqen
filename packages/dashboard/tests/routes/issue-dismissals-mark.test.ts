@@ -19,6 +19,14 @@ import {
   type HarnessUser,
 } from '../helpers/issue-dismissal-route-harness.js';
 
+import {
+  DISMISSAL_CODE_MAX_LENGTH,
+  DISMISSAL_COMMENT_MAX_LENGTH,
+  DISMISSAL_REASON_MAX_LENGTH,
+  DISMISSAL_SELECTOR_MAX_LENGTH,
+} from '../../src/services/issue-dismissals/validate-input.js';
+import { MarkBody, PreviewQuery, RevokeBody } from '../../src/routes/api/issue-dismissals-schemas.js';
+
 let store: Store;
 let server: FastifyInstance | undefined;
 
@@ -127,6 +135,36 @@ describe('POST /api/v1/scans/:scanId/dismissals — input validation', () => {
     const res = await mark(srv, scan, { ...good, reason: 'x'.repeat(1000) });
     expect(res.statusCode).toBe(201);
     expect(res.json().reason).toHaveLength(1000);
+  });
+
+  it('mark refuses a reason one character over the limit (400)', async () => {
+    const org = await seedOrg(store.storage, 'org_a');
+    const scan = await seedScan(store.storage, { orgId: org });
+    const srv = await as({ role: 'user', currentOrgId: org });
+    expect((await mark(srv, scan, { ...good, reason: 'x'.repeat(DISMISSAL_REASON_MAX_LENGTH + 1) })).statusCode).toBe(400);
+  });
+
+  it('mark refuses a limit-length reason padded with spaces at the schema (400)', async () => {
+    // IN-04 / D-13: the schema caps the RAW string, so surrounding spaces count. Before D-13 the
+    // 4000-char schema cap let this through and the validator accepted it after trim (201).
+    const org = await seedOrg(store.storage, 'org_a');
+    const scan = await seedScan(store.storage, { orgId: org });
+    const srv = await as({ role: 'user', currentOrgId: org });
+    const padded = `  ${'x'.repeat(DISMISSAL_REASON_MAX_LENGTH)}  `;
+    const res = await mark(srv, scan, { ...good, reason: padded });
+    expect(res.statusCode).toBe(400);
+    expect(await store.storage.issueDismissals!.listForSite(org, 'https://example.test/dev/en-us')).toHaveLength(0);
+  });
+
+  it('schema limits equal the validator constants', () => {
+    const maxOf = (schema: unknown): unknown => (schema as { maxLength?: number }).maxLength;
+    expect(maxOf(MarkBody.properties.reason)).toBe(DISMISSAL_REASON_MAX_LENGTH);
+    expect(maxOf(MarkBody.properties.code)).toBe(DISMISSAL_CODE_MAX_LENGTH);
+    expect(maxOf(MarkBody.properties.selector)).toBe(DISMISSAL_SELECTOR_MAX_LENGTH);
+    expect(maxOf(RevokeBody.properties.comment)).toBe(DISMISSAL_COMMENT_MAX_LENGTH);
+    expect(maxOf(PreviewQuery.properties.code)).toBe(DISMISSAL_CODE_MAX_LENGTH);
+    expect(maxOf(PreviewQuery.properties.selector)).toBe(DISMISSAL_SELECTOR_MAX_LENGTH);
+    expect([DISMISSAL_REASON_MAX_LENGTH, DISMISSAL_COMMENT_MAX_LENGTH]).toEqual([1000, 1000]);
   });
 
   it.each(['', 'html', 'BODY', ' :root ', 'html > body', '/html/body'])(

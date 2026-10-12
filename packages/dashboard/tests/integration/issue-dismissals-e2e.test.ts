@@ -140,6 +140,30 @@ describe('issue dismissals through the real server (Phase 87-04)', () => {
   });
 });
 
+describe('issue dismissal preview through the real server (Phase 89-01)', () => {
+  it('global admin api key previews a finding', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/v1/scans/${scanA}/dismissals/preview`,
+      query: { code: CODE, selector: SELECTOR },
+      headers: { authorization: `Bearer ${systemKey}` },
+    });
+    expect(res.statusCode).toBe(200);
+    // The mark test above dismissed this exact code and selector, so the preview flags it (89-04).
+    expect(res.json()).toEqual({ occurrences: 2, pages: 2, alreadyDismissed: true });
+  });
+
+  it('org-scoped admin api key is refused on preview while the permission is dark', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/v1/scans/${scanA}/dismissals/preview`,
+      query: { code: CODE, selector: SELECTOR },
+      headers: { authorization: `Bearer ${orgAKey}` },
+    });
+    expect(res.statusCode).toBe(403);
+  });
+});
+
 async function freshTenant(): Promise<{ orgId: string; scanId: string; key: string; siteKey: string }> {
   const slug = `org-${randomUUID().slice(0, 8)}`;
   const orgId = (await seed.organizations.createOrg({ name: slug, slug })).id;

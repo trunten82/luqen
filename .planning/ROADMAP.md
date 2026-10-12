@@ -307,7 +307,20 @@ Plans:
      - The grant does not merge until he approves directly, and the record names the channel (FP-18).
   5. The grant of `issues.dismiss` to org Owner and Admin is the LAST step of the milestone. It updates the default role sets and adds a seeding migration for existing orgs, and ships as its own PR held until that approval, because merges auto-deploy. After deploy, a read-back confirms that an Owner on the test org can mark and that a Member or Viewer cannot (FP-18).
 
-**Plans**: TBD
+**Plans**: 10 plans
+
+Plans:
+- [ ] 89-01-PLAN.md — Coverage preview endpoint (D-04) + one source of limits (D-13) + attributable API-key actors (D-12) [wave 1]
+- [ ] 89-02-PLAN.md — issueDismissals.* copy in 6 locales + parity and honesty gates (D-10) [wave 1]
+- [ ] 89-03-PLAN.md — Read-only issues.dismiss holder read-back instrument, dark/granted, break-tested (D-14/D-17) [wave 1]
+- [ ] 89-04-PLAN.md — Mark control + native dialog with preview, browser tracer (D-01..D-06) [wave 2]
+- [ ] 89-05-PLAN.md — Dismissed section + revoke + public-surface absence (D-07..D-09) [wave 3]
+- [ ] 89-06-PLAN.md — Full local browser UAT, browser break-tests, phase gate, dark-UI PR opened (not merged) [wave 4]
+- [ ] 89-07-PLAN.md — Owner merge OK -> PR #1 then dark-UI PR deployed; D-14 dark read-back on prod; owner sets up test org [wave 5, human-gated]
+- [ ] 89-08-PLAN.md — Deployed dark UAT on the test org + D-15 blocking owner review (wording, custom roles, org keys) [wave 6, human-gated]
+- [ ] 89-09-PLAN.md — Grant PR (held): lift dark, Owner/Admin sets, migration 091, flipped pins (D-16) [wave 7]
+- [ ] 89-10-PLAN.md — Owner's direct merge OK -> grant deployed; D-17 read-back + granted UAT on prod [wave 8, human-gated]
+
 **UI hint**: yes
 
 **Progress (v3.8.0):**
@@ -318,7 +331,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 87. Dismissal store, domain model and permission | v3.8.0 | 5/5 | Complete | 2026-10-08 |
 | 88. Dismissals applied on every surface | v3.8.0 | 19/19 | In Progress|  |
-| 89. Dismissal UI, dark launch and role grant | v3.8.0 | 0/? | Not started | - |
+| 89. Dismissal UI, dark launch and role grant | v3.8.0 | 0/10 | Planned | - |
 
 **Risks carried into planning (read from source 2026-10-08; not exercised live):**
 

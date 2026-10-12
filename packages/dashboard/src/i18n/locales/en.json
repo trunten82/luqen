@@ -2218,5 +2218,86 @@
   "reportCompare.noResolvedIssuesDesc": "No issues from the baseline scan were resolved in this scan.",
   "reportCompare.noSharedIssuesTitle": "No shared issues",
   "reportCompare.noSharedIssuesDesc": "The two scans have no issues in common.",
-  "exposure.band": "Risk band"
+  "exposure.band": "Risk band",
+  "issueDismissals": {
+    "action": {
+      "dismiss": "Dismiss",
+      "dismissTitle": "Dismiss as false positive",
+      "dismissAria": "Dismiss as false positive: rule {{code}}",
+      "refusedTitle": "This finding has no specific element and cannot be dismissed.",
+      "revokeAria": "Revoke dismissal of rule {{code}}"
+    },
+    "dialog": {
+      "mark": {
+        "title": "Dismiss as false positive",
+        "ruleLabel": "Rule",
+        "elementLabel": "Element",
+        "messageLabel": "Finding",
+        "scope": "This dismissal applies to this rule on this exact element, on every page of this site, in this scan and in future scans. It stops matching if the element's selector changes.",
+        "effect": "Dismissed findings stop counting in totals, scores and compliance results. Conformance reports (ACR) state how many findings were dismissed as false positives. You can revoke the dismissal later from the Dismissed findings section.",
+        "reasonLabel": "Reason",
+        "reasonHint": "Required. Say why this is a false positive. Your name and this reason are shown to everyone who can view this report.",
+        "confirm": "Dismiss as false positive",
+        "saving": "Saving…"
+      },
+      "preview": {
+        "occurrences": "Occurrences in this scan",
+        "pages": "Pages in this scan",
+        "loading": "Checking what this covers in this scan…",
+        "none": "This scan has no finding that matches this rule and element, so there is nothing to dismiss.",
+        "error": "Could not check what this covers. Try again.",
+        "retry": "Try again",
+        "refused": "This finding has no specific element and cannot be dismissed.",
+        "alreadyDismissed": "This rule on this exact element is already dismissed for this site, so there is nothing to dismiss. Reload the page to see it under Dismissed findings."
+      },
+      "revoke": {
+        "title": "Revoke dismissal",
+        "body": "The finding returns to the counts, scores, compliance results and conformance reports of this site, including earlier scans.",
+        "commentLabel": "Comment (optional)",
+        "commentHint": "Say why you are revoking. Shown in the Dismissed findings section.",
+        "confirm": "Revoke dismissal",
+        "saving": "Revoking…"
+      }
+    },
+    "section": {
+      "summary": "Dismissed findings — active: {{active}}, revoked: {{revoked}}",
+      "intro": "Findings dismissed as false positives for this site. They do not count in totals, scores or compliance results. Each dismissal matches one rule on one exact element.",
+      "activeHeading": "Active dismissals",
+      "revokedHeading": "Revoked dismissals",
+      "noActive": "No active dismissals."
+    },
+    "col": {
+      "rule": "Rule",
+      "element": "Element",
+      "reason": "Reason",
+      "dismissedBy": "Dismissed by",
+      "dismissedOn": "Dismissed on",
+      "revokedBy": "Revoked by",
+      "revokedOn": "Revoked on",
+      "comment": "Comment",
+      "actions": "Actions"
+    },
+    "actor": {
+      "apiKey": "API key"
+    },
+    "allDismissed": "Every finding in this report has been dismissed as a false positive. See Dismissed findings below.",
+    "toast": {
+      "marked": "Finding dismissed. Scans of this site updated: {{count}}.",
+      "revoked": "Dismissal revoked. Scans of this site updated: {{count}}.",
+      "recomputeFailed": "Saved, but {{failed}} scans of this site could not be updated. Totals on the home page and trends may be out of date for them.",
+      "recomputeIncomplete": "Saved, but the other scans of this site could not be fully updated. Totals on the home page and trends may be out of date."
+    },
+    "error": {
+      "invalid": "This finding cannot be dismissed, or the reason is not valid. Check the reason and try again.",
+      "session": "Your session has expired. Sign in again, then repeat this.",
+      "forbidden": "You do not have permission to do this.",
+      "notFound": "This report or dismissal no longer exists. Reload the page.",
+      "conflictMark": "This finding is already dismissed. Reload the page to see it under Dismissed findings.",
+      "conflictRevoke": "This dismissal was already revoked. Reload the page.",
+      "noMatch": "This report has no matching finding to dismiss.",
+      "rateLimited": "Too many requests. Wait a minute and try again.",
+      "unavailable": "Dismissals are not available on this server.",
+      "generic": "Something went wrong. Check your connection and try again."
+    }
+  }
 }
