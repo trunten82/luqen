@@ -368,6 +368,21 @@ function revokeDialogOf(html: string): string {
   return m![0];
 }
 
+describe('mark dialog — together text (89-11 item 6)', () => {
+  it('the mark dialog carries the together text as data in every locale, with no raw key', () => {
+    for (const locale of ['en', 'de', 'es', 'fr', 'it', 'pt'] as const) {
+      const html = render({ locale });
+      const m = /<dialog id="issue-dismiss-dialog"[\s\S]*?<\/dialog>/.exec(html);
+      expect(m, `${locale}: mark dialog rendered`).not.toBeNull();
+      const open = m![0].slice(0, m![0].indexOf('>') + 1);
+      const want = t('issueDismissals.dialog.preview.together', locale);
+      expect(want, locale).not.toBe('issueDismissals.dialog.preview.together');
+      expect(open, locale).toContain(`data-preview-together="${Handlebars.Utils.escapeExpression(want)}"`);
+      expect(open, locale).not.toContain('issueDismissals.');
+    }
+  });
+});
+
 describe('revoke dialog', () => {
   it('a permitted viewer gets the revoke dialog with every translated string as data', () => {
     const dialog = revokeDialogOf(render({ dismissals: TWO_ACTIVE_ONE_REVOKED }));

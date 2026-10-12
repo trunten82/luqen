@@ -33,7 +33,7 @@ import { runRemote, missingVars, REMOTE_VARS } from './dismissals/remote.mjs';
 
 const SCENARIOS = { ...coreScenarios, ...flowScenarios, ...viewScenarios, ...gapScenarios };
 // Order matters only for readability: each scenario gets its own world.
-const ORDER = ['tracer', 'permissions', 'dialog', 'refused', 'mark', 'surfaces', 'revoke', 'conflict', 'public', 'mobile', 'longtext', 'locales', 'theme', 'keyboard', 'overflow', 'attribution'];
+const ORDER = ['tracer', 'permissions', 'dialog', 'refused', 'mark', 'surfaces', 'revoke', 'conflict', 'public', 'mobile', 'longtext', 'locales', 'theme', 'keyboard', 'overflow', 'attribution', 'twins', 'layout'];
 
 function parseArgs(argv) {
   const out = { mode: 'local', expect: 'dark', scenario: 'all', leaveActive: false, keepGoing: false };

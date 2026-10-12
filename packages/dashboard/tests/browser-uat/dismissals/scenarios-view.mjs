@@ -77,7 +77,7 @@ async function revokeInvalidCopy(page, S, locale) {
 async function setPhone(page) { await page.setViewport(PHONE); }
 async function setDesktop(page) { await page.setViewport(DESKTOP); }
 
-async function setLocale(page, locale) {
+export async function setLocale(page, locale) {
   await page.evaluate(async (l) => {
     const meta = document.querySelector('meta[name="csrf-token"]');
     await fetch('/account/locale', { method: 'POST', credentials: 'include', redirect: 'manual',

@@ -702,6 +702,73 @@ describe('section styles (UI-SPEC "Proposed CSS additions", four rules)', () => 
     const layout = readFileSync(join(VIEWS_DIR, 'layouts', 'main.hbs'), 'utf8');
     expect(layout).not.toContain('/static/style.css?v=3.4.1');
     expect(layout).not.toContain('/static/style.css?v=3.4.2');
+    expect(layout).not.toContain('/static/style.css?v=3.4.3'); // 89-11 rules (dialog footer, tables, launcher)
     expect(layout).toMatch(/\/static\/style\.css\?v=3\.4\.\d+/);
+    expect(layout).not.toContain('/static/issue-dismissals.js?v=1.1.0'); // 89-11 together hint, error scroll
+    expect(layout).toMatch(/\/static\/issue-dismissals\.js\?v=1\.1\.\d+/);
+  });
+
+  // ── 89-11 (D-15 Q1 items 3-5; the closed UI-SPEC CSS set reopened under the owner's decision) ──
+  /** The body of every `@media <query>` block, brace-matched (rules nest one level inside it). */
+  const mediaBodies = (query: string): string[] => {
+    const out: string[] = [];
+    let from = 0;
+    for (;;) {
+      const at = CSS.indexOf(`@media ${query}`, from);
+      if (at === -1) return out;
+      const open = CSS.indexOf('{', at);
+      let depth = 0;
+      let i = open;
+      for (; i < CSS.length; i += 1) {
+        if (CSS[i] === '{') depth += 1;
+        else if (CSS[i] === '}') { depth -= 1; if (depth === 0) break; }
+      }
+      out.push(CSS.slice(open + 1, i));
+      from = i;
+    }
+  };
+  const tokensOnly = (body: string, label: string) => {
+    expect(body, label).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+    expect(body, label).not.toMatch(/\b(rgb|rgba|hsl|hsla|oklch)\(/);
+  };
+
+  it('the dialog footer is sticky and opaque, scoped to .rpt-dismiss-dialog', () => {
+    const footer = blocksFor('.rpt-dismiss-dialog .modal__footer').join('');
+    expect(footer).toMatch(/position:\s*sticky/);
+    expect(footer).toMatch(/bottom:/);
+    expect(footer).toMatch(/background(-color)?:\s*var\(--bg-primary\)/);
+    expect(footer).not.toMatch(/border(-top)?:\s*(none|0)/); // the global border-top is kept
+    tokensOnly(footer, 'footer');
+    expect(blocksFor('.rpt-dismiss-dialog').join('')).toMatch(/scroll-padding-bottom:/);
+    // Scoped: the global footer every other dialog uses is not sticky.
+    expect(blocksFor('.modal__footer').join('')).not.toContain('sticky');
+  });
+
+  it('the Dismissed tables have a desktop-only layout (inside a min-width: 768px block) that lets headers wrap and keeps the rule code from breaking per character', () => {
+    const block = mediaBodies('(min-width: 768px)').find((b) => b.includes('.rpt-dismissed'));
+    expect(block, 'a min-width: 768px block for the Dismissed tables').toBeDefined();
+    const rule = (sel: string) => {
+      const m = new RegExp(`${sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`).exec(block!);
+      return m ? m[1]! : '';
+    };
+    expect(rule('.rpt-dismissed .data-table th')).toMatch(/white-space:\s*normal/);
+    expect(rule('.rpt-dismissed .data-table td:first-child .rpt-code')).toMatch(/word-break:\s*normal/);
+    expect(rule('.rpt-dismissed .data-table td:first-child .rpt-code')).toMatch(/overflow-wrap:\s*anywhere/);
+    expect(rule('.rpt-dismissed .data-table td:first-child')).toMatch(/min-width:/);
+    expect(rule('.rpt-dismissed .data-table .cell--wrap')).toMatch(/min-width:/);
+    tokensOnly(block!, 'tables block');
+    // The phone card layout is not touched by these rules.
+    for (const body of mediaBodies('(max-width: 767px)')) expect(body).not.toContain('.rpt-dismissed .data-table');
+  });
+
+  it('the report page reserves bottom space for the assistant launcher only when it is present, on screen only', () => {
+    const block = mediaBodies('screen').find((b) => b.includes('agent-launch'));
+    expect(block, 'an @media screen block for the launcher clearance').toBeDefined();
+    const m = /body:has\(#agent-launch\)\s+\.rpt-shell__panels\s*>\s*\.rpt-tab-panel\s*\{([^}]*)\}/.exec(block!);
+    expect(m, 'clearance rule on the top-level tab panels only (child combinator)').not.toBeNull();
+    expect(m![1]).toMatch(/padding-bottom:\s*calc\(var\(--space-8\) \+ var\(--space-md\)\)/);
+    tokensOnly(block!, 'clearance block');
+    // The launcher itself is unchanged.
+    expect(blocksFor('.agent-launch').join('')).toMatch(/bottom:\s*var\(--space-md\)/);
   });
 });

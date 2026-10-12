@@ -133,6 +133,18 @@ export const flowScenarios = {
     }));
     check(S, 'the first tab shows the 409 mark text', got.error === expected && expected.length > 10, got.error);
     check(S, 'the dialog stays open with the typed reason kept and Cancel usable', got.open && got.reason.startsWith('First tab reason') && got.cancelEnabled, JSON.stringify(got));
+    // 89-11 item 3: measured as it is on screen, with no scroll call by the harness.
+    const errBox = await page.evaluate(() => {
+      const d = document.getElementById('issue-dismiss-dialog');
+      const e = document.getElementById('issue-dismiss-error');
+      const f = d.querySelector('.modal__footer');
+      const r = e.getBoundingClientRect(); const dr = d.getBoundingClientRect(); const fr = f.getBoundingClientRect();
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return { inViewport: r.top >= 0 && r.bottom <= window.innerHeight, inDialog: r.top >= dr.top && r.bottom <= dr.bottom,
+        aboveFooter: r.bottom <= fr.top + 1, uncovered: hit === e || e.contains(hit), h: Math.round(r.height), vw: window.innerWidth };
+    });
+    check(S, '1280px: the 409 text is visible and not covered by the dialog footer',
+      errBox.vw === 1280 && errBox.h > 0 && errBox.inViewport && errBox.inDialog && errBox.aboveFooter && errBox.uncovered, JSON.stringify(errBox));
     await shot(page, 'conflict-mark-409');
     await page.click('[data-action="rptDismissCancel"]');
 
