@@ -185,6 +185,22 @@ describe('issueDismissals namespace parity through the real loader', () => {
     });
   }
 
+  it('English copy promises no more than one rule on one exact element', () => {
+    const en = getLocaleData('en');
+    const FORBIDDEN = /forever|permanent|all similar|always/i;
+    const values = REQUIRED_KEYS.map((k) => [k, en[NS + k]] as const);
+    for (const [key, value] of values) {
+      expect(FORBIDDEN.test(value), `en: ${key} over-promises: ${value}`).toBe(false);
+    }
+    // Positive control: the pattern can match the words it forbids.
+    for (const word of ['forever', 'permanently', 'all similar issues', 'Always']) {
+      expect(FORBIDDEN.test(word), `pattern cannot match ${word}`).toBe(true);
+    }
+    for (const key of ['dialog.mark.scope', 'section.intro']) {
+      expect(en[NS + key], `en: ${key} must say the match is one exact element`).toContain('exact element');
+    }
+  });
+
   it('the English values are the UI-SPEC wording for the strings other plans match on', () => {
     const en = getLocaleData('en');
     expect(en['issueDismissals.action.dismiss']).toBe('Dismiss');
