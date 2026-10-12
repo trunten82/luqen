@@ -300,7 +300,15 @@ const SCENARIOS = {
     }, HERO.selector);
     check(S, 'finding returns after revoke', back === true);
 
-    // TASK3-CHECKS-PLACEHOLDER
+    const sectionState = await page.evaluate((c) => {
+      const tables = [...document.querySelectorAll('#rpt-dismissed table')];
+      // With the only dismissal revoked there is ONE table (no active rows): the revoked one, last.
+      const revokedRow = tables.length > 0 ? (tables[tables.length - 1].querySelector('tbody tr')?.textContent || '') : '';
+      return { tables: tables.length, revokedRow, revokeButtons: document.querySelectorAll('#rpt-dismissed [data-action="rptRevokeIssue"]').length, comment: revokedRow.includes(c), activeText: document.getElementById('rpt-dismissed').textContent || '' };
+    }, COMMENT);
+    check(S, 'row moved to revoked with comment', sectionState.comment === true && sectionState.revokedRow.includes(ADMIN.user), JSON.stringify(sectionState).slice(0, 300));
+    check(S, 'the revoked row has no Revoke button', sectionState.revokeButtons === 0, String(sectionState.revokeButtons));
+    check(S, 'the section now says there are no active dismissals', sectionState.activeText.includes('No active dismissals.'));
   },
 };
 

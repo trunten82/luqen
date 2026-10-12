@@ -441,10 +441,14 @@ describe('revoke dialog', () => {
     const html = render({ controls: null, dismissals: TWO_ACTIVE_ONE_REVOKED });
     expect(html).not.toContain('issue-revoke-dialog');
     expect(html).not.toContain('rptRevoke');
-    expect(html).not.toContain('Revoke');
-    // Positive control: the section IS on the page with its rows, so the absence is the gate.
+    expect(revokeButtons(html)).toHaveLength(0);
+    // The button's own label, as a whole word: "Revoked by" / "Revoked on" column heads stay.
+    expect(html).not.toMatch(/>\s*Revoke\s*</);
+    // Positive control: the section IS on the page with its rows (active AND revoked, whose
+    // heads say "Revoked ..."), so the absence above is the gate and not a missing section.
     expect(html).toContain('id="rpt-dismissed"');
     expect(html).toContain('Rendered by a script after load');
+    expect(html).toContain('Revoked by');
   });
 
   it('every locale renders the revoke dialog with no raw key visible', () => {

@@ -4084,6 +4084,44 @@ html[data-density="plain"] .data-table th {
 }
 .rpt-dismiss-dialog__preview dd { margin: 0; font-weight: 600; }
 
+/* Phase 89 Plan 05 — the Dismissed findings section (details at the end of the Issues panel) */
+.rpt-dismissed { margin-top: var(--space-lg); }
+.rpt-dismissed__summary {
+  cursor: pointer;
+  list-style: none;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+.rpt-dismissed__summary::-webkit-details-marker { display: none; }
+.rpt-dismissed__summary::before {
+  content: '\25B6';
+  margin-right: var(--space-sm);
+  font-size: var(--font-size-xs);
+  transition: transform 0.15s;
+}
+details[open] > .rpt-dismissed__summary::before { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) {
+  .rpt-dismissed__summary::before { transition: none; }
+}
+.rpt-dismissed__summary:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: var(--focus-outline-offset);
+}
+.rpt-dismissed__heading {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  margin: var(--space-md) 0 var(--space-sm);
+}
+.rpt-dismissed__intro {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  margin: var(--space-sm) 0 var(--space-md);
+}
+
 /* ── Severity badge ───────────────────────────────────────── */
 .rpt-severity { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; }
 .rpt-severity--error { background: var(--status-error-bg); color: var(--status-error); }
