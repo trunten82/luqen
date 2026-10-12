@@ -78,7 +78,8 @@ async function launch() {
 
 async function runLocal(browser) {
   const names = args.scenario === 'all' ? ORDER : [args.scenario];
-  resetShots();
+  // Only a full run clears the screenshots; a single scenario adds to (and overwrites) its own files.
+  if (args.scenario === 'all') resetShots();
   for (const n of names) {
     const world = await bootLocal();
     const { context, page } = await newPersonaPage(browser, world.base, null);
@@ -93,7 +94,6 @@ async function runLocal(browser) {
 }
 
 async function runSelftest(browser) {
-  resetShots();
   const world = await bootLocal();
   const env = envFromWorld(world);
   const guard = installOutputGuard(Object.entries(env).filter(([k]) => k !== 'LUQEN_UAT_BASE_URL').map(([, v]) => v));
