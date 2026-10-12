@@ -1731,5 +1731,85 @@
   "reportCompare.noResolvedIssuesDesc": "Nessun problema della scansione di riferimento è stato risolto in questa scansione.",
   "reportCompare.noSharedIssuesTitle": "Nessun problema in comune",
   "reportCompare.noSharedIssuesDesc": "Le due scansioni non hanno problemi in comune.",
-  "exposure.band": "Fascia di rischio"
+  "exposure.band": "Fascia di rischio",
+  "issueDismissals": {
+    "action": {
+      "dismiss": "Escludi",
+      "dismissTitle": "Escludi come falso positivo",
+      "dismissAria": "Escludi come falso positivo: regola {{code}}",
+      "refusedTitle": "Questo rilevamento non ha un elemento specifico e non può essere escluso.",
+      "revokeAria": "Revoca l'esclusione della regola {{code}}"
+    },
+    "dialog": {
+      "mark": {
+        "title": "Escludi come falso positivo",
+        "ruleLabel": "Regola",
+        "elementLabel": "Elemento",
+        "messageLabel": "Rilevamento",
+        "scope": "Questa esclusione si applica a questa regola su questo elemento esatto, in tutte le pagine di questo sito, in questa scansione e nelle scansioni future. Smette di corrispondere se il selettore dell'elemento cambia.",
+        "effect": "I rilevamenti esclusi non vengono più conteggiati nei totali, nei punteggi e nei risultati di conformità. I report di conformità (ACR) indicano quanti rilevamenti sono stati esclusi come falsi positivi. Puoi revocare l'esclusione in seguito dalla sezione Rilevamenti esclusi.",
+        "reasonLabel": "Motivo",
+        "reasonHint": "Obbligatorio. Spiega perché si tratta di un falso positivo. Il tuo nome e questo motivo sono visibili a chiunque possa vedere questo report.",
+        "confirm": "Escludi come falso positivo",
+        "saving": "Salvataggio…"
+      },
+      "preview": {
+        "occurrences": "Occorrenze in questa scansione",
+        "pages": "Pagine in questa scansione",
+        "loading": "Verifica di ciò che questo copre in questa scansione…",
+        "none": "Questa scansione non contiene alcun rilevamento che corrisponda a questa regola e a questo elemento, quindi non c'è nulla da escludere.",
+        "error": "Impossibile verificare ciò che questo copre. Riprova.",
+        "retry": "Riprova",
+        "refused": "Questo rilevamento non ha un elemento specifico e non può essere escluso."
+      },
+      "revoke": {
+        "title": "Revoca esclusione",
+        "body": "Il rilevamento torna nei conteggi, nei punteggi, nei risultati di conformità e nei report di conformità di questo sito, comprese le scansioni precedenti.",
+        "commentLabel": "Commento (facoltativo)",
+        "commentHint": "Spiega perché stai revocando. Mostrato nella sezione Rilevamenti esclusi.",
+        "confirm": "Revoca esclusione",
+        "saving": "Revoca in corso…"
+      }
+    },
+    "section": {
+      "summary": "Rilevamenti esclusi — attivi: {{active}}, revocati: {{revoked}}",
+      "intro": "Rilevamenti esclusi come falsi positivi per questo sito. Non vengono conteggiati nei totali, nei punteggi o nei risultati di conformità. Ogni esclusione corrisponde a una regola su un elemento esatto.",
+      "activeHeading": "Esclusioni attive",
+      "revokedHeading": "Esclusioni revocate",
+      "noActive": "Nessuna esclusione attiva."
+    },
+    "col": {
+      "rule": "Regola",
+      "element": "Elemento",
+      "reason": "Motivo",
+      "dismissedBy": "Escluso da",
+      "dismissedOn": "Escluso il",
+      "revokedBy": "Revocato da",
+      "revokedOn": "Revocato il",
+      "comment": "Commento",
+      "actions": "Azioni"
+    },
+    "actor": {
+      "apiKey": "Chiave API"
+    },
+    "allDismissed": "Tutti i rilevamenti di questo report sono stati esclusi come falsi positivi. Vedi Rilevamenti esclusi più sotto.",
+    "toast": {
+      "marked": "Rilevamento escluso. Scansioni di questo sito aggiornate: {{count}}.",
+      "revoked": "Esclusione revocata. Scansioni di questo sito aggiornate: {{count}}.",
+      "recomputeFailed": "Salvato, ma {{failed}} scansioni di questo sito non sono state aggiornate. I totali della home page e i trend potrebbero non essere aggiornati per queste scansioni.",
+      "recomputeIncomplete": "Salvato, ma le altre scansioni di questo sito non sono state aggiornate completamente. I totali della home page e i trend potrebbero non essere aggiornati."
+    },
+    "error": {
+      "invalid": "Questo rilevamento non può essere escluso, oppure il motivo non è valido. Controlla il motivo e riprova.",
+      "session": "La tua sessione è scaduta. Accedi di nuovo, poi ripeti l'operazione.",
+      "forbidden": "Non hai il permesso di farlo.",
+      "notFound": "Questo report o questa esclusione non esiste più. Ricarica la pagina.",
+      "conflictMark": "Questo rilevamento è già escluso. Ricarica la pagina per vederlo in Rilevamenti esclusi.",
+      "conflictRevoke": "Questa esclusione è già stata revocata. Ricarica la pagina.",
+      "noMatch": "Questo report non contiene alcun rilevamento corrispondente da escludere.",
+      "rateLimited": "Troppe richieste. Attendi un minuto e riprova.",
+      "unavailable": "Le esclusioni non sono disponibili su questo server.",
+      "generic": "Qualcosa è andato storto. Controlla la connessione e riprova."
+    }
+  }
 }

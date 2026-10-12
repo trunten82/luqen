@@ -1722,5 +1722,85 @@
   "reportCompare.noResolvedIssuesDesc": "Nenhum problema da análise de referência foi resolvido nesta análise.",
   "reportCompare.noSharedIssuesTitle": "Nenhum problema em comum",
   "reportCompare.noSharedIssuesDesc": "As duas análises não têm problemas em comum.",
-  "exposure.band": "Faixa de risco"
+  "exposure.band": "Faixa de risco",
+  "issueDismissals": {
+    "action": {
+      "dismiss": "Descartar",
+      "dismissTitle": "Descartar como falso positivo",
+      "dismissAria": "Descartar como falso positivo: regra {{code}}",
+      "refusedTitle": "Esta constatação não tem um elemento específico e não pode ser descartada.",
+      "revokeAria": "Revogar o descarte da regra {{code}}"
+    },
+    "dialog": {
+      "mark": {
+        "title": "Descartar como falso positivo",
+        "ruleLabel": "Regra",
+        "elementLabel": "Elemento",
+        "messageLabel": "Constatação",
+        "scope": "Este descarte se aplica a esta regra neste elemento exato, em todas as páginas deste site, nesta varredura e em varreduras futuras. Ele deixa de corresponder se o seletor do elemento mudar.",
+        "effect": "As constatações descartadas deixam de contar nos totais, nas pontuações e nos resultados de conformidade. Os relatórios de conformidade (ACR) informam quantas constatações foram descartadas como falsos positivos. Você pode revogar o descarte depois, na seção Constatações descartadas.",
+        "reasonLabel": "Motivo",
+        "reasonHint": "Obrigatório. Explique por que isto é um falso positivo. Seu nome e este motivo são exibidos para todos que podem ver este relatório.",
+        "confirm": "Descartar como falso positivo",
+        "saving": "Salvando…"
+      },
+      "preview": {
+        "occurrences": "Ocorrências nesta varredura",
+        "pages": "Páginas nesta varredura",
+        "loading": "Verificando o que isto abrange nesta varredura…",
+        "none": "Esta varredura não tem nenhuma constatação que corresponda a esta regra e a este elemento, então não há nada a descartar.",
+        "error": "Não foi possível verificar o que isto abrange. Tente novamente.",
+        "retry": "Tentar novamente",
+        "refused": "Esta constatação não tem um elemento específico e não pode ser descartada."
+      },
+      "revoke": {
+        "title": "Revogar descarte",
+        "body": "A constatação volta aos totais, às pontuações, aos resultados de conformidade e aos relatórios de conformidade deste site, inclusive às varreduras anteriores.",
+        "commentLabel": "Comentário (opcional)",
+        "commentHint": "Explique por que você está revogando. Exibido na seção Constatações descartadas.",
+        "confirm": "Revogar descarte",
+        "saving": "Revogando…"
+      }
+    },
+    "section": {
+      "summary": "Constatações descartadas — ativas: {{active}}, revogadas: {{revoked}}",
+      "intro": "Constatações descartadas como falsos positivos para este site. Elas não contam nos totais, nas pontuações nem nos resultados de conformidade. Cada descarte corresponde a uma regra em um elemento exato.",
+      "activeHeading": "Descartes ativos",
+      "revokedHeading": "Descartes revogados",
+      "noActive": "Nenhum descarte ativo."
+    },
+    "col": {
+      "rule": "Regra",
+      "element": "Elemento",
+      "reason": "Motivo",
+      "dismissedBy": "Descartado por",
+      "dismissedOn": "Descartado em",
+      "revokedBy": "Revogado por",
+      "revokedOn": "Revogado em",
+      "comment": "Comentário",
+      "actions": "Ações"
+    },
+    "actor": {
+      "apiKey": "Chave de API"
+    },
+    "allDismissed": "Todas as constatações deste relatório foram descartadas como falsos positivos. Veja Constatações descartadas abaixo.",
+    "toast": {
+      "marked": "Constatação descartada. Varreduras deste site atualizadas: {{count}}.",
+      "revoked": "Descarte revogado. Varreduras deste site atualizadas: {{count}}.",
+      "recomputeFailed": "Salvo, mas {{failed}} varreduras deste site não puderam ser atualizadas. Os totais da página inicial e as tendências podem estar desatualizados para elas.",
+      "recomputeIncomplete": "Salvo, mas as outras varreduras deste site não puderam ser totalmente atualizadas. Os totais da página inicial e as tendências podem estar desatualizados."
+    },
+    "error": {
+      "invalid": "Esta constatação não pode ser descartada, ou o motivo não é válido. Verifique o motivo e tente novamente.",
+      "session": "Sua sessão expirou. Entre novamente e repita a ação.",
+      "forbidden": "Você não tem permissão para fazer isto.",
+      "notFound": "Este relatório ou descarte não existe mais. Recarregue a página.",
+      "conflictMark": "Esta constatação já foi descartada. Recarregue a página para vê-la em Constatações descartadas.",
+      "conflictRevoke": "Este descarte já foi revogado. Recarregue a página.",
+      "noMatch": "Este relatório não tem nenhuma constatação correspondente para descartar.",
+      "rateLimited": "Muitas solicitações. Aguarde um minuto e tente novamente.",
+      "unavailable": "Os descartes não estão disponíveis neste servidor.",
+      "generic": "Algo deu errado. Verifique sua conexão e tente novamente."
+    }
+  }
 }

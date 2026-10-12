@@ -1722,5 +1722,85 @@
   "reportCompare.noResolvedIssuesDesc": "Keine Probleme aus dem Basis-Scan wurden in diesem Scan behoben.",
   "reportCompare.noSharedIssuesTitle": "Keine gemeinsamen Probleme",
   "reportCompare.noSharedIssuesDesc": "Die beiden Scans haben keine gemeinsamen Probleme.",
-  "exposure.band": "Risikostufe"
+  "exposure.band": "Risikostufe",
+  "issueDismissals": {
+    "action": {
+      "dismiss": "Verwerfen",
+      "dismissTitle": "Als Fehlalarm verwerfen",
+      "dismissAria": "Als Fehlalarm verwerfen: Regel {{code}}",
+      "refusedTitle": "Dieser Befund hat kein bestimmtes Element und kann nicht verworfen werden.",
+      "revokeAria": "Verwerfen von Regel {{code}} widerrufen"
+    },
+    "dialog": {
+      "mark": {
+        "title": "Als Fehlalarm verwerfen",
+        "ruleLabel": "Regel",
+        "elementLabel": "Element",
+        "messageLabel": "Befund",
+        "scope": "Dieses Verwerfen gilt für diese Regel an genau diesem Element, auf jeder Seite dieser Website, in diesem Scan und in künftigen Scans. Es greift nicht mehr, wenn sich der Selektor des Elements ändert.",
+        "effect": "Verworfene Befunde zählen nicht mehr in Summen, Bewertungen und Compliance-Ergebnissen. Konformitätsberichte (ACR) geben an, wie viele Befunde als Fehlalarm verworfen wurden. Sie können das Verwerfen später im Abschnitt „Verworfene Befunde“ widerrufen.",
+        "reasonLabel": "Begründung",
+        "reasonHint": "Erforderlich. Geben Sie an, warum dies ein Fehlalarm ist. Ihr Name und diese Begründung sind für alle sichtbar, die diesen Bericht ansehen können.",
+        "confirm": "Als Fehlalarm verwerfen",
+        "saving": "Wird gespeichert…"
+      },
+      "preview": {
+        "occurrences": "Vorkommen in diesem Scan",
+        "pages": "Seiten in diesem Scan",
+        "loading": "Es wird geprüft, was dies in diesem Scan abdeckt…",
+        "none": "Dieser Scan enthält keinen Befund, der zu dieser Regel und diesem Element passt, daher gibt es nichts zu verwerfen.",
+        "error": "Die Abdeckung konnte nicht geprüft werden. Versuchen Sie es erneut.",
+        "retry": "Erneut versuchen",
+        "refused": "Dieser Befund hat kein bestimmtes Element und kann nicht verworfen werden."
+      },
+      "revoke": {
+        "title": "Verwerfen widerrufen",
+        "body": "Der Befund fließt wieder in die Summen, Bewertungen, Compliance-Ergebnisse und Konformitätsberichte dieser Website ein, auch in frühere Scans.",
+        "commentLabel": "Kommentar (optional)",
+        "commentHint": "Geben Sie an, warum Sie widerrufen. Wird im Abschnitt „Verworfene Befunde“ angezeigt.",
+        "confirm": "Verwerfen widerrufen",
+        "saving": "Wird widerrufen…"
+      }
+    },
+    "section": {
+      "summary": "Verworfene Befunde — aktiv: {{active}}, widerrufen: {{revoked}}",
+      "intro": "Befunde, die für diese Website als Fehlalarm verworfen wurden. Sie zählen nicht in Summen, Bewertungen oder Compliance-Ergebnissen. Jedes Verwerfen gilt für eine Regel an genau einem Element.",
+      "activeHeading": "Aktive Verwerfungen",
+      "revokedHeading": "Widerrufene Verwerfungen",
+      "noActive": "Keine aktiven Verwerfungen."
+    },
+    "col": {
+      "rule": "Regel",
+      "element": "Element",
+      "reason": "Begründung",
+      "dismissedBy": "Verworfen von",
+      "dismissedOn": "Verworfen am",
+      "revokedBy": "Widerrufen von",
+      "revokedOn": "Widerrufen am",
+      "comment": "Kommentar",
+      "actions": "Aktionen"
+    },
+    "actor": {
+      "apiKey": "API-Schlüssel"
+    },
+    "allDismissed": "Alle Befunde in diesem Bericht wurden als Fehlalarm verworfen. Siehe unten unter „Verworfene Befunde“.",
+    "toast": {
+      "marked": "Befund verworfen. Aktualisierte Scans dieser Website: {{count}}.",
+      "revoked": "Verwerfen widerrufen. Aktualisierte Scans dieser Website: {{count}}.",
+      "recomputeFailed": "Gespeichert, aber {{failed}} Scans dieser Website konnten nicht aktualisiert werden. Summen auf der Startseite und Trends sind für diese Scans möglicherweise veraltet.",
+      "recomputeIncomplete": "Gespeichert, aber die übrigen Scans dieser Website konnten nicht vollständig aktualisiert werden. Summen auf der Startseite und Trends sind möglicherweise veraltet."
+    },
+    "error": {
+      "invalid": "Dieser Befund kann nicht verworfen werden, oder die Begründung ist ungültig. Prüfen Sie die Begründung und versuchen Sie es erneut.",
+      "session": "Ihre Sitzung ist abgelaufen. Melden Sie sich erneut an und wiederholen Sie dies.",
+      "forbidden": "Sie haben dafür keine Berechtigung.",
+      "notFound": "Dieser Bericht oder dieses Verwerfen existiert nicht mehr. Laden Sie die Seite neu.",
+      "conflictMark": "Dieser Befund wurde bereits verworfen. Laden Sie die Seite neu, um ihn unter „Verworfene Befunde“ zu sehen.",
+      "conflictRevoke": "Dieses Verwerfen wurde bereits widerrufen. Laden Sie die Seite neu.",
+      "noMatch": "Dieser Bericht enthält keinen passenden Befund zum Verwerfen.",
+      "rateLimited": "Zu viele Anfragen. Warten Sie eine Minute und versuchen Sie es erneut.",
+      "unavailable": "Verwerfen ist auf diesem Server nicht verfügbar.",
+      "generic": "Etwas ist schiefgelaufen. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
+    }
+  }
 }
