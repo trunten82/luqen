@@ -139,6 +139,16 @@ export async function orgAggregatorWebhookRoutes(
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
+      // Only a webhook in the caller org's own list (the list this page shows)
+      // may be deleted; another org's id answers exactly like a missing one.
+      const orgId = callerOrgId(request);
+      const own = orgId === undefined ? [] : await storage.orgAggregatorWebhooks.listAll(orgId);
+      if (!own.some((w) => w.id === id)) {
+        return reply
+          .code(404)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Aggregator webhook not found.', 'error'));
+      }
       try {
         const ok = await storage.orgAggregatorWebhooks.delete(id);
         if (!ok) {
