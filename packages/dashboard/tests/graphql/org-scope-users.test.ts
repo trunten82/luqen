@@ -19,17 +19,23 @@ const STRONG_PASSWORD = 'Placeholder-Pass-2026!x';
 const NW_USER = { id: 'user-nw-member', username: 'northwind-member', role: 'user', active: true, createdAt: '2026-01-01' };
 const FB_USER = { id: 'user-fb-member', username: 'fabrikam-member', role: 'user', active: true, createdAt: '2026-01-01' };
 const GA_USER = { id: 'user-global-admin', username: 'global-admin', role: 'admin', active: true, createdAt: '2026-01-01' };
+// SHARED_USER sits in a team of each org: only a global admin may manage them (ruling RESTRICT, 2026-10-12).
+const SHARED_USER = { id: 'user-shared', username: 'shared-member', role: 'user', active: true, createdAt: '2026-01-01' };
 const TEAMS: Record<string, { id: string; orgId: string; members: Array<{ userId: string }> }> = {
-  'team-fb': { id: 'team-fb', orgId: FABRIKAM_ORG, members: [{ userId: FB_USER.id }, { userId: GA_USER.id }] },
-  'team-nw': { id: 'team-nw', orgId: NORTHWIND_ORG, members: [{ userId: NW_USER.id }] },
+  'team-fb': { id: 'team-fb', orgId: FABRIKAM_ORG,
+    members: [{ userId: FB_USER.id }, { userId: GA_USER.id }, { userId: SHARED_USER.id }] },
+  'team-nw': { id: 'team-nw', orgId: NORTHWIND_ORG, members: [{ userId: NW_USER.id }, { userId: SHARED_USER.id }] },
 };
 
 function makeStorage() {
-  const users = [NW_USER, FB_USER, GA_USER];
+  const users = [NW_USER, FB_USER, GA_USER, SHARED_USER];
   return {
     teams: {
       listTeamsByOrgId: vi.fn(async (orgId: string) => Object.values(TEAMS).filter((t) => t.orgId === orgId)),
       getTeam: vi.fn(async (id: string) => TEAMS[id] ?? null),
+      listTeamMembershipsForUser: vi.fn(async (userId: string) => Object.values(TEAMS)
+        .filter((t) => t.members.some((m) => m.userId === userId))
+        .map((t) => ({ teamId: t.id, role: 'member' }))),
     },
     users: {
       getUserById: vi.fn(async (id: string) => users.find((u) => u.id === id) ?? null),
@@ -73,6 +79,18 @@ describe('GraphQL user org scoping', () => {
         const storage = makeStorage();
         await expect(c.run(NW_USER.id, makeOrgKeyCtx(storage, PERMS))).rejects.toThrow('Forbidden');
         expect(storage.users[c.write]).not.toHaveBeenCalled();
+      });
+
+      it('refuses an org owner acting on a user shared with another org (shared user)', async () => {
+        const storage = makeStorage();
+        await expect(c.run(SHARED_USER.id, orgOwner(storage))).rejects.toThrow('Forbidden');
+        expect(storage.users[c.write]).not.toHaveBeenCalled();
+      });
+
+      it('lets a global admin act on a user shared with another org (shared user)', async () => {
+        const storage = makeStorage();
+        await c.run(SHARED_USER.id, makeGlobalAdminCtx(storage, PERMS));
+        expect(storage.users[c.write]).toHaveBeenCalled();
       });
 
       it('lets an org owner act on a member of their own org', async () => {
@@ -122,7 +140,7 @@ describe('GraphQL user org scoping', () => {
     it('lists every user to a global admin, as REST does', async () => {
       const storage = makeStorage();
       const result = await resolvers.Query.dashboardUsers({}, {}, makeGlobalAdminCtx(storage, PERMS));
-      expect(result).toHaveLength(3);
+      expect(result).toHaveLength(4);
     });
   });
 });

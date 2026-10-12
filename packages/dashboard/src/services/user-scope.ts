@@ -15,10 +15,13 @@ export interface UserScopeActor {
 /**
  * Can `actor` manage the target user? A global admin may manage anyone.
  * Anyone else (org owners/admins, org-scoped admin keys) may only manage users
- * who are members of a team belonging to their current org — never unbound
- * or global users, never a global admin (even one who sits in one of their
- * teams: that would let an org owner reset an admin's password), and never
- * anyone when their current org is 'system'.
+ * who belong SOLELY to their current org: in at least one of its teams and in
+ * no other org's team (product ruling RESTRICT, 2026-10-12: a user shared
+ * with another org needs a global admin). Never unbound or global users, never
+ * a global admin (even one who sits in one of their teams: that would let an
+ * org owner reset an admin's password), and never anyone when their current
+ * org is 'system'. A membership of a team that no longer exists counts for no
+ * org.
  */
 export async function canManageUser(
   storage: StorageAdapter,
@@ -30,10 +33,13 @@ export async function canManageUser(
   if (!orgId || orgId === 'system') return false;
   const target = await storage.users.getUserById(targetUserId);
   if (target !== null && bypassesOrgScope(target)) return false;
-  const orgTeams = await storage.teams.listTeamsByOrgId(orgId);
-  for (const team of orgTeams) {
-    const detail = await storage.teams.getTeam(team.id);
-    if (detail?.members?.some((m) => m.userId === targetUserId)) return true;
+  const memberships = await storage.teams.listTeamMembershipsForUser(targetUserId);
+  let inActorOrg = false;
+  for (const membership of memberships) {
+    const team = await storage.teams.getTeam(membership.teamId);
+    if (team === null) continue;
+    if (team.orgId !== orgId) return false;
+    inActorOrg = true;
   }
-  return false;
+  return inActorOrg;
 }

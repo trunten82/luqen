@@ -98,3 +98,53 @@ describe('an org owner cannot manage a global admin who sits in their team', () 
     expect((await ctx.storage.users.getUserById(ctx.memberId))?.active).toBe(false);
   });
 });
+
+/**
+ * Product ruling RESTRICT (2026-10-12): an org owner may reset, deactivate or
+ * delete only users who belong SOLELY to their own org. A user who is also in
+ * another org's team needs a global admin.
+ */
+describe('an org owner cannot manage a user shared with another org', () => {
+  async function shareMemberWithNorthwind(c: Ctx): Promise<void> {
+    const northwind = (await c.storage.organizations.createOrg({ name: 'Northwind', slug: 'northwind' })).id;
+    const nwTeam = await c.storage.teams.createTeam({ name: 'Northwind QA', description: 'QA', orgId: northwind });
+    await c.storage.teams.addTeamMember(nwTeam.id, c.memberId);
+  }
+
+  it('refuses deactivating a user who is also in another org team (shared user)', async () => {
+    ctx = await setup();
+    await shareMemberWithNorthwind(ctx);
+    const res = await ctx.server.inject({ method: 'POST', url: `/admin/dashboard-users/${ctx.memberId}/deactivate` });
+    expect(res.statusCode).toBe(403);
+    expect((await ctx.storage.users.getUserById(ctx.memberId))?.active).toBe(true);
+  });
+
+  it('refuses resetting the password of a shared user (shared user)', async () => {
+    ctx = await setup();
+    await shareMemberWithNorthwind(ctx);
+    const res = await ctx.server.inject({
+      method: 'POST', url: `/admin/dashboard-users/${ctx.memberId}/reset-password`, headers: FORM,
+      payload: `newPassword=${encodeURIComponent(NEW_PASSWORD)}&confirmPassword=${encodeURIComponent(NEW_PASSWORD)}`,
+    });
+    expect(res.statusCode).toBe(403);
+    expect(await ctx.storage.users.verifyPassword('fabrikam-member', PASSWORD)).toBeTruthy();
+  });
+
+  it('refuses deleting a shared user (shared user)', async () => {
+    ctx = await setup();
+    await shareMemberWithNorthwind(ctx);
+    const res = await ctx.server.inject({ method: 'DELETE', url: `/admin/dashboard-users/${ctx.memberId}` });
+    expect(res.statusCode).toBe(403);
+    expect(await ctx.storage.users.getUserById(ctx.memberId)).not.toBeNull();
+  });
+
+  it('after another org deletes its team, the user is sole-org again (sole-org control)', async () => {
+    ctx = await setup();
+    const northwind = (await ctx.storage.organizations.createOrg({ name: 'Northwind', slug: 'northwind' })).id;
+    const gone = await ctx.storage.teams.createTeam({ name: 'Gone', description: 'x', orgId: northwind });
+    await ctx.storage.teams.addTeamMember(gone.id, ctx.memberId);
+    await ctx.storage.teams.deleteTeam(gone.id);
+    const res = await ctx.server.inject({ method: 'POST', url: `/admin/dashboard-users/${ctx.memberId}/deactivate` });
+    expect(res.statusCode).toBe(200);
+  });
+});
