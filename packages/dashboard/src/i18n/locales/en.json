@@ -2248,7 +2248,8 @@
         "error": "Could not check what this covers. Try again.",
         "retry": "Try again",
         "refused": "This finding has no specific element and cannot be dismissed.",
-        "alreadyDismissed": "This rule on this exact element is already dismissed for this site, so there is nothing to dismiss. Reload the page to see it under Dismissed findings."
+        "alreadyDismissed": "This rule on this exact element is already dismissed for this site, so there is nothing to dismiss. Reload the page to see it under Dismissed findings.",
+        "together": "Every occurrence counted above is dismissed together, including any that are listed separately in this report."
       },
       "revoke": {
         "title": "Revoke dismissal",
@@ -2278,7 +2279,8 @@
       "actions": "Actions"
     },
     "actor": {
-      "apiKey": "API key"
+      "apiKey": "API key",
+      "apiKeyNamed": "API key: {{name}}"
     },
     "allDismissed": "Every finding in this report has been dismissed as a false positive. See Dismissed findings below.",
     "toast": {
@@ -2289,6 +2291,7 @@
     },
     "error": {
       "invalid": "This finding cannot be dismissed, or the reason is not valid. Check the reason and try again.",
+      "invalidRevoke": "This dismissal cannot be revoked, or the comment is not valid. Check the comment and try again.",
       "session": "Your session has expired. Sign in again, then repeat this.",
       "forbidden": "You do not have permission to do this.",
       "notFound": "This report or dismissal no longer exists. Reload the page.",

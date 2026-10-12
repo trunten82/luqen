@@ -6,7 +6,8 @@
      flash/toast with it. Every string the script needs travels already translated in data-*
      attributes; runtime numbers use the __COUNT__ / __FAILED__ sentinels.
      Mark and revoke read the SAME data-err-* names: data-err-conflict holds the revoke text
-     here (409 = already revoked), and the 422 slot (never returned by revoke) carries the
+     here (409 = already revoked), data-err-invalid the revoke text for a 400 (89-11: it held
+     the mark sentence about the reason), and the 422 slot (never returned by revoke) carries the
      generic text so no status can ever produce an empty message. No script, no inline handlers. --}}
 <dialog id="issue-revoke-dialog" class="rpt-dismiss-dialog" aria-labelledby="issue-revoke-title"
         data-comment-max="{{dismissalControls.commentMax}}"
@@ -15,7 +16,7 @@
         data-msg-recompute-incomplete="{{t 'issueDismissals.toast.recomputeIncomplete'}}"
         data-msg-saving="{{t 'issueDismissals.dialog.revoke.saving'}}"
         data-msg-confirm="{{t 'issueDismissals.dialog.revoke.confirm'}}"
-        data-err-invalid="{{t 'issueDismissals.error.invalid'}}"
+        data-err-invalid="{{t 'issueDismissals.error.invalidRevoke'}}"
         data-err-session="{{t 'issueDismissals.error.session'}}"
         data-err-forbidden="{{t 'issueDismissals.error.forbidden'}}"
         data-err-not-found="{{t 'issueDismissals.error.notFound'}}"
