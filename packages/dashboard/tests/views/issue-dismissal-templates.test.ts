@@ -105,7 +105,41 @@ interface RenderOptions {
   readonly technical?: boolean;
   readonly selectors?: readonly unknown[];
   readonly locale?: string;
+  readonly dismissals?: Record<string, unknown>;
 }
+
+function dismissalRow(id: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id,
+    code: CODE,
+    selector: '#fabrikam-promo-note',
+    reason: 'Rendered by a script after load',
+    actor: 'fabrikam-admin',
+    actorIsApiKey: false,
+    createdAtIso: '2026-10-01T10:00:00.000Z',
+    createdAtDisplay: '10/1/2026, 10:00:00 AM',
+    revokedBy: '',
+    revokedByIsApiKey: false,
+    revokedAtIso: '',
+    revokedAtDisplay: '',
+    revokeComment: '',
+    ...extra,
+  };
+}
+
+const TWO_ACTIVE_ONE_REVOKED = {
+  activeCount: 2,
+  revokedCount: 1,
+  active: [dismissalRow('dis-active-1'), dismissalRow('dis-active-2', { code: 'OTHER.code' })],
+  revoked: [
+    dismissalRow('dis-revoked-1', {
+      revokedBy: 'northwind-owner',
+      revokedAtIso: '2026-10-02T10:00:00.000Z',
+      revokedAtDisplay: '10/2/2026, 10:00:00 AM',
+      revokeComment: 'Selector was too broad',
+    }),
+  ],
+};
 
 function render(opts: RenderOptions = {}): string {
   const controls = opts.controls === undefined ? { reasonMax: DISMISSAL_REASON_MAX_LENGTH, commentMax: 1000 } : opts.controls;
@@ -119,6 +153,7 @@ function render(opts: RenderOptions = {}): string {
     llmEnabled: false,
     assignedMap: {},
     ...(controls !== null ? { dismissalControls: controls } : {}),
+    ...(opts.dismissals !== undefined ? { dismissals: opts.dismissals } : {}),
   });
 }
 
@@ -316,5 +351,138 @@ describe('rendered sample (read by eye once; printed for the SUMMARY)', () => {
     console.info(`DIALOG_VISIBLE_TEXT: ${visible}`);
     expect(visible).toContain('Dismiss as false positive');
     expect(visible).toContain('this rule on this exact element');
+  });
+});
+
+
+// ── Plan 05: the revoke dialog and the Revoke button (FP-15, D-08) ───────────────────────────
+// Revoke is the SIBLING of mark: each invariant the mark controls prove (gating, limits from the
+// view data, translated strings as data, outside every table, no inline script, no raw key in
+// any locale) is proven again here against revoke's own markup.
+function revokeButtons(html: string): string[] {
+  return [...html.matchAll(/<button[^>]*data-action="rptRevokeIssue"[^>]*>/g)].map((m) => m[0]);
+}
+function revokeDialogOf(html: string): string {
+  const m = /<dialog id="issue-revoke-dialog"[\s\S]*?<\/dialog>/.exec(html);
+  expect(m, 'revoke dialog rendered').not.toBeNull();
+  return m![0];
+}
+
+describe('revoke dialog', () => {
+  it('a permitted viewer gets the revoke dialog with every translated string as data', () => {
+    const dialog = revokeDialogOf(render({ dismissals: TWO_ACTIVE_ONE_REVOKED }));
+    const open = dialog.slice(0, dialog.indexOf('>') + 1);
+    for (const attr of [
+      'data-msg-revoked="Dismissal revoked. Scans of this site updated: __COUNT__."',
+      'data-msg-recompute-failed=',
+      'data-msg-recompute-incomplete=',
+      'data-msg-saving="Revoking…"',
+      'data-msg-confirm="Revoke dismissal"',
+      'data-err-invalid=',
+      'data-err-session=',
+      'data-err-forbidden=',
+      'data-err-not-found=',
+      'data-err-conflict="This dismissal was already revoked.',
+      'data-err-no-match=',
+      'data-err-rate-limited=',
+      'data-err-unavailable=',
+      'data-err-generic=',
+    ]) {
+      expect(open, attr).toContain(attr);
+    }
+    expect(open).not.toMatch(/data-err-[a-z-]+=""/);
+    // Mark's 409 text is about marking; revoke's is its own sentence.
+    expect(open).not.toContain('already dismissed');
+  });
+
+  it('every error attribute the shared client map reads exists on BOTH dialogs and is never empty', () => {
+    const html = render({ dismissals: TWO_ACTIVE_ONE_REVOKED });
+    const client = readFileSync(join(STATIC_DIR, 'issue-dismissals.js'), 'utf8');
+    const attrs = [...new Set([...client.matchAll(/'(data-err-[a-z-]+)'/g)].map((m) => m[1]!))];
+    expect(attrs.length).toBeGreaterThanOrEqual(9);
+    for (const dialog of [revokeDialogOf(html), /<dialog id="issue-dismiss-dialog"[\s\S]*?<\/dialog>/.exec(html)![0]]) {
+      const open = dialog.slice(0, dialog.indexOf('>') + 1);
+      for (const attr of attrs) expect(open, attr).toMatch(new RegExp(`${attr}="[^"]+"`));
+    }
+  });
+
+  it('the comment is optional, the limit comes from the view data and confirm is enabled at once', () => {
+    const html = render({ controls: { reasonMax: 777, commentMax: 555 }, dismissals: TWO_ACTIVE_ONE_REVOKED });
+    const dialog = revokeDialogOf(html);
+    const textarea = /<textarea[^>]*id="issue-revoke-comment"[^>]*>/.exec(dialog)![0];
+    expect(textarea).toContain('maxlength="555"');
+    expect(textarea).toContain('data-action-input="rptRevokeCommentInput"');
+    expect(textarea).not.toMatch(/\srequired/);
+    expect(textarea).not.toContain('aria-required');
+    expect(dialog).toContain('<span data-comment-count>0</span> / 555');
+    const confirm = /<button[^>]*data-action="rptRevokeConfirm"[^>]*>/.exec(dialog)![0];
+    expect(confirm).not.toContain('disabled');
+    expect(dialog).toContain('Comment (optional)');
+    expect(dialog).toContain('id="issue-revoke-error"');
+    expect(dialog).toContain('role="alert"');
+
+    const limit = String(DISMISSAL_REASON_MAX_LENGTH);
+    const literal = new RegExp(`(^|[^0-9])${limit}([^0-9]|$)`);
+    expect(readFileSync(join(VIEWS_DIR, 'partials', 'issue-revoke-dialog.hbs'), 'utf8')).not.toMatch(literal);
+  });
+
+  it('the dialog is outside every table, has no inline script or handler, and is a native form dialog', () => {
+    const html = render({ dismissals: TWO_ACTIVE_ONE_REVOKED });
+    const dialog = revokeDialogOf(html);
+    const before = html.slice(0, html.indexOf('<dialog id="issue-revoke-dialog"'));
+    expect((before.match(/<table/g) ?? []).length).toBe((before.match(/<\/table>/g) ?? []).length);
+    expect(dialog).toContain('<form method="dialog"');
+    expect(dialog).not.toMatch(/<script/i);
+    expect(dialog).not.toMatch(/\son[a-z]+\s*=/i);
+    expect(dialog).toContain('rpt-dismiss-dialog');
+  });
+
+  it('without dismissal controls there is no revoke dialog and no Revoke button, though the rows are listed', () => {
+    const html = render({ controls: null, dismissals: TWO_ACTIVE_ONE_REVOKED });
+    expect(html).not.toContain('issue-revoke-dialog');
+    expect(html).not.toContain('rptRevoke');
+    expect(html).not.toContain('Revoke');
+    // Positive control: the section IS on the page with its rows, so the absence is the gate.
+    expect(html).toContain('id="rpt-dismissed"');
+    expect(html).toContain('Rendered by a script after load');
+  });
+
+  it('every locale renders the revoke dialog with no raw key visible', () => {
+    for (const locale of ['de', 'es', 'fr', 'it', 'pt']) {
+      const html = render({ locale, dismissals: TWO_ACTIVE_ONE_REVOKED });
+      revokeDialogOf(html);
+      expect(html, locale).not.toContain('issueDismissals.');
+      expect(html, locale).not.toContain('common.revoke');
+      expect(html, locale).not.toContain('{{');
+    }
+  });
+});
+
+describe('Revoke button', () => {
+  it('renders on active rows only, with the dismissal id, the rule and its accessible names', () => {
+    const buttons = revokeButtons(render({ dismissals: TWO_ACTIVE_ONE_REVOKED }));
+    expect(buttons).toHaveLength(2);
+    expect(buttons.filter((b) => b.includes('data-id="dis-revoked-1"'))).toHaveLength(0);
+    const first = buttons.find((b) => b.includes('data-id="dis-active-1"'))!;
+    expect(first).toContain('class="btn btn--ghost btn--sm"');
+    expect(first).toContain(`data-code="${CODE}"`);
+    expect(first).toContain(`aria-label="Revoke dismissal of rule ${CODE}"`);
+    expect(first).toContain('title="Revoke dismissal"');
+    expect(first).not.toMatch(/\son[a-z]+\s*=/i);
+  });
+
+  it('is a plain button in a table cell, never a form', () => {
+    const html = render({ dismissals: TWO_ACTIVE_ONE_REVOKED });
+    const section = /<details class="rpt-dismissed"[\s\S]*?<\/details>/.exec(html)![0];
+    expect(section).not.toContain('<form');
+  });
+
+  it('the visible label is the translated word in every locale', () => {
+    const expected: Record<string, string> = { de: 'Widerrufen', es: 'Revocar', fr: 'Révoquer', it: 'Revoca', pt: 'Revogar', en: 'Revoke' };
+    for (const [locale, word] of Object.entries(expected)) {
+      const html = render({ locale, dismissals: TWO_ACTIVE_ONE_REVOKED });
+      const m = /<button[^>]*data-action="rptRevokeIssue"[^>]*>([^<]*)<\/button>/.exec(html)!;
+      expect(m[1]!.trim(), locale).toBe(word);
+    }
   });
 });

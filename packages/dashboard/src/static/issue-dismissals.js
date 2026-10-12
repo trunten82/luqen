@@ -1,25 +1,32 @@
 /*
- * Issue dismissals ("Mark as false positive") — report page client behaviour.
- * Phase 89 Plan 04 (FP-14, FP-16).
+ * Issue dismissals ("Mark as false positive" and revoke) — report page client behaviour.
+ * Phase 89 Plan 04 (FP-14, FP-16) and Plan 05 (FP-15 revoke).
  *
  * Loaded from layouts/main.hbs; reached through app.js's click/input delegation, which falls
  * through to window[action]. Every string shown to the user arrives already translated in
- * data-* attributes on #issue-dismiss-dialog (window.luqenI18n is never defined). User-derived
- * text (rule code, selector, finding message, toast text) is written ONLY as text nodes.
+ * data-* attributes on #issue-dismiss-dialog / #issue-revoke-dialog (window.luqenI18n is never
+ * defined). User-derived text (rule code, selector, finding message, toast text) is written ONLY
+ * as text nodes.
+ *
+ * Mark and revoke share ONE status map (ERR_ATTR), ONE request path (submit), ONE in-flight lock
+ * (setInFlight) and ONE flash/toast (storeFlash, showFlashToast); each dialog supplies its own
+ * strings under the same data-* attribute names.
  */
 (function () {
   'use strict';
 
   var DIALOG_ID = 'issue-dismiss-dialog';
+  var REVOKE_ID = 'issue-revoke-dialog';
   var FLASH_KEY = 'luqen.issueDismissals.flash';
 
   /* Tests replace reload; jsdom does not implement location.reload. */
   var api = window.luqenIssueDismissals = window.luqenIssueDismissals || {};
   api.reload = api.reload || function () { window.location.reload(); };
 
-  var state = { code: '', selector: '', message: '', criterion: '', tab: 'issues', previewOk: false, inFlight: false, seq: 0 };
+  var state = { code: '', selector: '', message: '', criterion: '', tab: 'issues', previewOk: false, inFlight: false, seq: 0, revokeId: '' };
 
   function dialogEl() { return document.getElementById(DIALOG_ID); }
+  function revokeEl() { return document.getElementById(REVOKE_ID); }
   function field(d, name) { return d.querySelector('[data-field="' + name + '"]'); }
   function preview(d, name) { return d.querySelector('[data-preview="' + name + '"]'); }
   function reasonEl(d) { return d.querySelector('#issue-dismiss-reason'); }
@@ -164,33 +171,43 @@
     503: 'data-err-unavailable'
   };
 
+  /* The two dialogs share one frame, so the shared code finds its parts structurally. */
+  function errorEl(d) { return d.querySelector('.form-error'); }
+  function footerConfirm(d) { return d.querySelector('.modal__footer .btn--primary'); }
+  function footerCancel(d) { return d.querySelector('.modal__footer .btn--ghost'); }
+  function textareaEl(d) { return d.querySelector('textarea'); }
+
   function showError(d, text) {
-    setText(d.querySelector('#issue-dismiss-error'), text);
+    setText(errorEl(d), text);
+  }
+
+  /* Mark gates Confirm on reason + preview; revoke has no gate (the comment is optional). */
+  function refreshConfirm(d) {
+    if (d.id === DIALOG_ID) updateConfirm(d);
+    else footerConfirm(d).disabled = state.inFlight;
   }
 
   /* UD-12: while the request is in flight Confirm shows the saving label and both buttons
      are disabled; the cancel (Escape) handler below refuses to close the dialog. */
   function setInFlight(d, on) {
     state.inFlight = on;
-    var confirm = confirmBtn(d);
-    var cancel = d.querySelector('[data-action="rptDismissCancel"]');
-    setText(confirm, msg(d, on ? 'data-msg-saving' : 'data-msg-confirm'));
-    if (cancel) cancel.disabled = on;
-    updateConfirm(d);
+    setText(footerConfirm(d), msg(d, on ? 'data-msg-saving' : 'data-msg-confirm'));
+    footerCancel(d).disabled = on;
+    refreshConfirm(d);
   }
 
-  /* Failure: translated message, dialog stays open, typed reason kept, focus back to it. */
+  /* Failure: translated message, dialog stays open, typed text kept, focus back to it. */
   function failWith(d, httpStatus) {
     setInFlight(d, false);
     showError(d, msg(d, ERR_ATTR[httpStatus] || 'data-err-generic'));
-    reasonEl(d).focus();
+    textareaEl(d).focus();
   }
 
   function storeFlash(flash) {
     try { window.sessionStorage.setItem(FLASH_KEY, JSON.stringify(flash)); } catch (_e) { /* reload anyway */ }
   }
 
-  function flashFor(d, body) {
+  function flashFor(d, body, okAttr) {
     var failed = body && typeof body.failed_scans === 'number' ? body.failed_scans : 0;
     var count = body && typeof body.recomputed_scans === 'number' ? body.recomputed_scans : 0;
     var text;
@@ -202,33 +219,89 @@
       kind = 'warning';
       text = msg(d, 'data-msg-recompute-incomplete');
     } else {
-      text = msg(d, 'data-msg-marked').split('__COUNT__').join(String(count));
+      text = msg(d, okAttr).split('__COUNT__').join(String(count));
     }
     return { kind: kind, message: text, tab: state.tab, criterion: state.criterion };
+  }
+
+  /* The ONE mutating request (mark and revoke): JSON, cookie session, CSRF header, in-flight lock.
+     Only the exact success status counts as success; the dialog's own data-msg-* strings and the
+     shared status map do the rest. */
+  function submit(d, url, payload, okStatus, okAttr) {
+    showError(d, '');
+    setInFlight(d, true);
+    fetch(url, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-Token': csrfToken() },
+      body: JSON.stringify(payload)
+    })
+      .then(function (res) {
+        if (res.status !== okStatus) { failWith(d, res.status); return null; }
+        return res.json().then(function (body) { return body; }, function () { return {}; });
+      })
+      .then(function (body) {
+        if (body === null) return;
+        storeFlash(flashFor(d, body, okAttr));
+        api.reload();
+      })
+      .catch(function () { failWith(d, 0); });
   }
 
   window.rptDismissConfirm = function () {
     var d = dialogEl();
     if (!d || state.inFlight || confirmBtn(d).disabled) return;
-    var reason = trimmedReason(d);
+    submit(
+      d,
+      '/api/v1/scans/' + encodeURIComponent(d.getAttribute('data-scan-id') || '') + '/dismissals',
+      { code: state.code, selector: state.selector, reason: trimmedReason(d) },
+      201,
+      'data-msg-marked'
+    );
+  };
+
+  /* ── Revoke (Plan 05, D-08) ──────────────────────────────────────── */
+
+  function trimmedComment(d) { return (textareaEl(d).value || '').trim(); }
+
+  window.rptRevokeIssue = function (btn) {
+    var d = revokeEl();
+    if (!d || d.open) return;
+    state.revokeId = btn.getAttribute('data-id') || '';
+    state.code = btn.getAttribute('data-code') || '';
+    state.tab = panelTab(btn);
+    state.criterion = '';
+    setInFlight(d, false);
+    textareaEl(d).value = '';
+    setText(d.querySelector('[data-comment-count]'), '0');
     showError(d, '');
-    setInFlight(d, true);
-    fetch('/api/v1/scans/' + encodeURIComponent(d.getAttribute('data-scan-id') || '') + '/dismissals', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-Token': csrfToken() },
-      body: JSON.stringify({ code: state.code, selector: state.selector, reason: reason })
-    })
-      .then(function (res) {
-        if (res.status !== 201) { failWith(d, res.status); return null; }
-        return res.json().then(function (body) { return body; }, function () { return {}; });
-      })
-      .then(function (body) {
-        if (body === null) return;
-        storeFlash(flashFor(d, body));
-        api.reload();
-      })
-      .catch(function () { failWith(d, 0); });
+    setText(field(d, 'code'), state.code);
+    try { d.showModal(); } catch (_e) { /* already open or unsupported */ }
+  };
+
+  window.rptRevokeCancel = function () {
+    var d = revokeEl();
+    if (d && !state.inFlight) d.close();
+  };
+
+  window.rptRevokeCommentInput = function () {
+    var d = revokeEl();
+    if (d) setText(d.querySelector('[data-comment-count]'), String(textareaEl(d).value.length));
+  };
+
+  /* The comment is optional: an empty (or whitespace-only) one sends {} - never an empty body
+     (Phase 87 IN-01) and never an empty comment key. */
+  window.rptRevokeConfirm = function () {
+    var d = revokeEl();
+    if (!d || state.inFlight || !state.revokeId) return;
+    var comment = trimmedComment(d);
+    submit(
+      d,
+      '/api/v1/dismissals/' + encodeURIComponent(state.revokeId) + '/revoke',
+      comment === '' ? {} : { comment: comment },
+      200,
+      'data-msg-revoked'
+    );
   };
 
   /* ── Result toast after the reload ───────────────────────────────── */
@@ -299,10 +372,10 @@
 
   function onLoad() {
     var d = dialogEl();
-    /* The cancel event (Escape) does not bubble, so it is attached to the dialog itself. */
-    if (d) {
-      d.addEventListener('cancel', function (e) { if (state.inFlight) e.preventDefault(); });
-    }
+    /* The cancel event (Escape) does not bubble, so it is attached to each dialog itself. */
+    [d, revokeEl()].forEach(function (dlg) {
+      if (dlg) dlg.addEventListener('cancel', function (e) { if (state.inFlight) e.preventDefault(); });
+    });
     var flash = readFlash();
     if (!flash) return;
     showFlashToast(flash, d ? msg(d, 'data-label-close') : '');

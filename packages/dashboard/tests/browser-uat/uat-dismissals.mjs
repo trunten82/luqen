@@ -224,12 +224,83 @@ const SCENARIOS = {
     check(S, 'the success toast is shown after the reload', /Finding dismissed/.test(toastText), toastText);
 
     const after = await page.evaluate((sels) => {
-      const panel = document.getElementById('panel-issues');
+      // The issue LIST, not the whole panel: since Plan 05 the panel ends with the Dismissed
+      // section, which names the dismissed element on purpose (D-07).
+      const panel = document.getElementById('rpt-issue-list');
       const text = panel ? panel.textContent || '' : '';
       return { hero: text.includes(sels.hero), nav: text.includes(sels.nav) };
     }, { hero: HERO.selector, nav: NAV.selector });
     check(S, 'the dismissed finding is gone after reload', after.hero === false, JSON.stringify(after));
     check(S, 'the other finding is still listed', after.nav === true, JSON.stringify(after));
+  },
+
+  /**
+   * Plan 05: mark a finding (the tracer's steps), open the Dismissed section, revoke it with a
+   * comment, and watch the finding come back while the row moves to the revoked table.
+   * Standalone: marks its own finding, so `--scenario revoke` works on a fresh world.
+   */
+  async revoke({ page, scanId }) {
+    const S = 'revoke';
+    const REASON = 'The alternative text is supplied by a script after load.';
+    const COMMENT = 'The selector turned out to be too broad.';
+    check(S, 'login as global admin', await login(page, ADMIN), page.url());
+    await page.goto(`${BASE}/reports/${scanId}`, { waitUntil: 'networkidle0', timeout: WAIT });
+    await page.click('#tab-issues');
+    await page.waitForSelector('#panel-issues:not(.rpt-tab-panel--hidden)', { timeout: WAIT });
+
+    // Mark the hero finding the way a user would (expand its group, click Dismiss, type, confirm).
+    const heroButton = async () => (await page.evaluateHandle((sel) => [...document.querySelectorAll('#panel-issues .rpt-dismiss-btn')].find((b) => b.getAttribute('data-selector') === sel) || null, HERO.selector)).asElement();
+    let button = await heroButton();
+    check(S, 'the hero finding has a Dismiss button before the mark', button !== null);
+    const header = (await page.evaluateHandle((el) => el.closest('.rpt-group').querySelector('.rpt-group__header'), button)).asElement();
+    await header.click();
+    await page.waitForFunction((el) => !el.closest('.rpt-group').classList.contains('rpt-group--collapsed'), {}, button);
+    await (await heroButton()).click();
+    await page.waitForSelector('#issue-dismiss-dialog[open]', { timeout: WAIT });
+    await page.waitForFunction(() => document.querySelector('[data-preview="occurrences"]').textContent === '2', { timeout: WAIT });
+    await page.type('#issue-dismiss-reason', REASON);
+    await page.waitForFunction(() => !document.querySelector('[data-action="rptDismissConfirm"]').disabled, { timeout: WAIT });
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: WAIT }),
+      page.click('[data-action="rptDismissConfirm"]'),
+    ]);
+    await page.waitForSelector('#toast-container .toast', { timeout: WAIT });
+
+    // The section is collapsed after the reload; open it with a real click on its summary.
+    await page.click('#tab-issues');
+    await page.waitForSelector('#panel-issues:not(.rpt-tab-panel--hidden)', { timeout: WAIT });
+    const collapsed = await page.$eval('#rpt-dismissed', (d) => !d.open);
+    check(S, 'the Dismissed section is collapsed by default', collapsed === true);
+    await page.click('#rpt-dismissed > summary');
+    await page.waitForFunction(() => document.getElementById('rpt-dismissed').open, { timeout: WAIT });
+    const active = await page.evaluate(() => [...document.querySelectorAll('#rpt-dismissed table')][0]?.querySelector('tbody tr')?.textContent || '');
+    check(S, 'the active table lists the dismissal with its reason', active.includes(HERO.code) && active.includes(REASON), active.slice(0, 200));
+    await page.screenshot({ path: path.join(TMP, 'uat-dismissals-section.png') });
+
+    // Revoke it with a comment through the real dialog.
+    await page.click('#rpt-dismissed [data-action="rptRevokeIssue"]');
+    await page.waitForSelector('#issue-revoke-dialog[open]', { timeout: WAIT });
+    const focusId = await page.evaluate(() => document.activeElement && document.activeElement.id);
+    check(S, 'focus lands in the revoke comment', focusId === 'issue-revoke-comment', String(focusId));
+    const enabled = await page.$eval('[data-action="rptRevokeConfirm"]', (b) => !b.disabled);
+    check(S, 'revoke confirm is enabled without a comment', enabled === true);
+    await page.type('#issue-revoke-comment', COMMENT);
+    await page.screenshot({ path: path.join(TMP, 'uat-dismissals-revoke-dialog.png') });
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: WAIT }),
+      page.click('[data-action="rptRevokeConfirm"]'),
+    ]);
+    await page.waitForSelector('#toast-container .toast', { timeout: WAIT });
+    const toastText = await page.$eval('#toast-container .toast', (t) => t.textContent || '');
+    check(S, 'the revoked toast is shown after the reload', /Dismissal revoked/.test(toastText), toastText);
+
+    const back = await page.evaluate((hero) => {
+      const list = document.getElementById('rpt-issue-list');
+      return list ? (list.textContent || '').includes(hero) : false;
+    }, HERO.selector);
+    check(S, 'finding returns after revoke', back === true);
+
+    // TASK3-CHECKS-PLACEHOLDER
   },
 };
 
@@ -242,14 +313,26 @@ async function main() {
   const names = args.scenario === 'all' ? Object.keys(SCENARIOS) : [args.scenario];
   for (const n of names) if (!SCENARIOS[n]) { console.error(`unknown scenario ${n}`); process.exit(2); }
 
-  const world = await bootLocal();
   const puppeteer = resolvePuppeteer();
   const browser = await puppeteer.launch({ executablePath: discoverChromium(), headless: 'new', protocolTimeout: WAIT, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
   try {
-    const page = await browser.newPage();
-    page.setDefaultTimeout(WAIT);
-    await page.setViewport({ width: 1280, height: 1600 });
-    for (const n of names) await SCENARIOS[n]({ page, browser, ...world });
+    // Every scenario gets its own fresh dashboard, database and browser context: scenarios mark
+    // and revoke real data, so sharing a world would make each one depend on the one before it.
+    for (const n of names) {
+      const world = await bootLocal();
+      const context = await browser.createBrowserContext();
+      const page = await context.newPage();
+      page.setDefaultTimeout(WAIT);
+      await page.setViewport({ width: 1280, height: 1600 });
+      try {
+        await SCENARIOS[n]({ page, browser, ...world });
+      } finally {
+        await context.close();
+        killAll();
+        children.length = 0;
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+    }
     console.log(`UAT GREEN: ${checks} checks`);
   } finally {
     await browser.close();

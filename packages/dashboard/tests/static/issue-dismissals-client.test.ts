@@ -19,11 +19,13 @@ const VIEWS_DIR = join(HERE, '..', '..', 'src', 'views');
 const SCRIPT = readFileSync(join(HERE, '..', '..', 'src', 'static', 'issue-dismissals.js'), 'utf8');
 const FLASH_KEY = 'luqen.issueDismissals.flash';
 const REASON_MAX = 50;
+const COMMENT_MAX = 40;
 const CODE = 'WCAG2AA.Principle1.Guideline1_1.1_1_1.H37';
 const SELECTOR = '#hero > p';
 const SERVER_TEXT = 'SERVER-ENGLISH-DETAIL-9f3';
 
 let dialogHtml: string;
+let revokeDialogHtml: string;
 
 beforeAll(() => {
   loadTranslations();
@@ -42,6 +44,10 @@ beforeAll(() => {
     scan: { id: 'scan-fabrikam-1' },
     perm: { reportsViewTechnical: true },
     dismissalControls: { reasonMax: REASON_MAX, commentMax: 1000 },
+  });
+  revokeDialogHtml = hb.compile(readFileSync(join(VIEWS_DIR, 'partials', 'issue-revoke-dialog.hbs'), 'utf8'))({
+    scan: { id: 'scan-fabrikam-1' },
+    dismissalControls: { reasonMax: REASON_MAX, commentMax: COMMENT_MAX },
   });
 });
 
@@ -78,6 +84,12 @@ const BODY = `
       <button id="refused" type="button" class="rpt-dismiss-btn" aria-disabled="true">Dismiss</button>
     </div>
   </div>
+  <details id="rpt-dismissed">
+    <button id="revoker" type="button" class="btn btn--ghost btn--sm" data-action="rptRevokeIssue"
+      data-id="dis-1" data-code="${CODE}">Revoke</button>
+    <button id="revoker2" type="button" class="btn btn--ghost btn--sm" data-action="rptRevokeIssue"
+      data-id="dis/2 x" data-code="OTHER.code">Revoke</button>
+  </details>
 </div>
 <div id="panel-templates" class="rpt-tab-panel">
   <button id="tpl-opener" type="button" class="rpt-dismiss-btn" data-action="rptDismissIssue"
@@ -88,7 +100,7 @@ const BODY = `
 /** Build the realm. Pass storage seeds to simulate a page that loads after a reload. */
 async function boot(opts: { flash?: unknown; panels?: boolean } = {}): Promise<Harness> {
   const dom = new JSDOM(
-    `<!doctype html><html><head><meta name="csrf-token" content="tok-123"></head><body>${BODY}${dialogHtml}</body></html>`,
+    `<!doctype html><html><head><meta name="csrf-token" content="tok-123"></head><body>${BODY}${dialogHtml}${revokeDialogHtml}</body></html>`,
     { url: 'http://localhost/reports/scan-fabrikam-1', runScripts: 'outside-only' },
   );
   const win = dom.window as unknown as Window & typeof globalThis;
@@ -575,5 +587,266 @@ describe('return to place', () => {
     const h = await make({ flash: { kind: 'success', message: 'ok', tab: 'issues', criterion: '9.9.9' } });
     expect((h.doc.querySelector('[data-issue-group]') as HTMLElement).classList.contains('rpt-group--collapsed')).toBe(true);
     expect(h.scrolled).toHaveLength(0);
+  });
+});
+
+
+// ── Plan 05: revoke (FP-15, D-08) ────────────────────────────────────────────────────────────
+// Revoke is the SIBLING of mark. Every invariant the mark tests above prove (CSRF + credentials,
+// translated status map that never shows server text, in-flight lock, reset on open, text-only
+// writes, flash + reload) is proven AGAIN here against revoke's own dialog and request.
+const revokeDialog = (h: Harness) => h.doc.getElementById('issue-revoke-dialog') as HTMLDialogElement;
+const revokeConfirm = (h: Harness) => el(h, '[data-action="rptRevokeConfirm"]') as HTMLButtonElement;
+const revokeCancel = (h: Harness) => el(h, '[data-action="rptRevokeCancel"]') as HTMLButtonElement;
+const comment = (h: Harness) => h.doc.getElementById('issue-revoke-comment') as HTMLTextAreaElement;
+const revokeError = (h: Harness) => (h.doc.getElementById('issue-revoke-error') as HTMLElement).textContent;
+const revokeAttr = (h: Harness, name: string) => revokeDialog(h).getAttribute(name) ?? '';
+
+function openRevoke(h: Harness, id = 'revoker'): void {
+  call(h, 'rptRevokeIssue', h.doc.getElementById(id));
+}
+function typeComment(h: Harness, text: string): void {
+  comment(h).value = text;
+  call(h, 'rptRevokeCommentInput', comment(h));
+}
+
+describe('revoke — opening', () => {
+  it('opening copies the rule as text, sends nothing and enables confirm at once', async () => {
+    const h = await make();
+    openRevoke(h);
+    expect(revokeDialog(h).hasAttribute('open')).toBe(true);
+    expect(el(h, '#issue-revoke-dialog [data-field="code"]').textContent).toBe(CODE);
+    expect(h.calls).toHaveLength(0); // no preview round trip for revoke
+    expect(revokeConfirm(h).disabled).toBe(false); // the comment is optional
+    expect(comment(h).hasAttribute('autofocus')).toBe(true); // native focus lands in the comment
+  });
+
+  it('reopening clears the previous comment, counter and error and releases the buttons', async () => {
+    const h = await make();
+    openRevoke(h);
+    typeComment(h, 'A comment that must not survive');
+    call(h, 'rptRevokeConfirm', revokeConfirm(h));
+    h.pending[0].resolve(res(409, { error: SERVER_TEXT }));
+    await flush();
+    expect(revokeError(h)).not.toBe('');
+    call(h, 'rptRevokeCancel');
+    expect(revokeDialog(h).hasAttribute('open')).toBe(false);
+
+    openRevoke(h, 'revoker2');
+    expect(comment(h).value).toBe('');
+    expect(el(h, '[data-comment-count]').textContent).toBe('0');
+    expect(revokeError(h)).toBe('');
+    expect(revokeConfirm(h).disabled).toBe(false);
+    expect(revokeCancel(h).disabled).toBe(false);
+    expect(el(h, '#issue-revoke-dialog [data-field="code"]').textContent).toBe('OTHER.code');
+  });
+
+  it('the counter shows the raw length of the comment', async () => {
+    const h = await make();
+    openRevoke(h);
+    typeComment(h, '  abc  ');
+    expect(el(h, '[data-comment-count]').textContent).toBe('7');
+    expect(revokeConfirm(h).disabled).toBe(false);
+  });
+
+  it('the rule text is data, never markup', async () => {
+    const h = await make();
+    const HOSTILE = '<img src=x onerror="window.__pwned=1">';
+    h.doc.getElementById('revoker')!.setAttribute('data-code', HOSTILE);
+    openRevoke(h);
+    expect(revokeDialog(h).querySelector('img')).toBeNull();
+    expect(el(h, '#issue-revoke-dialog [data-field="code"]').textContent).toBe(HOSTILE);
+    expect((h.win as unknown as Record<string, unknown>)['__pwned']).toBeUndefined();
+  });
+});
+
+describe('revoke — request', () => {
+  it('revoke without a comment sends an empty JSON object', async () => {
+    const h = await make();
+    openRevoke(h);
+    call(h, 'rptRevokeConfirm', revokeConfirm(h));
+    expect(h.calls).toHaveLength(1);
+    const post = h.calls[0];
+    expect(post.url).toBe('/api/v1/dismissals/dis-1/revoke');
+    expect(post.init?.method).toBe('POST');
+    expect(post.init?.credentials).toBe('include');
+    const headers = post.init?.headers as Record<string, string>;
+    expect(headers['Content-Type']).toBe('application/json');
+    expect(headers['X-CSRF-Token']).toBe('tok-123');
+    expect(post.init?.body).toBe('{}'); // never an empty body (Phase 87 IN-01)
+  });
+
+  it('revoke with a comment sends the trimmed comment', async () => {
+    const h = await make();
+    openRevoke(h);
+    typeComment(h, '  Selector was too broad.  ');
+    call(h, 'rptRevokeConfirm', revokeConfirm(h));
+    expect(JSON.parse(String(h.calls[0].init?.body))).toEqual({ comment: 'Selector was too broad.' });
+  });
+
+  it('a whitespace-only comment is treated as no comment', async () => {
+    const h = await make();
+    openRevoke(h);
+    typeComment(h, ' \n\t ');
+    call(h, 'rptRevokeConfirm', revokeConfirm(h));
+    expect(h.calls[0].init?.body).toBe('{}');
+  });
+
+  it('the dismissal id is URL-encoded into the path', async () => {
+    const h = await make();
+    openRevoke(h, 'revoker2');
+    call(h, 'rptRevokeConfirm', revokeConfirm(h));
+    expect(h.calls[0].url).toBe('/api/v1/dismissals/dis%2F2%20x/revoke');
+  });
+
+  it('a successful revoke stores the revoked flash and reloads', async () => {
+    const h = await make();
+    openRevoke(h);
+    call(h, 'rptRevokeConfirm', revokeConfirm(h));
+    h.pending[0].resolve(res(200, { recomputed_scans: 2, failed_scans: 0, recompute_complete: true }));
+    await flush();
+    const flash = JSON.parse(h.win.sessionStorage.getItem(FLASH_KEY) ?? 'null');
+    expect(flash).toEqual({
+      kind: 'success',
+      message: 'Dismissal revoked. Scans of this site updated: 2.',
+      tab: 'issues',
+      criterion: '',
+    });
+    expect(h.reloads.count).toBe(1);
+  });
+
+  it.each([
+    ['failed scans', { recomputed_scans: 1, failed_scans: 2, recompute_complete: true }, 'Saved, but 2 scans of this site could not be updated.'],
+    ['an incomplete recompute', { recomputed_scans: 1, failed_scans: 0, recompute_complete: false }, 'Saved, but the other scans of this site could not be fully updated.'],
+  ])('%s after a revoke become a warning flash', async (_label, body, text) => {
+    const h = await make();
+    openRevoke(h);
+    call(h, 'rptRevokeConfirm', revokeConfirm(h));
+    h.pending[0].resolve(res(200, body));
+    await flush();
+    const flash = JSON.parse(h.win.sessionStorage.getItem(FLASH_KEY) ?? 'null');
+    expect(flash.kind).toBe('warning');
+    expect(flash.message).toContain(text);
+    expect(flash.message).not.toContain('__FAILED__');
+    expect(flash.message).not.toContain('Finding dismissed');
+  });
+
+  it('only a 200 is a revoked dismissal: any other 2xx is reported as a failure and does not reload', async () => {
+    const h = await make();
+    openRevoke(h);
+    call(h, 'rptRevokeConfirm', revokeConfirm(h));
+    h.pending[0].resolve(res(204, {}));
+    await flush();
+    expect(h.reloads.count).toBe(0);
+    expect(h.win.sessionStorage.getItem(FLASH_KEY)).toBeNull();
+    expect(revokeError(h)).toBe(revokeAttr(h, 'data-err-generic'));
+  });
+
+  it('a revoke that succeeds with an unreadable body still reloads with a success flash', async () => {
+    const h = await make();
+    openRevoke(h);
+    call(h, 'rptRevokeConfirm', revokeConfirm(h));
+    h.pending[0].resolve({ ok: true, status: 200, json: () => Promise.reject(new Error('bad json')) });
+    await flush();
+    expect(h.reloads.count).toBe(1);
+    expect(JSON.parse(h.win.sessionStorage.getItem(FLASH_KEY) ?? 'null').kind).toBe('success');
+  });
+});
+
+describe('revoke — errors', () => {
+  const MAP: ReadonlyArray<readonly [number | 'network', string]> = [
+    [400, 'data-err-invalid'],
+    [401, 'data-err-session'],
+    [403, 'data-err-forbidden'],
+    [404, 'data-err-not-found'],
+    [409, 'data-err-conflict'],
+    [422, 'data-err-no-match'],
+    [429, 'data-err-rate-limited'],
+    [503, 'data-err-unavailable'],
+    [500, 'data-err-generic'],
+    ['network', 'data-err-generic'],
+  ];
+
+  it.each(MAP)('each error status shows its own translated message and never the server text (%s)', async (code, attrName) => {
+    const h = await make();
+    openRevoke(h);
+    typeComment(h, 'My comment stays');
+    call(h, 'rptRevokeConfirm', revokeConfirm(h));
+    if (code === 'network') h.pending[0].reject(new Error(SERVER_TEXT));
+    else h.pending[0].resolve(res(code, { error: SERVER_TEXT }));
+    await flush();
+
+    expect(revokeError(h)).toBe(revokeAttr(h, attrName));
+    expect(revokeError(h)).not.toBe('');
+    expect(revokeError(h)).not.toContain(SERVER_TEXT);
+    expect(revokeDialog(h).hasAttribute('open')).toBe(true);
+    expect(comment(h).value).toBe('My comment stays');
+    expect(h.doc.activeElement).toBe(comment(h));
+    expect(revokeConfirm(h).disabled).toBe(false); // retry is possible
+    expect(revokeCancel(h).disabled).toBe(false);
+    expect(h.reloads.count).toBe(0);
+  });
+
+  it('a 409 on revoke shows the revoke-specific conflict text, not the mark one', async () => {
+    const h = await make();
+    openRevoke(h);
+    call(h, 'rptRevokeConfirm', revokeConfirm(h));
+    h.pending[0].resolve(res(409, { error: SERVER_TEXT }));
+    await flush();
+    expect(revokeError(h)).toBe('This dismissal was already revoked. Reload the page.');
+    expect(revokeError(h)).not.toBe(attr(h, 'data-err-conflict')); // the mark dialog's own 409 text
+    expect(attr(h, 'data-err-conflict')).toContain('already dismissed');
+  });
+});
+
+describe('revoke — in-flight lock', () => {
+  it('while revoking, confirm and cancel are disabled and Escape does not close the dialog', async () => {
+    const h = await make();
+    openRevoke(h);
+    const confirmLabel = revokeConfirm(h).textContent;
+    call(h, 'rptRevokeConfirm', revokeConfirm(h));
+
+    expect(revokeConfirm(h).disabled).toBe(true);
+    expect(revokeCancel(h).disabled).toBe(true);
+    expect(revokeConfirm(h).textContent).toBe('Revoking…');
+    const escape = new h.win.Event('cancel', { cancelable: true });
+    revokeDialog(h).dispatchEvent(escape);
+    expect(escape.defaultPrevented).toBe(true);
+
+    // Cancel while in flight closes nothing; a second Confirm sends nothing.
+    call(h, 'rptRevokeCancel');
+    expect(revokeDialog(h).hasAttribute('open')).toBe(true);
+    call(h, 'rptRevokeConfirm', revokeConfirm(h));
+    expect(h.calls.filter((c) => c.init?.method === 'POST')).toHaveLength(1);
+
+    h.pending[0].resolve(res(500, {}));
+    await flush();
+    expect(revokeCancel(h).disabled).toBe(false);
+    expect(revokeConfirm(h).disabled).toBe(false);
+    expect(revokeConfirm(h).textContent).toBe(confirmLabel);
+    const escapeAgain = new h.win.Event('cancel', { cancelable: true });
+    revokeDialog(h).dispatchEvent(escapeAgain);
+    expect(escapeAgain.defaultPrevented).toBe(false);
+  });
+
+  it('revoking never disables the mark dialog and vice versa', async () => {
+    const h = await make();
+    openRevoke(h);
+    call(h, 'rptRevokeConfirm', revokeConfirm(h));
+    h.pending[0].resolve(res(500, {}));
+    await flush();
+    expect(confirmBtn(h).disabled).toBe(true); // mark confirm is still gated on reason + preview
+    expect(confirmBtn(h).textContent).toBe('Dismiss as false positive');
+    expect(cancelBtn(h).disabled).toBe(false);
+  });
+});
+
+describe('revoke — one implementation shared with mark', () => {
+  it('the status map, the request and the flash/toast code exist once', () => {
+    expect((SCRIPT.match(/var ERR_ATTR\s*=/g) ?? []).length).toBe(1);
+    expect((SCRIPT.match(/function showFlashToast/g) ?? []).length).toBe(1);
+    expect((SCRIPT.match(/function storeFlash/g) ?? []).length).toBe(1);
+    expect((SCRIPT.match(/method:\s*'POST'/g) ?? []).length).toBe(1);
+    expect((SCRIPT.match(/X-CSRF-Token/g) ?? []).length).toBe(1);
   });
 });

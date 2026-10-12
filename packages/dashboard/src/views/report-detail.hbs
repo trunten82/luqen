@@ -470,6 +470,7 @@
           <th scope="col">{{t "issueDismissals.col.reason"}}</th>
           <th scope="col">{{t "issueDismissals.col.dismissedBy"}}</th>
           <th scope="col">{{t "issueDismissals.col.dismissedOn"}}</th>
+          {{#if dismissalControls}}<th scope="col"><span class="sr-only">{{t "issueDismissals.col.actions"}}</span></th>{{/if}}
         </tr></thead>
         <tbody>
           {{#each dismissals.active}}
@@ -479,6 +480,7 @@
             <td class="cell--wrap" data-label="{{t 'issueDismissals.col.reason'}}">{{reason}}</td>
             <td data-label="{{t 'issueDismissals.col.dismissedBy'}}" title="{{actor}}">{{#if actorIsApiKey}}{{t "issueDismissals.actor.apiKey"}}{{else}}{{actor}}{{/if}}</td>
             <td data-label="{{t 'issueDismissals.col.dismissedOn'}}"><time datetime="{{createdAtIso}}">{{createdAtDisplay}}</time></td>
+            {{#if @root.dismissalControls}}<td><button type="button" class="btn btn--ghost btn--sm" data-action="rptRevokeIssue" data-id="{{id}}" data-code="{{code}}" aria-label="{{t 'issueDismissals.action.revokeAria' code=code}}" title="{{t 'issueDismissals.dialog.revoke.title'}}">{{t "common.revoke"}}</button></td>{{/if}}
           </tr>
           {{/each}}
         </tbody>
@@ -745,7 +747,7 @@
 
 {{/if}}
 
-{{#if dismissalControls}}{{> issue-dismiss-dialog}}{{/if}}
+{{#if dismissalControls}}{{> issue-dismiss-dialog}}{{> issue-revoke-dialog}}{{/if}}
 
 {{#if assignees}}<script>window.__luqenAssignees = {{{json assignees}}};</script>{{/if}}
 

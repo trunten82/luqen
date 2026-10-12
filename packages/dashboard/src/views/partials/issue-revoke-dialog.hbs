@@ -1,0 +1,51 @@
+{{!-- Phase 89 Plan 05 — revoke-a-dismissal dialog (UI-SPEC Surface 4, FP-15, D-08).
+     Native <dialog>.showModal(), one shared instance per report page, rendered ONLY when the
+     route supplied dismissalControls (permission AND org access), next to the mark dialog.
+     The comment is OPTIONAL; Confirm is enabled at once. Behaviour lives in
+     /static/issue-dismissals.js and shares the mark dialog's status map, request code and
+     flash/toast with it. Every string the script needs travels already translated in data-*
+     attributes; runtime numbers use the __COUNT__ / __FAILED__ sentinels.
+     Mark and revoke read the SAME data-err-* names: data-err-conflict holds the revoke text
+     here (409 = already revoked), and the 422 slot (never returned by revoke) carries the
+     generic text so no status can ever produce an empty message. No script, no inline handlers. --}}
+<dialog id="issue-revoke-dialog" class="rpt-dismiss-dialog" aria-labelledby="issue-revoke-title"
+        data-comment-max="{{dismissalControls.commentMax}}"
+        data-msg-revoked="{{t 'issueDismissals.toast.revoked' count='__COUNT__'}}"
+        data-msg-recompute-failed="{{t 'issueDismissals.toast.recomputeFailed' failed='__FAILED__'}}"
+        data-msg-recompute-incomplete="{{t 'issueDismissals.toast.recomputeIncomplete'}}"
+        data-msg-saving="{{t 'issueDismissals.dialog.revoke.saving'}}"
+        data-msg-confirm="{{t 'issueDismissals.dialog.revoke.confirm'}}"
+        data-err-invalid="{{t 'issueDismissals.error.invalid'}}"
+        data-err-session="{{t 'issueDismissals.error.session'}}"
+        data-err-forbidden="{{t 'issueDismissals.error.forbidden'}}"
+        data-err-not-found="{{t 'issueDismissals.error.notFound'}}"
+        data-err-conflict="{{t 'issueDismissals.error.conflictRevoke'}}"
+        data-err-no-match="{{t 'issueDismissals.error.generic'}}"
+        data-err-rate-limited="{{t 'issueDismissals.error.rateLimited'}}"
+        data-err-unavailable="{{t 'issueDismissals.error.unavailable'}}"
+        data-err-generic="{{t 'issueDismissals.error.generic'}}">
+  <form method="dialog" novalidate>
+    <div class="modal__header">
+      <h3 class="modal__title" id="issue-revoke-title">{{t "issueDismissals.dialog.revoke.title"}}</h3>
+    </div>
+    <div class="modal__body">
+      <dl>
+        <dt>{{t "issueDismissals.dialog.mark.ruleLabel"}}</dt>
+        <dd><span class="rpt-code" data-field="code"></span></dd>
+      </dl>
+      <p>{{t "issueDismissals.dialog.revoke.body"}}</p>
+      <div class="form-group">
+        <label for="issue-revoke-comment">{{t "issueDismissals.dialog.revoke.commentLabel"}}</label>
+        <textarea id="issue-revoke-comment" rows="3" maxlength="{{dismissalControls.commentMax}}"
+                  aria-describedby="issue-revoke-comment-hint issue-revoke-error" autofocus
+                  data-action-input="rptRevokeCommentInput"></textarea>
+        <p class="form-hint" id="issue-revoke-comment-hint">{{t "issueDismissals.dialog.revoke.commentHint"}} <span data-comment-count>0</span> / {{dismissalControls.commentMax}}</p>
+      </div>
+      <div class="form-error" id="issue-revoke-error" role="alert"></div>
+    </div>
+    <div class="modal__footer">
+      <button type="button" class="btn btn--ghost" data-action="rptRevokeCancel">{{t "common.cancel"}}</button>
+      <button type="button" class="btn btn--primary" data-action="rptRevokeConfirm">{{t "issueDismissals.dialog.revoke.confirm"}}</button>
+    </div>
+  </form>
+</dialog>
