@@ -77,6 +77,7 @@ import { apiKeyRoutes } from './routes/admin/api-keys.js';
 import { organizationRoutes } from './routes/admin/organizations.js';
 import { VERSION } from './version.js';
 import { buildFixSuggestionHint } from './fix-suggestions.js';
+import { isWholePageSelector } from './services/issue-dismissals/validate-input.js';
 import { ALL_PERMISSION_IDS, resolveEffectivePermissions } from './permissions.js';
 import { roleRoutes } from './routes/admin/roles.js';
 import { teamRoutes } from './routes/admin/teams.js';
@@ -167,6 +168,16 @@ export function collectPartials(viewsDir: string): Record<string, string> {
     }
   }
   return map;
+}
+
+/**
+ * Template predicate behind the disabled Dismiss button (Phase 89 D-05, UD-04). It mirrors
+ * validateDismissalSelector's refusal: a non-string selector, or one isWholePageSelector says
+ * targets the whole page, can never be dismissed. Exported so the template tests run the
+ * registered predicate itself rather than a copy.
+ */
+export function dismissalRefused(selector: unknown): boolean {
+  return typeof selector !== 'string' || isWholePageSelector(selector);
 }
 
 function wantsHtml(request: FastifyRequest): boolean {
@@ -761,6 +772,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
       `<button type="button" class="rpt-assigned-toggle rpt-assigned-toggle--${a.status}" data-assignment-id="${esc(a.id)}" onclick="rptToggleAssignment(this)" title="Click to unassign">${esc(a.status)}${who}</button>`
     );
   });
+
+  handlebars.registerHelper('dismissalRefused', dismissalRefused);
 
   // 4th arg is the issue's flagged-HTML snippet; handlebars appends its options
   // object as the trailing argument, which buildFixSuggestionHint ignores.

@@ -377,6 +377,14 @@
               <button type="button" class="rpt-assign-btn" data-action="rptAssignIssue" data-code="{{code}}" data-selector="{{selector}}" data-message="{{message}}" data-severity="{{type}}" data-wcag-criterion="{{wcagCriterion}}" data-wcag-title="{{wcagTitle}}" title="Assign this issue">{{t "reportDetail.assign"}}</button>
               {{/unless}}
               {{/if}}
+              {{#if @root.dismissalControls}}
+              {{#if (dismissalRefused selector)}}
+              <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" aria-disabled="true" title="{{t 'issueDismissals.action.refusedTitle'}}" aria-describedby="dismiss-refused-ti-{{@../index}}-{{@index}}">{{t "issueDismissals.action.dismiss"}}</button>
+              <span class="sr-only" id="dismiss-refused-ti-{{@../index}}-{{@index}}">{{t "issueDismissals.action.refusedTitle"}}</span>
+              {{else}}
+              <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" data-action="rptDismissIssue" data-code="{{code}}" data-selector="{{selector}}" data-message="{{message}}" data-criterion="{{../criterion}}" aria-label="{{t 'issueDismissals.action.dismissAria' code=code}}" title="{{t 'issueDismissals.action.dismissTitle'}}">{{t "issueDismissals.action.dismiss"}}</button>
+              {{/if}}
+              {{/if}}
             </div>
             <div class="rpt-issue-item__message">{{message}}</div>
             {{#if ../../perm.reportsViewTechnical}}
@@ -414,7 +422,12 @@
             {{/unless}}
             {{/if}}
             {{#if @root.dismissalControls}}
+            {{#if (dismissalRefused selector)}}
+            <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" aria-disabled="true" title="{{t 'issueDismissals.action.refusedTitle'}}" aria-describedby="dismiss-refused-pi-{{@../index}}-{{@index}}">{{t "issueDismissals.action.dismiss"}}</button>
+            <span class="sr-only" id="dismiss-refused-pi-{{@../index}}-{{@index}}">{{t "issueDismissals.action.refusedTitle"}}</span>
+            {{else}}
             <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" data-action="rptDismissIssue" data-code="{{code}}" data-selector="{{selector}}" data-message="{{message}}" data-criterion="{{../criterion}}" aria-label="{{t 'issueDismissals.action.dismissAria' code=code}}" title="{{t 'issueDismissals.action.dismissTitle'}}">{{t "issueDismissals.action.dismiss"}}</button>
+            {{/if}}
             {{/if}}
           </div>
           {{#if ../../perm.reportsViewTechnical}}
@@ -469,6 +482,14 @@
               <span class="rpt-code">{{code}}</span>
             {{/if}}
             <span class="rpt-text--muted">({{affectedCount}} pages)</span>
+            {{#if @root.dismissalControls}}
+            {{#if (dismissalRefused selector)}}
+            <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" aria-disabled="true" title="{{t 'issueDismissals.action.refusedTitle'}}" aria-describedby="dismiss-refused-tt-{{@../index}}-{{@index}}">{{t "issueDismissals.action.dismiss"}}</button>
+            <span class="sr-only" id="dismiss-refused-tt-{{@../index}}-{{@index}}">{{t "issueDismissals.action.refusedTitle"}}</span>
+            {{else}}
+            <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" data-action="rptDismissIssue" data-code="{{code}}" data-selector="{{selector}}" data-message="{{message}}" aria-label="{{t 'issueDismissals.action.dismissAria' code=code}}" title="{{t 'issueDismissals.action.dismissTitle'}}">{{t "issueDismissals.action.dismiss"}}</button>
+            {{/if}}
+            {{/if}}
           </div>
           <div class="rpt-issue-item__message">{{message}}</div>
           {{#if ../../perm.reportsViewTechnical}}
