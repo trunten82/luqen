@@ -9,7 +9,7 @@
  * (acr-wording.ts). Pure and side-effect-free — unit-tested.
  */
 
-import type { VpatReport, VpatConformance } from './vpat-service.js';
+import { localizeDismissalRemarks, type VpatReport, type VpatConformance } from './vpat-service.js';
 import type { PdfScanMeta } from '../pdf/generator.js';
 import {
   resolveAcrStrings,
@@ -245,7 +245,11 @@ export function buildAcrView(
       title: r.title,
       conformance: r.conformance,
       conformanceClass: conformanceClass(r.conformance),
-      remarks: r.remarks,
+      // Phase 88 (FP-07, D-12): swap buildVpat's English disclosure for the localised
+      // sentence; falls back to the English remark if it cannot be swapped (never dropped).
+      remarks: localizeDismissalRemarks(r, (n) =>
+        t(n === 1 ? 'acr.dismissedDisclosureOne' : 'acr.dismissedDisclosureOther', locale, { count: String(n) }),
+      ),
     })),
   }));
 

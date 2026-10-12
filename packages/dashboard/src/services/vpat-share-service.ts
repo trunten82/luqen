@@ -10,6 +10,11 @@ import { buildVpat, type VpatReport } from './vpat-service.js';
 import { resolveRegulationDetails } from './regulation-catalog.js';
 import { buildVpatEvidenceGroups, type VpatEvidenceGroup } from './vpat-evidence.js';
 import { resolveReportIdentity, type VpatIdentity } from './vpat-identity.js';
+import {
+  applyActiveDismissals,
+  dismissedCountsByCriterion,
+} from './issue-dismissals/load-dismissed-report.js';
+import type { DismissedOccurrence } from './issue-dismissals/apply-dismissals.js';
 
 /**
  * Resolve a scan's per-org report identity (legal text fields + the org's
@@ -64,12 +69,19 @@ export async function loadVpatForScan(
   scan: ScanRecord,
 ): Promise<LoadedVpat | null> {
   let reportData: ReturnType<typeof normalizeReportData> | null = null;
+  let dismissed: readonly DismissedOccurrence[] = [];
   const dbReport = await storage.scans.getReport(scan.id);
   if (dbReport !== null) {
-    reportData = normalizeReportData(dbReport as JsonReportFile, scan);
+    // Phase 88 (D-05, D-11): the verdicts are derived from the report with the scan's
+    // own org's active dismissals applied; the per-criterion counts feed the disclosure.
+    const applied = await applyActiveDismissals(storage, scan, dbReport as JsonReportFile);
+    dismissed = applied.dismissed;
+    reportData = normalizeReportData(applied.report, scan);
   } else if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
     const raw = JSON.parse(await readFile(scan.jsonReportPath, 'utf-8')) as JsonReportFile;
-    reportData = normalizeReportData(raw, scan);
+    const applied = await applyActiveDismissals(storage, scan, raw);
+    dismissed = applied.dismissed;
+    reportData = normalizeReportData(applied.report, scan);
   }
   if (reportData === null) return null;
 
@@ -97,6 +109,7 @@ export async function loadVpatForScan(
     manualResults,
     {
       evidenceCounts,
+      dismissedByCriterion: dismissedCountsByCriterion(dismissed),
       reasonedChangeCount,
       behaviorallyEvaluatedCriteria: new Set(reportData.behaviorallyEvaluatedCriteria ?? []),
       regulationDetails,

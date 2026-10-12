@@ -25,6 +25,10 @@ import { buildVpat } from './vpat-service.js';
 import { resolveRegulationDetails } from './regulation-catalog.js';
 import { buildRemediationRecord } from './remediation-service.js';
 import { generateVpatPdf } from '../pdf/generator.js';
+import {
+  applyActiveDismissals,
+  dismissedCountsByCriterion,
+} from './issue-dismissals/load-dismissed-report.js';
 
 /** Hard cap so a huge org can't exhaust memory/disk in one request. */
 export const FLEET_REPORT_MAX_SITES = 50;
@@ -62,7 +66,10 @@ async function buildVpatPdfForScan(
   }
   if (reportJson === null) return null;
 
-  const reportData = normalizeReportData(reportJson, scan);
+  // Phase 88 (D-05, D-11): this is a direct buildVpat caller, so it applies the scan's
+  // own org's active dismissals itself and hands the per-criterion counts to buildVpat.
+  const applied = await applyActiveDismissals(storage, scan, reportJson);
+  const reportData = normalizeReportData(applied.report, scan);
   const manualResults = storage.manualTests
     ? await storage.manualTests.getManualTests(scan.id)
     : [];
@@ -81,6 +88,7 @@ async function buildVpatPdfForScan(
     manualResults,
     {
       behaviorallyEvaluatedCriteria: new Set(reportData.behaviorallyEvaluatedCriteria ?? []),
+      dismissedByCriterion: dismissedCountsByCriterion(applied.dismissed),
       regulationDetails,
     },
     remediation,

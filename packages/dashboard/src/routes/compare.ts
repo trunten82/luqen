@@ -6,6 +6,10 @@ import type { StorageAdapter } from '../db/index.js';
 import { diffReports, type NormalizedReport, type DiffIssue } from '../compare/diff.js';
 import { extractCriterion, getWcagDescription } from './wcag-enrichment.js';
 import { HtmlPageSchema } from '../api/schemas/envelope.js';
+import {
+  applyActiveDismissals,
+  withDismissalsInRawBlob,
+} from '../services/issue-dismissals/load-dismissed-report.js';
 
 interface CompareQuery {
   a?: string;
@@ -162,8 +166,19 @@ export async function compareRoutes(
         return reply.code(500).send({ error: 'Failed to read one or both report files.' });
       }
 
-      const normalA = normalizeForDiff(rawA, scanA);
-      const normalB = normalizeForDiff(rawB, scanB);
+      // Each scan is judged by ITS OWN org + site (D-05): a global admin may compare scans of two
+      // orgs and one org's dismissal must never filter the other's report.
+      let appliedA: Awaited<ReturnType<typeof applyActiveDismissals<JsonReportFile>>>;
+      let appliedB: Awaited<ReturnType<typeof applyActiveDismissals<JsonReportFile>>>;
+      try {
+        appliedA = await applyActiveDismissals(storage, scanA, rawA);
+        appliedB = await applyActiveDismissals(storage, scanB, rawB);
+      } catch {
+        return reply.code(500).send({ error: 'Failed to apply issue dismissals to one or both reports.' });
+      }
+
+      const normalA = normalizeForDiff(appliedA.report, scanA);
+      const normalB = normalizeForDiff(appliedB.report, scanB);
       const diff = diffReports(normalA, normalB);
 
       // Enrich all diff issues with WCAG criterion info
@@ -179,8 +194,9 @@ export async function compareRoutes(
         pageTitle: 'Compare Reports',
         currentPath: '/reports/compare',
         user: request.user,
-        scanA: formatScanMeta(scanA),
-        scanB: formatScanMeta(scanB),
+        // The row carries the whole raw report: it follows the filtered report when a dismissal applied.
+        scanA: formatScanMeta(withDismissalsInRawBlob(scanA, appliedA)),
+        scanB: formatScanMeta(withDismissalsInRawBlob(scanB, appliedB)),
         diff: {
           added: enrichedAdded,
           removed: enrichedRemoved,

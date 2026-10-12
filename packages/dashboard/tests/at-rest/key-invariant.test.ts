@@ -130,7 +130,9 @@ describe('at-rest key-invariant (PBH-A)', () => {
     // (1115->1116, 1312->1313, 1313->1314, 1430->1431). Phase 87-04 then added the
     // issueDismissalRoutes import (+1 for every site) and its registration above R8
     // (+1 more for R8-R10): 313->314, 355->356, 1117->1118, 1314->1316, 1315->1317,
-    // 1432->1434. The /graphql CSRF guard then added its import (+1 for every site)
+    // 1432->1434. Phase 88-09 then wired dismissals into fix-pr.ts and repos.ts above
+    // their decrypt calls: R5 repos.ts 405->460, R6 fix-pr.ts 306->307.
+    // The /graphql CSRF guard then added its import (+1 for every site)
     // and a 3-line registration above R10 (+3 more for R10): 314->315, 356->357,
     // 1118->1119, 1316->1317, 1317->1318, 1434->1438. The startup-check's own `encryptionKey: config.encryptionKey`
     // reference (server.ts ~289) is NOT a new wiring site requiring a list
@@ -146,8 +148,8 @@ describe('at-rest key-invariant (PBH-A)', () => {
       { file: SERVER_TS, line: 1438, label: 'R10 startKeyHousekeeping' },
       { file: REL('cli.ts'), line: 219, label: 'R2 cli.ts PluginManager options' },
       { file: REL('routes', 'git-credentials.ts'), line: 32, label: 'R4 git-credentials encryptionKey local' },
-      { file: REL('routes', 'repos.ts'), line: 405, label: 'R5 repos.ts decryptSecret' },
-      { file: REL('routes', 'fix-pr.ts'), line: 306, label: 'R6 fix-pr.ts decryptSecret' },
+      { file: REL('routes', 'repos.ts'), line: 460, label: 'R5 repos.ts decryptSecret' },
+      { file: REL('routes', 'fix-pr.ts'), line: 307, label: 'R6 fix-pr.ts decryptSecret' },
     ];
 
     const results = EXPECTED_WIRING_SITES.map((site) => {

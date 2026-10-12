@@ -20,6 +20,7 @@ import type { StorageAdapter } from '../db/adapter.js';
 import type { ScanRecord } from '../db/types.js';
 import { normalizeReportData, type JsonReportFile } from './report-service.js';
 import { deriveExposure, BAND_ORDINAL, type ExposureResult } from './legal-exposure.js';
+import { applyActiveDismissals } from './issue-dismissals/load-dismissed-report.js';
 
 // ---------------------------------------------------------------------------
 // Exported types
@@ -96,17 +97,22 @@ function computeDirection(
 }
 
 /**
- * Load a scan's JSON report from the DB or from disk (jsonReportPath fallback).
- * Returns null if not available — never throws.
+ * Load a scan's JSON report from the DB or from disk (jsonReportPath fallback), with the
+ * scan's own org's active dismissals applied at read time (Phase 88, D-05), so the
+ * per-criterion counts exclude dismissed occurrences.
+ * Returns null if not available — never throws. A dismissal-lookup failure is caught by
+ * the same catch and therefore degrades this surface to "report unavailable" (no
+ * per-criterion changes), matching its existing semantics.
  */
 async function loadReport(storage: StorageAdapter, scan: ScanRecord): Promise<JsonReportFile | null> {
   try {
     const dbReport = await storage.scans.getReport(scan.id);
     if (dbReport !== null) {
-      return dbReport as unknown as JsonReportFile;
+      return (await applyActiveDismissals(storage, scan, dbReport as unknown as JsonReportFile)).report;
     }
     if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
-      return JSON.parse(await readFile(scan.jsonReportPath, 'utf-8')) as JsonReportFile;
+      const raw = JSON.parse(await readFile(scan.jsonReportPath, 'utf-8')) as JsonReportFile;
+      return (await applyActiveDismissals(storage, scan, raw)).report;
     }
   } catch {
     // Malformed report — conservative: treat as unavailable

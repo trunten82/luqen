@@ -32,6 +32,12 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { StorageAdapter } from '../../db/index.js';
 import type { ScanRecord } from '../../db/types.js';
 import type { ScanService } from '../../services/scan-service.js';
+import {
+  applyActiveDismissals,
+  withDismissalsInRawBlob,
+} from '../../services/issue-dismissals/load-dismissed-report.js';
+import { filterDismissedIssues } from '../../services/issue-dismissals/apply-dismissals.js';
+import { toSiteKey } from '../../services/issue-dismissals/site-key.js';
 
 /**
  * Slim projection of ScanRecord for list responses. Explicitly OMITS the
@@ -413,7 +419,10 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
           ],
         };
       }
-      const report = await storage.scans.getReport(args.scanId);
+      const raw = await storage.scans.getReport(args.scanId);
+      // Phase 88 (FP-11, FP-12): the scan's own org + site dismissals. The row carries the
+      // whole raw blob as `jsonReport`, so it follows the filtered report (D-05).
+      const applied = await applyActiveDismissals(storage, lookup.scan, raw);
       return {
         content: [
           {
@@ -422,8 +431,8 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
               {
                 status: 'completed',
                 scanId: args.scanId,
-                scan: lookup.scan,
-                report,
+                scan: withDismissalsInRawBlob(lookup.scan, applied),
+                report: applied.report,
               },
               null,
               2,
@@ -543,10 +552,13 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
       if (lookup.ok === false) {
         return errorEnvelope(lookup.error);
       }
-      const report = await storage.scans.getReport(args.scanId);
-      if (report === null) {
+      const rawReport = await storage.scans.getReport(args.scanId);
+      if (rawReport === null) {
         return errorEnvelope('Report not available');
       }
+      // Phase 88 (W2, FP-11): the shapes read below are not the `pages` shape the loader filters,
+      // so the extracted list is filtered with the SAME matcher over the scan's own active rows.
+      const { report, active } = await applyActiveDismissals(storage, lookup.scan, rawReport);
       // Report shape from pa11y/orchestrator: either { issues: [...] } or
       // { results: [{ issues: [...] }] } (one-page vs multi-page scan).
       // Flatten defensively; corresponding test exercises both shapes.
@@ -561,7 +573,8 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
               ] as Array<{ issues?: Array<Record<string, unknown>> }>
             ).flatMap((r) => r.issues ?? [])
           : [];
-      const filtered = rawIssues.filter((issue) => {
+      const visible = filterDismissedIssues(rawIssues, active, toSiteKey(lookup.scan.siteUrl));
+      const filtered = visible.filter((issue) => {
         if (args.type !== undefined && issue['type'] !== args.type) return false;
         if (args.codePrefix !== undefined) {
           const code = typeof issue['code'] === 'string' ? (issue['code'] as string) : '';

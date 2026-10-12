@@ -7,6 +7,13 @@ import type { StorageAdapter, ScanRecord } from '../../db/index.js';
 import { SqliteStorageAdapter } from '../../db/sqlite/index.js';
 import { getFixSuggestion } from '../../fix-suggestions.js';
 import { ErrorEnvelope } from '../../api/schemas/envelope.js';
+import {
+  applyActiveDismissals,
+  applyLoadedDismissals,
+  withDismissalsInRawBlob,
+} from '../../services/issue-dismissals/load-dismissed-report.js';
+import { toSiteKey } from '../../services/issue-dismissals/site-key.js';
+import type { IssueDismissal } from '../../db/interfaces/issue-dismissal-repository.js';
 
 // Data API responds with bare JSON ({ data, total } / { data, ... }) — schemas
 // mirror that shape directly rather than going through LuqenResponse.
@@ -215,6 +222,16 @@ async function readReport(reportPath: string | undefined): Promise<JsonReport | 
   }
 }
 
+/** The scan row's raw `jsonReport` blob, parsed; null when absent or not JSON. */
+function parseRowBlob(scan: ScanRecord): JsonReport | null {
+  if (scan.jsonReport === undefined) return null;
+  try {
+    return JSON.parse(scan.jsonReport) as JsonReport;
+  } catch {
+    return null;
+  }
+}
+
 /** Strip jsonReportPath and error from a scan record for external consumption. */
 function toPublicScan(scan: ScanRecord): Record<string, unknown> {
   const { jsonReportPath: _path, error: _err, createdBy: _cb, ...rest } = scan as ScanRecord & Record<string, unknown>;
@@ -286,11 +303,36 @@ export async function dataApiRoutes(
         .all(params) as Array<Record<string, unknown>>;
 
       // Convert rows through the ScanRepository interface
-      const scanResults = await Promise.all(rows.map(async (row) => {
-        const record = await storage.scans.getScan(row['id'] as string);
-        return record !== null ? toPublicScan(record) : null;
-      }));
-      const scans = scanResults.filter(Boolean);
+      const records = (
+        await Promise.all(rows.map((row) => storage.scans.getScan(row['id'] as string)))
+      ).filter((record): record is ScanRecord => record !== null);
+
+      // The row's raw jsonReport is part of this response, so it follows the dismissals of the
+      // row's own org + site. One lookup per distinct (org, site) on the page; a row's blob is
+      // parsed only when its site has an active dismissal (the blobs are multi-MB).
+      const activeBySite = new Map<string, Promise<readonly IssueDismissal[]>>();
+      const lookupActive = (record: ScanRecord): Promise<readonly IssueDismissal[]> => {
+        const repo = storage.issueDismissals;
+        if (repo === undefined) return Promise.resolve([]);
+        const siteKey = toSiteKey(record.siteUrl);
+        const key = `${record.orgId}\u0000${siteKey}`;
+        const cached = activeBySite.get(key);
+        if (cached !== undefined) return cached;
+        const looked = repo.listActiveForSite(record.orgId, siteKey);
+        activeBySite.set(key, looked);
+        return looked;
+      };
+      const scans = await Promise.all(
+        records.map(async (record) => {
+          const active = await lookupActive(record);
+          if (active.length === 0) return toPublicScan(record);
+          const blob = parseRowBlob(record);
+          // IN-01: a blob that cannot be parsed cannot be filtered, so it is not served (fail closed,
+          // same as repos.ts); an absent blob has nothing to leak.
+          if (blob === null) return toPublicScan({ ...record, jsonReport: undefined });
+          return toPublicScan(withDismissalsInRawBlob(record, applyLoadedDismissals(record, active, blob)));
+        }),
+      );
 
       return reply.header('content-type', 'application/json').send({
         data: scans,
@@ -322,8 +364,13 @@ export async function dataApiRoutes(
         return reply.code(404).send({ error: 'Scan not found' });
       }
 
-      const report = await readReport(scan.jsonReportPath);
-      const publicScan = toPublicScan(scan);
+      // One dismissal lookup per request. The summary comes from the FS report (as before); the
+      // row's raw jsonReport blob is part of this response, so it follows the filtered report
+      // (or, when there is no FS report, its own filtered copy) whenever a dismissal applied.
+      const fsReport = await readReport(scan.jsonReportPath);
+      const applied = await applyActiveDismissals(storage, scan, fsReport ?? parseRowBlob(scan));
+      const report = fsReport === null ? null : applied.report;
+      const publicScan = toPublicScan(withDismissalsInRawBlob(scan, applied));
 
       return reply.header('content-type', 'application/json').send({
         data: {
@@ -361,7 +408,8 @@ export async function dataApiRoutes(
         return reply.code(404).send({ error: 'Scan not found' });
       }
 
-      const report = await readReport(scan.jsonReportPath);
+      const rawReport = await readReport(scan.jsonReportPath);
+      const report = (await applyActiveDismissals(storage, scan, rawReport)).report;
       if (report === null || report.pages === undefined) {
         return reply.send({ data: [], total: 0 });
       }
@@ -524,7 +572,8 @@ export async function dataApiRoutes(
       const summaries: Array<Record<string, unknown>> = [];
 
       for (const scan of scans) {
-        const report = await readReport(scan.jsonReportPath);
+        const rawReport = await readReport(scan.jsonReportPath);
+        const report = (await applyActiveDismissals(storage, scan, rawReport)).report;
         const matrix = report?.compliance?.matrix;
 
         const jurisdictions: Array<Record<string, unknown>> = [];
@@ -586,7 +635,8 @@ export async function dataApiRoutes(
         return reply.code(404).send({ error: 'Scan not found' });
       }
 
-      const report = await readReport(scan.jsonReportPath);
+      const rawReport = await readReport(scan.jsonReportPath);
+      const report = (await applyActiveDismissals(storage, scan, rawReport)).report;
       if (report === null || report.pages === undefined) {
         return reply.send({ data: [], total: 0, connectedRepo: null });
       }

@@ -1474,6 +1474,7 @@
       "previewAssessed": "Sur la base d'une analyse du",
       "previewLimitations": "Limitations connues :",
       "previewPending": "Examen manuel en attente :",
+      "previewDismissed": "Critères avec constats écartés :",
       "previewNoScan": "Aucune analyse achevée n'a encore été trouvée pour le site configuré — définissez une URL de site et lancez une analyse pour renseigner les limitations connues.",
       "acrUrl": "Lien vers le Rapport de Conformité d’Accessibilité (ACR)",
       "acrUrlHelp": "Facultatif. Un lien public vers votre ACR/VPAT complet, affiché sur la déclaration sous « Voir notre Rapport de Conformité d’Accessibilité »."
@@ -1489,6 +1490,8 @@
       "limitationsHeading": "Limitations connues",
       "limitationsIntro": "Malgré tous nos efforts, les utilisateurs peuvent rencontrer les obstacles suivants. Nous travaillons activement à les résoudre :",
       "pendingNote": "De plus, {{count}} critères de succès nécessitent une évaluation manuelle que les tests automatisés ne peuvent à eux seuls confirmer ; ceux-ci sont en cours d'examen.",
+      "dismissedHeading": "Constats automatiques écartés après examen",
+      "dismissedItem": "{{count}} constat(s) automatique(s) écarté(s) comme faux positif(s) après examen",
       "noAssessment": "Une évaluation complète de ce site est actuellement en cours. Cette déclaration sera mise à jour avec des constats précis une fois l'évaluation achevée.",
       "measuresHeading": "Mesures de soutien à l'accessibilité",
       "measureAutomated": "Analyse WCAG automatisée des pages au regard de la norme cible.",
@@ -1600,7 +1603,19 @@
     "verdictPartial": "{{site}} est partiellement conforme à {{standard}} sur {{pages}} page(s).",
     "verdictMeta": "Évalué le {{date}} · {{supports}} critères pris en charge sur {{total}} · {{doesNotSupport}} non pris en charge · {{notEvaluated}} en attente d’évaluation manuelle",
     "staleNotice": "Une version plus récente de ce rapport est disponible.",
-    "staleNoticeLink": "Voir le rapport le plus récent"
+    "staleNoticeLink": "Voir le rapport le plus récent",
+    "dismissedDisclosureOne": "1 constat automatique a été écarté comme faux positif après examen.",
+    "dismissedDisclosureOther": "{{count}} constats automatiques ont été écartés comme faux positifs après examen."
+  },
+  "dismissalsExport": {
+    "sheetName": "Écartés",
+    "colPageUrl": "URL de la page",
+    "colRuleCode": "Code de règle",
+    "colSelector": "Sélecteur",
+    "colLevel": "Niveau",
+    "colReason": "Motif",
+    "colDismissedBy": "Écarté par",
+    "colDismissedAt": "Écarté le"
   },
   "reportPage": {
     "revisionsHeading": "Historique du rapport",

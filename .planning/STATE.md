@@ -2,20 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v3.8.0
 milestone_name: Mark as false positive
-current_phase: "87"
-current_phase_name: Dismissal store, domain model and permission
-status: executing
-stopped_at: "Phase 87 EXECUTED (5/5 plans merged on gsd/v3.8.0-false-positive f5e9c555, not pushed); 87-05 prod half BLOCKED on a permission decision; next: code review, verify, ship. See phases/87-*/.continue-here.md"
-last_activity_desc: "v3.8.0 started; same day shipped PR #97 (noscript/video contrast FP), #98 (axe needs-review -> warning), #99 (deploy drain), #100 (/login escalation fix), #101 (audit key id)"
-state_head: b2df214c  # last CODE commit. Re-checkable: `git diff --name-only b2df214c..HEAD` must list nothing outside .planning/.
-last_updated: "2026-10-08T11:18:05.820Z"
-last_activity: 2026-10-08
+current_phase: 88
+current_phase_name: Dismissals applied on every surface
+status: verifying
+stopped_at: Completed 88-12-PLAN.md
+last_updated: "2026-10-11T23:40:17.259Z"
+last_activity: 2026-10-11
+last_activity_desc: Phase 88 execution started
+state_head: 26e49897a44752fb5bad17a5aef761b4fc26b0b7
 progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 3
+  completed_phases: 1
+  total_plans: 24
+  completed_plans: 24
+  percent: 33
 ---
 
 # Project State
@@ -104,14 +104,14 @@ verdict and resurfaces automatically if its file changes.
 See: .planning/PROJECT.md (updated 2026-09-28 — v3.7.0 archived)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** none — dormant by choice, awaiting a new milestone (owner instruction 2026-09-28)
+**Current focus:** Phase 88 — Dismissals applied on every surface
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-10-08 — Milestone v3.8.0 started
+Phase: 88 (Dismissals applied on every surface) — EXECUTING
+Plan: 18 of 18
+Status: Phase complete — ready for verification
+Last activity: 2026-10-11 — Phase 88 execution started
 
 ## Phase Map (v3.7.0 — AI output quality)
 
@@ -190,9 +190,9 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-09-28
-Stopped at: v3.7.0 archived; tree clean; nothing in flight.
-Resume file: .planning/HANDOFF.json (untracked; see its own note on durability)
+Last session: 2026-10-11T23:40:17.151Z
+Stopped at: Completed 88-12-PLAN.md
+Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
 ## Operator Next Steps
@@ -217,3 +217,32 @@ Next action: none until the owner opens a new milestone. If woken with one, star
   host (blind SSRF via Node fetch; after 260928-g6k their page URLs are scope-filtered, the fetch itself
   is not). Needs its own decision.
 - Next-milestone candidates recorded (NOT started): grow the reference sets (the lever on power); behavioral a11y testing beyond Pa11y.
+
+## Performance Metrics
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 88 P01 | 75min | 3 tasks | 9 files |
+| Phase 88 P02 | 7 min | 3 tasks | 5 files |
+| Phase 88 P13 | 10 min | 2 tasks | 7 files |
+| Phase 88 P03 | 8min | 3 tasks | 4 files |
+| Phase 88 P16 | 20min | 2 tasks | 4 files |
+| Phase 88 P04 | 45min | 3 tasks | 7 files |
+| Phase 88 P05 | ~40 min | 3 tasks | 7 files |
+| Phase 88 P06 | 25 min | 2 tasks | 5 files |
+| Phase 88 P11 | 25min | 3 tasks | 8 files |
+| Phase 88 P15 | 25min | 3 tasks | 0 files |
+| Phase 88 P10 | 6 min | 2 tasks | 3 files |
+| Phase 88 P08 | 30min | 2 tasks | 4 files |
+| Phase 88 P09 | 40min | 3 tasks | 7 files |
+| Phase 88 P17 | 25min | 3 tasks | 7 files |
+| Phase 88 P19 | 35min | 2 tasks | 4 files |
+| Phase 88 P07 | 25min | 2 tasks | 11 files |
+| Phase 88 P14 | 35min | 3 tasks | 5 files |
+| Phase 88 P18 | 10 min | 2 tasks | 2 files |
+| Phase 88 P12 | 35min | 3 tasks | 1 files |
+
+## Decisions
+
+- [Phase 88]: 88-01: golden baselines use exact-literal replacement for per-run ids and dates; TZ defaults to UTC only when unset so the TZ determinism check is not vacuous
+- [Phase 88]: 88-02: D-04 Case A measured on prod (340 completed scans: confirmed_violations NULL 203, 0 137, non-zero 0); D-13 largest site 138 completed scans, synchronous recompute stays

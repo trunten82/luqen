@@ -1474,6 +1474,7 @@
       "previewAssessed": "Basierend auf einem Scan vom",
       "previewLimitations": "Bekannte Einschränkungen:",
       "previewPending": "Ausstehende manuelle Prüfung:",
+      "previewDismissed": "Kriterien mit verworfenen Befunden:",
       "previewNoScan": "Für die konfigurierte Website wurde noch kein abgeschlossener Scan gefunden — legen Sie eine Website-URL fest und führen Sie einen Scan durch, um bekannte Einschränkungen zu erfassen.",
       "acrUrl": "Link zum Accessibility Conformance Report (ACR)",
       "acrUrlHelp": "Optional. Ein öffentlicher Link zu Ihrem vollständigen ACR/VPAT – in der Erklärung als „Unseren Accessibility Conformance Report ansehen“ angezeigt."
@@ -1489,6 +1490,8 @@
       "limitationsHeading": "Bekannte Einschränkungen",
       "limitationsIntro": "Trotz unserer größten Bemühungen können Nutzer auf folgende Barrieren stoßen. Wir arbeiten aktiv an deren Behebung:",
       "pendingNote": "Darüber hinaus erfordern {{count}} Erfolgskriterien eine manuelle Bewertung, die durch automatisierte Tests allein nicht bestätigt werden kann; diese werden derzeit geprüft.",
+      "dismissedHeading": "Automatisch erkannte Probleme, nach Prüfung verworfen",
+      "dismissedItem": "{{count}} automatisch erkannte(s) Problem(e) nach Prüfung als Fehlalarm verworfen",
       "noAssessment": "Eine vollständige Bewertung dieser Website wird derzeit durchgeführt. Diese Erklärung wird mit konkreten Ergebnissen aktualisiert, sobald die Bewertung abgeschlossen ist.",
       "measuresHeading": "Maßnahmen zur Förderung der Barrierefreiheit",
       "measureAutomated": "Automatisiertes WCAG-Scannen von Seiten anhand des angestrebten Standards.",
@@ -1600,7 +1603,19 @@
     "verdictPartial": "{{site}} entspricht {{standard}} teilweise über {{pages}} Seite(n).",
     "verdictMeta": "Bewertet am {{date}} · {{supports}} von {{total}} Kriterien unterstützt · {{doesNotSupport}} nicht unterstützt · {{notEvaluated}} ausstehende manuelle Bewertung",
     "staleNotice": "Eine neuere Version dieses Berichts ist verfügbar.",
-    "staleNoticeLink": "Aktuellen Bericht ansehen"
+    "staleNoticeLink": "Aktuellen Bericht ansehen",
+    "dismissedDisclosureOne": "1 automatisch erkanntes Problem wurde nach Prüfung als Fehlalarm verworfen.",
+    "dismissedDisclosureOther": "{{count}} automatisch erkannte Probleme wurden nach Prüfung als Fehlalarme verworfen."
+  },
+  "dismissalsExport": {
+    "sheetName": "Verworfen",
+    "colPageUrl": "Seiten-URL",
+    "colRuleCode": "Regelcode",
+    "colSelector": "Selektor",
+    "colLevel": "Stufe",
+    "colReason": "Begründung",
+    "colDismissedBy": "Verworfen von",
+    "colDismissedAt": "Verworfen am"
   },
   "reportPage": {
     "revisionsHeading": "Berichtsverlauf",

@@ -112,7 +112,7 @@ function buildOrgTotals(scans: readonly ScanRecord[]): readonly OrgTotalPoint[] 
   }));
 }
 
-function computeSiteScore(errors: number, pagesScanned: number): number {
+export function computeSiteScore(errors: number, pagesScanned: number): number {
   // Score based on errors-per-page ratio (errors only, not warnings/notices)
   // Weight 5: 0 e/p=100, 2 e/p=90, 5 e/p=75, 10 e/p=50, 20 e/p=0
   const pages = Math.max(pagesScanned, 1);
@@ -120,7 +120,7 @@ function computeSiteScore(errors: number, pagesScanned: number): number {
   return Math.max(0, Math.min(100, raw));
 }
 
-function computeOrgScore(scans: readonly ScanRecord[]): number {
+export function computeOrgScore(scans: readonly ScanRecord[]): number {
   // Average of per-site scores (prevents one bad site from tanking org score)
   const latestBySite = new Map<string, ScanRecord>();
   for (const scan of scans) {

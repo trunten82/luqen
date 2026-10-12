@@ -4,7 +4,7 @@ import { Type } from '@sinclair/typebox';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import type { StorageAdapter } from '../db/index.js';
+import type { StorageAdapter, ScanRecord } from '../db/index.js';
 import type { DashboardConfig } from '../config.js';
 import { requirePermission } from '../auth/middleware.js';
 import { toastHtml } from './admin/helpers.js';
@@ -13,6 +13,10 @@ import { hasPermission } from '../permissions.js';
 import { getGitHostPlugin } from '../git-hosts/registry.js';
 import { decryptSecret } from '../plugins/crypto.js';
 import { RemoteFileReader } from '../git-hosts/remote-file-reader.js';
+import {
+  applyActiveDismissals,
+  withDismissalsInRawBlob,
+} from '../services/issue-dismissals/load-dismissed-report.js';
 import { HtmlPageSchema } from '../api/schemas/envelope.js';
 
 const RepoIdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
@@ -117,6 +121,33 @@ function sanitizeBranch(raw: string | undefined): string {
   // Allow alphanumeric, hyphens, underscores, slashes, dots
   if (/^[a-zA-Z0-9._\-/]+$/.test(trimmed)) return trimmed;
   return 'main';
+}
+
+/**
+ * The scan row for a noReport fixes view. The view data spreads the whole row, and a row can
+ * still carry a DB `jsonReport` even when the report file is missing or unreadable, so the
+ * dismissed occurrences must be gone from that blob too. Zero dismissals return the caller's own
+ * row (output unchanged). A blob that cannot be filtered (not JSON) or a failed dismissal lookup
+ * drops the blob rather than echoing it: the template never renders it.
+ */
+async function scanRowWithoutDismissedBlob(storage: StorageAdapter, scan: ScanRecord): Promise<ScanRecord> {
+  if (scan.jsonReport === undefined) return scan;
+  try {
+    let parsed: unknown = null;
+    try {
+      parsed = JSON.parse(scan.jsonReport) as unknown;
+    } catch {
+      parsed = null;
+    }
+    const applied = await applyActiveDismissals(storage, scan, parsed ?? {});
+    if (parsed === null) {
+      // Unfilterable blob: keep it only when nothing is dismissed for this site.
+      return applied.active.length === 0 ? scan : { ...scan, jsonReport: undefined };
+    }
+    return withDismissalsInRawBlob(scan, applied);
+  } catch {
+    return { ...scan, jsonReport: undefined };
+  }
 }
 
 function collectIssuesFromReport(raw: JsonReportForFixes, siteUrl: string): Array<ReportFixIssue & { pageUrl: string }> {
@@ -347,7 +378,7 @@ export async function repoRoutes(
           currentPath: `/reports/${id}/fixes`,
           user: request.user,
           scan: {
-            ...scan,
+            ...(await scanRowWithoutDismissedBlob(storage, scan)),
             jurisdictions: scan.jurisdictions.join(', '),
           },
           fixes: [],
@@ -370,7 +401,7 @@ export async function repoRoutes(
           currentPath: `/reports/${id}/fixes`,
           user: request.user,
           scan: {
-            ...scan,
+            ...(await scanRowWithoutDismissedBlob(storage, scan)),
             jurisdictions: scan.jurisdictions.join(', '),
           },
           fixes: [],
@@ -380,6 +411,30 @@ export async function repoRoutes(
           noReport: true,
         });
       }
+
+      // Never list a fix for a dismissed issue (the scan's own org + site). A lookup failure shows
+      // the same empty state as an unreadable report rather than the unfiltered list.
+      let appliedDismissals: Awaited<ReturnType<typeof applyActiveDismissals<JsonReportForFixes>>>;
+      try {
+        appliedDismissals = await applyActiveDismissals(storage, scan, raw);
+      } catch {
+        return reply.view('fixes.hbs', {
+          pageTitle: `Fix Proposals — ${scan.siteUrl}`,
+          currentPath: `/reports/${id}/fixes`,
+          user: request.user,
+          scan: {
+            ...scan,
+            jsonReport: undefined,
+            jurisdictions: scan.jurisdictions.join(', '),
+          },
+          fixes: [],
+          fixCount: 0,
+          connectedRepo,
+          canCreatePr,
+          noReport: true,
+        });
+      }
+      raw = appliedDismissals.report;
 
       // Collect all issues for both core proposer and local fallback
       const allIssues = collectIssuesFromReport(raw, scan.siteUrl);
@@ -532,8 +587,9 @@ export async function repoRoutes(
         pageTitle: `Fix Proposals — ${scan.siteUrl}`,
         currentPath: `/reports/${id}/fixes`,
         user: request.user,
+        // The row carries the whole raw report: it follows the filtered report when a dismissal applied.
         scan: {
-          ...scan,
+          ...withDismissalsInRawBlob(scan, appliedDismissals),
           jurisdictions: scan.jurisdictions.join(', '),
         },
         fixes,

@@ -12,7 +12,7 @@
  * good-faith framing is the point — an over-claim is the liability.
  */
 
-import type { VpatReport, VpatRow } from './vpat-service.js';
+import { dismissalNoteEn, type VpatReport, type VpatRow } from './vpat-service.js';
 import type { AccessibilityStatementRecord } from '../db/interfaces/accessibility-statement-repository.js';
 
 export type ConformanceStatus = 'partially-conformant' | 'not-conformant';
@@ -22,6 +22,13 @@ export interface StatementLimitation {
   readonly title: string;
   readonly conformance: 'Does Not Support' | 'Partially Supports';
   readonly remarks: string;
+}
+
+/** Automated findings dismissed as false positives after review, per WCAG criterion. Counts only. */
+export interface StatementDismissalDisclosure {
+  readonly criterion: string;
+  readonly title: string;
+  readonly count: number;
 }
 
 export interface AccessibilityStatementView {
@@ -48,6 +55,11 @@ export interface AccessibilityStatementView {
   /** Criteria that automated testing alone cannot confirm (pending manual review). */
   readonly notEvaluatedCount: number;
   readonly summary?: VpatReport['summary'];
+  /**
+   * Criteria with dismissed findings (all levels, catalogue order). Present ONLY when
+   * non-empty, so a statement with no dismissals is structurally unchanged (SC5).
+   */
+  readonly dismissedDisclosures?: readonly StatementDismissalDisclosure[];
 }
 
 export interface BuildStatementOptions {
@@ -62,6 +74,30 @@ const MAX_LIMITATIONS = 50;
 
 function isLimitation(row: VpatRow): boolean {
   return row.conformance === 'Does Not Support' || row.conformance === 'Partially Supports';
+}
+
+/**
+ * A limitation's remark without the trailing English dismissal sentence. The statement has a
+ * dedicated, localised section that already discloses the count, so repeating the English
+ * sentence would disclose it twice and, in a non-English statement, in the wrong language.
+ * Only the exact sentence for the row's own count is removed (never a fuzzy match); a remark
+ * that does not end with it, or a row without a count, is returned unchanged.
+ */
+function limitationRemarks(row: VpatRow): string {
+  const count = row.dismissedCount;
+  if (count === undefined || count <= 0) return row.remarks;
+  const sentence = dismissalNoteEn(count);
+  if (!row.remarks.endsWith(sentence)) return row.remarks;
+  const rest = row.remarks.slice(0, row.remarks.length - sentence.length);
+  return rest.endsWith(' — ') ? rest.slice(0, rest.length - ' — '.length) : rest;
+}
+
+function dismissedDisclosuresOf(vpat: VpatReport | null): readonly StatementDismissalDisclosure[] {
+  if (vpat === null) return [];
+  return vpat.tablesByLevel
+    .flatMap((t) => t.rows)
+    .filter((r) => r.dismissedCount !== undefined && r.dismissedCount > 0)
+    .map((r) => ({ criterion: r.criterion, title: r.title, count: r.dismissedCount as number }));
 }
 
 /**
@@ -85,7 +121,7 @@ export function buildAccessibilityStatement(
           criterion: r.criterion,
           title: r.title,
           conformance: r.conformance as 'Does Not Support' | 'Partially Supports',
-          remarks: r.remarks,
+          remarks: limitationRemarks(r),
         }))
     : [];
 
@@ -95,6 +131,8 @@ export function buildAccessibilityStatement(
   const supports = vpat?.summary.supports ?? 0;
   const conformanceStatus: ConformanceStatus =
     vpat !== null && supports > 0 ? 'partially-conformant' : 'not-conformant';
+
+  const dismissedDisclosures = dismissedDisclosuresOf(vpat);
 
   return {
     entityName: (config.entityName ?? '').trim() || config.orgId,
@@ -113,5 +151,6 @@ export function buildAccessibilityStatement(
     ...(config.contactUrl !== undefined ? { contactUrl: config.contactUrl } : {}),
     ...(config.acrUrl !== undefined && config.acrUrl.trim() !== '' ? { acrUrl: config.acrUrl.trim() } : {}),
     ...(vpat !== null ? { summary: vpat.summary } : {}),
+    ...(dismissedDisclosures.length > 0 ? { dismissedDisclosures } : {}),
   };
 }

@@ -1483,6 +1483,7 @@
       "previewAssessed": "Sulla base di una scansione del",
       "previewLimitations": "Limitazioni note:",
       "previewPending": "Revisione manuale in sospeso:",
+      "previewDismissed": "Criteri con rilevamenti esclusi:",
       "previewNoScan": "Non è ancora stata trovata alcuna scansione completata per il sito configurato: imposta un URL del sito ed esegui una scansione per popolare le limitazioni note.",
       "acrUrl": "Link al Rapporto di Conformità all’Accessibilità (ACR)",
       "acrUrlHelp": "Facoltativo. Un link pubblico al tuo ACR/VPAT completo, mostrato nella dichiarazione come «Visualizza il nostro Rapporto di Conformità all’Accessibilità»."
@@ -1498,6 +1499,8 @@
       "limitationsHeading": "Limitazioni note",
       "limitationsIntro": "Nonostante i nostri massimi sforzi, gli utenti potrebbero incontrare le seguenti barriere. Stiamo lavorando attivamente per risolverle:",
       "pendingNote": "Inoltre, {{count}} criteri di successo richiedono una valutazione manuale che i test automatizzati da soli non possono confermare; questi sono in fase di revisione.",
+      "dismissedHeading": "Rilevamenti automatici esclusi dopo la revisione",
+      "dismissedItem": "{{count}} rilevamento/i automatico/i escluso/i come falso positivo dopo la revisione",
       "noAssessment": "È attualmente in corso una valutazione completa di questo sito. Questa dichiarazione verrà aggiornata con riscontri specifici una volta completata la valutazione.",
       "measuresHeading": "Misure a sostegno dell'accessibilità",
       "measureAutomated": "Scansione WCAG automatizzata delle pagine rispetto allo standard di riferimento.",
@@ -1609,7 +1612,19 @@
     "verdictPartial": "{{site}} è parzialmente conforme a {{standard}} su {{pages}} pagina/e.",
     "verdictMeta": "Valutato il {{date}} · {{supports}} di {{total}} criteri supportati · {{doesNotSupport}} non supportati · {{notEvaluated}} in attesa di valutazione manuale",
     "staleNotice": "È disponibile una versione più recente di questo rapporto.",
-    "staleNoticeLink": "Visualizza il rapporto più recente"
+    "staleNoticeLink": "Visualizza il rapporto più recente",
+    "dismissedDisclosureOne": "1 rilevamento automatico è stato escluso come falso positivo dopo la revisione.",
+    "dismissedDisclosureOther": "{{count}} rilevamenti automatici sono stati esclusi come falsi positivi dopo la revisione."
+  },
+  "dismissalsExport": {
+    "sheetName": "Esclusi",
+    "colPageUrl": "URL pagina",
+    "colRuleCode": "Codice regola",
+    "colSelector": "Selettore",
+    "colLevel": "Livello",
+    "colReason": "Motivo",
+    "colDismissedBy": "Escluso da",
+    "colDismissedAt": "Escluso il"
   },
   "reportPage": {
     "revisionsHeading": "Cronologia del rapporto",

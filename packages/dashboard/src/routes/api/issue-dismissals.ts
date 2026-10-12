@@ -16,16 +16,18 @@
  * under org 'system', which is a write into another tenant. The global-admin
  * half is the shared `bypassesOrgScope` (PR #102) — never an org-scoped key.
  */
-import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { StorageAdapter } from '../../db/index.js';
-import type { ScanRecord } from '../../db/types.js';
 import type { IssueDismissalRepository } from '../../db/interfaces/issue-dismissal-repository.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { bypassesOrgScope } from '../../permissions.js';
 import { toSiteKey } from '../../services/issue-dismissals/site-key.js';
 import { applyDismissals } from '../../services/issue-dismissals/apply-dismissals.js';
+import { loadReportForScan } from '../../services/issue-dismissals/load-dismissed-report.js';
+import {
+  recomputeSiteCounts,
+  type RecomputeResult,
+} from '../../services/issue-dismissals/recompute-site-counts.js';
 import {
   validateMarkInput,
   validateRevokeComment,
@@ -33,7 +35,7 @@ import {
 import {
   ErrorResponse,
   ConflictResponse,
-  DismissalSchema,
+  DismissalMutationResponse,
   ListResponse,
   MarkBody,
   RevokeBody,
@@ -41,6 +43,7 @@ import {
   IdParams,
   RATE_LIMIT,
   dismissalToJson,
+  mutationToJson,
   eventToJson,
   type MarkPayload,
   type RevokePayload,
@@ -55,18 +58,27 @@ function mayTouchOrg(request: FastifyRequest, orgId: string): boolean {
   return current !== '' && current === orgId;
 }
 
-/** DB report first, then the on-disk file (precedent: api/export.ts). */
-async function loadReport(storage: StorageAdapter, scan: ScanRecord): Promise<unknown | null> {
-  try {
-    const dbReport = await storage.scans.getReport(scan.id);
-    if (dbReport !== null) return dbReport;
-    if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
-      return JSON.parse(await readFile(scan.jsonReportPath, 'utf-8')) as unknown;
-    }
-  } catch {
-    // Fixed message at the call site: never echo parser or fs error text.
-  }
-  return null;
+/**
+ * Recompute the site's stored counts and log ONE summary line (D-13 / I1): how many scans and how
+ * long, with no identifiers. The first real mark's line is the measurement of the synchronous bound.
+ */
+async function recomputeAndLog(
+  request: FastifyRequest,
+  storage: StorageAdapter,
+  orgId: string,
+  siteKey: string,
+): Promise<RecomputeResult> {
+  const result = await recomputeSiteCounts(storage, orgId, siteKey, request.log);
+  request.log.info(
+    {
+      scanCount: result.recomputedScans + result.failedScans,
+      recomputedScans: result.recomputedScans,
+      failedScans: result.failedScans,
+      durationMs: result.durationMs,
+    },
+    'Dismissal recompute finished',
+  );
+  return result;
 }
 
 function actorOf(request: FastifyRequest): { actor: string; actorId?: string } {
@@ -94,7 +106,7 @@ export async function issueDismissalRoutes(
         params: ScanParams,
         body: MarkBody,
         response: {
-          201: DismissalSchema,
+          201: DismissalMutationResponse,
           400: ErrorResponse,
           401: ErrorResponse,
           403: ErrorResponse,
@@ -120,8 +132,16 @@ export async function issueDismissalRoutes(
       if (scan.status !== 'completed') {
         return reply.code(422).send({ error: 'Scan has no completed report' });
       }
-      const report = await loadReport(storage, scan);
-      if (report === null) return reply.code(422).send({ error: 'Report data not available' });
+      const loaded = await loadReportForScan(storage, scan);
+      if (loaded.kind !== 'ok') {
+        // D-21/IN-03: scan id and error NAME only; parser and fs messages quote their input.
+        request.log.warn(
+          { scanId: scan.id, errorName: loaded.kind === 'error' ? loaded.errorName : 'NoReport' },
+          'Dismissal mark: report not readable',
+        );
+        return reply.code(422).send({ error: 'Report data not available' });
+      }
+      const report = loaded.report;
 
       const siteKey = toSiteKey(scan.siteUrl);
       const probe = applyDismissals(
@@ -149,7 +169,8 @@ export async function issueDismissalRoutes(
           existing_id: result.existing.id,
         });
       }
-      return reply.code(201).send(dismissalToJson(result.dismissal));
+      const recomputed = await recomputeAndLog(request, storage, scan.orgId, siteKey);
+      return reply.code(201).send(mutationToJson(result.dismissal, recomputed));
     },
   );
 
@@ -164,7 +185,7 @@ export async function issueDismissalRoutes(
         params: IdParams,
         body: RevokeBody,
         response: {
-          200: DismissalSchema,
+          200: DismissalMutationResponse,
           400: ErrorResponse,
           401: ErrorResponse,
           403: ErrorResponse,
@@ -197,7 +218,8 @@ export async function issueDismissalRoutes(
         return reply.code(409).send({ error: 'This dismissal is already revoked' });
       }
       if (result.kind === 'not-found') return reply.code(404).send({ error: 'Dismissal not found' });
-      return reply.code(200).send(dismissalToJson(result.dismissal));
+      const recomputed = await recomputeAndLog(request, storage, existing.orgId, existing.siteKey);
+      return reply.code(200).send(mutationToJson(result.dismissal, recomputed));
     },
   );
 

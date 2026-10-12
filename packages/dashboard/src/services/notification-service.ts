@@ -5,6 +5,7 @@ import { generateIssuesCsv, buildEmailBody } from '../email/report-generator.js'
 import { generatePdfFromData } from '../pdf/generator.js';
 import type { PdfReportData, PdfScanMeta } from '../pdf/generator.js';
 import { normalizeReportData } from './report-service.js';
+import { applyActiveDismissals } from './issue-dismissals/load-dismissed-report.js';
 import type { JsonReportFile } from './report-service.js';
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -114,7 +115,9 @@ export async function buildPdfAttachment(
 
     if (reportJson === null) return null;
 
-    const reportData = normalizeReportData(reportJson, scan);
+    // D-05: the scan's own org + site active dismissals; a lookup failure takes the catch below.
+    const applied = await applyActiveDismissals(storage, scan, reportJson);
+    const reportData = normalizeReportData(applied.report, scan);
     const scanMeta: PdfScanMeta = {
       siteUrl: scan.siteUrl,
       standard: scan.standard,
@@ -143,8 +146,9 @@ export async function buildPdfAttachment(
 export async function buildCsvAttachment(
   scan: ScanRecord,
   reportPath: string,
+  storage: StorageAdapter,
 ): Promise<EmailAttachment | null> {
-  const csv = await generateIssuesCsv(scan, reportPath);
+  const csv = await generateIssuesCsv(scan, reportPath, storage);
   if (csv === null) return null;
 
   const hostname = extractHostname(scan.siteUrl);
@@ -180,7 +184,7 @@ export async function buildAttachments(
   }
 
   if (wantsCsv) {
-    const csv = await buildCsvAttachment(scan, reportPath);
+    const csv = await buildCsvAttachment(scan, reportPath, storage);
     if (csv !== null) {
       attachments.push(csv);
     }

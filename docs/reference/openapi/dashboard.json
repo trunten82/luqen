@@ -35308,7 +35308,10 @@
                     "revoked_by",
                     "revoked_by_id",
                     "revoked_at",
-                    "revoke_comment"
+                    "revoke_comment",
+                    "recomputed_scans",
+                    "failed_scans",
+                    "recompute_complete"
                   ],
                   "properties": {
                     "id": {
@@ -35390,6 +35393,17 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "recomputed_scans": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "failed_scans": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "recompute_complete": {
+                      "type": "boolean"
                     }
                   }
                 }
@@ -38550,7 +38564,10 @@
                     "revoked_by",
                     "revoked_by_id",
                     "revoked_at",
-                    "revoke_comment"
+                    "revoke_comment",
+                    "recomputed_scans",
+                    "failed_scans",
+                    "recompute_complete"
                   ],
                   "properties": {
                     "id": {
@@ -38632,6 +38649,17 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "recomputed_scans": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "failed_scans": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "recompute_complete": {
+                      "type": "boolean"
                     }
                   }
                 }

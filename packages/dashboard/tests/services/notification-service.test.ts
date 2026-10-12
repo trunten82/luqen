@@ -231,7 +231,7 @@ describe('buildCsvAttachment', () => {
     vi.mocked(generateIssuesCsv).mockResolvedValue('col1,col2\nval1,val2');
     const scan = makeScan();
 
-    const result = await buildCsvAttachment(scan, '/tmp/report.json');
+    const result = await buildCsvAttachment(scan, '/tmp/report.json', makeStorage());
 
     expect(result).not.toBeNull();
     expect(result!.filename).toContain('.csv');
@@ -242,7 +242,7 @@ describe('buildCsvAttachment', () => {
     vi.mocked(generateIssuesCsv).mockResolvedValue(null);
     const scan = makeScan();
 
-    const result = await buildCsvAttachment(scan, '/tmp/report.json');
+    const result = await buildCsvAttachment(scan, '/tmp/report.json', makeStorage());
 
     expect(result).toBeNull();
   });
