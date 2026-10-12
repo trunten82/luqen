@@ -432,8 +432,7 @@ describe('dismissal-permission-readback: arguments and failures', () => {
     const dirs: string[] = [];
     try {
       src.baseline();
-      src.role('org-a:support', 'Support', 'org-a');
-      src.grant('org-a:support');
+      src.grant('org-a:Member');
       const copyTo = (mode: number): string => {
         const dir = mkdtempSync(join(tmpdir(), 'readback-copy-'));
         dirs.push(dir);
@@ -453,7 +452,9 @@ describe('dismissal-permission-readback: arguments and failures', () => {
       const a = run(readOnlyCopy);
       const b = run(writableCopy);
       expect(a.status).toBe(4);
-      expect(a.json.violations).toContain('latent-org-custom-role');
+      // The violation lives only in the WAL, so measuring it proves the WAL was read. It is a Member row,
+      // not a custom-role row, so this test does not move with the custom-role bucket (BT-89-03-A).
+      expect(a.json.violations).toContain('latent-org-member-viewer-executive');
       expect(a.json).toEqual(b.json);
       expect(digest(readOnlyCopy)).toEqual(before);
       expect(digest(writableCopy)).toEqual(before);
