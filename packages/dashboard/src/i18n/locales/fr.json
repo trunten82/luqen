@@ -1753,7 +1753,8 @@
         "error": "Impossible de vérifier ce que cela couvre. Réessayez.",
         "retry": "Réessayer",
         "refused": "Ce constat n'a pas d'élément précis et ne peut pas être écarté.",
-        "alreadyDismissed": "Cette règle est déjà écartée pour cet élément de ce site, il n'y a donc rien à écarter. Rechargez la page pour la voir dans Constats écartés."
+        "alreadyDismissed": "Cette règle est déjà écartée pour cet élément de ce site, il n'y a donc rien à écarter. Rechargez la page pour la voir dans Constats écartés.",
+        "together": "Toutes les occurrences comptées ci-dessus sont écartées ensemble, y compris celles qui sont listées séparément dans ce rapport."
       },
       "revoke": {
         "title": "Révoquer l'écartement",
@@ -1783,7 +1784,8 @@
       "actions": "Actions"
     },
     "actor": {
-      "apiKey": "Clé API"
+      "apiKey": "Clé API",
+      "apiKeyNamed": "Clé API : {{name}}"
     },
     "allDismissed": "Tous les constats de ce rapport ont été écartés comme faux positifs. Voir Constats écartés ci-dessous.",
     "toast": {
@@ -1794,6 +1796,7 @@
     },
     "error": {
       "invalid": "Ce constat ne peut pas être écarté, ou le motif n'est pas valide. Vérifiez le motif et réessayez.",
+      "invalidRevoke": "Cet écartement ne peut pas être révoqué, ou le commentaire n'est pas valide. Vérifiez le commentaire et réessayez.",
       "session": "Votre session a expiré. Reconnectez-vous, puis recommencez.",
       "forbidden": "Vous n'avez pas l'autorisation d'effectuer cette action.",
       "notFound": "Ce rapport ou cet écartement n'existe plus. Rechargez la page.",

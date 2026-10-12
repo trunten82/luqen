@@ -1762,7 +1762,8 @@
         "error": "Impossibile verificare ciò che questo copre. Riprova.",
         "retry": "Riprova",
         "refused": "Questo rilevamento non ha un elemento specifico e non può essere escluso.",
-        "alreadyDismissed": "Questa regola è già esclusa per questo elemento di questo sito, quindi non c'è nulla da escludere. Ricarica la pagina per vederla in Rilevamenti esclusi."
+        "alreadyDismissed": "Questa regola è già esclusa per questo elemento di questo sito, quindi non c'è nulla da escludere. Ricarica la pagina per vederla in Rilevamenti esclusi.",
+        "together": "Tutte le occorrenze conteggiate sopra vengono escluse insieme, comprese quelle elencate separatamente in questo report."
       },
       "revoke": {
         "title": "Revoca esclusione",
@@ -1792,7 +1793,8 @@
       "actions": "Azioni"
     },
     "actor": {
-      "apiKey": "Chiave API"
+      "apiKey": "Chiave API",
+      "apiKeyNamed": "Chiave API: {{name}}"
     },
     "allDismissed": "Tutti i rilevamenti di questo report sono stati esclusi come falsi positivi. Vedi Rilevamenti esclusi più sotto.",
     "toast": {
@@ -1803,6 +1805,7 @@
     },
     "error": {
       "invalid": "Questo rilevamento non può essere escluso, oppure il motivo non è valido. Controlla il motivo e riprova.",
+      "invalidRevoke": "Questa esclusione non può essere revocata, oppure il commento non è valido. Controlla il commento e riprova.",
       "session": "La tua sessione è scaduta. Accedi di nuovo, poi ripeti l'operazione.",
       "forbidden": "Non hai il permesso di farlo.",
       "notFound": "Questo report o questa esclusione non esiste più. Ricarica la pagina.",

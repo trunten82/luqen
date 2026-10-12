@@ -33,15 +33,20 @@ export function killAll() {
 export const log = (...a) => console.error('[uat]', ...a);
 
 // ── Check reporting: exit non-zero on the first FAIL ───────────────────
-const state = { checks: 0, withholdDetail: false };
+const state = { checks: 0, withholdDetail: false, keepGoing: false, failures: 0 };
 export function setWithholdDetail(on) { state.withholdDetail = on; }
 export function checkCount() { return state.checks; }
+/** Local break-tests only: report every FAIL instead of stopping at the first (the run still exits 1). */
+export function setKeepGoing(on) { state.keepGoing = on; }
+export function failureCount() { return state.failures; }
 
 export function check(scenario, name, cond, detail) {
   state.checks += 1;
   if (cond) { console.log(`PASS ${scenario}: ${name}`); return; }
   const shown = detail && !state.withholdDetail ? ` :: ${detail}` : '';
   console.log(`FAIL ${scenario}: ${name}${shown}`);
+  state.failures += 1;
+  if (state.keepGoing) return;
   throw new Error(`FAIL ${scenario}: ${name}`);
 }
 

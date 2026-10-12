@@ -12,41 +12,48 @@
 // Usage:
 //   npm run build   (this script runs dist/, so build first)
 //   node tests/browser-uat/uat-dismissals.mjs [--mode local|remote|remote-selftest]
-//        [--expect dark|granted] [--scenario <name>|all] [--leave-active]
+//        [--expect dark|granted] [--scenario <name>|all] [--leave-active] [--keep-going]
+//
+// --keep-going (local mode only, for break-tests): every FAIL is reported instead of stopping at the
+// first, so a mutation's whole red set is observable; the run still exits 1 and never prints GREEN.
 //
 // Output: one `PASS <scenario>: <check>` or `FAIL <scenario>: <check> :: <detail>` line per check; exit
 // non-zero on the first FAIL (1), or 2 for bad arguments / missing remote environment.
 // Browser launches and waits use 90s+ timeouts.
 import {
   check, killAll, log, checkCount, discoverChromium, resolvePuppeteer, newPersonaPage, WAIT, DESKTOP, setWithholdDetail,
-  sleep,
+  sleep, setKeepGoing, failureCount,
 } from './dismissals/lib.mjs';
 import { bootLocal, envFromWorld, resetShots } from './dismissals/world.mjs';
 import { coreScenarios } from './dismissals/scenarios-core.mjs';
 import { flowScenarios } from './dismissals/scenarios-flow.mjs';
 import { viewScenarios } from './dismissals/scenarios-view.mjs';
+import { gapScenarios, GAP_WORLD } from './dismissals/scenarios-gap.mjs';
 import { runRemote, missingVars, REMOTE_VARS } from './dismissals/remote.mjs';
 
-const SCENARIOS = { ...coreScenarios, ...flowScenarios, ...viewScenarios };
+const SCENARIOS = { ...coreScenarios, ...flowScenarios, ...viewScenarios, ...gapScenarios };
 // Order matters only for readability: each scenario gets its own world.
-const ORDER = ['tracer', 'permissions', 'dialog', 'refused', 'mark', 'surfaces', 'revoke', 'conflict', 'public', 'mobile', 'longtext', 'locales', 'theme', 'keyboard', 'overflow'];
+const ORDER = ['tracer', 'permissions', 'dialog', 'refused', 'mark', 'surfaces', 'revoke', 'conflict', 'public', 'mobile', 'longtext', 'locales', 'theme', 'keyboard', 'overflow', 'attribution', 'twins', 'layout'];
 
 function parseArgs(argv) {
-  const out = { mode: 'local', expect: 'dark', scenario: 'all', leaveActive: false };
+  const out = { mode: 'local', expect: 'dark', scenario: 'all', leaveActive: false, keepGoing: false };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === '--mode') out.mode = argv[++i];
     else if (a === '--expect') out.expect = argv[++i];
     else if (a === '--scenario') out.scenario = argv[++i];
     else if (a === '--leave-active') out.leaveActive = true;
+    else if (a === '--keep-going') out.keepGoing = true;
     else { console.error(`unknown argument ${a}`); process.exit(2); }
   }
   if (!['local', 'remote', 'remote-selftest'].includes(out.mode)) { console.error('--mode must be local, remote or remote-selftest'); process.exit(2); }
   if (!['dark', 'granted'].includes(out.expect)) { console.error('--expect must be dark or granted'); process.exit(2); }
+  if (out.keepGoing && out.mode !== 'local') { console.error('--keep-going is for local mode only'); process.exit(2); }
   if (out.scenario !== 'all' && !SCENARIOS[out.scenario]) { console.error(`unknown scenario ${out.scenario}; known: ${ORDER.join(', ')}`); process.exit(2); }
   return out;
 }
 const args = parseArgs(process.argv.slice(2));
+setKeepGoing(args.keepGoing);
 
 process.on('exit', killAll);
 process.on('SIGINT', () => { killAll(); process.exit(130); });
@@ -81,7 +88,7 @@ async function runLocal(browser) {
   // Only a full run clears the screenshots; a single scenario adds to (and overwrites) its own files.
   if (args.scenario === 'all') resetShots();
   for (const n of names) {
-    const world = await bootLocal();
+    const world = await bootLocal(GAP_WORLD[n] ?? {});
     const { context, page } = await newPersonaPage(browser, world.base, null);
     try {
       await SCENARIOS[n]({ page, browser, world, expect: args.expect });
@@ -125,6 +132,7 @@ async function main() {
     if (args.mode === 'local') await runLocal(browser);
     else if (args.mode === 'remote-selftest') await runSelftest(browser);
     else await runRemoteMode(browser);
+    if (failureCount() > 0) throw new Error(`UAT RED: ${failureCount()} of ${checkCount()} checks failed`);
     console.log(`UAT GREEN: ${checkCount()} checks`);
   } finally {
     await browser.close();

@@ -458,7 +458,9 @@
        LAST child of the Issues panel so it still renders when every group is dismissed.
        Server-rendered from the SCAN's org and site (routes/reports.ts); the key is absent
        when the site has no dismissal or the viewer may not touch the scan's org. Reason,
-       selector and actor are free text: DOUBLE-brace (escaped) output only, never triple. }}
+       selector and actor are free text: DOUBLE-brace (escaped) output only, never triple.
+       89-11: an API-key actor never renders its stored `api-key:<id>` (no title); it reads
+       "API key: <label>" when the key belongs to the scan's org, else the generic label. }}
   {{#if dismissals}}
   <details class="rpt-dismissed" id="rpt-dismissed">
     <summary class="rpt-dismissed__summary">{{t "issueDismissals.section.summary" active=dismissals.activeCount revoked=dismissals.revokedCount}}</summary>
@@ -482,7 +484,7 @@
             <td data-label="{{t 'issueDismissals.col.rule'}}"><span class="rpt-code">{{code}}</span></td>
             {{#if @root.perm.reportsViewTechnical}}<td class="cell--url" data-label="{{t 'issueDismissals.col.element'}}" title="{{selector}}"><span class="rpt-code">{{selector}}</span></td>{{/if}}
             <td class="cell--wrap" data-label="{{t 'issueDismissals.col.reason'}}">{{reason}}</td>
-            <td data-label="{{t 'issueDismissals.col.dismissedBy'}}" title="{{actor}}">{{#if actorIsApiKey}}{{t "issueDismissals.actor.apiKey"}}{{else}}{{actor}}{{/if}}</td>
+            {{#if actorIsApiKey}}<td data-label="{{t 'issueDismissals.col.dismissedBy'}}">{{#if actorKeyName}}{{t "issueDismissals.actor.apiKeyNamed" name=actorKeyName}}{{else}}{{t "issueDismissals.actor.apiKey"}}{{/if}}</td>{{else}}<td data-label="{{t 'issueDismissals.col.dismissedBy'}}" title="{{actor}}">{{actor}}</td>{{/if}}
             <td data-label="{{t 'issueDismissals.col.dismissedOn'}}"><time datetime="{{createdAtIso}}">{{createdAtDisplay}}</time></td>
             {{#if @root.dismissalControls}}<td><button type="button" class="btn btn--ghost btn--sm" data-action="rptRevokeIssue" data-id="{{id}}" data-code="{{code}}" aria-label="{{t 'issueDismissals.action.revokeAria' code=code}}" title="{{t 'issueDismissals.dialog.revoke.title'}}">{{t "common.revoke"}}</button></td>{{/if}}
           </tr>
@@ -514,9 +516,9 @@
             <td class="rpt-text--muted" data-label="{{t 'issueDismissals.col.rule'}}"><span class="rpt-code">{{code}}</span></td>
             {{#if @root.perm.reportsViewTechnical}}<td class="cell--url rpt-text--muted" data-label="{{t 'issueDismissals.col.element'}}" title="{{selector}}"><span class="rpt-code">{{selector}}</span></td>{{/if}}
             <td class="cell--wrap rpt-text--muted" data-label="{{t 'issueDismissals.col.reason'}}">{{reason}}</td>
-            <td class="rpt-text--muted" data-label="{{t 'issueDismissals.col.dismissedBy'}}" title="{{actor}}">{{#if actorIsApiKey}}{{t "issueDismissals.actor.apiKey"}}{{else}}{{actor}}{{/if}}</td>
+            {{#if actorIsApiKey}}<td class="rpt-text--muted" data-label="{{t 'issueDismissals.col.dismissedBy'}}">{{#if actorKeyName}}{{t "issueDismissals.actor.apiKeyNamed" name=actorKeyName}}{{else}}{{t "issueDismissals.actor.apiKey"}}{{/if}}</td>{{else}}<td class="rpt-text--muted" data-label="{{t 'issueDismissals.col.dismissedBy'}}" title="{{actor}}">{{actor}}</td>{{/if}}
             <td class="rpt-text--muted" data-label="{{t 'issueDismissals.col.dismissedOn'}}"><time datetime="{{createdAtIso}}">{{createdAtDisplay}}</time></td>
-            <td class="rpt-text--muted" data-label="{{t 'issueDismissals.col.revokedBy'}}" title="{{revokedBy}}">{{#if revokedByIsApiKey}}{{t "issueDismissals.actor.apiKey"}}{{else}}{{revokedBy}}{{/if}}</td>
+            {{#if revokedByIsApiKey}}<td class="rpt-text--muted" data-label="{{t 'issueDismissals.col.revokedBy'}}">{{#if revokedByKeyName}}{{t "issueDismissals.actor.apiKeyNamed" name=revokedByKeyName}}{{else}}{{t "issueDismissals.actor.apiKey"}}{{/if}}</td>{{else}}<td class="rpt-text--muted" data-label="{{t 'issueDismissals.col.revokedBy'}}" title="{{revokedBy}}">{{revokedBy}}</td>{{/if}}
             <td class="rpt-text--muted" data-label="{{t 'issueDismissals.col.revokedOn'}}"><time datetime="{{revokedAtIso}}">{{revokedAtDisplay}}</time></td>
             <td class="cell--wrap rpt-text--muted" data-label="{{t 'issueDismissals.col.comment'}}">{{revokeComment}}</td>
           </tr>

@@ -207,13 +207,41 @@ describe('opening and the preview', () => {
     expect(status(h)).toBe(attr(h, 'data-preview-loading'));
   });
 
-  it('a successful preview shows both numbers and clears the hint', async () => {
+  // 89-11 item 6 (D-15 Q1): this pin used occurrences 2 and expected an empty hint. A count above
+  // one now carries the together text, so the pin is renamed to the single-occurrence case.
+  it('a single-occurrence preview clears the hint', async () => {
     const h = await make();
-    await openReady(h);
-    expect(el(h, '[data-preview="occurrences"]').textContent).toBe('2');
-    expect(el(h, '[data-preview="pages"]').textContent).toBe('2');
+    open(h);
+    h.pending[0].resolve(res(200, { occurrences: 1, pages: 1 }));
+    await flush();
+    expect(el(h, '[data-preview="occurrences"]').textContent).toBe('1');
+    expect(el(h, '[data-preview="pages"]').textContent).toBe('1');
     expect(status(h)).toBe('');
     expect(el(h, '[data-preview-region]').getAttribute('aria-busy')).toBe('false');
+  });
+
+  it('a preview with more than one occurrence says every occurrence is dismissed together', async () => {
+    const h = await make();
+    await openReady(h); // occurrences 2, pages 2: two page issues with the same rule and selector
+    expect(el(h, '[data-preview="occurrences"]').textContent).toBe('2');
+    expect(status(h)).toBe(attr(h, 'data-preview-together'));
+    expect(status(h)).toBe(t('issueDismissals.dialog.preview.together', 'en'));
+    type(h, 'A real reason');
+    expect(confirmBtn(h).disabled).toBe(false); // a usable preview, not a refusal
+  });
+
+  it('refused and already-dismissed keep their own hint when more than one occurrence is counted', async () => {
+    for (const [body, hintAttr] of [
+      [{ occurrences: 3, pages: 2, refused: true, reason: 'selector' }, 'data-preview-refused'],
+      [{ occurrences: 2, pages: 2, alreadyDismissed: true }, 'data-preview-already'],
+    ] as const) {
+      const h = await make();
+      open(h);
+      h.pending[0].resolve(res(200, body));
+      await flush();
+      expect(status(h)).toBe(attr(h, hintAttr));
+      expect(status(h)).not.toBe(attr(h, 'data-preview-together'));
+    }
   });
 
   it('an aria-disabled dismiss button opens nothing', async () => {
@@ -434,6 +462,65 @@ describe('errors', () => {
       const texts = MAP.filter(([c]) => c !== 500 && c !== 'network').map(([, a]) => attr(h, a));
       expect(new Set(texts).size).toBe(texts.length);
     });
+  });
+});
+
+// 89-11 item 3 (D-02): with the footer sticky, a shown error must not sit under it or below the
+// dialog's visible area. The textarea is focused WITHOUT scrolling, then the error is scrolled into
+// view (nearest), so the error is the last thing brought into view.
+describe('a shown error is brought into view', () => {
+  it('a shown error is brought into view', async () => {
+    const h = await make();
+    await openReady(h);
+    type(h, 'A real reason');
+    const seq: string[] = [];
+    const textarea = reason(h);
+    const ownFocus = textarea.focus.bind(textarea);
+    textarea.focus = (opts?: FocusOptions) => { seq.push(`focus:${JSON.stringify(opts ?? null)}`); ownFocus(opts); };
+    const error = h.doc.getElementById('issue-dismiss-error') as HTMLElement;
+    error.scrollIntoView = ((opts?: ScrollIntoViewOptions) => { seq.push(`scroll-error:${JSON.stringify(opts ?? null)}`); }) as never;
+    call(h, 'rptDismissConfirm', confirmBtn(h));
+    h.pending[h.pending.length - 1].resolve(res(409, { error: SERVER_TEXT }));
+    await flush();
+    expect(errorText(h)).toBe(attr(h, 'data-err-conflict'));
+    expect(seq).toEqual(['focus:{"preventScroll":true}', 'scroll-error:{"block":"nearest"}']);
+    expect(h.doc.activeElement).toBe(textarea);
+  });
+
+  it('clearing the error scrolls nothing', async () => {
+    const h = await make();
+    await openReady(h);
+    call(h, 'rptDismissCancel');
+    call(h, 'rptRevokeIssue', h.doc.getElementById('revoker')); // revoke's open clears its error via showError('')
+    const errors = h.scrolled.filter((e) => e.classList.contains('form-error'));
+    expect(errors).toHaveLength(0);
+    expect(revokeDialog(h).hasAttribute('open')).toBe(true); // positive control: the reset path ran
+  });
+
+  it('a focused field is kept in view when the dialog opens and when the preview answers', async () => {
+    const h = await make();
+    open(h);
+    reason(h).focus(); // the real dialog autofocuses the textarea; the JSDOM stub does not
+    h.pending[0].resolve(res(200, { occurrences: 2, pages: 2 }));
+    await flush();
+    expect(h.scrolled.filter((e) => e === reason(h)).length).toBeGreaterThanOrEqual(1);
+    call(h, 'rptDismissCancel');
+    const revokeComment = h.doc.getElementById('issue-revoke-comment') as HTMLTextAreaElement;
+    revokeComment.focus();
+    const before = h.scrolled.length;
+    const proto = h.win.HTMLDialogElement.prototype as unknown as Record<string, unknown>;
+    const ownShow = proto['showModal'] as (this: HTMLDialogElement) => void;
+    proto['showModal'] = function (this: HTMLDialogElement) { ownShow.call(this); revokeComment.focus(); };
+    call(h, 'rptRevokeIssue', h.doc.getElementById('revoker'));
+    expect(h.scrolled.slice(before)).toContain(revokeComment);
+  });
+
+  it('an unfocused field is not scrolled when the preview answers', async () => {
+    const h = await make();
+    open(h);
+    h.pending[0].resolve(res(200, { occurrences: 2, pages: 2 }));
+    await flush();
+    expect(h.scrolled.filter((e) => e === reason(h))).toHaveLength(0);
   });
 });
 
@@ -796,6 +883,22 @@ describe('revoke — errors', () => {
     expect(revokeError(h)).toBe('This dismissal was already revoked. Reload the page.');
     expect(revokeError(h)).not.toBe(attr(h, 'data-err-conflict')); // the mark dialog's own 409 text
     expect(attr(h, 'data-err-conflict')).toContain('already dismissed');
+  });
+
+  // 89-11 item 1 (D-15 Q1): the 400 slot of the revoke dialog said "This finding cannot be
+  // dismissed, or the reason is not valid" - mark wording for a revoke request.
+  it('a 400 on revoke shows the revoke-specific invalid text, not the mark one', async () => {
+    const h = await make();
+    openRevoke(h);
+    typeComment(h, 'My comment stays');
+    call(h, 'rptRevokeConfirm', revokeConfirm(h));
+    h.pending[0].resolve(res(400, { error: SERVER_TEXT }));
+    await flush();
+    expect(revokeError(h)).toBe(t('issueDismissals.error.invalidRevoke', 'en'));
+    expect(revokeError(h)).not.toBe(attr(h, 'data-err-invalid')); // the mark dialog's own 400 text
+    expect(attr(h, 'data-err-invalid')).toBe(t('issueDismissals.error.invalid', 'en'));
+    expect(comment(h).value).toBe('My comment stays');
+    expect(revokeDialog(h).hasAttribute('open')).toBe(true);
   });
 });
 

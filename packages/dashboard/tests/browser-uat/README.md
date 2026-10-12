@@ -81,12 +81,14 @@ self-contained: the entry point is `uat-dismissals.mjs`, the helpers are in `dis
 ```bash
 cd packages/dashboard && npm run build        # the script runs dist/, so build first
 node tests/browser-uat/uat-dismissals.mjs [--mode local|remote|remote-selftest]
-     [--expect dark|granted] [--scenario <name>|all] [--leave-active]
+     [--expect dark|granted] [--scenario <name>|all] [--leave-active] [--keep-going]
 ```
 
 Output is one `PASS <scenario>: <check>` or `FAIL <scenario>: <check> :: <detail>` line per check and a
 final `UAT GREEN: <n> checks`. It stops at the first FAIL (exit 1); bad arguments or a missing remote
-environment exit 2. Browser waits are 90 s.
+environment exit 2. Browser waits are 90 s. `--keep-going` (local mode only, for break-tests) reports
+every FAIL instead of stopping at the first, so a mutation's whole red set is visible; the run still
+exits 1 and never prints `UAT GREEN`.
 
 ### Modes
 
@@ -108,8 +110,18 @@ from a direct mark, preview and revoke request, and `/admin/roles/new` offers no
 
 `tracer`, `permissions`, `dialog`, `refused`, `mark`, `surfaces`, `revoke`, `conflict`, `public`, `mobile`
 (375x812), `longtext` (1000-char reason, 600-char selector, 1000-char comment at 375 and 1280),
-`locales` (de, it), `theme` (dark), `keyboard` (real key presses, real Escape), `overflow` (150 rows).
-`all` runs them in that order.
+`locales` (de, it; plus the revoke dialog's 400 copy in en/de/it through an intercepted request),
+`theme` (dark), `keyboard` (real key presses, real Escape), `overflow` (150 rows), and the 89-11 gap
+scenarios (`dismissals/scenarios-gap.mjs`):
+
+| Scenario | What it proves |
+|----------|----------------|
+| `attribution` | Own seeded world: an org API key and a system key as dismissal actors. The org key reads `API key: <label>`, the system key reads `API key`, and the section HTML holds no `api-key:` identifier or key id. |
+| `twins` | Two page issues with the same rule and selector have two Dismiss buttons and are one dismissal; a dialog counting more than one occurrence (twins, a template item) says they are dismissed together; a single occurrence does not. |
+| `layout` | Both dialogs show Cancel and Confirm inside the viewport and the dialog, uncovered, measured right after opening with NO scroll call (1280x800 en/de/it, the 600-char selector, 375x812); the footer is opaque in light and dark; the Dismissed tables fit 1280 with the rule code on at most 2 lines; the assistant launcher covers nothing at the page bottom (1280 and 375). |
+
+`all` runs them in that order. The older `mobile`/`longtext` reachability checks scroll each button into
+view first: they prove a button CAN be reached, not that it is visible at open (that is `layout`).
 
 ### Remote environment variables
 

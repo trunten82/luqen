@@ -60,9 +60,18 @@
     setText(preview(d, 'status'), msg(d, attr));
   }
 
+  /* 89-11 (D-02): the footer is sticky. Autofocus does not scroll a field that is already partly
+     visible, and the preview hint can push the field down, so a FOCUSED field is brought into view
+     (nearest, which honours the dialog's scroll-padding above the footer). An unfocused one is left. */
+  function keepFieldInView(d) {
+    var f = d.querySelector('textarea');
+    if (f && document.activeElement === f && typeof f.scrollIntoView === 'function') f.scrollIntoView({ block: 'nearest' });
+  }
+
   function previewDone(d, attrOrNull) {
     setPreviewBusy(d, false);
     if (attrOrNull) showPreviewHint(d, attrOrNull); else setText(preview(d, 'status'), '');
+    keepFieldInView(d);
   }
 
   function startPreview(d) {
@@ -104,7 +113,9 @@
     if (data && data.refused === true) { previewDone(d, 'data-preview-refused'); }
     else if (data && data.alreadyDismissed === true) { previewDone(d, 'data-preview-already'); }
     else if (occ < 1) { previewDone(d, 'data-preview-none'); }
-    else { state.previewOk = true; previewDone(d, null); }
+    /* 89-11 (D-04, UD-05): more than one counted occurrence (twin page issues, a template item)
+       is ONE dismissal; say so before Confirm. The key and the count are unchanged. */
+    else { state.previewOk = true; previewDone(d, occ > 1 ? 'data-preview-together' : null); }
     updateConfirm(d);
   }
 
@@ -136,6 +147,7 @@
     setText(field(d, 'message'), state.message);
     confirmBtn(d).disabled = true;
     try { d.showModal(); } catch (_e) { /* already open or unsupported */ }
+    keepFieldInView(d);
     startPreview(d);
   };
 
@@ -177,8 +189,12 @@
   function footerCancel(d) { return d.querySelector('.modal__footer .btn--ghost'); }
   function textareaEl(d) { return d.querySelector('textarea'); }
 
+  /* 89-11 (D-02): the footer is sticky, so a shown error is brought into view (nearest) rather
+     than left under the footer or below the dialog's visible area. Clearing scrolls nothing. */
   function showError(d, text) {
-    setText(errorEl(d), text);
+    var el = errorEl(d);
+    setText(el, text);
+    if (el && text && typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'nearest' });
   }
 
   /* Mark gates Confirm on reason + preview; revoke has no gate (the comment is optional). */
@@ -199,8 +215,8 @@
   /* Failure: translated message, dialog stays open, typed text kept, focus back to it. */
   function failWith(d, httpStatus) {
     setInFlight(d, false);
+    textareaEl(d).focus({ preventScroll: true });
     showError(d, msg(d, ERR_ATTR[httpStatus] || 'data-err-generic'));
-    textareaEl(d).focus();
   }
 
   function storeFlash(flash) {
@@ -277,6 +293,7 @@
     showError(d, '');
     setText(field(d, 'code'), state.code);
     try { d.showModal(); } catch (_e) { /* already open or unsupported */ }
+    keepFieldInView(d);
   };
 
   window.rptRevokeCancel = function () {

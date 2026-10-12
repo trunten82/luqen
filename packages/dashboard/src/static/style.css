@@ -4083,6 +4083,18 @@ html[data-density="plain"] .data-table th {
   margin: var(--space-md) 0;
 }
 .rpt-dismiss-dialog__preview dd { margin: 0; font-weight: 600; }
+/* 89-11 (D-15 Q1 item 3, D-02): the dialog is the scroll container; its footer stays in view at
+   open, over the dialog's bottom padding, opaque in both themes. scroll-padding keeps focus
+   scrolling (textarea, error) above it. Scoped: the global .modal__footer is unchanged. */
+.rpt-dismiss-dialog { scroll-padding-bottom: calc(var(--space-8) + var(--space-lg)); }
+.rpt-dismiss-dialog .modal__footer {
+  position: sticky;
+  /* Chromium insets the sticky edge by the scroll container's padding; reach the dialog's edge. */
+  bottom: calc(-1 * var(--space-xl));
+  background-color: var(--bg-primary);
+  padding-bottom: var(--space-xl);
+  margin-bottom: calc(-1 * var(--space-xl));
+}
 
 /* Phase 89 Plan 05 — the Dismissed findings section (details at the end of the Issues panel) */
 .rpt-dismissed { margin-top: var(--space-lg); }
@@ -4125,6 +4137,23 @@ details[open] > .rpt-dismissed__summary::before { transform: rotate(90deg); }
 /* Revoked rows carry .rpt-text--muted, but `.data-table td` sets its own colour and outranks that
    single-class utility, so without this rule the rows are muted in markup and not on screen. */
 .rpt-dismissed td.rpt-text--muted { color: var(--text-muted); }
+/* 89-11 (D-15 Q1 item 4, D-07): desktop only. The 8-column revoked table squeezed the rule code
+   (break-all broke it per character over up to 11 lines) and collapsed the Comment column. The
+   <=767px card layout above is untouched. */
+@media (min-width: 768px) {
+  .rpt-dismissed .data-table th { white-space: normal; padding-left: var(--space-sm); padding-right: var(--space-sm); }
+  .rpt-dismissed .data-table td { padding-left: var(--space-sm); padding-right: var(--space-sm); }
+  .rpt-dismissed .data-table td:first-child { min-width: 11rem; }
+  .rpt-dismissed .data-table td:first-child .rpt-code { word-break: normal; overflow-wrap: anywhere; }
+  .rpt-dismissed .data-table .cell--wrap { min-width: 8rem; }
+  .rpt-dismissed .data-table .cell--url { max-width: 8rem; }
+}
+/* 89-11 (D-15 Q1 item 5, D-11): room under the report's top-level tab panels for the fixed
+   assistant launcher, only when it is on the page and only on screen (the child combinator keeps
+   the nested compliance sub-panels from adding it twice). The launcher itself is unchanged. */
+@media screen {
+  body:has(#agent-launch) .rpt-shell__panels > .rpt-tab-panel { padding-bottom: calc(var(--space-8) + var(--space-md)); }
+}
 
 /* ── Severity badge ───────────────────────────────────────── */
 .rpt-severity { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; }

@@ -368,6 +368,21 @@ function revokeDialogOf(html: string): string {
   return m![0];
 }
 
+describe('mark dialog — together text (89-11 item 6)', () => {
+  it('the mark dialog carries the together text as data in every locale, with no raw key', () => {
+    for (const locale of ['en', 'de', 'es', 'fr', 'it', 'pt'] as const) {
+      const html = render({ locale });
+      const m = /<dialog id="issue-dismiss-dialog"[\s\S]*?<\/dialog>/.exec(html);
+      expect(m, `${locale}: mark dialog rendered`).not.toBeNull();
+      const open = m![0].slice(0, m![0].indexOf('>') + 1);
+      const want = t('issueDismissals.dialog.preview.together', locale);
+      expect(want, locale).not.toBe('issueDismissals.dialog.preview.together');
+      expect(open, locale).toContain(`data-preview-together="${Handlebars.Utils.escapeExpression(want)}"`);
+      expect(open, locale).not.toContain('issueDismissals.');
+    }
+  });
+});
+
 describe('revoke dialog', () => {
   it('a permitted viewer gets the revoke dialog with every translated string as data', () => {
     const dialog = revokeDialogOf(render({ dismissals: TWO_ACTIVE_ONE_REVOKED }));
@@ -449,6 +464,25 @@ describe('revoke dialog', () => {
     expect(html).toContain('id="rpt-dismissed"');
     expect(html).toContain('Rendered by a script after load');
     expect(html).toContain('Revoked by');
+  });
+
+  // 89-11 item 1 (D-15 Q1, second-path rule): revoke shares the client's status map with mark,
+  // so a mark-worded VALUE in any revoke data-err-* slot is shown to someone revoking.
+  it('the revoke dialog carries no mark-only error text', () => {
+    const MARK_ONLY = ['issueDismissals.error.invalid', 'issueDismissals.error.conflictMark', 'issueDismissals.error.noMatch'];
+    for (const locale of ['en', 'de', 'es', 'fr', 'it', 'pt'] as const) {
+      const dialog = revokeDialogOf(render({ locale, dismissals: TWO_ACTIVE_ONE_REVOKED }));
+      const open = dialog.slice(0, dialog.indexOf('>') + 1);
+      const values = [...open.matchAll(/data-err-[a-z-]+="([^"]*)"/g)].map((m) => m[1]!);
+      expect(values.length, locale).toBeGreaterThanOrEqual(9); // positive control: the slots were read
+      const forbidden = new Set<string>();
+      for (const key of MARK_ONLY) {
+        forbidden.add(Handlebars.Utils.escapeExpression(t(key, locale)));
+        forbidden.add(Handlebars.Utils.escapeExpression(t(key, 'en')));
+      }
+      for (const v of values) expect(forbidden.has(v), `${locale}: mark-only text in the revoke dialog: ${v}`).toBe(false);
+      expect(open, locale).toContain(`data-err-invalid="${Handlebars.Utils.escapeExpression(t('issueDismissals.error.invalidRevoke', locale))}"`);
+    }
   });
 
   it('every locale renders the revoke dialog with no raw key visible', () => {

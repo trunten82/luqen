@@ -1753,7 +1753,8 @@
         "error": "Não foi possível verificar o que isto abrange. Tente novamente.",
         "retry": "Tentar novamente",
         "refused": "Esta constatação não tem um elemento específico e não pode ser descartada.",
-        "alreadyDismissed": "Esta regra já foi descartada para este elemento deste site, então não há nada a descartar. Recarregue a página para vê-la em Constatações descartadas."
+        "alreadyDismissed": "Esta regra já foi descartada para este elemento deste site, então não há nada a descartar. Recarregue a página para vê-la em Constatações descartadas.",
+        "together": "Todas as ocorrências contadas acima são descartadas juntas, incluindo as que aparecem listadas separadamente neste relatório."
       },
       "revoke": {
         "title": "Revogar descarte",
@@ -1783,7 +1784,8 @@
       "actions": "Ações"
     },
     "actor": {
-      "apiKey": "Chave de API"
+      "apiKey": "Chave de API",
+      "apiKeyNamed": "Chave de API: {{name}}"
     },
     "allDismissed": "Todas as constatações deste relatório foram descartadas como falsos positivos. Veja Constatações descartadas abaixo.",
     "toast": {
@@ -1794,6 +1796,7 @@
     },
     "error": {
       "invalid": "Esta constatação não pode ser descartada, ou o motivo não é válido. Verifique o motivo e tente novamente.",
+      "invalidRevoke": "Este descarte não pode ser revogado, ou o comentário não é válido. Verifique o comentário e tente novamente.",
       "session": "Sua sessão expirou. Entre novamente e repita a ação.",
       "forbidden": "Você não tem permissão para fazer isto.",
       "notFound": "Este relatório ou descarte não existe mais. Recarregue a página.",

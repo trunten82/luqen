@@ -3,13 +3,16 @@ import { mayTouchDismissalOrg } from '../services/issue-dismissals/scan-access.j
 import { toSiteKey } from '../services/issue-dismissals/site-key.js';
 import {
   buildDismissalsView,
+  hasApiKeyActor,
+  type ApiKeyLabels,
   type DismissalsView,
 } from '../services/issue-dismissals/dismissals-view.js';
+import type { IssueDismissal } from '../db/interfaces/issue-dismissal-repository.js';
 import {
   DISMISSAL_COMMENT_MAX_LENGTH,
   DISMISSAL_REASON_MAX_LENGTH,
 } from '../services/issue-dismissals/validate-input.js';
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyBaseLogger, FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { requirePermission } from '../auth/middleware.js';
 import { Type } from '@sinclair/typebox';
 import { readFile, unlink } from 'node:fs/promises';
@@ -193,6 +196,32 @@ interface ReportsQuery {
 }
 
 const PAGE_SIZE = 20;
+
+/**
+ * 89-11 (D-15 Q1, D-12): the label of each API key the Dismissed section may NAME. Only the
+ * SCAN org's own key rows are read, so a system key or another org's key is never named on
+ * this org's report (it falls back to the generic "API key"). Read once, and only when a row
+ * carries an API-key actor; a failed read degrades to generic labels, never drops the section.
+ */
+async function scanOrgKeyLabels(
+  storage: StorageAdapter,
+  scan: { readonly id: string; readonly orgId: string },
+  rows: readonly IssueDismissal[],
+  log: FastifyBaseLogger,
+): Promise<ApiKeyLabels> {
+  if (!hasApiKeyActor(rows)) return new Map();
+  try {
+    const keys = await storage.apiKeys.listKeys(scan.orgId);
+    return new Map(keys.filter((k) => k.orgId === scan.orgId).map((k) => [k.id, k.label] as const));
+  } catch (err) {
+    // Scan id and error NAME only: driver messages can quote their input.
+    log.warn(
+      { scanId: scan.id, errorName: err instanceof Error ? err.name : 'UnknownError' },
+      'Dismissed section: API key labels not readable, generic labels shown',
+    );
+    return new Map();
+  }
+}
 
 
 export async function reportRoutes(
@@ -600,9 +629,8 @@ export async function reportRoutes(
       let dismissals: DismissalsView | undefined;
       if (mayTouchDismissalOrg(request.user, scan.orgId) && storage.issueDismissals !== undefined) {
         try {
-          dismissals = buildDismissalsView(
-            await storage.issueDismissals.listForSite(scan.orgId, toSiteKey(scan.siteUrl)),
-          );
+          const rows = await storage.issueDismissals.listForSite(scan.orgId, toSiteKey(scan.siteUrl));
+          dismissals = buildDismissalsView(rows, await scanOrgKeyLabels(storage, scan, rows, request.log));
         } catch (err) {
           // Scan id and error NAME only: driver messages can quote their input.
           request.log.warn(
