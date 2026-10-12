@@ -149,7 +149,8 @@ describe('issue dismissal preview through the real server (Phase 89-01)', () => 
       headers: { authorization: `Bearer ${systemKey}` },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ occurrences: 2, pages: 2 });
+    // The mark test above dismissed this exact code and selector, so the preview flags it (89-04).
+    expect(res.json()).toEqual({ occurrences: 2, pages: 2, alreadyDismissed: true });
   });
 
   it('org-scoped admin api key is refused on preview while the permission is dark', async () => {
