@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { guidelineHasChild } from '../../services/branding-child.js';
+import { guidelineInScope } from '../admin/branding-guideline-scope.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../../db/index.js';
@@ -236,12 +238,19 @@ export async function brandingApiRoutes(
           201: ItemEnvelope(GuidelineShape),
           400: ErrorEnvelope,
           401: ErrorEnvelope,
+          403: ErrorEnvelope,
         },
       },
     },
     async (request: FastifyRequest<{ Body: CreateGuidelineBody }>, reply: FastifyReply) => {
       const orgId = getOrgId(request);
       const { name, description } = request.body ?? {};
+
+      // An org-less caller resolves to org 'system'; only a global admin may
+      // add to the shared 'system' library. No target guideline exists, so 403.
+      if (!guidelineInScope(request.user, orgId, 'edit')) {
+        return reply.code(403).send({ error: 'Forbidden' });
+      }
 
       if (typeof name !== 'string' || name.trim() === '') {
         return reply.code(400).send({ error: 'name is required' });
@@ -278,7 +287,8 @@ export async function brandingApiRoutes(
       const orgId = getOrgId(request);
       const guideline = await storage.branding.getGuideline(request.params.id);
 
-      if (guideline === null || guideline.orgId !== orgId) {
+      if (guideline === null || guideline.orgId !== orgId
+        || !guidelineInScope(request.user, guideline.orgId, 'edit')) {
         return reply.code(404).send({ error: 'Guideline not found' });
       }
 
@@ -311,7 +321,8 @@ export async function brandingApiRoutes(
       const orgId = getOrgId(request);
       const guideline = await storage.branding.getGuideline(request.params.id);
 
-      if (guideline === null || guideline.orgId !== orgId) {
+      if (guideline === null || guideline.orgId !== orgId
+        || !guidelineInScope(request.user, guideline.orgId, 'edit')) {
         return reply.code(404).send({ error: 'Guideline not found' });
       }
 
@@ -358,8 +369,13 @@ export async function brandingApiRoutes(
       const orgId = getOrgId(request);
       const guideline = await storage.branding.getGuideline(request.params.id);
 
-      if (guideline === null || guideline.orgId !== orgId) {
+      if (guideline === null || guideline.orgId !== orgId
+        || !guidelineInScope(request.user, guideline.orgId, 'edit')) {
         return reply.code(404).send({ error: 'Guideline not found' });
+      }
+
+      if (!await guidelineHasChild(storage, 'color', guideline.id, request.params.colorId)) {
+        return reply.code(404).send({ error: 'Color not found' });
       }
 
       await storage.branding.removeColor(request.params.colorId);
@@ -391,7 +407,8 @@ export async function brandingApiRoutes(
       const orgId = getOrgId(request);
       const guideline = await storage.branding.getGuideline(request.params.id);
 
-      if (guideline === null || guideline.orgId !== orgId) {
+      if (guideline === null || guideline.orgId !== orgId
+        || !guidelineInScope(request.user, guideline.orgId, 'edit')) {
         return reply.code(404).send({ error: 'Guideline not found' });
       }
 
@@ -435,8 +452,13 @@ export async function brandingApiRoutes(
       const orgId = getOrgId(request);
       const guideline = await storage.branding.getGuideline(request.params.id);
 
-      if (guideline === null || guideline.orgId !== orgId) {
+      if (guideline === null || guideline.orgId !== orgId
+        || !guidelineInScope(request.user, guideline.orgId, 'edit')) {
         return reply.code(404).send({ error: 'Guideline not found' });
+      }
+
+      if (!await guidelineHasChild(storage, 'font', guideline.id, request.params.fontId)) {
+        return reply.code(404).send({ error: 'Font not found' });
       }
 
       await storage.branding.removeFont(request.params.fontId);
@@ -468,7 +490,8 @@ export async function brandingApiRoutes(
       const orgId = getOrgId(request);
       const guideline = await storage.branding.getGuideline(request.params.id);
 
-      if (guideline === null || guideline.orgId !== orgId) {
+      if (guideline === null || guideline.orgId !== orgId
+        || !guidelineInScope(request.user, guideline.orgId, 'edit')) {
         return reply.code(404).send({ error: 'Guideline not found' });
       }
 
@@ -510,8 +533,13 @@ export async function brandingApiRoutes(
       const orgId = getOrgId(request);
       const guideline = await storage.branding.getGuideline(request.params.id);
 
-      if (guideline === null || guideline.orgId !== orgId) {
+      if (guideline === null || guideline.orgId !== orgId
+        || !guidelineInScope(request.user, guideline.orgId, 'edit')) {
         return reply.code(404).send({ error: 'Guideline not found' });
+      }
+
+      if (!await guidelineHasChild(storage, 'selector', guideline.id, request.params.selectorId)) {
+        return reply.code(404).send({ error: 'Selector not found' });
       }
 
       await storage.branding.removeSelector(request.params.selectorId);
@@ -543,7 +571,8 @@ export async function brandingApiRoutes(
       const orgId = getOrgId(request);
       const guideline = await storage.branding.getGuideline(request.params.id);
 
-      if (guideline === null || guideline.orgId !== orgId) {
+      if (guideline === null || guideline.orgId !== orgId
+        || !guidelineInScope(request.user, guideline.orgId, 'edit')) {
         return reply.code(404).send({ error: 'Guideline not found' });
       }
 
@@ -582,7 +611,8 @@ export async function brandingApiRoutes(
       const orgId = getOrgId(request);
       const guideline = await storage.branding.getGuideline(request.params.id);
 
-      if (guideline === null || guideline.orgId !== orgId) {
+      if (guideline === null || guideline.orgId !== orgId
+        || !guidelineInScope(request.user, guideline.orgId, 'edit')) {
         return reply.code(404).send({ error: 'Guideline not found' });
       }
 

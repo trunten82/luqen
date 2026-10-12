@@ -40,7 +40,7 @@ function makeCtx(overrides: Partial<GraphQLContext> = {}): GraphQLContext {
     user: { id: 'user-1', username: 'testuser', role: 'admin' },
     permissions: new Set(['scans.create', 'reports.delete', 'issues.assign', 'trends.view',
       'users.create', 'users.delete', 'users.activate', 'users.reset_password', 'users.roles',
-      'audit.view']),
+      'audit.view', 'admin.teams']),
     orgId: 'org-1',
     ...overrides,
   };
@@ -231,7 +231,7 @@ describe('GraphQL resolvers', () => {
   describe('Query.scan', () => {
     it('returns a scan when found', async () => {
       const ctx = makeCtx();
-      const scan = { id: 'scan-1', siteUrl: 'http://test.com' };
+      const scan = { id: 'scan-1', orgId: 'org-1', siteUrl: 'http://test.com' };
       ctx.storage.scans.getScan.mockResolvedValue(scan);
 
       const result = await resolvers.Query.scan({}, { id: 'scan-1' }, ctx);
@@ -265,7 +265,7 @@ describe('GraphQL resolvers', () => {
 
     it('returns empty when report file does not exist', async () => {
       const ctx = makeCtx();
-      ctx.storage.scans.getScan.mockResolvedValue({ id: '1', jsonReportPath: '/tmp/nope.json' });
+      ctx.storage.scans.getScan.mockResolvedValue({ orgId: 'org-1', id: '1', jsonReportPath: '/tmp/nope.json' });
       mockedExistsSync.mockReturnValue(false);
 
       const result = await resolvers.Query.scanIssues({}, { scanId: '1' }, ctx);
@@ -274,7 +274,7 @@ describe('GraphQL resolvers', () => {
 
     it('returns empty when scan has no jsonReportPath', async () => {
       const ctx = makeCtx();
-      ctx.storage.scans.getScan.mockResolvedValue({ id: '1' });
+      ctx.storage.scans.getScan.mockResolvedValue({ orgId: 'org-1', id: '1' });
 
       const result = await resolvers.Query.scanIssues({}, { scanId: '1' }, ctx);
       expect(result.nodes).toEqual([]);
@@ -283,7 +283,7 @@ describe('GraphQL resolvers', () => {
     it('flattens issues from all pages in the report', async () => {
       const ctx = makeCtx();
       const reportPath = '/tmp/report.json';
-      ctx.storage.scans.getScan.mockResolvedValue({ id: '1', jsonReportPath: reportPath });
+      ctx.storage.scans.getScan.mockResolvedValue({ orgId: 'org-1', id: '1', jsonReportPath: reportPath });
       mockedExistsSync.mockReturnValue(true);
 
       const report = {
@@ -309,7 +309,7 @@ describe('GraphQL resolvers', () => {
     it('filters issues by severity', async () => {
       const ctx = makeCtx();
       const reportPath = '/tmp/report.json';
-      ctx.storage.scans.getScan.mockResolvedValue({ id: '1', jsonReportPath: reportPath });
+      ctx.storage.scans.getScan.mockResolvedValue({ orgId: 'org-1', id: '1', jsonReportPath: reportPath });
       mockedExistsSync.mockReturnValue(true);
 
       const report = {
@@ -330,7 +330,7 @@ describe('GraphQL resolvers', () => {
     it('filters issues by WCAG criterion', async () => {
       const ctx = makeCtx();
       const reportPath = '/tmp/report.json';
-      ctx.storage.scans.getScan.mockResolvedValue({ id: '1', jsonReportPath: reportPath });
+      ctx.storage.scans.getScan.mockResolvedValue({ orgId: 'org-1', id: '1', jsonReportPath: reportPath });
       mockedExistsSync.mockReturnValue(true);
 
       const report = {
@@ -351,7 +351,7 @@ describe('GraphQL resolvers', () => {
     it('paginates issue results', async () => {
       const ctx = makeCtx();
       const reportPath = '/tmp/report.json';
-      ctx.storage.scans.getScan.mockResolvedValue({ id: '1', jsonReportPath: reportPath });
+      ctx.storage.scans.getScan.mockResolvedValue({ orgId: 'org-1', id: '1', jsonReportPath: reportPath });
       mockedExistsSync.mockReturnValue(true);
 
       const issues = Array.from({ length: 5 }, (_, i) => ({
@@ -369,7 +369,7 @@ describe('GraphQL resolvers', () => {
     it('returns empty when report has no pages key', async () => {
       const ctx = makeCtx();
       const reportPath = '/tmp/report.json';
-      ctx.storage.scans.getScan.mockResolvedValue({ id: '1', jsonReportPath: reportPath });
+      ctx.storage.scans.getScan.mockResolvedValue({ orgId: 'org-1', id: '1', jsonReportPath: reportPath });
       mockedExistsSync.mockReturnValue(true);
       mockedReadFile.mockResolvedValue(JSON.stringify({}));
 
@@ -381,7 +381,7 @@ describe('GraphQL resolvers', () => {
     it('returns empty when readFile throws', async () => {
       const ctx = makeCtx();
       const reportPath = '/tmp/report.json';
-      ctx.storage.scans.getScan.mockResolvedValue({ id: '1', jsonReportPath: reportPath });
+      ctx.storage.scans.getScan.mockResolvedValue({ orgId: 'org-1', id: '1', jsonReportPath: reportPath });
       mockedExistsSync.mockReturnValue(true);
       mockedReadFile.mockRejectedValue(new Error('Read error'));
 
@@ -724,6 +724,7 @@ describe('GraphQL resolvers', () => {
   describe('Mutation.assignIssue', () => {
     it('creates an assignment', async () => {
       const ctx = makeCtx();
+      ctx.storage.scans.getScan.mockResolvedValue({ id: 's1', orgId: 'org-1' });
       const input = {
         scanId: 's1',
         issueFingerprint: 'fp1',

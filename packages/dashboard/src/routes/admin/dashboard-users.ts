@@ -3,6 +3,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import type { StorageAdapter, DashboardUser } from '../../db/index.js';
 import { requirePermission } from '../../auth/middleware.js';
+import { canManageUser } from '../../services/user-scope.js';
 import { toastHtml } from './helpers.js';
 import { validateUsername, validatePassword } from '../../validation.js';
 import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
@@ -27,21 +28,6 @@ const UsernameQuery = Type.Object(
   { username: Type.Optional(Type.String()) },
   { additionalProperties: true },
 );
-
-/** Check if a non-admin user can manage the target user.
- * Org owners can only manage users who are in their org's teams (not unbound/global users). */
-async function canManageUser(storage: StorageAdapter, request: FastifyRequest, targetUserId: string): Promise<boolean> {
-  if (bypassesOrgScope(request.user)) return true;
-  const orgId = request.user?.currentOrgId;
-  if (!orgId || orgId === 'system') return false;
-  // Check if target user is in any team belonging to this org
-  const orgTeams = await storage.teams.listTeamsByOrgId(orgId);
-  for (const team of orgTeams) {
-    const detail = await storage.teams.getTeam(team.id);
-    if (detail?.members?.some((m) => m.userId === targetUserId)) return true;
-  }
-  return false;
-}
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -319,7 +305,7 @@ export async function dashboardUserRoutes(
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      if (!await canManageUser(storage, request, id)) {
+      if (!await canManageUser(storage, request.user, id)) {
         return reply.code(403).header('content-type', 'text/html').send(toastHtml('You can only manage users in your organization.', 'error'));
       }
       const body = request.body as { role?: string };
@@ -381,7 +367,7 @@ export async function dashboardUserRoutes(
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      if (!await canManageUser(storage, request, id)) {
+      if (!await canManageUser(storage, request.user, id)) {
         return reply.code(403).header('content-type', 'text/html').send(toastHtml('You can only manage users in your organization.', 'error'));
       }
 
@@ -426,7 +412,7 @@ export async function dashboardUserRoutes(
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      if (!await canManageUser(storage, request, id)) {
+      if (!await canManageUser(storage, request.user, id)) {
         return reply.code(403).header('content-type', 'text/html').send(toastHtml('You can only manage users in your organization.', 'error'));
       }
 
@@ -463,7 +449,7 @@ export async function dashboardUserRoutes(
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      if (!await canManageUser(storage, request, id)) {
+      if (!await canManageUser(storage, request.user, id)) {
         return reply.code(403).header('content-type', 'text/html').send(toastHtml('You can only manage users in your organization.', 'error'));
       }
       const user = await storage.users.getUserById(id);
@@ -521,7 +507,7 @@ export async function dashboardUserRoutes(
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      if (!await canManageUser(storage, request, id)) {
+      if (!await canManageUser(storage, request.user, id)) {
         return reply.code(403).header('content-type', 'text/html').send(toastHtml('You can only manage users in your organization.', 'error'));
       }
       const body = request.body as { newPassword?: string; confirmPassword?: string };
@@ -579,7 +565,7 @@ export async function dashboardUserRoutes(
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      if (!await canManageUser(storage, request, id)) {
+      if (!await canManageUser(storage, request.user, id)) {
         return reply.code(403).header('content-type', 'text/html').send(toastHtml('You can only manage users in your organization.', 'error'));
       }
 

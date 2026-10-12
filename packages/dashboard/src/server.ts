@@ -119,6 +119,7 @@ import mercurius from 'mercurius';
 import { schema as graphqlSchema } from './graphql/schema.js';
 import { resolvers as graphqlResolvers } from './graphql/resolvers.js';
 import type { GraphQLContext } from './graphql/resolvers.js';
+import { registerGraphqlCsrfGuard } from './graphql/csrf-guard.js';
 import { runApiKeySweep } from './api-key-sweep.js';
 import { registerMcpRoutes } from './routes/api/mcp.js';
 import { createDashboardJwtVerifier } from './mcp/verifier.js';
@@ -1414,6 +1415,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   // ── GraphQL API (mercurius) ──────────────────────────────────────────────
+  // /graphql is CSRF-token exempt (isCsrfExempt); cookie-authenticated POSTs
+  // must instead use a non-simple content type (see graphql/csrf-guard.ts).
+  registerGraphqlCsrfGuard(server, (request) => authService.hasValidApiCredential(request));
   await server.register(mercurius, {
     schema: graphqlSchema,
     resolvers: graphqlResolvers as Parameters<typeof mercurius>[1]['resolvers'],

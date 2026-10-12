@@ -141,13 +141,28 @@ export class AuthService {
   // Request authentication
   // -----------------------------------------------------------------------
 
-  async authenticateRequest(request: FastifyRequest): Promise<AuthResult> {
-    // 1. Check Authorization: Bearer header OR X-API-Key header -> try API key
+  /** The API-key token a request presents (Bearer header, else X-API-Key), if any. */
+  private apiKeyTokenFrom(request: FastifyRequest): string | undefined {
     const authHeader = request.headers.authorization;
     const xApiKey = request.headers['x-api-key'] as string | undefined;
-    const apiKeyToken = authHeader !== undefined && authHeader.startsWith('Bearer ')
+    return authHeader !== undefined && authHeader.startsWith('Bearer ')
       ? authHeader.slice(7)
       : xApiKey;
+  }
+
+  /**
+   * Will this request authenticate by API key (rather than the session cookie)?
+   * True only when the presented key actually validates — a bogus header does
+   * not count, because authenticateRequest then falls through to the cookie.
+   */
+  hasValidApiCredential(request: FastifyRequest): boolean {
+    const token = this.apiKeyTokenFrom(request);
+    return token !== undefined && token !== '' && validateApiKey(this.db, token).valid;
+  }
+
+  async authenticateRequest(request: FastifyRequest): Promise<AuthResult> {
+    // 1. Check Authorization: Bearer header OR X-API-Key header -> try API key
+    const apiKeyToken = this.apiKeyTokenFrom(request);
 
     if (apiKeyToken !== undefined && apiKeyToken !== '') {
       const result = validateApiKey(this.db, apiKeyToken);
