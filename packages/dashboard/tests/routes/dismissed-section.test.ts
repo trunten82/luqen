@@ -560,15 +560,31 @@ describe('section styles (UI-SPEC "Proposed CSS additions", four rules)', () => 
 
   it('the summary marker rotates when open, respects reduced motion and has a visible focus outline', () => {
     expect(blocksFor('.rpt-dismissed__summary::before').join('')).toContain('transition');
+    // A transform only applies to a box that is not plain inline: without this the marker never turned
+    // (found in the browser: an open section still showed the right-pointing marker).
+    expect(blocksFor('.rpt-dismissed__summary::before').join('')).toMatch(/display:\s*inline-block/);
     expect(blocksFor('details[open] > .rpt-dismissed__summary::before').join('')).toContain('rotate(90deg)');
     expect(CSS).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{[^@]*\.rpt-dismissed__summary::before[^}]*transition:\s*none/);
     expect(blocksFor('.rpt-dismissed__summary:focus-visible').join('')).toContain('var(--focus-outline)');
     expect(blocksFor('.rpt-dismissed__summary::-webkit-details-marker').join('')).toContain('display: none');
   });
 
+  it('revoked cells really render muted: a rule that outranks `.data-table td` carries the muted token', () => {
+    // `.data-table td` (one class, one element) sets color: var(--text-primary); the bare
+    // `.rpt-text--muted` utility (one class) loses to it, so the revoked rows were muted in markup only
+    // (found by the dark-theme UAT: computed colours were identical for active and revoked cells).
+    const body = blocksFor('.rpt-dismissed td.rpt-text--muted').join('');
+    expect(body).toContain('color: var(--text-muted)');
+    const selector = '.rpt-dismissed td.rpt-text--muted';
+    const classes = (selector.match(/\./g) ?? []).length;
+    const elements = (selector.match(/(^|\s)[a-z]+/g) ?? []).length;
+    expect(classes * 10 + elements, 'specificity must exceed .data-table td (1 class, 1 element)').toBeGreaterThan(1 * 10 + 1);
+  });
+
   it('the stylesheet version served by the layout was bumped for the new rules', () => {
     const layout = readFileSync(join(VIEWS_DIR, 'layouts', 'main.hbs'), 'utf8');
     expect(layout).not.toContain('/static/style.css?v=3.4.1');
+    expect(layout).not.toContain('/static/style.css?v=3.4.2');
     expect(layout).toMatch(/\/static\/style\.css\?v=3\.4\.\d+/);
   });
 });

@@ -4099,6 +4099,7 @@ html[data-density="plain"] .data-table th {
 .rpt-dismissed__summary::-webkit-details-marker { display: none; }
 .rpt-dismissed__summary::before {
   content: '\25B6';
+  display: inline-block; /* a transform does not apply to a plain inline box, so the open marker never turned */
   margin-right: var(--space-sm);
   font-size: var(--font-size-xs);
   transition: transform 0.15s;
@@ -4121,6 +4122,9 @@ details[open] > .rpt-dismissed__summary::before { transform: rotate(90deg); }
   color: var(--text-muted);
   margin: var(--space-sm) 0 var(--space-md);
 }
+/* Revoked rows carry .rpt-text--muted, but `.data-table td` sets its own colour and outranks that
+   single-class utility, so without this rule the rows are muted in markup and not on screen. */
+.rpt-dismissed td.rpt-text--muted { color: var(--text-muted); }
 
 /* ── Severity badge ───────────────────────────────────────── */
 .rpt-severity { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; }
