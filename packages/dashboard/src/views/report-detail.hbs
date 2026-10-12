@@ -450,6 +450,46 @@
   <div class="alert alert--info" role="status">{{t "reportDetail.noIssues"}}</div>
   {{/if}}
 
+  {{! ── Dismissed findings (Phase 89 Plan 05, FP-15, D-07) ───────────────────
+       LAST child of the Issues panel so it still renders when every group is dismissed.
+       Server-rendered from the SCAN's org and site (routes/reports.ts); the key is absent
+       when the site has no dismissal or the viewer may not touch the scan's org. Reason,
+       selector and actor are free text: DOUBLE-brace (escaped) output only, never triple. }}
+  {{#if dismissals}}
+  <details class="rpt-dismissed" id="rpt-dismissed">
+    <summary class="rpt-dismissed__summary">{{t "issueDismissals.section.summary" active=dismissals.activeCount revoked=dismissals.revokedCount}}</summary>
+    <p class="rpt-dismissed__intro">{{t "issueDismissals.section.intro"}}</p>
+
+    <h4 class="rpt-dismissed__heading">{{t "issueDismissals.section.activeHeading"}}</h4>
+    {{#if dismissals.active.length}}
+    <div class="table-responsive" role="region" aria-label="{{t 'issueDismissals.section.activeHeading'}}" tabindex="0">
+      <table class="data-table">
+        <thead><tr>
+          <th scope="col">{{t "issueDismissals.col.rule"}}</th>
+          {{#if perm.reportsViewTechnical}}<th scope="col">{{t "issueDismissals.col.element"}}</th>{{/if}}
+          <th scope="col">{{t "issueDismissals.col.reason"}}</th>
+          <th scope="col">{{t "issueDismissals.col.dismissedBy"}}</th>
+          <th scope="col">{{t "issueDismissals.col.dismissedOn"}}</th>
+        </tr></thead>
+        <tbody>
+          {{#each dismissals.active}}
+          <tr>
+            <td data-label="{{t 'issueDismissals.col.rule'}}"><span class="rpt-code">{{code}}</span></td>
+            {{#if @root.perm.reportsViewTechnical}}<td class="cell--url" data-label="{{t 'issueDismissals.col.element'}}" title="{{selector}}"><span class="rpt-code">{{selector}}</span></td>{{/if}}
+            <td class="cell--wrap" data-label="{{t 'issueDismissals.col.reason'}}">{{reason}}</td>
+            <td data-label="{{t 'issueDismissals.col.dismissedBy'}}" title="{{actor}}">{{#if actorIsApiKey}}{{t "issueDismissals.actor.apiKey"}}{{else}}{{actor}}{{/if}}</td>
+            <td data-label="{{t 'issueDismissals.col.dismissedOn'}}"><time datetime="{{createdAtIso}}">{{createdAtDisplay}}</time></td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+    {{else}}
+    <p class="rpt-text--muted">{{t "issueDismissals.section.noActive"}}</p>
+    {{/if}}
+  </details>
+  {{/if}}
+
 </div>
 
 {{! ── Tab 3: Templates (only if template issues exist) ──────────────────── }}

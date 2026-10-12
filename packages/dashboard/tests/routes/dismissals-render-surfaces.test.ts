@@ -81,7 +81,32 @@ async function detail(scanId: string = ctx.scanId): Promise<DetailView> {
   return (await driveReportDetail(ctx, scanId)) as DetailView;
 }
 
+/**
+ * Phase 89 Plan 05 (D-07): the authenticated report page lists the dismissals themselves, so
+ * the view data legitimately carries each dismissed rule, element and reason under the new
+ * `dismissals` key. The Phase 88 assertions below are about the ISSUE data and the raw report
+ * blob, so they read the view data WITHOUT that key. The positive pin that the key carries
+ * the rows is the first test of this file; nothing here is weakened for any other key.
+ */
+function withoutDismissals(data: unknown): string {
+  const { dismissals: _listed, ...rest } = data as Record<string, unknown>;
+  return JSON.stringify(rest);
+}
+
 describe('report detail (/reports/:id) applies the scan org active dismissals', () => {
+  it('dismissals.active carries the dismissed selector and the reason', async () => {
+    await dismiss(DISMISS_PARTIAL);
+    const data = (await detail()) as unknown as {
+      dismissals: { activeCount: number; revokedCount: number; active: ReadonlyArray<Record<string, unknown>> };
+    };
+    expect(data.dismissals.activeCount).toBe(1);
+    expect(data.dismissals.revokedCount).toBe(0);
+    expect(data.dismissals.active).toHaveLength(1);
+    expect(data.dismissals.active[0]!['selector']).toBe(SEL_DISMISSED);
+    expect(data.dismissals.active[0]!['reason']).toBe(REASON_TOKEN);
+    expect(data.dismissals.active[0]!['code']).toBe(DISMISS_PARTIAL.code);
+  });
+
   it('report detail drops a dismissed finding from the Issues, Templates and Pages tabs', async () => {
     await dismiss(DISMISS_PARTIAL);
     const data = await detail();
@@ -99,7 +124,7 @@ describe('report detail (/reports/:id) applies the scan org active dismissals', 
       notice: AFTER_PARTIAL.notices,
     });
 
-    const whole = JSON.stringify(data);
+    const whole = withoutDismissals(data);
     assertDismissedAbsent(whole, 'partial');
     assertSiblingPresent(whole);
   });
@@ -111,7 +136,10 @@ describe('report detail (/reports/:id) applies the scan org active dismissals', 
     expect(typeof data.scan['jsonReport']).toBe('string');
     expect(data.scan['jsonReport'] as string).not.toContain(SEL_DISMISSED.replace(/^#/, ''));
     expect(data.scan['jsonReport'] as string).toContain(SEL_SIBLING.replace(/^#/, ''));
-    expect(JSON.stringify(data)).not.toContain(REASON_TOKEN);
+    // Narrowed (Plan 05): the reason is listed under `dismissals` on purpose (D-07); everywhere
+    // ELSE in the view data - the row, the report, the matrices - it must still be absent.
+    expect(JSON.stringify(data.scan)).not.toContain(REASON_TOKEN);
+    expect(withoutDismissals(data)).not.toContain(REASON_TOKEN);
   });
 
   it('report detail shows a fully dismissed criterion as not failing in the compliance and regulation matrices', async () => {
@@ -134,7 +162,7 @@ describe('report detail (/reports/:id) applies the scan org active dismissals', 
     const reg = data.reportData.regulationMatrix.find((r) => r.regulationId === 'TEST-REG');
     expect(reg?.status).toBe('partial');
     expect((reg?.violatedRequirements ?? []).map((v) => v.wcagCriterion)).toEqual(['2.4.4']);
-    assertDismissedAbsent(JSON.stringify(data), 'both');
+    assertDismissedAbsent(withoutDismissals(data), 'both');
   });
 
   it('report detail keeps a criterion failing while one same-code sibling remains', async () => {
@@ -147,7 +175,7 @@ describe('report detail (/reports/:id) applies the scan org active dismissals', 
     expect(criteria).toContain('1.4.3');
     expect(criteria).not.toContain('1.1.1');
     expect(eu?.reviewStatus).toBe('fail');
-    const whole = JSON.stringify(data);
+    const whole = withoutDismissals(data);
     assertDismissedAbsent(whole, 'both');
     assertSiblingPresent(whole);
     expect(whole).not.toContain(SEL_ALT.replace(/^#/, ''));
@@ -173,9 +201,9 @@ describe('report detail (/reports/:id) applies the scan org active dismissals', 
       expect(res.statusCode).toBe(200);
       const body = (JSON.parse(res.body) as { data: DetailView }).data;
       // Fabrikam's report: Fabrikam's dismissal applies (selector gone) ...
-      assertDismissedAbsent(JSON.stringify(body), 'partial');
+      assertDismissedAbsent(withoutDismissals(body), 'partial');
       // ... and Northwind's dismissal of the 1.1.1 finding on the same URL does NOT.
-      const whole = JSON.stringify(body);
+      const whole = withoutDismissals(body);
       expect(whole).toContain(SEL_ALT.replace(/^#/, ''));
       assertSiblingPresent(whole);
     } finally {
