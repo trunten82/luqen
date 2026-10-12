@@ -1,4 +1,9 @@
-import { bypassesOrgScope } from '../permissions.js';
+import { bypassesOrgScope, hasPermission } from '../permissions.js';
+import { mayTouchDismissalOrg } from '../services/issue-dismissals/scan-access.js';
+import {
+  DISMISSAL_COMMENT_MAX_LENGTH,
+  DISMISSAL_REASON_MAX_LENGTH,
+} from '../services/issue-dismissals/validate-input.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { requirePermission } from '../auth/middleware.js';
 import { Type } from '@sinclair/typebox';
@@ -574,6 +579,15 @@ export async function reportRoutes(
         }
       }
 
+      // Phase 89 D-01 (recorded deviation): the dismissal controls are gated HERE, not by a
+      // global perm flag, because the gate also depends on the scan's org. The key is absent
+      // unless the viewer holds the permission AND mayTouchDismissalOrg allows this scan's org
+      // (the predicate the mark route enforces), so nothing renders that the API would refuse.
+      const dismissalControls =
+        hasPermission(request, 'issues.dismiss') && mayTouchDismissalOrg(request.user, scan.orgId)
+          ? { reasonMax: DISMISSAL_REASON_MAX_LENGTH, commentMax: DISMISSAL_COMMENT_MAX_LENGTH }
+          : undefined;
+
       return reply.view('report-detail.hbs', {
         pageTitle: `Report — ${scan.siteUrl}`,
         currentPath: `/reports/${id}`,
@@ -581,6 +595,7 @@ export async function reportRoutes(
         scan: viewScan,
         liveBadgeId,
         reportData,
+        ...(dismissalControls !== undefined ? { dismissalControls } : {}),
         complianceStatus: verdictColourClass,
         verdictSentence,
         verdictMeta,

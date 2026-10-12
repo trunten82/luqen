@@ -413,6 +413,9 @@
             <button type="button" class="rpt-assign-btn" data-action="rptAssignIssue" data-code="{{code}}" data-selector="{{selector}}" data-message="{{message}}" data-severity="{{type}}" data-wcag-criterion="{{wcagCriterion}}" data-wcag-title="{{wcagTitle}}" title="Assign this issue">{{t "reportDetail.assign"}}</button>
             {{/unless}}
             {{/if}}
+            {{#if @root.dismissalControls}}
+            <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" data-action="rptDismissIssue" data-code="{{code}}" data-selector="{{selector}}" data-message="{{message}}" data-criterion="{{../criterion}}" aria-label="{{t 'issueDismissals.action.dismissAria' code=code}}" title="{{t 'issueDismissals.action.dismissTitle'}}">{{t "issueDismissals.action.dismiss"}}</button>
+            {{/if}}
           </div>
           {{#if ../../perm.reportsViewTechnical}}
           {{#if selector}}<div class="rpt-issue-item__detail"><span class="rpt-code">{{selector}}</span></div>{{/if}}
@@ -680,6 +683,8 @@
 {{/if}}
 
 {{/if}}
+
+{{#if dismissalControls}}{{> issue-dismiss-dialog}}{{/if}}
 
 {{#if assignees}}<script>window.__luqenAssignees = {{{json assignees}}};</script>{{/if}}
 

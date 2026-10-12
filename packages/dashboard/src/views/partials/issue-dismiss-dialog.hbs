@@ -1,0 +1,71 @@
+{{!-- Phase 89 Plan 04 — mark-as-false-positive dialog (UI-SPEC Surface 2, FP-14).
+     Native <dialog>.showModal(), one shared instance per report page, rendered ONLY when the
+     route supplied dismissalControls (permission AND org access). Behaviour lives in
+     /static/issue-dismissals.js, reached through the data-action delegation in app.js.
+     Every string the script needs travels already translated in data-* attributes; runtime
+     numbers use the __COUNT__ / __FAILED__ sentinels. No script element, no inline handlers. --}}
+<dialog id="issue-dismiss-dialog" class="rpt-dismiss-dialog" aria-labelledby="issue-dismiss-title"
+        data-scan-id="{{scan.id}}"
+        data-reason-max="{{dismissalControls.reasonMax}}"
+        data-label-close="{{t 'common.close'}}"
+        data-msg-marked="{{t 'issueDismissals.toast.marked' count='__COUNT__'}}"
+        data-msg-recompute-failed="{{t 'issueDismissals.toast.recomputeFailed' failed='__FAILED__'}}"
+        data-msg-recompute-incomplete="{{t 'issueDismissals.toast.recomputeIncomplete'}}"
+        data-msg-saving="{{t 'issueDismissals.dialog.mark.saving'}}"
+        data-msg-confirm="{{t 'issueDismissals.dialog.mark.confirm'}}"
+        data-preview-loading="{{t 'issueDismissals.dialog.preview.loading'}}"
+        data-preview-none="{{t 'issueDismissals.dialog.preview.none'}}"
+        data-preview-error="{{t 'issueDismissals.dialog.preview.error'}}"
+        data-preview-refused="{{t 'issueDismissals.dialog.preview.refused'}}"
+        data-preview-already="{{t 'issueDismissals.dialog.preview.alreadyDismissed'}}"
+        data-err-invalid="{{t 'issueDismissals.error.invalid'}}"
+        data-err-session="{{t 'issueDismissals.error.session'}}"
+        data-err-forbidden="{{t 'issueDismissals.error.forbidden'}}"
+        data-err-not-found="{{t 'issueDismissals.error.notFound'}}"
+        data-err-conflict="{{t 'issueDismissals.error.conflictMark'}}"
+        data-err-no-match="{{t 'issueDismissals.error.noMatch'}}"
+        data-err-rate-limited="{{t 'issueDismissals.error.rateLimited'}}"
+        data-err-unavailable="{{t 'issueDismissals.error.unavailable'}}"
+        data-err-generic="{{t 'issueDismissals.error.generic'}}">
+  <form method="dialog" novalidate>
+    <div class="modal__header">
+      <h3 class="modal__title" id="issue-dismiss-title">{{t "issueDismissals.dialog.mark.title"}}</h3>
+    </div>
+    <div class="modal__body">
+      <dl>
+        <dt>{{t "issueDismissals.dialog.mark.ruleLabel"}}</dt>
+        <dd><span class="rpt-code" data-field="code"></span></dd>
+        {{#if perm.reportsViewTechnical}}
+        <dt>{{t "issueDismissals.dialog.mark.elementLabel"}}</dt>
+        <dd><span class="rpt-code" data-field="selector"></span></dd>
+        {{/if}}
+        <dt>{{t "issueDismissals.dialog.mark.messageLabel"}}</dt>
+        <dd data-field="message"></dd>
+      </dl>
+      <div class="alert alert--info"><div class="alert__body">{{t "issueDismissals.dialog.mark.scope"}}</div></div>
+      <div role="status" aria-live="polite" aria-busy="false" data-preview-region>
+        <dl class="rpt-dismiss-dialog__preview">
+          <dt>{{t "issueDismissals.dialog.preview.occurrences"}}</dt>
+          <dd data-preview="occurrences">&mdash;</dd>
+          <dt>{{t "issueDismissals.dialog.preview.pages"}}</dt>
+          <dd data-preview="pages">&mdash;</dd>
+        </dl>
+        <p class="form-hint" data-preview="status"></p>
+        <button type="button" class="btn btn--ghost btn--sm is-hidden" data-action="rptDismissRetryPreview">{{t "issueDismissals.dialog.preview.retry"}}</button>
+      </div>
+      <p>{{t "issueDismissals.dialog.mark.effect"}}</p>
+      <div class="form-group">
+        <label for="issue-dismiss-reason">{{t "issueDismissals.dialog.mark.reasonLabel"}} <span class="required" aria-hidden="true">*</span></label>
+        <textarea id="issue-dismiss-reason" rows="4" maxlength="{{dismissalControls.reasonMax}}" required aria-required="true"
+                  aria-describedby="issue-dismiss-reason-hint issue-dismiss-error" autofocus
+                  data-action-input="rptDismissReasonInput"></textarea>
+        <p class="form-hint" id="issue-dismiss-reason-hint">{{t "issueDismissals.dialog.mark.reasonHint"}} <span data-reason-count>0</span> / {{dismissalControls.reasonMax}}</p>
+      </div>
+      <div class="form-error" id="issue-dismiss-error" role="alert"></div>
+    </div>
+    <div class="modal__footer">
+      <button type="button" class="btn btn--ghost" data-action="rptDismissCancel">{{t "common.cancel"}}</button>
+      <button type="button" class="btn btn--primary" data-action="rptDismissConfirm" disabled>{{t "issueDismissals.dialog.mark.confirm"}}</button>
+    </div>
+  </form>
+</dialog>
