@@ -140,6 +140,8 @@ export async function authRoutes(
         session.set('username', 'admin');
         session.set('role', 'admin');
         session.set('authMethod', 'api-key');
+        // The key's row id (never the secret), so dismissals made in this session name the key.
+        if (check.keyId !== undefined) session.set('apiKeyId', check.keyId);
         session.set('bootId', authService.getBootId());
 
         void storage?.audit.log({ actor: 'admin', actorId: 'api-key', action: 'login.success', resourceType: 'session', ...(check.keyId ? { resourceId: check.keyId } : {}), details: 'API key login', ipAddress: request.ip });

@@ -14,6 +14,12 @@ export interface AuthUser {
    */
   readonly orgScopedApiKey?: boolean;
   /**
+   * api_keys row id of the key that authenticated this request — never the secret. Absent for
+   * password, SSO and pre-change sessions. `id` stays 'api-key' for every key (four sites use it
+   * as a discriminator), so this is the only place a request names WHICH key (D-12 / IN-02).
+   */
+  readonly apiKeyId?: string;
+  /**
    * Phase 32 Plan 06 — per-org chat companion display name. Populated by the
    * org-context preHandler in server.ts after resolving the user's current
    * org. Omitted when the org has no custom name set (layout falls back to
@@ -51,13 +57,14 @@ export function createAuthGuard(authService: AuthService) {
       return;
     }
 
-    const authUser = result.user! as { id: string; username: string; role?: string; currentOrgId?: string; orgScopedApiKey?: boolean };
+    const authUser = result.user! as { id: string; username: string; role?: string; currentOrgId?: string; orgScopedApiKey?: boolean; apiKeyId?: string };
     request.user = {
       id: authUser.id,
       username: authUser.username,
       role: authUser.role ?? 'viewer',
       ...(authUser.currentOrgId !== undefined ? { currentOrgId: authUser.currentOrgId } : {}),
       ...(authUser.orgScopedApiKey === true ? { orgScopedApiKey: true } : {}),
+      ...(typeof authUser.apiKeyId === 'string' && authUser.apiKeyId !== '' ? { apiKeyId: authUser.apiKeyId } : {}),
     };
   };
 }

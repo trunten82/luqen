@@ -160,6 +160,7 @@ export class AuthService {
             username: 'api-key',
             role: result.role ?? 'admin',
             ...(isOrgScoped ? { currentOrgId: result.orgId, orgScopedApiKey: true } : {}),
+            ...(result.keyId !== undefined ? { apiKeyId: result.keyId } : {}),
           },
         };
       }
@@ -175,13 +176,23 @@ export class AuthService {
       const username = session.get('username') as string | undefined;
       const role = session.get('role') as string | undefined;
       const sessionBootId = session.get('bootId') as string | undefined;
+      // A /login API-key session stores the key's row id (never the secret) so its dismissals
+      // stay attributable; sessions opened before that carry none.
+      const sessionKeyId = session.get('apiKeyId');
 
       if (userId !== undefined && username !== undefined) {
         // Verify session belongs to this database instance
         if (sessionBootId === this.getBootId()) {
           return {
             authenticated: true,
-            user: { id: userId, username, role: role ?? 'user' },
+            user: {
+              id: userId,
+              username,
+              role: role ?? 'user',
+              ...(userId === 'api-key' && typeof sessionKeyId === 'string' && sessionKeyId !== ''
+                ? { apiKeyId: sessionKeyId }
+                : {}),
+            },
           };
         }
 

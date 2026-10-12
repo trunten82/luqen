@@ -77,8 +77,18 @@ async function recomputeAndLog(
   return result;
 }
 
+/**
+ * Who is acting (D-12 / IN-02). A password user is recorded as before. An API key authenticates as
+ * the shared user id 'api-key', which would make every key's dismissals one anonymous actor in an
+ * append-only history, so a key is recorded as `api-key:<api_keys row id>` (never the secret); a
+ * /login session opened before the key id was stored records `api-key:session`.
+ */
 function actorOf(request: FastifyRequest): { actor: string; actorId?: string } {
   const user = request.user;
+  if (user?.id === 'api-key') {
+    const named = `api-key:${user.apiKeyId ?? 'session'}`;
+    return { actor: named, actorId: named };
+  }
   return {
     actor: user?.username ?? user?.id ?? 'unknown',
     ...(user?.id !== undefined ? { actorId: user.id } : {}),
