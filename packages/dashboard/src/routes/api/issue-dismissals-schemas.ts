@@ -74,17 +74,22 @@ export const DismissalWithEventsSchema = Type.Composite([
 
 export const ListResponse = Type.Object({ dismissals: Type.Array(DismissalWithEventsSchema) });
 
+/**
+ * Length limits come from validate-input.ts (D-13 / IN-04): one source of truth. The schema caps the
+ * RAW string and the validator trims first, so a limit-length value padded with spaces is refused
+ * here with a generic 400 (browsers trim before sending).
+ */
 export const MarkBody = Type.Object(
   {
-    code: Type.String({ maxLength: 300 }),
-    selector: Type.String({ maxLength: 4000 }),
-    reason: Type.String({ maxLength: 4000 }),
+    code: Type.String({ maxLength: DISMISSAL_CODE_MAX_LENGTH }),
+    selector: Type.String({ maxLength: DISMISSAL_SELECTOR_MAX_LENGTH }),
+    reason: Type.String({ maxLength: DISMISSAL_REASON_MAX_LENGTH }),
   },
   { additionalProperties: false },
 );
 
 export const RevokeBody = Type.Object(
-  { comment: Type.Optional(Type.String({ maxLength: 4000 })) },
+  { comment: Type.Optional(Type.String({ maxLength: DISMISSAL_COMMENT_MAX_LENGTH })) },
   { additionalProperties: false },
 );
 
