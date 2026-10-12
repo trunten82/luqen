@@ -14,6 +14,11 @@ import { validatePassword, validateUsername } from '../validation.js';
 import { validateScanUrl, VALID_STANDARDS } from '../services/scan-service.js';
 import { retagScansForSite } from '../services/branding-retag.js';
 import type { BrandingOrchestrator } from '../services/branding/branding-orchestrator.js';
+import { bypassesOrgScope } from '../permissions.js';
+import {
+  getScanInOrg, getScanForDelete, getScanForAssignment, getAssignmentInOrg, getTeamInOrg,
+  getGuidelineInOrg, requireGuidelineInOrg, requireBrandChildInOrg, requireCanManageUser, listOrgsInScope,
+} from './org-scope.js';
 
 // ---------------------------------------------------------------------------
 // Context typing
@@ -21,7 +26,13 @@ import type { BrandingOrchestrator } from '../services/branding/branding-orchest
 
 export interface GraphQLContext {
   readonly storage: StorageAdapter;
-  readonly user: { id: string; username: string; role: string } | undefined;
+  readonly user: {
+    id: string;
+    username: string;
+    role: string;
+    readonly currentOrgId?: string;
+    readonly orgScopedApiKey?: boolean;
+  } | undefined;
   readonly permissions: Set<string>;
   readonly orgId: string;
   readonly brandingOrchestrator: BrandingOrchestrator;
@@ -148,7 +159,7 @@ export const resolvers = {
       ctx: GraphQLContext,
     ) => {
       requireAuth(ctx);
-      return await ctx.storage.scans.getScan(args.id) ?? null;
+      return await getScanInOrg(ctx, args.id);
     },
 
     // ── Issues ─────────────────────────────────────────────────────────
@@ -160,7 +171,7 @@ export const resolvers = {
     ) => {
       requireAuth(ctx);
 
-      const scan = await ctx.storage.scans.getScan(args.scanId);
+      const scan = await getScanInOrg(ctx, args.scanId);
       if (scan === null) {
         return { nodes: [], totalCount: 0, pageInfo: buildPageInfo(0, 0, 0) };
       }
@@ -279,7 +290,12 @@ export const resolvers = {
       ctx: GraphQLContext,
     ) => {
       requirePerm(ctx, 'users.create', 'users.delete', 'users.activate', 'users.reset_password', 'users.roles');
-      return await ctx.storage.users.listUsers();
+      // Mirrors GET /admin/dashboard-users: non-global-admins see their org's users.
+      const currentOrgId = ctx.user?.currentOrgId;
+      if (bypassesOrgScope(ctx.user) || !currentOrgId) {
+        return await ctx.storage.users.listUsers();
+      }
+      return await ctx.storage.users.listUsersForOrg(currentOrgId);
     },
 
     // ── Teams ──────────────────────────────────────────────────────────
@@ -289,7 +305,7 @@ export const resolvers = {
       _args: unknown,
       ctx: GraphQLContext,
     ) => {
-      requireAuth(ctx);
+      requirePerm(ctx, 'admin.teams');
       return await ctx.storage.teams.listTeams(ctx.orgId);
     },
 
@@ -298,8 +314,8 @@ export const resolvers = {
       args: { id: string },
       ctx: GraphQLContext,
     ) => {
-      requireAuth(ctx);
-      return await ctx.storage.teams.getTeam(args.id) ?? null;
+      requirePerm(ctx, 'admin.teams');
+      return await getTeamInOrg(ctx, args.id);
     },
 
     // ── Organizations ──────────────────────────────────────────────────
@@ -310,7 +326,7 @@ export const resolvers = {
       ctx: GraphQLContext,
     ) => {
       requireAuth(ctx);
-      return await ctx.storage.organizations.listOrgs();
+      return await listOrgsInScope(ctx);
     },
 
     // ── Roles ──────────────────────────────────────────────────────────
@@ -377,7 +393,7 @@ export const resolvers = {
 
     async brandingGuideline(_: unknown, args: { id: string }, ctx: GraphQLContext) {
       requirePerm(ctx, 'branding.view');
-      const g = await ctx.storage.branding.getGuideline(args.id);
+      const g = await getGuidelineInOrg(ctx, args.id);
       if (!g) return null;
       return {
         ...g,
@@ -445,11 +461,7 @@ export const resolvers = {
     ) => {
       requirePerm(ctx, 'reports.delete');
 
-      const scan = await ctx.storage.scans.getScan(args.id);
-      if (scan === null) {
-        throw new Error(`Scan not found: ${args.id}`);
-      }
-
+      await getScanForDelete(ctx, args.id);
       await ctx.storage.scans.deleteScan(args.id);
       return true;
     },
@@ -475,6 +487,7 @@ export const resolvers = {
       ctx: GraphQLContext,
     ) => {
       requirePerm(ctx, 'issues.assign');
+      await getScanForAssignment(ctx, args.input.scanId);
 
       const id = randomUUID();
       const now = new Date().toISOString();
@@ -504,10 +517,7 @@ export const resolvers = {
     ) => {
       requirePerm(ctx, 'issues.assign');
 
-      const existing = await ctx.storage.assignments.getAssignment(args.id);
-      if (existing === null) {
-        throw new Error(`Assignment not found: ${args.id}`);
-      }
+      await getAssignmentInOrg(ctx, args.id);
 
       await ctx.storage.assignments.updateAssignment(args.id, {
         status: args.status as 'open' | 'assigned' | 'in-progress' | 'fixed' | 'verified' | undefined,
@@ -529,10 +539,7 @@ export const resolvers = {
     ) => {
       requirePerm(ctx, 'issues.assign');
 
-      const existing = await ctx.storage.assignments.getAssignment(args.id);
-      if (existing === null) {
-        throw new Error(`Assignment not found: ${args.id}`);
-      }
+      await getAssignmentInOrg(ctx, args.id);
 
       await ctx.storage.assignments.deleteAssignment(args.id);
       return true;
@@ -554,7 +561,10 @@ export const resolvers = {
       if (!passwordCheck.valid) {
         throw new Error(passwordCheck.error ?? 'Invalid password');
       }
-      return await ctx.storage.users.createUser(args.username, args.password, args.role ?? 'user');
+      // Mirrors POST /admin/dashboard-users: only a global admin may create an admin.
+      const requestedRole = args.role ?? 'user';
+      const role = requestedRole === 'admin' && !bypassesOrgScope(ctx.user) ? 'user' : requestedRole;
+      return await ctx.storage.users.createUser(args.username, args.password, role);
     },
 
     deleteUser: async (
@@ -564,6 +574,7 @@ export const resolvers = {
     ) => {
       requirePerm(ctx, 'users.delete');
 
+      await requireCanManageUser(ctx, args.id);
       const user = await ctx.storage.users.getUserById(args.id);
       if (user === null) {
         throw new Error(`User not found: ${args.id}`);
@@ -579,6 +590,7 @@ export const resolvers = {
     ) => {
       requirePerm(ctx, 'users.activate');
 
+      await requireCanManageUser(ctx, args.id);
       const user = await ctx.storage.users.getUserById(args.id);
       if (user === null) {
         throw new Error(`User not found: ${args.id}`);
@@ -600,6 +612,7 @@ export const resolvers = {
     ) => {
       requirePerm(ctx, 'users.activate');
 
+      await requireCanManageUser(ctx, args.id);
       const user = await ctx.storage.users.getUserById(args.id);
       if (user === null) {
         throw new Error(`User not found: ${args.id}`);
@@ -621,6 +634,7 @@ export const resolvers = {
     ) => {
       requirePerm(ctx, 'users.reset_password');
 
+      await requireCanManageUser(ctx, args.id);
       const user = await ctx.storage.users.getUserById(args.id);
       if (user === null) {
         throw new Error(`User not found: ${args.id}`);
@@ -660,14 +674,14 @@ export const resolvers = {
 
     async deleteBrandingGuideline(_: unknown, args: { id: string }, ctx: GraphQLContext) {
       requirePerm(ctx, 'branding.manage');
+      await requireGuidelineInOrg(ctx, args.id);
       await ctx.storage.branding.deleteGuideline(args.id);
       return true;
     },
 
     async toggleBrandingGuideline(_: unknown, args: { id: string }, ctx: GraphQLContext) {
       requirePerm(ctx, 'branding.manage');
-      const existing = await ctx.storage.branding.getGuideline(args.id);
-      if (!existing) throw new Error('Guideline not found');
+      const existing = await requireGuidelineInOrg(ctx, args.id);
       const updated = await ctx.storage.branding.updateGuideline(args.id, { active: !existing.active });
       return {
         ...updated,
@@ -684,6 +698,7 @@ export const resolvers = {
       ctx: GraphQLContext,
     ) {
       requirePerm(ctx, 'branding.manage');
+      await requireGuidelineInOrg(ctx, args.guidelineId);
       return ctx.storage.branding.addColor(args.guidelineId, {
         id: randomUUID(),
         name: args.input.name,
@@ -695,6 +710,7 @@ export const resolvers = {
 
     async removeBrandColor(_: unknown, args: { id: string }, ctx: GraphQLContext) {
       requirePerm(ctx, 'branding.manage');
+      await requireBrandChildInOrg(ctx, 'color', args.id);
       await ctx.storage.branding.removeColor(args.id);
       return true;
     },
@@ -705,6 +721,7 @@ export const resolvers = {
       ctx: GraphQLContext,
     ) {
       requirePerm(ctx, 'branding.manage');
+      await requireGuidelineInOrg(ctx, args.guidelineId);
       return ctx.storage.branding.addFont(args.guidelineId, {
         id: randomUUID(),
         family: args.input.family,
@@ -716,6 +733,7 @@ export const resolvers = {
 
     async removeBrandFont(_: unknown, args: { id: string }, ctx: GraphQLContext) {
       requirePerm(ctx, 'branding.manage');
+      await requireBrandChildInOrg(ctx, 'font', args.id);
       await ctx.storage.branding.removeFont(args.id);
       return true;
     },
@@ -726,6 +744,7 @@ export const resolvers = {
       ctx: GraphQLContext,
     ) {
       requirePerm(ctx, 'branding.manage');
+      await requireGuidelineInOrg(ctx, args.guidelineId);
       return ctx.storage.branding.addSelector(args.guidelineId, {
         id: randomUUID(),
         pattern: args.input.pattern,
@@ -735,6 +754,7 @@ export const resolvers = {
 
     async removeBrandSelector(_: unknown, args: { id: string }, ctx: GraphQLContext) {
       requirePerm(ctx, 'branding.manage');
+      await requireBrandChildInOrg(ctx, 'selector', args.id);
       await ctx.storage.branding.removeSelector(args.id);
       return true;
     },
@@ -745,6 +765,7 @@ export const resolvers = {
       ctx: GraphQLContext,
     ) {
       requirePerm(ctx, 'branding.manage');
+      await requireGuidelineInOrg(ctx, args.guidelineId);
       await ctx.storage.branding.assignToSite(args.guidelineId, args.siteUrl, ctx.orgId);
       // Retag existing scans
       try {
