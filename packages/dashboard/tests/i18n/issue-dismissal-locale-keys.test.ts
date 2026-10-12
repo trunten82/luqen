@@ -74,8 +74,10 @@ const REQUIRED_KEYS: readonly string[] = [
 
 const OTHER_LOCALES = SUPPORTED_LOCALES.filter((l) => l !== 'en');
 
-function placeholdersOf(value: string): string[] {
-  return [...value.matchAll(/\{\{([^}]*)\}\}/g)].map((m) => m[1]).sort();
+// A missing key reads as no placeholders, so the presence test reports it once
+// and this check reports a real mismatch instead of crashing on undefined.
+function placeholdersOf(value: string | undefined): string[] {
+  return [...(value ?? '').matchAll(/\{\{([^}]*)\}\}/g)].map((m) => m[1]).sort();
 }
 
 function wordCount(value: string): number {
@@ -134,7 +136,7 @@ describe('issueDismissals namespace parity through the real loader', () => {
         const actual = placeholdersOf(data[full]);
         expect(actual, `${locale}: ${full} placeholders`).toEqual(expected);
         expect(new Set(actual).size, `${locale}: ${full} repeats a placeholder`).toBe(actual.length);
-        expect(data[full].replace(/\{\{[^}]*\}\}/g, '').includes('{'), `${locale}: ${full} stray brace`).toBe(false);
+        expect((data[full] ?? '').replace(/\{\{[^}]*\}\}/g, '').includes('{'), `${locale}: ${full} stray brace`).toBe(false);
       }
       // Positive control: the loop must have met the six placeholder-carrying keys.
       expect(withPlaceholder).toBe(6);
