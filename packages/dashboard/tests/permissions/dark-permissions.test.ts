@@ -1,7 +1,12 @@
 /**
- * FP-17 / D-07 (Phase 87): `issues.dismiss` exists in the catalogue (so global
- * admins hold it) but is DARK — no default org role, no ORG_* permission set,
- * and no role-form checkbox carries it until Phase 89 lifts DARK_PERMISSIONS.
+ * FP-17 / D-07 (Phase 87) introduced DARK_PERMISSIONS: `issues.dismiss` existed in the catalogue
+ * (so global admins held it) while no default org role, ORG_* set or role-form checkbox carried it.
+ *
+ * FP-18 / D-16 (Phase 89 Plan 09) lifted it: the dark set is EMPTY, issues.dismiss belongs to the
+ * org Owner and Admin sets only, and custom roles may carry it (D-15 Q3 = A). Every test below was
+ * a dark pin; each was renamed to the granted proposition and watched red against the dark source
+ * first (89-09-EVIDENCE.md "Flipped pins"). The DARK_PERMISSIONS symbol and its filters stay for
+ * the next dark permission.
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -25,38 +30,27 @@ const noRepo = {
   },
 };
 
-describe('dark permissions (issues.dismiss)', () => {
-  it('issues.dismiss is in the catalogue and every dark id is in the catalogue', () => {
+describe('issues.dismiss after the Phase 89 grant (dark set lifted)', () => {
+  it('the dark set is empty after the grant and issues.dismiss is in the catalogue', () => {
     expect(ALL_PERMISSION_IDS).toContain('issues.dismiss');
-    expect([...DARK_PERMISSIONS]).toEqual(['issues.dismiss']);
-    for (const id of DARK_PERMISSIONS) expect(ALL_PERMISSION_IDS).toContain(id);
+    expect([...DARK_PERMISSIONS]).toEqual([]);
   });
 
-  it('no default org role or ORG_ permission set holds a dark permission', () => {
-    const sets: Record<string, readonly string[]> = {
-      ORG_OWNER_PERMISSIONS,
-      ORG_ADMIN_PERMISSIONS,
-      ORG_MEMBER_PERMISSIONS,
-      ORG_EXECUTIVE_PERMISSIONS,
-      ORG_VIEWER_PERMISSIONS,
-    };
-    for (const [name, set] of Object.entries(sets)) {
-      for (const dark of DARK_PERMISSIONS) {
-        expect(set, `${name} must not hold ${dark}`).not.toContain(dark);
-      }
-    }
-    for (const role of DEFAULT_ORG_ROLES) {
-      for (const dark of DARK_PERMISSIONS) {
-        expect(role.permissions, `default role ${role.name} must not hold ${dark}`).not.toContain(dark);
-      }
-    }
+  it('Owner and Admin sets and default roles hold issues.dismiss; Member, Executive and Viewer do not', () => {
+    expect(ORG_OWNER_PERMISSIONS).toContain('issues.dismiss');
+    expect(ORG_ADMIN_PERMISSIONS).toContain('issues.dismiss');
+    expect(ORG_MEMBER_PERMISSIONS).not.toContain('issues.dismiss');
+    expect(ORG_EXECUTIVE_PERMISSIONS).not.toContain('issues.dismiss');
+    expect(ORG_VIEWER_PERMISSIONS).not.toContain('issues.dismiss');
+    const holders = DEFAULT_ORG_ROLES.filter((r) => r.permissions.includes('issues.dismiss')).map((r) => r.name);
+    expect(holders.sort()).toEqual(['Admin', 'Owner']);
   });
 
-  it('getPermissionGroups lists no dark permission (role form unchanged while dark)', () => {
+  it('getPermissionGroups lists issues.dismiss (the role form offers it)', () => {
     const listed = getPermissionGroups().flatMap((g) => g.permissions.map((p) => p.id));
-    for (const dark of DARK_PERMISSIONS) expect(listed).not.toContain(dark);
-    // Control: the groups are not simply empty.
-    expect(listed).toContain('issues.fix');
+    expect(listed).toContain('issues.dismiss');
+    // Control: every catalogue id is listed once the dark set is empty.
+    expect([...listed].sort()).toEqual([...ALL_PERMISSION_IDS].sort());
   });
 
   it('a global admin (role admin, no options) holds issues.dismiss and exactly the full catalogue', async () => {
@@ -65,34 +59,33 @@ describe('dark permissions (issues.dismiss)', () => {
     expect([...perms].sort()).toEqual([...ALL_PERMISSION_IDS].sort());
   });
 
-  it('isRoleGrantablePermission accepts catalogue ids except dark ones; withoutDarkPermissions does not mutate', () => {
+  it('issues.dismiss is role-grantable and withoutDarkPermissions keeps it without mutating its input', () => {
     expect(isRoleGrantablePermission('reports.view')).toBe(true);
-    expect(isRoleGrantablePermission('issues.dismiss')).toBe(false);
+    expect(isRoleGrantablePermission('issues.dismiss')).toBe(true);
     expect(isRoleGrantablePermission('not.a.permission')).toBe(false);
 
     const input = ['reports.view', 'issues.dismiss'];
     const out = withoutDarkPermissions(input);
-    expect([...out]).toEqual(['reports.view']);
+    expect([...out]).toEqual(['reports.view', 'issues.dismiss']);
+    expect(out).not.toBe(input);
     expect(input).toEqual(['reports.view', 'issues.dismiss']);
   });
 
-  // WR-01 (87 review): parsePermissions is not the only way a role row gets
-  // written, so the dark filter must hold where permissions are RESOLVED.
-  it('a non-admin whose stored role rows carry a dark id does not resolve it', async () => {
-    const smuggled = {
+  it('a non-admin whose stored role rows carry issues.dismiss resolves it', async () => {
+    const granted = {
       async getEffectivePermissions(): Promise<Set<string>> {
         return new Set<string>(['reports.view', 'issues.dismiss']);
       },
     };
-    const perms = await resolveEffectivePermissions(smuggled, 'u2', 'user', 'org-1');
-    expect(perms.has('issues.dismiss')).toBe(false);
-    // Control: the non-dark permission from the same rows survives.
+    const perms = await resolveEffectivePermissions(granted, 'u2', 'user', 'org-1');
+    expect(perms.has('issues.dismiss')).toBe(true);
     expect(perms.has('reports.view')).toBe(true);
   });
 
-  it('an org-scoped admin key never resolves a dark id', async () => {
+  it('an org-scoped admin key resolves issues.dismiss through the owner cap', async () => {
     const perms = await resolveEffectivePermissions(noRepo, 'k1', 'admin', 'org-1', { orgScopedApiKey: true });
-    for (const dark of DARK_PERMISSIONS) expect(perms.has(dark)).toBe(false);
-    expect(perms.size).toBeGreaterThan(0);
+    expect(perms.has('issues.dismiss')).toBe(true);
+    // Still capped: no global permission.
+    expect(perms.has('admin.system')).toBe(false);
   });
 });

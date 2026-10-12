@@ -60,14 +60,15 @@ export const ALL_PERMISSION_IDS: readonly string[] = ALL_PERMISSIONS.map((p) => 
  *      so keeping that set dark-free keeps those keys dark-free;
  *   4. /login refuses org-scoped keys (PR #100).
  *
- * Phase 89 (FP-18) lifts the grant: remove the id here, add it to
- * ORG_OWNER_PERMISSIONS / ORG_ADMIN_PERMISSIONS, and seed existing orgs in a
- * migration. NOTE: because PR #102 caps org-scoped admin keys at
- * ORG_OWNER_PERMISSIONS, the moment the id joins that set it reaches those keys
- * too (the path-3 pin in tests/auth/org-scoped-key-dark-permission.test.ts must
- * be updated deliberately then).
+ * Phase 89 (FP-18, D-16) emptied this set on 2026-10-12: issues.dismiss joined
+ * ORG_OWNER_PERMISSIONS and ORG_ADMIN_PERMISSIONS only, migration 091 seeded
+ * existing orgs' Owner and Admin roles, custom org roles may carry it (D-15
+ * Q3 = A), and org-scoped admin API keys hold it through the ORG_OWNER cap
+ * (D-15 Q4 = accept). The mechanism stays for the next dark permission: add its
+ * id here and pin the four paths above again, because with an empty set the
+ * filters below have nothing to filter and no test can watch them work.
  */
-export const DARK_PERMISSIONS: ReadonlySet<PermissionId> = new Set<PermissionId>(['issues.dismiss']);
+export const DARK_PERMISSIONS: ReadonlySet<PermissionId> = new Set<PermissionId>();
 
 /** A new Set of `ids` without any dark permission. Never mutates its argument. */
 export function withoutDarkPermissions(ids: Iterable<string>): Set<string> {
@@ -262,6 +263,7 @@ export async function resolveEffectiveRoles(
 export const ORG_OWNER_PERMISSIONS: readonly string[] = [
   'scans.create', 'scans.schedule', 'reports.view', 'reports.view_technical',
   'reports.export', 'reports.vpat', 'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
+  'issues.dismiss',
   'manual_testing', 'repos.manage', 'repos.credentials', 'trends.view',
   'admin.roles', 'admin.teams', 'admin.org', 'admin.plugins',
   'users.create', 'users.delete', 'users.activate', 'users.reset_password',
@@ -274,6 +276,7 @@ export const ORG_OWNER_PERMISSIONS: readonly string[] = [
 export const ORG_ADMIN_PERMISSIONS: readonly string[] = [
   'scans.create', 'scans.schedule', 'reports.view', 'reports.view_technical',
   'reports.export', 'reports.vpat', 'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
+  'issues.dismiss',
   'manual_testing', 'repos.manage', 'repos.credentials', 'trends.view',
   'admin.plugins', 'users.create', 'users.delete', 'users.activate', 'users.reset_password',
   'compliance.view', 'compliance.manage',
