@@ -155,6 +155,16 @@ describe('POST /admin/dashboard-users', () => {
     expect(response.statusCode).toBe(400);
   });
 
+  it('returns 400 for a username starting with api-key (reserved for API-key actors)', async () => {
+    const response = await ctx.server.inject({
+      method: 'POST', url: '/admin/dashboard-users',
+      payload: 'username=api-key&password=Secret123!x&role=user',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+    expect(response.statusCode).toBe(400);
+    expect(await ctx.storage.users.getUserByUsername('api-key')).toBeNull();
+  });
+
   it('returns 400 for duplicate username', async () => {
     await ctx.storage.users.createUser('alice', 'Password123!', 'viewer');
     const response = await ctx.server.inject({

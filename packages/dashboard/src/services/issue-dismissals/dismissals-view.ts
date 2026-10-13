@@ -7,6 +7,8 @@
  *   - no rows at all -> undefined, so the route spreads NO `dismissals` key and the zero-
  *     dismissal render stays byte-identical (UD-06);
  *   - an API-key actor (D-12 `api-key:<id>`, or the legacy bare `api-key`) is flagged so the
+ *     (quick 261013-dr7, WR-04: decided from the server-set actor ID - `api-key[:<id>]` for a key,
+ *     a uuid for a user - never from the display string, which for a user is a chosen username)
  *     template shows the translated "API key" label. 89-11 (D-15 Q1 reverses the UD-16 title
  *     clause): the stored identifier is never rendered; when the caller's key-label map (built
  *     from the SCAN org's own key rows only) knows the id, the row carries that label so the
@@ -55,20 +57,33 @@ export interface DismissalsView {
   readonly revoked: readonly DismissalViewRow[];
 }
 
-/** `api-key:<id>` (D-12) or the legacy bare `api-key`. */
-export function isApiKeyActor(actor: string): boolean {
-  return actor === API_KEY_ACTOR || actor.startsWith(API_KEY_PREFIX);
+/** Shape test on a SERVER-SET actor id: `api-key:<id>` (D-12) or the legacy bare `api-key`. */
+function isApiKeyId(id: string): boolean {
+  return id === API_KEY_ACTOR || id.startsWith(API_KEY_PREFIX);
+}
+
+/**
+ * Was this actor an API key? Decided from the server-set actor id (`created_by_id` /
+ * `revoked_by_id`): `api-key[:<id>]` for a key, `randomUUID()` for a user, so a user who CHOSE the
+ * username `api-key` is still a user (WR-04). A null id (no current write path produces one; prod
+ * 2026-10-13: 0 rows) falls back to the legacy shape of the display string.
+ */
+export function isApiKeyActor(actor: string, actorId: string | null = null): boolean {
+  return isApiKeyId(actorId ?? actor);
 }
 
 /** True when at least one row was dismissed or revoked by an API key (the route's lookup gate). */
 export function hasApiKeyActor(rows: readonly IssueDismissal[]): boolean {
-  return rows.some((r) => isApiKeyActor(r.createdBy) || (r.revokedBy !== null && isApiKeyActor(r.revokedBy)));
+  return rows.some(
+    (r) => isApiKeyActor(r.createdBy, r.createdById) || (r.revokedBy !== null && isApiKeyActor(r.revokedBy, r.revokedById)),
+  );
 }
 
-/** The label of `api-key:<id>` when the map knows the id; '' for anything else. */
-function keyNameOf(actor: string, labels: ApiKeyLabels): string {
-  if (!actor.startsWith(API_KEY_PREFIX)) return '';
-  return labels.get(actor.slice(API_KEY_PREFIX.length)) ?? '';
+/** The label of key actor `api-key:<id>` (by its id) when the map knows it; '' for anything else. */
+function keyNameOf(actor: string, actorId: string | null, labels: ApiKeyLabels): string {
+  const id = actorId ?? actor;
+  if (!id.startsWith(API_KEY_PREFIX)) return '';
+  return labels.get(id.slice(API_KEY_PREFIX.length)) ?? '';
 }
 
 function display(iso: string | null): string {
@@ -83,13 +98,13 @@ function toViewRow(row: IssueDismissal, labels: ApiKeyLabels): DismissalViewRow 
     selector: row.selector,
     reason: row.reason,
     actor: row.createdBy,
-    actorIsApiKey: isApiKeyActor(row.createdBy),
-    actorKeyName: keyNameOf(row.createdBy, labels),
+    actorIsApiKey: isApiKeyActor(row.createdBy, row.createdById),
+    actorKeyName: keyNameOf(row.createdBy, row.createdById, labels),
     createdAtIso: row.createdAt,
     createdAtDisplay: display(row.createdAt),
     revokedBy,
-    revokedByIsApiKey: isApiKeyActor(revokedBy),
-    revokedByKeyName: keyNameOf(revokedBy, labels),
+    revokedByIsApiKey: revokedBy !== '' && isApiKeyActor(revokedBy, row.revokedById),
+    revokedByKeyName: revokedBy === '' ? '' : keyNameOf(revokedBy, row.revokedById, labels),
     revokedAtIso: row.revokedAt ?? '',
     revokedAtDisplay: display(row.revokedAt),
     revokeComment: row.revokeComment ?? '',

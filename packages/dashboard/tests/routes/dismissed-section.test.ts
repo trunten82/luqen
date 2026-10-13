@@ -253,6 +253,7 @@ interface RawMark {
   readonly selector?: string;
   readonly reason?: string;
   readonly actor?: string;
+  readonly actorId?: string;
 }
 
 /** Mark through the repository (the route-level refusals are covered by the API tests). */
@@ -265,17 +266,24 @@ async function markRaw(input: RawMark = {}) {
     selector: input.selector ?? SEL_DISMISSED,
     reason: input.reason ?? REASON_TOKEN,
     actor: input.actor ?? 'fabrikam-admin',
+    ...(input.actorId !== undefined ? { actorId: input.actorId } : {}),
   });
   if (result.kind !== 'created') throw new Error('markRaw: key already active');
   return result.dismissal;
 }
 
-async function revokeRaw(id: string, actor = 'northwind-owner', comment: string | null = 'Selector was too broad') {
+async function revokeRaw(
+  id: string,
+  actor = 'northwind-owner',
+  comment: string | null = 'Selector was too broad',
+  actorId?: string,
+) {
   const result = await ctx.storage.issueDismissals!.revoke({
     id,
     orgId: ctx.orgs.fabrikamOrgId,
     actor,
     comment,
+    ...(actorId !== undefined ? { actorId } : {}),
   });
   if (result.kind !== 'revoked') throw new Error('revokeRaw: not revoked');
   return result.dismissal;
@@ -495,6 +503,25 @@ describe('actor label', () => {
     expect(html).toContain('&lt;b&gt;ops&lt;/b&gt;');
     expect(html).not.toContain('<b>ops</b>');
     expect(html).not.toContain('<img src=x>');
+  });
+
+  it('a user named api-key is shown by name, not as API key', async () => {
+    // WR-04: the kind comes from the server-set actor id (a user's is its uuid), never the name.
+    const userId = 'c0ffee00-0000-4000-8000-000000000001';
+    await markRaw({ actor: 'api-key', actorId: userId });
+    const gone = await markRaw({ code: CODE_ALT, selector: SEL_ALT, actor: 'api-key', actorId: userId });
+    await revokeRaw(gone.id, 'api-key', null, userId);
+    const cells = actorCells((await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId))).doc);
+    expect(cells.get(CODE_CONTRAST)).toEqual({ by: 'api-key', byTitle: 'api-key' });
+    expect(cells.get(CODE_ALT)).toEqual({ by: 'api-key', byTitle: 'api-key', revokedBy: 'api-key', revokedTitle: 'api-key' });
+  });
+
+  it("a user named api-key:<a real key id> is shown verbatim, not as that key's label", async () => {
+    const keyId = await storeKeyIn('Fabrikam CI', ctx.orgs.fabrikamOrgId);
+    await markRaw({ actor: `api-key:${keyId}`, actorId: 'c0ffee00-0000-4000-8000-000000000002' });
+    const { doc, html } = await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId));
+    expect(actorCells(doc).get(CODE_CONTRAST)!.by).toBe(`api-key:${keyId}`);
+    expect(html).not.toContain('API key: Fabrikam CI');
   });
 
   it('a user actor keeps its name and its title', async () => {

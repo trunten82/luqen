@@ -121,6 +121,13 @@ describe('GraphQL user org scoping', () => {
       expect(created.role).toBe('user');
     });
 
+    it('refuses a username starting with api-key (reserved for API-key actors)', async () => {
+      const storage = makeStorage();
+      await expect(resolvers.Mutation.createUser({},
+        { username: 'api-key', password: STRONG_PASSWORD, role: 'user' }, makeGlobalAdminCtx(storage, PERMS))).rejects.toThrow();
+      expect(storage.users.createUser).not.toHaveBeenCalled();
+    });
+
     it("lets a global admin create a role 'admin' user, as REST does", async () => {
       const storage = makeStorage();
       const created = await resolvers.Mutation.createUser({},
