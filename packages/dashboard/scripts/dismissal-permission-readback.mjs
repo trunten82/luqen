@@ -12,6 +12,8 @@
  *   - active global admins, and how many sit in a customer-org team (incl. team_org_links);
  *   - active, unexpired API keys by scope and role;
  *   - API-key /login history from audit_log.
+ * Every mode also flags (quick 261013-dr7, WR-03) an org role named like a global role, an org role
+ * holding admin.system, and an org team bound to a role holding admin.system.
  * Rows that say issues.dismiss are LATENT while the permission is dark (resolution strips it) and
  * become live the moment it leaves DARK_PERMISSIONS, so --expect dark counts them as violations.
  *
@@ -47,6 +49,13 @@ const PROPOSITION =
   'identity holds it outside the expected set';
 
 const PERMISSION = 'issues.dismiss';
+
+// Quick 261013-dr7 (WR-03 / CR-01): the global role vocabulary a dashboard user can hold
+// (permissions.ts GLOBAL_ROLE_NAMES). An org role whose name equals one of these, or the name of
+// any role in org 'system', is a violation in EVERY mode: before the CR-01 fix the global-role
+// lookup matched by name in any org, so such a role replaced the global role for every holder.
+// Exact (BINARY, case-sensitive) comparison, as the lookup itself compares.
+const GLOBAL_ROLE_NAMES = ['viewer', 'user', 'developer', 'admin', 'executive'];
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const UNMEASURABLE_REASONS = {
@@ -149,7 +158,8 @@ function countReach(db) {
         WHERE rp.permission = ? AND ${predicate}`,
       PERMISSION,
     );
-    // Global path: getUserPermissions looks the role up by NAME (getRoleByName), in any org.
+    // Global path: joined by NAME in any org, over-approximating toward alarm. Since quick 261013-dr7
+    // getRoleByName resolves org 'system' only; a name collision is its own violation below.
     const globalRoleUsers = count(
       db,
       `SELECT COUNT(DISTINCT du.id) AS n FROM dashboard_users du
@@ -219,7 +229,30 @@ function countApiKeyLogins(db) {
   };
 }
 
-function violationsFor(expectMode, allowCustomRoles, roleRows, globalAdmins, ownerAdminRoles) {
+/** Org-scoped sources that could stand in for a global role or confer admin.system. */
+function countGlobalRoleShadowing(db) {
+  const placeholders = GLOBAL_ROLE_NAMES.map(() => '?').join(', ');
+  return {
+    orgRolesNamedLikeGlobalRole: count(
+      db,
+      `SELECT COUNT(*) AS n FROM roles r WHERE r.org_id != 'system'
+          AND (r.name IN (${placeholders}) OR r.name IN (SELECT name FROM roles WHERE org_id = 'system'))`,
+      ...GLOBAL_ROLE_NAMES,
+    ),
+    orgRolesHoldingAdminSystem: count(
+      db,
+      `SELECT COUNT(DISTINCT r.id) AS n FROM roles r JOIN role_permissions rp ON rp.role_id = r.id
+        WHERE r.org_id != 'system' AND rp.permission = 'admin.system'`,
+    ),
+    orgTeamsHoldingAdminSystem: count(
+      db,
+      `SELECT COUNT(DISTINCT t.id) AS n FROM teams t JOIN role_permissions rp ON rp.role_id = t.role_id
+        WHERE t.org_id != 'system' AND rp.permission = 'admin.system'`,
+    ),
+  };
+}
+
+function violationsFor(expectMode, allowCustomRoles, roleRows, globalAdmins, ownerAdminRoles, shadowing) {
   const violations = [];
   if (expectMode === 'dark') {
     if (roleRows.systemOther > 0) violations.push('latent-system-role');
@@ -233,6 +266,10 @@ function violationsFor(expectMode, allowCustomRoles, roleRows, globalAdmins, own
     if (roleRows.orgCustom > 0 && !allowCustomRoles) violations.push('granted-to-custom-role');
   }
   if (globalAdmins.inCustomerOrgTeam > 0) violations.push('global-admin-in-customer-org-team');
+  // Mode-independent and NOT switched off by --allow-custom-roles (WR-03).
+  if (shadowing.orgRolesNamedLikeGlobalRole > 0) violations.push('org-role-shadows-global-role');
+  if (shadowing.orgRolesHoldingAdminSystem > 0) violations.push('org-role-holds-admin-system');
+  if (shadowing.orgTeamsHoldingAdminSystem > 0) violations.push('org-team-holds-admin-system');
   return violations;
 }
 
@@ -243,6 +280,7 @@ function measure(db, args) {
   const globalAdmins = countGlobalAdmins(db);
   const ownerAdminRoles = countOwnerAdminRoles(db);
   const apiKeys = countApiKeys(db, new Date().toISOString());
+  const globalRoleShadowing = countGlobalRoleShadowing(db);
   return {
     proposition: PROPOSITION,
     expect: args.expect,
@@ -258,11 +296,12 @@ function measure(db, args) {
     ownerAdminRoles,
     apiKeys,
     apiKeyLogins: countApiKeyLogins(db),
+    globalRoleShadowing,
     unmeasurable: Object.keys(UNMEASURABLE_REASONS),
     unmeasurableReasons: UNMEASURABLE_REASONS,
     needsHumanConfirmation: ['globalAdminIdentities'],
     notes: NOTES,
-    violations: violationsFor(args.expect, allowCustomRoles, roleRows, globalAdmins, ownerAdminRoles),
+    violations: violationsFor(args.expect, allowCustomRoles, roleRows, globalAdmins, ownerAdminRoles, globalRoleShadowing),
   };
 }
 
