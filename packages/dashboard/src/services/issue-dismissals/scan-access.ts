@@ -23,6 +23,8 @@ import type { AuthUser } from '../../auth/middleware.js';
  * every viewer it admits; the write-side `mayTouchDismissalOrg` below stays for mark/revoke only.
  */
 export function mayViewScanReport(user: AuthUser | undefined, scanOrgId: string): boolean {
+  // Unreachable behind requirePermission, but fail closed: no caller, no report.
+  if (user === undefined) return false;
   if (bypassesOrgScope(user)) return true;
   return scanOrgId === (user?.currentOrgId ?? 'system') || scanOrgId === 'system';
 }

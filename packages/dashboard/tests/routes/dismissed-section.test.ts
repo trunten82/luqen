@@ -775,6 +775,25 @@ describe('cross-tenant: the widened section never shows another org its data', (
     for (const token of Object.values(SECRET)) expect(own.html, token).toContain(token);
   });
 
+  it('a user with no org cannot open an org scan and gets none of its dismissal data', async () => {
+    await seedFabrikamPrivate();
+    const server = await makeServer(ctx, async (s) => {
+      s.addHook('preHandler', async (request) => {
+        request.user = { id: 'u-noorg', username: 'noorg', role: 'user' } as never;
+        (request as unknown as { permissions: Set<string> }).permissions = new Set(CONTROLS);
+      });
+      await reportRoutes(s, ctx.storage, () => null);
+    });
+    try {
+      const res = await server.inject({ method: 'GET', url: `/reports/${ctx.scanId}` });
+      expect(res.statusCode).toBe(404);
+      expect(res.body).not.toContain('rpt-dismissed');
+      for (const token of Object.values(SECRET)) expect(res.body).not.toContain(token);
+    } finally {
+      await server.close();
+    }
+  });
+
   it('an org user on a system scan sees the generic API key label, never a system key label', async () => {
     const keyId = await storeKeyIn('Platform Ops Key 7f3a'); // org 'system'
     const systemScan = await seedSurfaceScan(ctx.storage, { orgId: 'system', location: 'db', id: 'scan-system-x2' });
