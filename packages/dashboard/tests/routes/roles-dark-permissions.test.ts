@@ -1,8 +1,14 @@
 /**
- * D-07 path 2 (Phase 87): a custom role can never carry `issues.dismiss` while
- * the permission is dark. Covers the three create/update call sites of
- * parsePermissions in routes/admin/roles.ts (POST, PATCH, POST method-override)
- * for an org Owner and for a global admin, plus the role form (D-13).
+ * D-07 path 2 (Phase 87) pinned that a custom role could never carry `issues.dismiss` while the
+ * permission was dark, at the three create/update call sites of parsePermissions in
+ * routes/admin/roles.ts (POST, PATCH, POST method-override), for an org Owner and for a global
+ * admin, plus the role form (D-13).
+ *
+ * Phase 89 Plan 09 (FP-18) lifted the dark set. The owner decided at D-15 (Q3 = A) that custom
+ * ORG roles may carry it, so each pin now asserts the granted state; each was watched red against
+ * the dark source first. The global-role case is pinned as MEASURED, not as decided: D-15 did not
+ * cover global (system-org) custom roles, and the D-17 read-back flags any such row as
+ * granted-to-system-role (89-09 finding).
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import Fastify, { FastifyInstance, FastifyReply } from 'fastify';
@@ -85,8 +91,8 @@ async function storedPermissions(ctx: Ctx, name: string, orgId: string): Promise
   return [...(role?.permissions ?? [])].sort();
 }
 
-describe('roles: dark permission handling', () => {
-  it('org owner cannot grant a dark permission on create', async () => {
+describe('roles: issues.dismiss after the grant', () => {
+  it('org owner can grant issues.dismiss on a custom role on create (D-15 Q3 = A)', async () => {
     const ctx = await createCtx('owner');
     const res = await ctx.server.inject({
       method: 'POST',
@@ -95,10 +101,10 @@ describe('roles: dark permission handling', () => {
       payload: `name=auditors&scope=org&${perms('issues.dismiss', 'reports.view')}`,
     });
     expect(res.statusCode).toBe(302);
-    expect(await storedPermissions(ctx, 'auditors', ctx.orgId)).toEqual(['reports.view']);
+    expect(await storedPermissions(ctx, 'auditors', ctx.orgId)).toEqual(['issues.dismiss', 'reports.view']);
   });
 
-  it('org owner cannot grant a dark permission on PATCH', async () => {
+  it('org owner can grant issues.dismiss on a custom role on PATCH', async () => {
     const ctx = await createCtx('owner');
     const role = await ctx.storage.roles.createRole({ name: 'auditors', description: '', permissions: ['trends.view'], orgId: ctx.orgId });
     const res = await ctx.server.inject({
@@ -108,10 +114,10 @@ describe('roles: dark permission handling', () => {
       payload: perms('issues.dismiss', 'reports.view'),
     });
     expect(res.statusCode).toBe(302);
-    expect(await storedPermissions(ctx, 'auditors', ctx.orgId)).toEqual(['reports.view']);
+    expect(await storedPermissions(ctx, 'auditors', ctx.orgId)).toEqual(['issues.dismiss', 'reports.view']);
   });
 
-  it('org owner cannot grant a dark permission on POST method-override', async () => {
+  it('org owner can grant issues.dismiss on a custom role on POST method-override', async () => {
     const ctx = await createCtx('owner');
     const role = await ctx.storage.roles.createRole({ name: 'auditors', description: '', permissions: ['trends.view'], orgId: ctx.orgId });
     const res = await ctx.server.inject({
@@ -121,10 +127,10 @@ describe('roles: dark permission handling', () => {
       payload: `_method=PATCH&${perms('issues.dismiss', 'reports.view')}`,
     });
     expect(res.statusCode).toBe(302);
-    expect(await storedPermissions(ctx, 'auditors', ctx.orgId)).toEqual(['reports.view']);
+    expect(await storedPermissions(ctx, 'auditors', ctx.orgId)).toEqual(['issues.dismiss', 'reports.view']);
   });
 
-  it('global admin cannot grant a dark permission on a GLOBAL role', async () => {
+  it('global admin can put issues.dismiss on a GLOBAL role (measured; not decided at D-15; the D-17 read-back flags it)', async () => {
     const ctx = await createCtx('global-admin');
     const res = await ctx.server.inject({
       method: 'POST',
@@ -133,16 +139,16 @@ describe('roles: dark permission handling', () => {
       payload: `name=globalauditors&scope=global&${perms('issues.dismiss', 'reports.view')}`,
     });
     expect(res.statusCode).toBe(302);
-    expect(await storedPermissions(ctx, 'globalauditors', 'system')).toEqual(['reports.view']);
+    expect(await storedPermissions(ctx, 'globalauditors', 'system')).toEqual(['issues.dismiss', 'reports.view']);
   });
 
-  it('role form hides dark permissions', async () => {
+  it('role form lists issues.dismiss after the grant', async () => {
     const ctx = await createCtx('owner');
     const res = await ctx.server.inject({ method: 'GET', url: '/admin/roles/new' });
     expect(res.statusCode).toBe(200);
     const body = res.json() as { data: { permissionGroups: Array<{ permissions: Array<{ id: string }> }> } };
     const ids = body.data.permissionGroups.flatMap((g) => g.permissions.map((p) => p.id));
-    expect(ids).not.toContain('issues.dismiss');
+    expect(ids).toContain('issues.dismiss');
     expect(ids).toContain('issues.fix');
   });
 });

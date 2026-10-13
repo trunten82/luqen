@@ -155,7 +155,7 @@ async function buildWorld(opts: WorldOptions = {}): Promise<World> {
   return track(world);
 }
 
-/** The REAL mark route as a global admin (the permission is dark, as Phase 87's tests inject it). */
+/** The REAL mark route as a global admin (written while the permission was dark, as Phase 87's tests inject it). */
 async function markThroughRoute(world: World, match: Match): Promise<void> {
   const server = await buildRouteServer(world.store.storage, {
     user: { role: 'admin' },

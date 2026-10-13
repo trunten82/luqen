@@ -2325,4 +2325,19 @@ CREATE INDEX IF NOT EXISTS idx_issue_dismissal_events_org
   ON issue_dismissal_events(org_id);
     `,
   },
+  {
+    id: '091',
+    name: 'grant-issues-dismiss-to-org-owner-admin',
+    sql: `
+-- Phase 89 (FP-18, D-16) — the issues.dismiss grant for orgs that already exist.
+-- New orgs get it from DEFAULT_ORG_ROLES (ORG_OWNER / ORG_ADMIN sets). This copies
+-- ONLY migration 088's org-roles statement: Owner and Admin of non-system orgs.
+-- No row for the global 'admin' role (it resolves the whole catalogue), and none
+-- for Member, Executive, Viewer, system-org or custom roles. INSERT OR IGNORE
+-- makes a re-run a no-op.
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+SELECT id, 'issues.dismiss' FROM roles
+WHERE org_id != 'system' AND name IN ('Owner', 'Admin');
+    `,
+  },
 ];

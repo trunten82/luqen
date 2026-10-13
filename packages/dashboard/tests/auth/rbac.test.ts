@@ -144,7 +144,7 @@ describe('RBAC Permission Matrix', () => {
       'compliance.view', 'compliance.manage', 'branding.view', 'branding.manage',
       'llm.view', 'llm.manage',
       'mcp.use',
-      // Phase 87 (FP-17): dark permission — global admins hold it, no other role does (see DARK_PERMISSIONS).
+      // Phase 87 (FP-17) added it dark; Phase 89 (FP-18) granted it to org Owner/Admin. The global admin holds it either way.
       'issues.dismiss',
     ]);
 
