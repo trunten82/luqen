@@ -638,7 +638,12 @@ export async function reportRoutes(
       if (mayViewScanReport(request.user, scan.orgId) && storage.issueDismissals !== undefined) {
         try {
           const rows = await storage.issueDismissals.listForSite(scan.orgId, toSiteKey(scan.siteUrl));
-          dismissals = buildDismissalsView(rows, await scanOrgKeyLabels(storage, scan, rows, request.log));
+          // Key LABELS only for viewers who may touch the scan's org: report access alone (an org
+          // user on a 'system' scan) shows the generic "API key", never another tenant's key names.
+          const keyLabels = mayTouchDismissalOrg(request.user, scan.orgId)
+            ? await scanOrgKeyLabels(storage, scan, rows, request.log)
+            : new Map<string, string>();
+          dismissals = buildDismissalsView(rows, keyLabels);
         } catch (err) {
           // Scan id and error NAME only: driver messages can quote their input.
           request.log.warn(
