@@ -1,5 +1,5 @@
 import { bypassesOrgScope, hasPermission } from '../permissions.js';
-import { mayTouchDismissalOrg } from '../services/issue-dismissals/scan-access.js';
+import { mayTouchDismissalOrg, mayViewScanReport } from '../services/issue-dismissals/scan-access.js';
 import { toSiteKey } from '../services/issue-dismissals/site-key.js';
 import {
   buildDismissalsView,
@@ -359,7 +359,8 @@ export async function reportRoutes(
       }
 
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (!bypassesOrgScope(request.user) && scan.orgId !== orgId && scan.orgId !== 'system') {
+      // One predicate for opening the report AND for its read-only dismissal disclosure below.
+      if (!mayViewScanReport(request.user, scan.orgId)) {
         return reply.code(404).send({ error: 'Report not found' });
       }
 
@@ -399,12 +400,15 @@ export async function reportRoutes(
       // raw blob follows the filtered report so the view data carries no dismissed finding.
       let reportData: ReturnType<typeof normalizeReportData> | null = null;
       let viewScan = scanMeta;
+      // WR-01: occurrences removed from THIS report - what the all-dismissed notice may claim.
+      let reportDismissedCount = 0;
       try {
         const dbReport = await storage.scans.getReport(id);
         if (dbReport !== null) {
           const applied = await applyActiveDismissals(storage, scan, dbReport as JsonReportFile);
           reportData = normalizeReportData(applied.report, scan);
           viewScan = withDismissalsInRawBlob(scanMeta, applied);
+          reportDismissedCount = applied.dismissed.length;
         } else if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
           const raw = JSON.parse(
             await readFile(scan.jsonReportPath, 'utf-8'),
@@ -412,6 +416,7 @@ export async function reportRoutes(
           const applied = await applyActiveDismissals(storage, scan, raw);
           reportData = normalizeReportData(applied.report, scan);
           viewScan = withDismissalsInRawBlob(scanMeta, applied);
+          reportDismissedCount = applied.dismissed.length;
         }
       } catch {
         // Render without report data — template handles the missing case
@@ -623,11 +628,14 @@ export async function reportRoutes(
           : undefined;
 
       // Phase 89 Plan 05 (FP-15, D-07): the Dismissed section lists the SCAN's org and site (never
-      // the requester's), for anyone who may touch that org - the rule the list API enforces, so a
-      // page never shows rows the API would refuse. It needs report access only, not issues.dismiss.
-      // No rows (or a failed read) -> no key at all, so the zero-dismissal render is unchanged.
+      // the requester's). It needs report access only, not issues.dismiss. Quick 261013-dr7 (CR-02,
+      // owner ruling SC2 option B): it follows the predicate that admitted the viewer to this page,
+      // because the scan org's dismissals were applied for that viewer above - an org user on a
+      // 'system' scan used to get the filtered report and no trace of what was removed. The list
+      // API keeps the write-side predicate (recorded deferral). No rows (or a failed read) -> no
+      // key at all, so the zero-dismissal render is unchanged.
       let dismissals: DismissalsView | undefined;
-      if (mayTouchDismissalOrg(request.user, scan.orgId) && storage.issueDismissals !== undefined) {
+      if (mayViewScanReport(request.user, scan.orgId) && storage.issueDismissals !== undefined) {
         try {
           const rows = await storage.issueDismissals.listForSite(scan.orgId, toSiteKey(scan.siteUrl));
           dismissals = buildDismissalsView(rows, await scanOrgKeyLabels(storage, scan, rows, request.log));
@@ -649,6 +657,7 @@ export async function reportRoutes(
         reportData,
         ...(dismissalControls !== undefined ? { dismissalControls } : {}),
         ...(dismissals !== undefined ? { dismissals } : {}),
+        ...(reportDismissedCount > 0 ? { reportDismissedCount } : {}),
         complianceStatus: verdictColourClass,
         verdictSentence,
         verdictMeta,

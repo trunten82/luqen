@@ -447,7 +447,7 @@
     {{/each}}
   </div>
   {{else}}
-  {{#if dismissals.activeCount}}
+  {{#if reportDismissedCount}}
   <div class="alert alert--info" role="status">{{t "issueDismissals.allDismissed"}}</div>
   {{else}}
   <div class="alert alert--info" role="status">{{t "reportDetail.noIssues"}}</div>
@@ -457,7 +457,7 @@
   {{! ── Dismissed findings (Phase 89 Plan 05, FP-15, D-07) ───────────────────
        LAST child of the Issues panel so it still renders when every group is dismissed.
        Server-rendered from the SCAN's org and site (routes/reports.ts); the key is absent
-       when the site has no dismissal or the viewer may not touch the scan's org. Reason,
+       when the site has no dismissal or the viewer may not open the report (CR-02). Reason,
        selector and actor are free text: DOUBLE-brace (escaped) output only, never triple.
        89-11: an API-key actor never renders its stored `api-key:<id>` (no title); it reads
        "API key: <label>" when the key belongs to the scan's org, else the generic label. }}

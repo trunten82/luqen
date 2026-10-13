@@ -176,7 +176,10 @@ describe('the Dismissed section — tracer', () => {
     expect(html).not.toContain('rpt-dismissed');
   });
 
-  it('an org user viewing a system scan sees no Dismissed section', async () => {
+  it('an org user viewing a system scan sees the read-only Dismissed section', async () => {
+    // Owner ruling SC2 option B (quick 261013-dr7, CR-02): the section follows REPORT access (the
+    // shared guard lets org users open 'system' scans), not the write-side predicate. It used to be
+    // absent here, so the user read a filtered report with no trace of what was taken out of it.
     const systemScan = await seedSurfaceScan(ctx.storage, {
       orgId: 'system',
       location: 'db',
@@ -184,20 +187,39 @@ describe('the Dismissed section — tracer', () => {
     });
     await seedSurfaceDismissal(ctx.storage, { orgId: 'system', match: DISMISS_PARTIAL });
 
-    // Positive control: the page itself is open to this org user (the shared guard lets
-    // 'system' scans through), and a global admin DOES get the section for the same scan.
     const orgUser = await page(systemScan, {
       role: 'user',
       currentOrgId: ctx.orgs.fabrikamOrgId,
       permissions: VIEW,
     });
     expect(orgUser.data['reportData']).toBeTruthy();
-    expect('dismissals' in orgUser.data).toBe(false);
-    expect(orgUser.html).not.toContain('rpt-dismissed');
-    expect(orgUser.html).not.toContain(REASON_TOKEN);
+    const section = orgUser.doc.querySelector('details#rpt-dismissed');
+    expect(section).not.toBeNull();
+    expect(section!.querySelectorAll('table tbody tr')).toHaveLength(1);
+    expect(section!.textContent).toContain(REASON_TOKEN);
+    expect('dismissalControls' in orgUser.data).toBe(false);
+    expect(orgUser.doc.querySelector('[data-action="rptRevokeIssue"]')).toBeNull();
+  });
 
-    const admin = await page(systemScan, adminOf(ctx.orgs.fabrikamOrgId));
-    expect(admin.doc.querySelector('details#rpt-dismissed')).not.toBeNull();
+  it('an org user still cannot open another org scan', async () => {
+    const northwindScan = await seedSurfaceScan(ctx.storage, {
+      orgId: ctx.orgs.northwindOrgId,
+      location: 'db',
+      id: 'scan-northwind-0001',
+    });
+    const server = await makeServer(ctx, async (s) => {
+      s.addHook('preHandler', async (request) => {
+        request.user = { id: 'u-viewer', username: 'viewer', role: 'user', currentOrgId: ctx.orgs.fabrikamOrgId } as never;
+        (request as unknown as { permissions: Set<string> }).permissions = new Set(VIEW);
+      });
+      await reportRoutes(s, ctx.storage, () => null);
+    });
+    try {
+      const res = await server.inject({ method: 'GET', url: `/reports/${northwindScan}` });
+      expect(res.statusCode).toBe(404);
+    } finally {
+      await server.close();
+    }
   });
 
   it('an org user reads the section of their own org scan without issues.dismiss', async () => {
@@ -586,6 +608,60 @@ describe('every finding dismissed', () => {
     expect(panel.textContent).not.toContain('Every finding in this report');
     expect(doc.getElementById('rpt-dismissed')).not.toBeNull(); // the history is still listed
   });
+
+  it('a clean scan with an active dismissal for the site shows No issues found, not the all-dismissed notice', async () => {
+    // WR-01: the notice must follow what was removed from THIS report, not the site's active rules.
+    const scanId = await seedSurfaceScan(ctx.storage, {
+      orgId: ctx.orgs.fabrikamOrgId,
+      location: 'db',
+      id: 'scan-fabrikam-clean-active-1',
+      report: {
+        ...surfaceReport(FABRIKAM_SITE),
+        summary: { pagesScanned: 1, totalIssues: 0, byLevel: { error: 0, warning: 0, notice: 0 }, pagesFailed: 0 },
+        pages: [{ url: FABRIKAM_SITE, issueCount: 0, issues: [] }],
+        compliance: undefined,
+        complianceMatrix: [],
+        regulationMatrix: [],
+      },
+    });
+    await markRaw(); // active, never revoked, matches nothing in this clean report
+    const { doc } = await page(scanId, adminOf(ctx.orgs.fabrikamOrgId));
+    const panel = doc.getElementById('panel-issues')!;
+    expect(panel.textContent).toContain('No issues found in this report');
+    expect(panel.textContent).not.toContain('Every finding in this report');
+    expect(doc.getElementById('rpt-dismissed')).not.toBeNull(); // the rule itself is still listed
+  });
+
+  it('an org user on a system scan whose only finding was dismissed sees the all-dismissed notice', async () => {
+    // CR-02 as the review measured it: 0 groups, no section, "No issues found" - a false all-clear.
+    const report = {
+      ...surfaceReport(FABRIKAM_SITE),
+      summary: { pagesScanned: 1, totalIssues: 1, byLevel: { error: 1, warning: 0, notice: 0 }, pagesFailed: 0 },
+      pages: [
+        {
+          url: FABRIKAM_SITE,
+          issueCount: 1,
+          issues: [
+            { type: 'error', code: CODE_ALT, message: 'Image is missing a text alternative', selector: SEL_ALT, context: '<img id="x">' },
+          ],
+        },
+      ],
+      compliance: undefined,
+      complianceMatrix: [],
+      regulationMatrix: [],
+    };
+    const systemScan = await seedSurfaceScan(ctx.storage, { orgId: 'system', location: 'db', id: 'scan-system-0003', report });
+    await seedSurfaceDismissal(ctx.storage, { orgId: 'system', match: DISMISS_WHOLE });
+    const { doc, data } = await page(systemScan, {
+      role: 'user',
+      currentOrgId: ctx.orgs.fabrikamOrgId,
+      permissions: VIEW,
+    });
+    expect((data['reportData'] as { allIssueGroups: unknown[] }).allIssueGroups).toHaveLength(0);
+    const panel = doc.getElementById('panel-issues')!;
+    expect(panel.textContent).toContain('Every finding in this report has been dismissed');
+    expect(panel.textContent).not.toContain('No issues found in this report');
+  });
 });
 
 describe('who sees the Revoke control', () => {
@@ -610,19 +686,21 @@ describe('who sees the Revoke control', () => {
     expect(head).toHaveLength(6); // five columns plus the actions column
   });
 
-  it('a permitted org user on a system scan sees neither the section nor a control', async () => {
+  it('a permitted org user on a system scan sees the section but no control', async () => {
     const systemScan = await seedSurfaceScan(ctx.storage, {
       orgId: 'system',
       location: 'db',
       id: 'scan-system-0002',
     });
     await seedSurfaceDismissal(ctx.storage, { orgId: 'system', match: DISMISS_PARTIAL });
-    const { doc } = await page(systemScan, {
+    const { doc, data } = await page(systemScan, {
       role: 'user',
       currentOrgId: ctx.orgs.fabrikamOrgId,
       permissions: CONTROLS,
     });
-    expect(doc.getElementById('rpt-dismissed')).toBeNull();
+    // Mark and revoke stay on mayTouchDismissalOrg: an org user never writes into org 'system'.
+    expect(doc.getElementById('rpt-dismissed')).not.toBeNull();
+    expect('dismissalControls' in data).toBe(false);
     expect(doc.querySelector('[data-action="rptRevokeIssue"]')).toBeNull();
     expect(doc.getElementById('issue-revoke-dialog')).toBeNull();
   });
