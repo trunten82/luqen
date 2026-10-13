@@ -2,7 +2,15 @@ import { bypassesOrgScope } from '../../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../../db/index.js';
-import { hasPermission, getPermissionGroups, isRoleGrantablePermission, ALL_PERMISSION_IDS, DEFAULT_ORG_ROLES } from '../../permissions.js';
+import {
+  hasPermission,
+  getPermissionGroups,
+  isRoleGrantablePermission,
+  isReservedGlobalRoleName,
+  forbiddenOrgRolePermissions,
+  ALL_PERMISSION_IDS,
+  DEFAULT_ORG_ROLES,
+} from '../../permissions.js';
 import { toastHtml, escapeHtml } from './helpers.js';
 import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
 
@@ -91,6 +99,35 @@ function parsePermissions(rawPerms: string | string[] | undefined): string[] {
     : typeof rawPerms === 'string'
       ? [rawPerms].filter((p) => isRoleGrantablePermission(p))
       : [];
+}
+
+/**
+ * CR-01 (quick 261013-dr7): why an ORG role with this name and these permissions may not be
+ * written, or null when it may. Global (org 'system') roles are not restricted here. The same
+ * rule is the repository's backstop; this one answers with a 422 instead of a 500.
+ */
+async function orgRoleRefusal(
+  storage: StorageAdapter,
+  orgId: string,
+  name: string,
+  permissions: readonly string[],
+): Promise<string | null> {
+  if (orgId === 'system') return null;
+  const systemNames = (await storage.roles.listGlobalRoles()).map((r) => r.name);
+  if (isReservedGlobalRoleName(name, systemNames)) {
+    return 'Organization roles cannot use the name of a global role';
+  }
+  if (forbiddenOrgRolePermissions(permissions).length > 0) {
+    return 'Organization roles cannot carry the System settings permission';
+  }
+  return null;
+}
+
+function sendRefusal(request: FastifyRequest, reply: FastifyReply, message: string): FastifyReply {
+  if (request.headers['hx-request'] === 'true') {
+    return reply.code(422).send(toastHtml(message, 'error'));
+  }
+  return reply.code(422).send({ error: message });
 }
 
 // ---------------------------------------------------------------------------
@@ -386,6 +423,12 @@ export async function roleRoutes(
         }
       }
 
+      // Parse permissions
+      const permissions = parsePermissions(body.permissions);
+
+      const refusal = await orgRoleRefusal(storage, targetOrgId, name, permissions);
+      if (refusal !== null) return sendRefusal(request, reply, refusal);
+
       // Check for duplicates within the same org scope
       const existing = await storage.roles.getRoleByNameAndOrg(name, targetOrgId);
       if (existing !== null) {
@@ -394,9 +437,6 @@ export async function roleRoutes(
         }
         return reply.code(422).send({ error: 'Role name already exists' });
       }
-
-      // Parse permissions
-      const permissions = parsePermissions(body.permissions);
 
       await storage.roles.createRole({
         name,
@@ -505,6 +545,9 @@ export async function roleRoutes(
         }
       }
 
+      const updateRefusal = await orgRoleRefusal(storage, role.orgId, updateData.name ?? role.name, permissions);
+      if (updateRefusal !== null) return sendRefusal(request, reply, updateRefusal);
+
       await storage.roles.updateRole(id, updateData);
 
       if (request.headers['hx-request'] === 'true') {
@@ -563,6 +606,9 @@ export async function roleRoutes(
           updateData.name = name;
         }
       }
+
+      const updateRefusal = await orgRoleRefusal(storage, role.orgId, updateData.name ?? role.name, permissions);
+      if (updateRefusal !== null) return sendRefusal(request, reply, updateRefusal);
 
       await storage.roles.updateRole(id, updateData);
 

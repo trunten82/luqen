@@ -79,6 +79,35 @@ export function withoutDarkPermissions(ids: Iterable<string>): Set<string> {
   return out;
 }
 
+/**
+ * Quick 261013-dr7 (CR-01): the GLOBAL role vocabulary - every value dashboard_users.role may hold
+ * (the REST/setup user-create allow-list). A user's global role resolves from org 'system' only;
+ * no org role may take one of these names (nor the name of any other role in org 'system').
+ * Matching is case-SENSITIVE on purpose: dashboard_users.role is compared BINARY, so the default
+ * org roles 'Admin' and 'Executive' that every org has can never shadow 'admin' / 'executive'.
+ * 'viewer' has no role row at all (its holders get their permissions from teams), so it is listed
+ * here explicitly: an org role named 'viewer' was the shape that would have reached all of them.
+ */
+export const GLOBAL_ROLE_NAMES: readonly string[] = ['viewer', 'user', 'developer', 'admin', 'executive'];
+
+/** Is `name` reserved for a global role? `systemRoleNames` = names of the roles in org 'system'. */
+export function isReservedGlobalRoleName(name: string, systemRoleNames: Iterable<string> = []): boolean {
+  if (GLOBAL_ROLE_NAMES.includes(name)) return true;
+  for (const n of systemRoleNames) if (n === name) return true;
+  return false;
+}
+
+/**
+ * Permissions no ORG-scoped source may carry or confer: admin.system is the cross-org bypass, so it
+ * comes from the global role only (refused on org-role writes, stripped from team-derived grants).
+ */
+export const ORG_ROLE_FORBIDDEN_PERMISSIONS: ReadonlySet<string> = new Set(['admin.system']);
+
+/** The forbidden ids present in `ids` (empty when the set is allowed on an org role). */
+export function forbiddenOrgRolePermissions(ids: Iterable<string>): string[] {
+  return [...new Set(ids)].filter((id) => ORG_ROLE_FORBIDDEN_PERMISSIONS.has(id));
+}
+
 /** May a role row carry this permission id? In the catalogue and not dark. */
 export function isRoleGrantablePermission(id: string): boolean {
   return ALL_PERMISSION_IDS.includes(id) && !(DARK_PERMISSIONS as ReadonlySet<string>).has(id);

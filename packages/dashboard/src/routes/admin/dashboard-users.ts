@@ -1,4 +1,4 @@
-import { bypassesOrgScope } from '../../permissions.js';
+import { bypassesOrgScope, GLOBAL_ROLE_NAMES } from '../../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import type { StorageAdapter, DashboardUser } from '../../db/index.js';
@@ -103,7 +103,7 @@ function userRowHtml(user: DashboardUser, requesterIsAdmin = false, canChangeRol
 </tr>`;
 }
 
-const VALID_ROLES = new Set(['viewer', 'user', 'developer', 'admin', 'executive']);
+const VALID_ROLES: ReadonlySet<string> = new Set(GLOBAL_ROLE_NAMES);
 
 function hasPermission(request: FastifyRequest, perm: string): boolean {
   const perms = (request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined;

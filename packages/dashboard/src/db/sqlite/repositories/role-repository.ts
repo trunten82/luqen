@@ -1,7 +1,12 @@
 import type Database from 'better-sqlite3';
 import type { RoleRepository } from '../../interfaces/role-repository.js';
 import type { Role } from '../../types.js';
-import { ALL_PERMISSION_IDS } from '../../../permissions.js';
+import {
+  ALL_PERMISSION_IDS,
+  forbiddenOrgRolePermissions,
+  isReservedGlobalRoleName,
+  ORG_ROLE_FORBIDDEN_PERMISSIONS,
+} from '../../../permissions.js';
 
 // ---------------------------------------------------------------------------
 // Private row type
@@ -63,8 +68,12 @@ export class SqliteRoleRepository implements RoleRepository {
     return row !== undefined ? this.roleRowToRecord(row) : null;
   }
 
+  /**
+   * The GLOBAL role called `name` (org 'system' only). Looking it up in any org let an org role
+   * with a global role's name replace that role for every holder on the platform (CR-01).
+   */
   async getRoleByName(name: string): Promise<Role | null> {
-    const stmt = this.db.prepare('SELECT * FROM roles WHERE name = ?');
+    const stmt = this.db.prepare("SELECT * FROM roles WHERE name = ? AND org_id = 'system'");
     const row = stmt.get(name) as RoleRow | undefined;
     return row !== undefined ? this.roleRowToRecord(row) : null;
   }
@@ -83,6 +92,7 @@ export class SqliteRoleRepository implements RoleRepository {
     readonly permissions: readonly string[];
     readonly orgId: string;
   }): Promise<Role> {
+    this.assertOrgRoleInvariants(data.orgId, data.name, data.permissions);
     const id = `role-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const now = new Date().toISOString();
 
@@ -124,6 +134,9 @@ export class SqliteRoleRepository implements RoleRepository {
     const role = await this.getRole(id);
     if (role === null) {
       throw new Error(`Role not found: ${id}`);
+    }
+    if (!role.isSystem) {
+      this.assertOrgRoleInvariants(role.orgId, data.name ?? role.name, data.permissions ?? []);
     }
 
     this.db.transaction(() => {
@@ -244,6 +257,10 @@ export class SqliteRoleRepository implements RoleRepository {
       ).all(role_id) as Array<{ permission: string }>;
 
       for (const { permission } of perms) {
+        // admin.system comes from the global role only: a team (an org-scoped grant) never
+        // confers it, whichever role the team is bound to (an org role written by any path, or a
+        // system role such as 'admin' - teams.ts lets an org team bind a system role).
+        if (ORG_ROLE_FORBIDDEN_PERMISSIONS.has(permission)) continue;
         result.add(permission);
       }
     }
@@ -252,6 +269,22 @@ export class SqliteRoleRepository implements RoleRepository {
   }
 
   // ── Private helpers ──────────────────────────────────────────────────
+
+  /**
+   * Backstop for every write path (routes refuse first with a 422): an ORG role may neither take a
+   * global role's name nor carry admin.system. Global (org 'system') roles are unrestricted here.
+   */
+  private assertOrgRoleInvariants(orgId: string, name: string, permissions: readonly string[]): void {
+    if (orgId === 'system') return;
+    const systemNames = (this.db.prepare("SELECT name FROM roles WHERE org_id = 'system'").all() as Array<{ name: string }>)
+      .map((r) => r.name);
+    if (isReservedGlobalRoleName(name, systemNames)) {
+      throw new Error('An organization role cannot use a global role name');
+    }
+    if (forbiddenOrgRolePermissions(permissions).length > 0) {
+      throw new Error('An organization role cannot carry admin.system');
+    }
+  }
 
   private roleRowToRecord(row: RoleRow): Role {
     const permissions = this.db.prepare(
