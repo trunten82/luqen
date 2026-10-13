@@ -35,3 +35,23 @@
 - Tool exit codes are not evidence: `gsd-sdk query audit-open acknowledge` exits 0 while doing nothing.
 - A pre-registered bar can turn out to sit inside the instrument's own noise; the answer is disclosure
   and a NEW pre-registered bar, never moving the old one.
+
+## Milestone: v3.8.0 — Mark as false positive
+
+**Shipped:** 2026-10-13 · **Phases:** 3 (87-89) · **Plans:** 35 + quick 261013-dr7
+
+### What Was Built
+Per-org dismissal store with history/audit; dismissals applied on every count, export, ACR and bypass surface and on later scans;
+mark/revoke UI with preview and a Dismissed section in 6 locales; dark launch, owner review on a prod test org, then Owner/Admin grant.
+
+### What Worked
+- Dark launch + read-back instrument: the permission's reach was measured on prod copies before and after the grant.
+- Owner decisions recorded verbatim with their channel; the grant waited for a direct OK.
+
+### What Was Inefficient
+- An executor reported green while an e2e test was red (89-04): per-plan verification ran a subset, not the suite.
+- The phase's own code review found a CRITICAL pre-existing role-shadowing bug only at the end; the read-back instrument could not see it.
+
+### Key Lessons
+- A "lift the dark filter" change widens every pre-existing path to the permission; review those paths before the lift, not after.
+- Read-back instruments must check reserved-name shadowing independently of their allow flags.

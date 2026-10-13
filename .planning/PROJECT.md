@@ -8,7 +8,9 @@ Luqen is a WCAG accessibility compliance platform built as a monorepo of Fastify
 
 AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control of the whole stack through the dashboard, not config files.
 
-## Current Milestone: v3.8.0 Mark as false positive
+## Last Milestone (shipped 2026-10-13): v3.8.0 Mark as false positive
+
+**Status:** SHIPPED and archived 2026-10-13, prod 23c40aaf. No next milestone: DORMANT-BY-CHOICE per the closure ruling of 2026-10-12.
 
 **Goal:** Let a dashboard user dismiss a scan finding they have verified is a false positive, with a
 required reason and a full audit trail, so it stops counting against the site everywhere a count, a
@@ -32,6 +34,12 @@ gets a test link before it goes live.
 - Dismissals re-applied automatically to matching issues on later scans
 
 ## Current State
+
+**v3.8.0 Mark as false positive SHIPPED 2026-10-13** (prod 23c40aaf). Org Owners/Admins can dismiss a verified false
+positive with a required reason; dismissals apply on every count/score/export/ACR surface and on later scans, are revocable and
+audited, and ACRs disclose them per criterion. Custom org roles may be given `issues.dismiss` (owner Q3=A). Open follow-ups: user
+docs for dismissals, review deferrals (quick 261013-dr7), UAT persona cleanup.
+
 
 **v3.7.0 AI output quality SHIPPED 2026-09-07, archived 2026-09-28** (prod f3d1043c after the Phase 86
 gap closure, PR #81). The platform now has an evaluation instrument for its two durable LLM capabilities:
@@ -291,4 +299,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-08 after v3.8.0 milestone started (Mark as false positive)*
+*Last updated: 2026-10-13 after v3.8.0 milestone (shipped; dormant-by-choice)*

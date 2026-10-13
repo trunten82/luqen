@@ -2,20 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v3.8.0
 milestone_name: Mark as false positive
-current_phase: 88
-current_phase_name: Dismissals applied on every surface
-status: verifying
-stopped_at: "Phase 89 context gathered; Phase 88 complete pending merge (PR #1) + UAT"
-last_updated: "2026-10-12T00:30:16.559Z"
-last_activity: 2026-10-11
-last_activity_desc: Phase 88 execution started
-state_head: fae1a7eee06afca3dda6c808f3a4145baa2d79c7
+status: "dormant: dormant-by-choice — closure ruling 2026-10-12 (v3.8.0 shipped; no next milestone opened)"
+stopped_at: "v3.8.0 shipped and archived 2026-10-13 (prod 23c40aaf); dormant-by-choice"
+last_updated: "2026-10-13T04:28:21.274Z"
+last_activity: 2026-10-13
+last_activity_desc: Milestone v3.8.0 completed and archived
+state_head: d39d8b69cf86c55c68ae8675b15a85895258c0ae
 progress:
   total_phases: 3
-  completed_phases: 1
-  total_plans: 24
-  completed_plans: 24
-  percent: 33
+  completed_phases: 3
+  total_plans: 35
+  completed_plans: 35
+  percent: 100
+current_phase: 89
+current_phase_name: Dismissal UI, dark launch and role grant
 ---
 
 # Project State
@@ -85,6 +85,25 @@ SUMMARY says complete; gsd-tools saw 24 items gsd-sdk never showed.
 
 ## Deferred Items
 
+Items acknowledged and deferred at the v3.8.0 close, 2026-10-13 (gsd-tools writer; pre-ack audit: 7 open, 47
+carried forward; re-scan after: 0 open, 54 acknowledged).
+
+| Category | Item | Status | Deferred At | Milestone |
+|----------|------|--------|-------------|-----------|
+| todos | 2026-09-29-runscan-events-skip-sse-replay.md | (presence-only) | 2026-10-13 | v3.8.0 |
+| uat_gaps | 88/88-UAT.md (item 2: post-merge read-back; dark read-back measured in 89-07/89-08, D-13 recompute duration unmeasurable at prod log level) | testing | 2026-10-13 | v3.8.0 |
+| verification_gaps | 88/88-VERIFICATION.md (human items: wording approved D-15; post-merge read-back as above) | human_needed | 2026-10-13 | v3.8.0 |
+| deferred_items | 88/deferred-items.md: 88-01 AI-summary issuesList always empty (pre-existing) | acknowledged | 2026-10-13 | v3.8.0 |
+| deferred_items | 88/deferred-items.md: 88-03 MCP query_issues pages shape, raw jsonReport on scan rows | acknowledged | 2026-10-13 | v3.8.0 |
+| deferred_items | 88/deferred-items.md: 88-08 scans LIST serialises raw jsonReport; GraphQL scanIssues no org guard | acknowledged | 2026-10-13 | v3.8.0 |
+| deferred_items | 89/deferred-items.md: D-89-07-01 GraphQL createScan never starts; D-89-09-01..03 | acknowledged | 2026-10-13 | v3.8.0 |
+
+Also open (not audit-tracked): quick 261013-dr7 deferred list (review WR-05, IN-01..IN-08, /api/v1 cookie CSRF sweep, list API
+write-side check, MCP role strings); owner follow-ups (deactivate uat-owner/member/viewer; keep or revoke the review dismissal on the
+test org; dismissal user docs; mark dialog opens scrolled in de/it/375).
+
+### v3.7.0 close
+
 Items acknowledged and deferred at the v3.7.0 close, 2026-09-28 (via the gsd-tools writer; totals from
 its own re-scan: 0 open, 47 acknowledged). All inherited from v3.0.0-v3.6.0 except Phase 86.
 
@@ -101,17 +120,17 @@ verdict and resurfaces automatically if its file changes.
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-28 — v3.7.0 archived)
+See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** Phase 88 — Dismissals applied on every surface
+**Current focus:** none — DORMANT-BY-CHOICE, reason: closure ruling 2026-10-12 (Alessandro, relayed by Allanon): close v3.8.0 and do not open a next milestone.
 
 ## Current Position
 
-Phase: 88 (Dismissals applied on every surface) — EXECUTING
-Plan: 18 of 18
-Status: Phase complete — ready for verification
-Last activity: 2026-10-11 — Phase 88 execution started
+Phase: Milestone v3.8.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-10-13 — Milestone v3.8.0 completed and archived
 
 ## Phase Map (v3.7.0 — AI output quality)
 
@@ -190,33 +209,14 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-12T00:30:16.383Z
-Stopped at: Phase 89 context gathered; Phase 88 complete pending merge (PR #1) + UAT
-Resume file: .planning/phases/89-dismissal-ui-dark-launch-and-role-grant/89-CONTEXT.md
+Last session: 2026-10-12T20:18:50.119Z
+Stopped at: Completed 89-09-PLAN.md (grant PR #5 open, CI green, HELD)
+Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
 ## Operator Next Steps
 
-- Two owner decisions are asked and on the register (a2a pending list): v2 false-PASS gate; prod prompt-override read.
-- **LATENT DEFECT, found at the v3.7.0 close — fix FIRST in the next milestone:** `RunFunction.harnessVersion`
-  = `${HARNESS_SCHEMA_VERSION}+${VERSION}` (run-manifest.ts:205) embeds the llm PACKAGE version, and
-  verdict-comparability.ts holds `harnessVersion` CONSTANT between baseline and candidate. The committed
-  baselines carry `1+3.6.0`; the first release that bumps packages/llm to 3.7.0 makes every future
-  candidate un-judgeable against them. Therefore v3.7.0 was NOT tagged and packages were NOT bumped
-  (config has no git.create_tag). Decouple harnessVersion from the package version (scoring-semantics
-  version only) before any bump; watch it fail first.
-- **Owner rulings 2026-09-28 (relayed via Allanon, option cards):** (a) pre-register a noise-aware v2
-  false-PASS gate as the FIRST item of the next eval milestone — not started; (b) one read-only
-  comparison of prod's `system`-org generate-fix prompt override — allow rule in
-  .claude/settings.local.json, takes effect at next session start.
-- **Session secret still exposed** (transcript, 2026-09-28): rotation crash-looped the dashboard 48 s
-  because DASHBOARD_SESSION_SECRET is also the at-rest AES key; rolled back. Compliance client secret
-  WAS rotated (old rejected 401). Follow-up (separate encryption key + re-encryption script) asked:
-  register 01M3M66864K7Y9M42JF91Q6TVQ.
-- **Security follow-up, not scoped:** sitemap.ts fetches child sitemaps / robots `Sitemap:` URLs on any
-  host (blind SSRF via Node fetch; after 260928-g6k their page URLs are scope-filtered, the fetch itself
-  is not). Needs its own decision.
-- Next-milestone candidates recorded (NOT started): grow the reference sets (the lever on power); behavioral a11y testing beyond Pa11y.
+- Start the next milestone with /gsd-new-milestone
 
 ## Performance Metrics
 
@@ -241,8 +241,19 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 88 P14 | 35min | 3 tasks | 5 files |
 | Phase 88 P18 | 10 min | 2 tasks | 2 files |
 | Phase 88 P12 | 35min | 3 tasks | 1 files |
+| Phase 89 P03 | 25 min | 3 tasks | 2 files |
+| Phase 89 P05 | 27 min | 3 tasks | 18 files |
+| Phase 89 P06 | ~3h | 3 tasks | 12 files |
+| Phase 89 P11 | 2h48m | 3 tasks | 25 files |
+| Phase 89 P09 | 27min | 3 tasks | 9 files |
 
 ## Decisions
 
 - [Phase 88]: 88-01: golden baselines use exact-literal replacement for per-run ids and dates; TZ defaults to UTC only when unset so the TZ determinism check is not vacuous
 - [Phase 88]: 88-02: D-04 Case A measured on prod (340 completed scans: confirmed_violations NULL 203, 0 137, non-zero 0); D-13 largest site 138 completed scans, synchronous recompute stays
+- [Phase 89]: 89-05: Revoke control and dialog are gated on dismissalControls (route-computed, includes the org predicate), not perm.issuesDismiss; mark and revoke share one status map, request path, lock and flash in issue-dismissals.js
+- [Phase 89]: 89-11: API-key actor labels read once via listKeys(scan.orgId), filtered to the scan org; other key actors stay generic
+- [Phase 89]: 89-11: sticky dismissal-dialog footer (bottom -space-xl for Chromium's padding inset) plus keepFieldInView for the focused textarea
+- [Phase 89]: 89-11: UAT harness --keep-going (local only) so break-tests show the whole red set
+- [Phase 89]: 89-09: grant PR #5 (head 9bf30d1c) HELD — issues.dismiss to org Owner/Admin + migration 091; merge needs the owner's direct OK (Plan 10)
+- [Phase 89]: 89-09 open point D-89-09-01: after the lift a global admin can put issues.dismiss on a global (system-org) role; not decided at D-15; D-17 read-back flags it
