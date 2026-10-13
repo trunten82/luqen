@@ -1,5 +1,32 @@
 # Milestones
 
+## v3.8.0 Mark as false positive (Shipped: 2026-10-13)
+
+**Phases completed:** 3 phases, 35 plans (+ quick 261013-dr7). Prod 23c40aaf. Closeout: override_closeout.
+
+**Delivered:** customers' org Owners/Admins can mark a verified scan finding as a false positive (required reason, preview,
+revocable, audited); it stops counting on every surface and every later scan, and ACRs disclose it per criterion. Dark-launched,
+owner-reviewed on a prod test org (D-15 "Approved", direct), granted on his direct "Merge the grant" (PR #5, c69dfc55).
+Code review found a pre-existing CRITICAL global-role shadowing bug; fixed and deployed in PR #6 (23c40aaf).
+
+**Known verification overrides:** 7 newly acknowledged, 47 carried forward from a prior close (see STATE.md Deferred Items).
+
+**Key accomplishments:**
+
+- `6a345373` (fixture, golden-io, report-detail driver and baseline), `68b190f7` (seven more render surfaces), `98276ce8` (export + ACR surfaces).
+- One loader every surface will call (scan's own org + toSiteKey, identity by reference, errors propagate), a pure conservative compliance/regulation matrix filter wired into it, and a counts-only prod measurement that settles D-04 (Case A) and sizes D-13 (largest site: 138 completed scans).
+- `5249f7bd` (tracer: fixture, drivers, MCP get_report baseline), `af3d4a2e` (MCP query_issues x2, resource, fleet, REST x4, GraphQL, compare), `fa1ad9be` (fix-PR proposer input, repos fixes view, bulk-fix candidates).
+- A dismissed finding no longer drives an ACR verdict (loadVpatForScan feeds buildVpat the filtered report), and each affected criterion discloses how many automated finding occurrences were dismissed as false positives after review, localised in the ACR view, English in PDFKit/data, with counts only and zero change when nothing is dismissed.
+- The public accessibility statement now derives its limitations from the dismissal-filtered report and discloses, per criterion (title + WCAG id), how many automated findings were dismissed as false positives after review, including a criterion that is no longer a limitation, in six locales, counts only, with no key and no HTML added when nothing is dismissed.
+- A scan of a site with an active dismissal now persists and announces counts that exclude the dismissed occurrences on the standard AND incremental paths, computed right before the write so a dismissal marked during the compliance step is honoured; json_report stays raw and zero-dismissal output is structurally unchanged.
+- Mark and revoke now recompute the four count columns for every completed scan of the org+site (both URL variants), one report at a time inside the request, and answer with how many scans were recomputed, how many failed, and whether the recompute is complete; each recompute logs one duration line.
+- Ten new locale keys (two ACR disclosure strings, a Dismissed-sheet name and seven column headers) in en/de/es/fr/it/pt, added without changing any of the 9883 pre-existing key/value pairs, with a 22-test coverage file that checks the real loader, worksheet-name legality and a count-only placeholder whitelist.
+- `23e2044a13899147aa855794384630dde46e8fa4`, wired tree. Wave-2 plans merged at that HEAD: 88-03, 88-16 (goldens not run here), 88-04, 88-05, 88-06, 88-11 (also 88-02, 88-13). Not merged: 88-07..10, 88-12, 88-14, 88-17, 88-18.
+- `cc4eaec7` (tracer: driver, mocks, standard golden and baseline), `12056a6d` (incremental path, second baseline entry).
+- One dismissal marked through the real mark route makes all 12 SC3 surfaces agree with the rendered report for the same scan, raw counts stay recoverable from the stored report, another org's scan of the same URL keeps its raw columns, and a summary-less stored report renders the filtered counts; skipping the recompute in the mark route reddens exactly the 16 pre-registered tests.
+
+---
+
 ## v3.7.0 AI output quality — eval harness + labelled reference sets (Shipped: 2026-09-07)
 
 **Phases completed:** 4 phases (83-86), 15 plans. Requirements 16/16 Complete (EVALSET-01..05,
