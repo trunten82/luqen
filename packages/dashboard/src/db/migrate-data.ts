@@ -97,10 +97,14 @@ async function migrateRoles(
   const roles = await source.roles.listRoles();
   if (dryRun) return roles.length;
 
+  // Skip a role whose NAME already exists in the target in any org. This is the dedup the tool has
+  // always had: it used getRoleByName, which matched any org until quick 261013-dr7 restricted it to
+  // org 'system' (global-role resolution). Target orgs get new ids (migrateOrganizations), so the
+  // target's own default org roles are what this skips. Kept explicit so the copy is unchanged.
+  const targetNames = new Set((await target.roles.listRoles()).map((r) => r.name));
   let count = 0;
   for (const role of roles) {
-    const existing = await target.roles.getRoleByName(role.name);
-    if (existing !== null) continue;
+    if (targetNames.has(role.name)) continue;
 
     // createRole includes permissions
     await target.roles.createRole({
@@ -109,6 +113,7 @@ async function migrateRoles(
       permissions: role.permissions,
       orgId: role.orgId,
     });
+    targetNames.add(role.name);
     count++;
   }
   return count;

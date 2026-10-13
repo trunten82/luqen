@@ -114,13 +114,13 @@ describe('RBAC Permission Matrix', () => {
   });
 
   describe('custom role permissions', () => {
-    it('custom role has only assigned permissions', async () => {
-      const orgId = `org-${randomUUID()}`;
+    it('custom global role has only assigned permissions', async () => {
+      // A user's global role resolves from org 'system' only (quick 261013-dr7, CR-01).
       const customRole = await storage.roles.createRole({
         name: `custom-${randomUUID()}`,
         description: 'Limited custom role',
         permissions: ['reports.view', 'issues.assign'],
-        orgId,
+        orgId: 'system',
       });
 
       const user = await storage.users.createUser(`custom-user-${randomUUID()}`, 'pass', customRole.name);
@@ -130,6 +130,19 @@ describe('RBAC Permission Matrix', () => {
       expect(perms.size).toBe(2);
       expect(perms.has('reports.view')).toBe(true);
       expect(perms.has('issues.assign')).toBe(true);
+    });
+
+    it('an org custom role is never a global role, even when a user names it as one', async () => {
+      const orgId = `org-${randomUUID()}`;
+      const orgRole = await storage.roles.createRole({
+        name: `custom-${randomUUID()}`,
+        description: 'Org custom role',
+        permissions: ['reports.view', 'issues.assign'],
+        orgId,
+      });
+
+      const user = await storage.users.createUser(`custom-user-${randomUUID()}`, 'pass', orgRole.name);
+      expect((await storage.roles.getUserPermissions(user.id)).size).toBe(0);
     });
   });
 

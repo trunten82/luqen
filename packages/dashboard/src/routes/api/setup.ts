@@ -3,6 +3,7 @@ import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../../db/index.js';
 import type { AuthService } from '../../auth/auth-service.js';
 import { validateUsername, validatePassword } from '../../validation.js';
+import { GLOBAL_ROLE_NAMES } from '../../permissions.js';
 import { ErrorEnvelope } from '../../api/schemas/envelope.js';
 
 interface SetupBody {
@@ -101,7 +102,7 @@ export async function setupRoutes(
         return reply.code(400).send({ error: passwordCheck.error });
       }
 
-      const validRoles = new Set(['viewer', 'user', 'developer', 'admin', 'executive']);
+      const validRoles: ReadonlySet<string> = new Set(GLOBAL_ROLE_NAMES);
       if (!validRoles.has(role)) {
         return reply.code(400).send({
           error: `Invalid role "${role}". Must be one of: ${[...validRoles].join(', ')}`,

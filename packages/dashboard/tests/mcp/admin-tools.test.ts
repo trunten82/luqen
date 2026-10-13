@@ -574,3 +574,25 @@ describe('Phase 30 admin tools — service-connection secret redaction (D-06)', 
     testSpy.mockRestore();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Quick 261013-dr7 (WR-04): dashboard_create_user reserves the api-key prefix
+// ---------------------------------------------------------------------------
+
+describe('dashboard_create_user reserved usernames', () => {
+  let app: FastifyInstance | undefined;
+  afterEach(async () => { await app?.close(); app = undefined; });
+
+  it('refuses a username starting with api-key and creates nothing; a normal name is created', async () => {
+    app = await buildApp({ permissions: ['admin.users'] });
+    for (const username of ['api-key', 'api-key:0123456789abcdef', 'API-Key-ops']) {
+      const parsed = await callTool(app, 'dashboard_create_user', { username, password: 'Pass-word-123!', role: 'user' });
+      const result = parsed['result'] as { isError?: boolean; content?: Array<{ text?: string }> };
+      expect(result.isError, username).toBe(true);
+      expect(result.content?.[0]?.text ?? '', username).toMatch(/api-key/i);
+      expect(extractText(parsed)['id'], username).toBeUndefined();
+    }
+    const ok = extractText(await callTool(app, 'dashboard_create_user', { username: 'fabrikam-ops', password: 'Pass-word-123!', role: 'user' }));
+    expect(ok['username']).toBe('fabrikam-ops');
+  });
+});

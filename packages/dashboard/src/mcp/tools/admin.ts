@@ -28,6 +28,7 @@
  * without a permission (or with a typo'd permission id) breaks CI.
  */
 
+import { isReservedUsername, RESERVED_USERNAME_ERROR } from '../../validation.js';
 import { z } from 'zod';
 import { getCurrentToolContext } from '@luqen/core/mcp';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -280,6 +281,9 @@ export function registerAdminTools(
     async (args) => {
       const _orgId = resolveOrgId();
       void _orgId;
+      // WR-04: this tool validates usernames nowhere else; the reserved api-key prefix is refused
+      // here as on every other user-create path.
+      if (isReservedUsername(args.username)) return errorEnvelope(RESERVED_USERNAME_ERROR);
       const user = await storage.users.createUser(
         args.username,
         args.password,

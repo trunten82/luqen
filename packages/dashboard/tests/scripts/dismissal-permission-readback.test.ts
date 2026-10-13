@@ -394,6 +394,80 @@ describe('dismissal-permission-readback: granted mode (D-17, post-grant)', () =>
   });
 });
 
+describe('dismissal-permission-readback: global-role shadowing and admin.system (quick 261013-dr7, WR-03)', () => {
+  // Independent of --expect and --allow-custom-roles: an org role named like a global role (the
+  // CR-01 shape) or any org-scoped source of admin.system is a violation in every mode.
+  const GRANTED_ALLOWED = ['--expect', 'granted', '--allow-custom-roles', 'true'] as const;
+  const adminSystem = (roleId: string): void => {
+    fx.db.prepare('INSERT INTO role_permissions (role_id, permission) VALUES (?, ?)').run(roleId, 'admin.system');
+  };
+
+  it('an org role named user is a violation even with --expect granted --allow-custom-roles true', () => {
+    fx.baseline();
+    fx.grantOwnerAdmin();
+    fx.role('org-a:shadow', 'user', 'org-a');
+    fx.db.close();
+    const res = run(fx.path, GRANTED_ALLOWED);
+    expect(res.status).toBe(4);
+    expect(res.json.violations).toContain('org-role-shadows-global-role');
+    expect(res.json.globalRoleShadowing.orgRolesNamedLikeGlobalRole).toBe(1);
+  });
+
+  it('an org role named user is a violation under --expect dark', () => {
+    fx.baseline();
+    fx.role('org-a:shadow', 'viewer', 'org-a');
+    fx.db.close();
+    const res = run(fx.path, ['--expect', 'dark']);
+    expect(res.status).toBe(4);
+    expect(res.json.violations).toEqual(['org-role-shadows-global-role']);
+  });
+
+  it('capitalized default org role names are not a shadow violation', () => {
+    fx.baseline(); // Owner, Admin, Member, Executive, Viewer
+    fx.grantOwnerAdmin();
+    fx.role('org-a:user-cap', 'User', 'org-a');
+    fx.db.close();
+    const res = run(fx.path, GRANTED_ALLOWED);
+    expect(res.status).toBe(0);
+    expect(res.json.violations).toEqual([]);
+    expect(res.json.globalRoleShadowing.orgRolesNamedLikeGlobalRole).toBe(0);
+  });
+
+  it('an org role named like a custom global role is a violation', () => {
+    fx.baseline();
+    fx.grantOwnerAdmin();
+    fx.role('sys-auditor', 'auditor', 'system');
+    fx.role('org-a:auditor', 'auditor', 'org-a');
+    fx.db.close();
+    const res = run(fx.path, GRANTED_ALLOWED);
+    expect(res.status).toBe(4);
+    expect(res.json.violations).toContain('org-role-shadows-global-role');
+  });
+
+  it('an org role holding admin.system is a violation with --allow-custom-roles true', () => {
+    fx.baseline();
+    fx.grantOwnerAdmin();
+    fx.role('org-a:ops', 'Ops', 'org-a');
+    adminSystem('org-a:ops');
+    fx.db.close();
+    const res = run(fx.path, GRANTED_ALLOWED);
+    expect(res.status).toBe(4);
+    expect(res.json.violations).toEqual(['org-role-holds-admin-system']);
+    expect(res.json.globalRoleShadowing.orgRolesHoldingAdminSystem).toBe(1);
+  });
+
+  it('an org team bound to a role holding admin.system is a violation', () => {
+    fx.baseline();
+    fx.grantOwnerAdmin();
+    fx.team('team-a-sys', 'org-a', 'admin'); // the system admin role row carries admin.system
+    fx.db.close();
+    const res = run(fx.path, GRANTED_ALLOWED);
+    expect(res.status).toBe(4);
+    expect(res.json.violations).toEqual(['org-team-holds-admin-system']);
+    expect(res.json.globalRoleShadowing.orgTeamsHoldingAdminSystem).toBe(1);
+  });
+});
+
 describe('dismissal-permission-readback: arguments and failures', () => {
   it('bad arguments exit 2', () => {
     fx.baseline();

@@ -176,7 +176,10 @@ describe('the Dismissed section — tracer', () => {
     expect(html).not.toContain('rpt-dismissed');
   });
 
-  it('an org user viewing a system scan sees no Dismissed section', async () => {
+  it('an org user viewing a system scan sees the read-only Dismissed section', async () => {
+    // Owner ruling SC2 option B (quick 261013-dr7, CR-02): the section follows REPORT access (the
+    // shared guard lets org users open 'system' scans), not the write-side predicate. It used to be
+    // absent here, so the user read a filtered report with no trace of what was taken out of it.
     const systemScan = await seedSurfaceScan(ctx.storage, {
       orgId: 'system',
       location: 'db',
@@ -184,20 +187,39 @@ describe('the Dismissed section — tracer', () => {
     });
     await seedSurfaceDismissal(ctx.storage, { orgId: 'system', match: DISMISS_PARTIAL });
 
-    // Positive control: the page itself is open to this org user (the shared guard lets
-    // 'system' scans through), and a global admin DOES get the section for the same scan.
     const orgUser = await page(systemScan, {
       role: 'user',
       currentOrgId: ctx.orgs.fabrikamOrgId,
       permissions: VIEW,
     });
     expect(orgUser.data['reportData']).toBeTruthy();
-    expect('dismissals' in orgUser.data).toBe(false);
-    expect(orgUser.html).not.toContain('rpt-dismissed');
-    expect(orgUser.html).not.toContain(REASON_TOKEN);
+    const section = orgUser.doc.querySelector('details#rpt-dismissed');
+    expect(section).not.toBeNull();
+    expect(section!.querySelectorAll('table tbody tr')).toHaveLength(1);
+    expect(section!.textContent).toContain(REASON_TOKEN);
+    expect('dismissalControls' in orgUser.data).toBe(false);
+    expect(orgUser.doc.querySelector('[data-action="rptRevokeIssue"]')).toBeNull();
+  });
 
-    const admin = await page(systemScan, adminOf(ctx.orgs.fabrikamOrgId));
-    expect(admin.doc.querySelector('details#rpt-dismissed')).not.toBeNull();
+  it('an org user still cannot open another org scan', async () => {
+    const northwindScan = await seedSurfaceScan(ctx.storage, {
+      orgId: ctx.orgs.northwindOrgId,
+      location: 'db',
+      id: 'scan-northwind-0001',
+    });
+    const server = await makeServer(ctx, async (s) => {
+      s.addHook('preHandler', async (request) => {
+        request.user = { id: 'u-viewer', username: 'viewer', role: 'user', currentOrgId: ctx.orgs.fabrikamOrgId } as never;
+        (request as unknown as { permissions: Set<string> }).permissions = new Set(VIEW);
+      });
+      await reportRoutes(s, ctx.storage, () => null);
+    });
+    try {
+      const res = await server.inject({ method: 'GET', url: `/reports/${northwindScan}` });
+      expect(res.statusCode).toBe(404);
+    } finally {
+      await server.close();
+    }
   });
 
   it('an org user reads the section of their own org scan without issues.dismiss', async () => {
@@ -231,6 +253,7 @@ interface RawMark {
   readonly selector?: string;
   readonly reason?: string;
   readonly actor?: string;
+  readonly actorId?: string;
 }
 
 /** Mark through the repository (the route-level refusals are covered by the API tests). */
@@ -243,17 +266,24 @@ async function markRaw(input: RawMark = {}) {
     selector: input.selector ?? SEL_DISMISSED,
     reason: input.reason ?? REASON_TOKEN,
     actor: input.actor ?? 'fabrikam-admin',
+    ...(input.actorId !== undefined ? { actorId: input.actorId } : {}),
   });
   if (result.kind !== 'created') throw new Error('markRaw: key already active');
   return result.dismissal;
 }
 
-async function revokeRaw(id: string, actor = 'northwind-owner', comment: string | null = 'Selector was too broad') {
+async function revokeRaw(
+  id: string,
+  actor = 'northwind-owner',
+  comment: string | null = 'Selector was too broad',
+  actorId?: string,
+) {
   const result = await ctx.storage.issueDismissals!.revoke({
     id,
     orgId: ctx.orgs.fabrikamOrgId,
     actor,
     comment,
+    ...(actorId !== undefined ? { actorId } : {}),
   });
   if (result.kind !== 'revoked') throw new Error('revokeRaw: not revoked');
   return result.dismissal;
@@ -475,6 +505,25 @@ describe('actor label', () => {
     expect(html).not.toContain('<img src=x>');
   });
 
+  it('a user named api-key is shown by name, not as API key', async () => {
+    // WR-04: the kind comes from the server-set actor id (a user's is its uuid), never the name.
+    const userId = 'c0ffee00-0000-4000-8000-000000000001';
+    await markRaw({ actor: 'api-key', actorId: userId });
+    const gone = await markRaw({ code: CODE_ALT, selector: SEL_ALT, actor: 'api-key', actorId: userId });
+    await revokeRaw(gone.id, 'api-key', null, userId);
+    const cells = actorCells((await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId))).doc);
+    expect(cells.get(CODE_CONTRAST)).toEqual({ by: 'api-key', byTitle: 'api-key' });
+    expect(cells.get(CODE_ALT)).toEqual({ by: 'api-key', byTitle: 'api-key', revokedBy: 'api-key', revokedTitle: 'api-key' });
+  });
+
+  it("a user named api-key:<a real key id> is shown verbatim, not as that key's label", async () => {
+    const keyId = await storeKeyIn('Fabrikam CI', ctx.orgs.fabrikamOrgId);
+    await markRaw({ actor: `api-key:${keyId}`, actorId: 'c0ffee00-0000-4000-8000-000000000002' });
+    const { doc, html } = await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId));
+    expect(actorCells(doc).get(CODE_CONTRAST)!.by).toBe(`api-key:${keyId}`);
+    expect(html).not.toContain('API key: Fabrikam CI');
+  });
+
   it('a user actor keeps its name and its title', async () => {
     await markRaw({ actor: 'fabrikam-admin' });
     const gone = await markRaw({ code: CODE_ALT, selector: SEL_ALT, actor: 'fabrikam-admin' });
@@ -586,6 +635,60 @@ describe('every finding dismissed', () => {
     expect(panel.textContent).not.toContain('Every finding in this report');
     expect(doc.getElementById('rpt-dismissed')).not.toBeNull(); // the history is still listed
   });
+
+  it('a clean scan with an active dismissal for the site shows No issues found, not the all-dismissed notice', async () => {
+    // WR-01: the notice must follow what was removed from THIS report, not the site's active rules.
+    const scanId = await seedSurfaceScan(ctx.storage, {
+      orgId: ctx.orgs.fabrikamOrgId,
+      location: 'db',
+      id: 'scan-fabrikam-clean-active-1',
+      report: {
+        ...surfaceReport(FABRIKAM_SITE),
+        summary: { pagesScanned: 1, totalIssues: 0, byLevel: { error: 0, warning: 0, notice: 0 }, pagesFailed: 0 },
+        pages: [{ url: FABRIKAM_SITE, issueCount: 0, issues: [] }],
+        compliance: undefined,
+        complianceMatrix: [],
+        regulationMatrix: [],
+      },
+    });
+    await markRaw(); // active, never revoked, matches nothing in this clean report
+    const { doc } = await page(scanId, adminOf(ctx.orgs.fabrikamOrgId));
+    const panel = doc.getElementById('panel-issues')!;
+    expect(panel.textContent).toContain('No issues found in this report');
+    expect(panel.textContent).not.toContain('Every finding in this report');
+    expect(doc.getElementById('rpt-dismissed')).not.toBeNull(); // the rule itself is still listed
+  });
+
+  it('an org user on a system scan whose only finding was dismissed sees the all-dismissed notice', async () => {
+    // CR-02 as the review measured it: 0 groups, no section, "No issues found" - a false all-clear.
+    const report = {
+      ...surfaceReport(FABRIKAM_SITE),
+      summary: { pagesScanned: 1, totalIssues: 1, byLevel: { error: 1, warning: 0, notice: 0 }, pagesFailed: 0 },
+      pages: [
+        {
+          url: FABRIKAM_SITE,
+          issueCount: 1,
+          issues: [
+            { type: 'error', code: CODE_ALT, message: 'Image is missing a text alternative', selector: SEL_ALT, context: '<img id="x">' },
+          ],
+        },
+      ],
+      compliance: undefined,
+      complianceMatrix: [],
+      regulationMatrix: [],
+    };
+    const systemScan = await seedSurfaceScan(ctx.storage, { orgId: 'system', location: 'db', id: 'scan-system-0003', report });
+    await seedSurfaceDismissal(ctx.storage, { orgId: 'system', match: DISMISS_WHOLE });
+    const { doc, data } = await page(systemScan, {
+      role: 'user',
+      currentOrgId: ctx.orgs.fabrikamOrgId,
+      permissions: VIEW,
+    });
+    expect((data['reportData'] as { allIssueGroups: unknown[] }).allIssueGroups).toHaveLength(0);
+    const panel = doc.getElementById('panel-issues')!;
+    expect(panel.textContent).toContain('Every finding in this report has been dismissed');
+    expect(panel.textContent).not.toContain('No issues found in this report');
+  });
 });
 
 describe('who sees the Revoke control', () => {
@@ -610,21 +713,129 @@ describe('who sees the Revoke control', () => {
     expect(head).toHaveLength(6); // five columns plus the actions column
   });
 
-  it('a permitted org user on a system scan sees neither the section nor a control', async () => {
+  it('a permitted org user on a system scan sees the section but no control', async () => {
     const systemScan = await seedSurfaceScan(ctx.storage, {
       orgId: 'system',
       location: 'db',
       id: 'scan-system-0002',
     });
     await seedSurfaceDismissal(ctx.storage, { orgId: 'system', match: DISMISS_PARTIAL });
-    const { doc } = await page(systemScan, {
+    const { doc, data } = await page(systemScan, {
       role: 'user',
       currentOrgId: ctx.orgs.fabrikamOrgId,
       permissions: CONTROLS,
     });
-    expect(doc.getElementById('rpt-dismissed')).toBeNull();
+    // Mark and revoke stay on mayTouchDismissalOrg: an org user never writes into org 'system'.
+    expect(doc.getElementById('rpt-dismissed')).not.toBeNull();
+    expect('dismissalControls' in data).toBe(false);
     expect(doc.querySelector('[data-action="rptRevokeIssue"]')).toBeNull();
     expect(doc.getElementById('issue-revoke-dialog')).toBeNull();
+  });
+});
+
+describe('cross-tenant: the widened section never shows another org its data', () => {
+  // Commit security review flag (coordinator, 2026-10-13): CR-02 widened the Dismissed section from
+  // the write predicate to report access. The rows are always the SCAN org's for the scan's site,
+  // and the viewers are exactly those who can open the report; the one new pairing is org users
+  // reading org 'system' rows on a system scan, where key LABELS of system keys must not be named.
+  const SECRET = {
+    reason: 'FABRIKAM-PRIVATE-REASON-7f3a',
+    actor: 'fabrikam-private-actor',
+    comment: 'FABRIKAM-PRIVATE-COMMENT-7f3a',
+    keyLabel: 'Fabrikam Private Key 7f3a',
+  } as const;
+
+  async function seedFabrikamPrivate(): Promise<void> {
+    const keyId = await storeKeyIn(SECRET.keyLabel, ctx.orgs.fabrikamOrgId);
+    const marks = [
+      { code: 'WCAG2A.Priv.H1', selector: '#priv1', actor: SECRET.actor },
+      { code: 'WCAG2A.Priv.H2', selector: '#priv2', actor: `api-key:${keyId}` },
+    ];
+    for (const m of marks) {
+      const r = await ctx.storage.issueDismissals!.mark({
+        orgId: ctx.orgs.fabrikamOrgId, siteUrl: FABRIKAM_SITE, siteKey: toSiteKey(FABRIKAM_SITE),
+        code: m.code, selector: m.selector, reason: SECRET.reason, actor: m.actor, actorId: m.actor,
+      });
+      if (r.kind !== 'created') throw new Error('seed');
+    }
+    const gone = await ctx.storage.issueDismissals!.mark({
+      orgId: ctx.orgs.fabrikamOrgId, siteUrl: FABRIKAM_SITE, siteKey: toSiteKey(FABRIKAM_SITE),
+      code: 'WCAG2A.Priv.H3', selector: '#priv3', reason: SECRET.reason, actor: SECRET.actor, actorId: 'u-fab',
+    });
+    if (gone.kind !== 'created') throw new Error('seed');
+    await ctx.storage.issueDismissals!.revoke({
+      id: gone.dismissal.id, orgId: ctx.orgs.fabrikamOrgId, actor: SECRET.actor, actorId: 'u-fab', comment: SECRET.comment,
+    });
+  }
+
+  const northwindUser = (): Viewer => ({ role: 'user', currentOrgId: ctx.orgs.northwindOrgId, permissions: CONTROLS });
+
+  it('a viewer of org B never sees org A dismissal data on any report they can open', async () => {
+    await seedFabrikamPrivate();
+    // Same site URL under 'system' and under Northwind, so only the org key separates them.
+    const systemScan = await seedSurfaceScan(ctx.storage, { orgId: 'system', location: 'db', id: 'scan-system-x1' });
+    await seedSurfaceDismissal(ctx.storage, { orgId: 'system', match: DISMISS_PARTIAL });
+    const northwindScan = await seedSurfaceScan(ctx.storage, { orgId: ctx.orgs.northwindOrgId, location: 'db', id: 'scan-northwind-x1' });
+
+    for (const scanId of [systemScan, northwindScan]) {
+      const { html, doc } = await page(scanId, northwindUser());
+      expect(doc.getElementById('rpt-dismissed'), scanId).not.toBeNull(); // positive control: a section rendered
+      for (const token of Object.values(SECRET)) expect(html, `${scanId} ${token}`).not.toContain(token);
+    }
+
+    // The viewer cannot open org A's scan at all; org A's own viewer does see the data (control).
+    const server = await makeServer(ctx, async (s) => {
+      s.addHook('preHandler', async (request) => {
+        request.user = { id: 'u-nw', username: 'nw', role: 'user', currentOrgId: ctx.orgs.northwindOrgId } as never;
+        (request as unknown as { permissions: Set<string> }).permissions = new Set(CONTROLS);
+      });
+      await reportRoutes(s, ctx.storage, () => null);
+    });
+    try {
+      const res = await server.inject({ method: 'GET', url: `/reports/${ctx.scanId}` });
+      expect(res.statusCode).toBe(404);
+      for (const token of Object.values(SECRET)) expect(res.body).not.toContain(token);
+    } finally {
+      await server.close();
+    }
+    const own = await page(ctx.scanId, { role: 'user', currentOrgId: ctx.orgs.fabrikamOrgId, permissions: CONTROLS });
+    for (const token of Object.values(SECRET)) expect(own.html, token).toContain(token);
+  });
+
+  it('a user with no org cannot open an org scan and gets none of its dismissal data', async () => {
+    await seedFabrikamPrivate();
+    const server = await makeServer(ctx, async (s) => {
+      s.addHook('preHandler', async (request) => {
+        request.user = { id: 'u-noorg', username: 'noorg', role: 'user' } as never;
+        (request as unknown as { permissions: Set<string> }).permissions = new Set(CONTROLS);
+      });
+      await reportRoutes(s, ctx.storage, () => null);
+    });
+    try {
+      const res = await server.inject({ method: 'GET', url: `/reports/${ctx.scanId}` });
+      expect(res.statusCode).toBe(404);
+      expect(res.body).not.toContain('rpt-dismissed');
+      for (const token of Object.values(SECRET)) expect(res.body).not.toContain(token);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('an org user on a system scan sees the generic API key label, never a system key label', async () => {
+    const keyId = await storeKeyIn('Platform Ops Key 7f3a'); // org 'system'
+    const systemScan = await seedSurfaceScan(ctx.storage, { orgId: 'system', location: 'db', id: 'scan-system-x2' });
+    const r = await ctx.storage.issueDismissals!.mark({
+      orgId: 'system', siteUrl: FABRIKAM_SITE, siteKey: toSiteKey(FABRIKAM_SITE),
+      code: CODE_CONTRAST, selector: SEL_DISMISSED, reason: REASON_TOKEN, actor: `api-key:${keyId}`, actorId: `api-key:${keyId}`,
+    });
+    if (r.kind !== 'created') throw new Error('seed');
+
+    const orgUser = await page(systemScan, northwindUser());
+    expect(actorCells(orgUser.doc).get(CODE_CONTRAST)!.by).toBe('API key');
+    expect(orgUser.html).not.toContain('Platform Ops Key 7f3a');
+
+    const admin = await page(systemScan, adminOf(ctx.orgs.northwindOrgId)); // control: a global admin may
+    expect(actorCells(admin.doc).get(CODE_CONTRAST)!.by).toBe('API key: Platform Ops Key 7f3a');
   });
 });
 
