@@ -44,6 +44,7 @@ import {
   ScanParams,
   IdParams,
   RATE_LIMIT,
+  MUTATION_CONFIG,
   dismissalToJson,
   mutationToJson,
   eventToJson,
@@ -106,7 +107,7 @@ export async function issueDismissalRoutes(
     '/api/v1/scans/:scanId/dismissals',
     {
       preHandler: requirePermission('issues.dismiss'),
-      config: RATE_LIMIT,
+      config: MUTATION_CONFIG,
       schema: {
         tags: ['issue-dismissals'],
         params: ScanParams,
@@ -185,7 +186,7 @@ export async function issueDismissalRoutes(
     '/api/v1/dismissals/:id/revoke',
     {
       preHandler: requirePermission('issues.dismiss'),
-      config: RATE_LIMIT,
+      config: MUTATION_CONFIG,
       schema: {
         tags: ['issue-dismissals'],
         params: IdParams,

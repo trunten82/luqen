@@ -101,6 +101,19 @@ async function addOrgUser(orgId: string, roleName: string, username: string, pas
   await seed.teams.addTeamMember(team.id, user.id);
 }
 
+/**
+ * A password session as the report page's client holds it: the cookie plus the page's CSRF token,
+ * which cookie-session dismissal mutations must send (quick 261013-dr7, WR-02).
+ */
+async function pageSession(username: string, password: string, scanId: string): Promise<{ cookie: string; csrf: string }> {
+  const cookie = await passwordSession(username, password);
+  const page = await app.inject({ method: 'GET', url: `/reports/${scanId}`, cookies: { session: cookie } });
+  expect(page.statusCode).toBe(200);
+  const csrf = /name="csrf-token" content="([^"]+)"/.exec(page.body)?.[1];
+  expect(csrf).toBeDefined();
+  return { cookie: page.cookies.find((c) => c.name === 'session')?.value ?? cookie, csrf: csrf! };
+}
+
 /** A password session (POST /login is a browser form: CSRF token + the cookie it is bound to). */
 async function passwordSession(username: string, password: string): Promise<string> {
   const page = await app.inject({ method: 'GET', url: '/login' });
@@ -239,11 +252,12 @@ describe('issue dismissals through the real server (Phase 87-04)', () => {
 
 describe('the grant reaches an org that existed before migration 091 (Phase 89-09)', () => {
   it('an org Owner of an org that existed before 091 marks a finding through the real server', async () => {
-    const cookie = await passwordSession('fabrikam-owner', OWNER_PASSWORD);
+    const session = await pageSession('fabrikam-owner', OWNER_PASSWORD, preScan);
     const res = await app.inject({
       method: 'POST',
       url: `/api/v1/scans/${preScan}/dismissals`,
-      cookies: { session: cookie },
+      cookies: { session: session.cookie },
+      headers: { 'x-csrf-token': session.csrf },
       payload: { code: CODE, selector: SELECTOR, reason: 'Hidden noscript copy' },
     });
     expect(res.statusCode).toBe(201);
@@ -252,11 +266,12 @@ describe('the grant reaches an org that existed before migration 091 (Phase 89-0
   });
 
   it('a Member of the same pre-existing org is refused', async () => {
-    const cookie = await passwordSession('fabrikam-member', MEMBER_PASSWORD);
+    const session = await pageSession('fabrikam-member', MEMBER_PASSWORD, preScan);
     const res = await app.inject({
       method: 'POST',
       url: `/api/v1/scans/${preScan}/dismissals`,
-      cookies: { session: cookie },
+      cookies: { session: session.cookie },
+      headers: { 'x-csrf-token': session.csrf },
       // A real finding of this scan, so a wrongly granted Member would get 201, not 422.
       payload: { code: 'WCAG2AA.Principle2.Other', selector: '#nav a', reason: 'should never be stored' },
     });

@@ -216,10 +216,17 @@ describe('API-key dismissal actors through the real server', () => {
     expect(login.statusCode).toBe(302);
     const cookie = login.cookies.find((c) => c.name === 'session');
     expect(cookie).toBeDefined();
+    // A cookie session sends the report page's CSRF token, as issue-dismissals.js does (WR-02).
+    const reportPage = await app.inject({ method: 'GET', url: `/reports/${t.scanId}`, cookies: { session: cookie!.value } });
+    expect(reportPage.statusCode).toBe(200);
+    const pageCsrf = /name="csrf-token" content="([^"]+)"/.exec(reportPage.body)?.[1];
+    expect(pageCsrf).toBeDefined();
+    const sessionCookie = reportPage.cookies.find((c) => c.name === 'session')?.value ?? cookie!.value;
     const res = await app.inject({
       method: 'POST',
       url: `/api/v1/scans/${t.scanId}/dismissals`,
-      cookies: { session: cookie!.value },
+      cookies: { session: sessionCookie },
+      headers: { 'x-csrf-token': pageCsrf! },
       payload: MARK_BODY,
     });
     expect(res.statusCode).toBe(201);
