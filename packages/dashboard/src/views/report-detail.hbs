@@ -777,8 +777,6 @@
     <input type="hidden" name="_csrf" value="{{csrfToken}}">
     {{t "reportDetail.retryScan"}}
   </button>
-  {{/if}}
-  {{#if scanControls}}
   <button hx-post="/reports/{{scan.id}}/cancel" hx-confirm="Cancel this scan?" hx-target="body" class="btn btn--sm btn--danger">
     <input type="hidden" name="_csrf" value="{{csrfToken}}">
     {{t "reportDetail.cancelScan"}}
