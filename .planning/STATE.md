@@ -5,16 +5,16 @@ milestone_name: Dismissal follow-through
 current_phase: 90
 current_phase_name: GraphQL createScan starts scans
 status: executing
-stopped_at: Completed 90-06-PLAN.md (local rehearsal + rate-limit probe green; 90-03 finding B1 still open for plan 05)
-last_updated: "2026-10-15T12:45:11.525Z"
+stopped_at: Completed 90-04-PLAN.md (M1-M26 break-tests; M6 category finding)
+last_updated: "2026-10-15T14:20:31.695Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 90 execution started
-state_head: 0cd72058664a9e6b95185c5795da8eaa1d7ecc62
+state_head: 19cea24959d87f404e1f0bbd0251eff360ae0de1
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -128,7 +128,7 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 ## Current Position
 
 Phase: 90 (GraphQL createScan starts scans) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 90 execution started
 
@@ -219,8 +219,8 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-15T12:45:11.457Z
-Stopped at: Completed 90-06-PLAN.md (local rehearsal + rate-limit probe green; 90-03 finding B1 still open for plan 05)
+Last session: 2026-10-15T14:20:31.659Z
+Stopped at: Completed 90-04-PLAN.md (M1-M26 break-tests; M6 category finding)
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -260,6 +260,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 90 P02 | 35min | 3 tasks | 10 files |
 | Phase 90 P03 | 35min | 3 tasks | 2 files |
 | Phase 90 P06 | ~50min | 3 tasks | 6 files |
+| Phase 90 P04 | 1h25m | 3 tasks | 0 files |
 
 ## Decisions
 
@@ -273,6 +274,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 89]: 89-09 open point D-89-09-01: after the lift a global admin can put issues.dismiss on a global (system-org) role; not decided at D-15; D-17 read-back flags it
 - [Phase 90]: Phase 90-01: GraphQL createScan routes through ScanService.initiateScanAuthorized (permission check in the shared function, not initiateScan; MCP exception documented)
 - [Phase 90]: 90-03: read-back script switch-ignored world uses a same-named other org, so the org assertion must compare name AND id; selftest lives in the script file
+- [Phase 90]: 90-04: all 26 guard mutations watched failing; 25 reddened exactly the declared set, M6 reddened the declared set plus one positive-control test outside its stated category (recorded as a MISMATCH, declaration not edited); M25 first run hit nine load timeouts, re-run clean
 
 ### Blockers
 

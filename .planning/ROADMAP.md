@@ -30,7 +30,7 @@
 ## Phases
 
 - [ ] **Phase 90: GraphQL createScan starts scans** - A scan created through GraphQL runs to a terminal state and is validated by the same code path as `/scan/new`
-- [ ] **Phase 91: Dismissal and permission hardening** - Close the 14 review and deferred-list items so dismissal and permission boundaries hold on every path
+- [ ] **Phase 91: Dismissal and permission hardening** - Close the 15 review and deferred-list items so dismissal and permission boundaries hold on every path
 - [ ] **Phase 92: Dismissal user documentation** - Users can follow written docs to mark, understand, revoke and audit false-positive dismissals
 
 ## Phase Details
@@ -53,7 +53,7 @@ Plans:
 - [x] 90-01-PLAN.md — Tracer: GraphQL createScan goes through the shared authorized scan function and reaches the orchestrator (RED first); docs
 - [x] 90-02-PLAN.md — POST /scan/new refuses callers without scans.create through the same function; one scan-start rate limit inside it, one bucket for both paths (D-90-07)
 - [x] 90-03-PLAN.md — Env-only prod read-back script with selftest, its guards broken, and the read-only prod preflight
-- [ ] 90-04-PLAN.md — Break every guard (permission, SSRF, wiring, generator, shared rate limit) one at a time against pre-declared red sets
+- [x] 90-04-PLAN.md — Break every guard (permission, SSRF, wiring, generator, shared rate limit) one at a time against pre-declared red sets
 - [ ] 90-05-PLAN.md — Ship: content scan, PR with green checks, pre-merge prod gates, merge, deploy, prod read-back
 - [x] 90-06-PLAN.md — RBAC matrix shows the guard; docs for the 403 and the shared rate limit; full gates and local end-to-end rehearsal with a rate-limit probe (wave 3, runs before 90-04)
 
@@ -61,7 +61,7 @@ Plans:
 
 **Goal**: The dismissal feature and the permission model behave correctly at their edges on every path (UI, API, MCP, admin roles): no user can reach a dead-end control, see data they may not see, or hold a permission that was never meant to be grantable.
 **Depends on**: Nothing functionally (Phase 90 is independent); sequenced before Phase 92 so the documentation describes the hardened behaviour
-**Requirements**: HARD-01, HARD-02, HARD-03, HARD-04, HARD-05, HARD-06, HARD-07, HARD-08, HARD-09, HARD-10, HARD-11, HARD-12, HARD-13, HARD-14
+**Requirements**: HARD-01, HARD-02, HARD-03, HARD-04, HARD-05, HARD-06, HARD-07, HARD-08, HARD-09, HARD-10, HARD-11, HARD-12, HARD-13, HARD-14, HARD-15
 **Success Criteria** (what must be TRUE):
 
   1. On the report page, the Dismiss button is disabled for every selector the server refuses (including over 4000 characters), so no user reaches an endless "Try again" loop; a user without `reports.view_technical` never receives a raw selector in the DOM or in requests from the Dismiss/Assign controls; a key label containing `$&`, `` $` `` or `$'` renders unchanged; dismissed/revoked dates show in the viewing user's session locale (HARD-01, 02, 04, 05)
