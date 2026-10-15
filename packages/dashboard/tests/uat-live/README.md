@@ -24,7 +24,9 @@ UAT which surfaced 11 production bugs the unit suites missed.
   GraphQL `createScan` against a RUNNING dashboard (also reachable remotely),
   configured by environment variables only: `LUQEN_UAT_BASE_URL`,
   `LUQEN_UAT_ADMIN_USER`, `LUQEN_UAT_ADMIN_PASS` (required; the script names
-  any missing one and exits 2), `LUQEN_UAT_ORG_NAME` (default `Fabrikam UAT`),
+  any missing one and exits 2; `LUQEN_UAT_BASE_URL` must be `https://`, or the
+  script exits 2 without sending anything, except a loopback `http://` URL with
+  an explicit port for a local rehearsal), `LUQEN_UAT_ORG_NAME` (default `Fabrikam UAT`),
   `LUQEN_UAT_SCAN_TARGET` (default `https://example.com`),
   `LUQEN_UAT_PRIVATE_PROBE` (`on`/`off`), and the timing knobs
   `LUQEN_UAT_LEAVE_QUEUED_S`, `LUQEN_UAT_TERMINAL_S`, `LUQEN_UAT_POLL_MS`.
@@ -34,7 +36,7 @@ UAT which surfaced 11 production bugs the unit suites missed.
   `queued` and reach `completed`/`failed`, then deletes it in a finally block
   and reads it back as null. `--preflight` stops after the org assertion and
   never calls `/graphql`. `--selftest` drives the same code against an
-  in-process fake server in six worlds and greps the output for sentinel
+  in-process fake server in twelve worlds and greps the output for sentinel
   values. Output is check names, status words and elapsed seconds only.
   **Run full mode against production only after the fix is deployed and the
   Deploy run succeeded; never before** (a row created by the old code would

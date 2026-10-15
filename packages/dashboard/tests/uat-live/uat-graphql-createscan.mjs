@@ -7,6 +7,7 @@
 //
 // Environment (names only; values are never printed):
 //   LUQEN_UAT_BASE_URL, LUQEN_UAT_ADMIN_USER, LUQEN_UAT_ADMIN_PASS      required (exit 2 naming the missing ones)
+//   LUQEN_UAT_BASE_URL must be https:// (exit 2 otherwise), except http://127.0.0.1:<port> / http://localhost:<port> for a local rehearsal
 //   LUQEN_UAT_ORG_NAME            default 'Fabrikam UAT'
 //   LUQEN_UAT_SCAN_TARGET         default 'https://example.com'
 //   LUQEN_UAT_PRIVATE_PROBE       'on' (default) | 'off'
@@ -28,6 +29,22 @@ const KNOWN_STATUS = ['queued', 'running', 'completed', 'failed'];
 /** Names (never values) of the required variables that are absent or empty. */
 export function missingVars(env) {
   return REQUIRED_VARS.filter((name) => typeof env[name] !== 'string' || env[name].trim() === '');
+}
+
+/**
+ * The admin password and session cookie travel to this URL, so it must be https://. Plain http is
+ * accepted only for the local rehearsal: exactly http://127.0.0.1:<port> or http://localhost:<port>.
+ * Returns true when the value is acceptable; never echoes it.
+ */
+export function baseUrlAllowed(raw) {
+  const value = typeof raw === 'string' ? raw.trim() : '';
+  if (/^http:\/\/(127\.0\.0\.1|localhost):[0-9]{1,5}\/?$/i.test(value)) return true;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.hostname !== '' && url.username === '' && url.password === '';
+  } catch {
+    return false;
+  }
 }
 
 const positive = (raw, fallback) => {
@@ -60,6 +77,10 @@ export async function run({ env, mode, transport, sleep, now, log }) {
   const missing = missingVars(env);
   if (missing.length > 0) {
     log(`MISSING ${missing.join(', ')} (set them in the environment; values are never printed)`);
+    return 2;
+  }
+  if (!baseUrlAllowed(env.LUQEN_UAT_BASE_URL)) {
+    log('REFUSED LUQEN_UAT_BASE_URL must be https:// (plain http only for a loopback host with an explicit port); value never printed');
     return 2;
   }
   const cfg = readConfig(env);
@@ -276,7 +297,7 @@ function makeFake(world) {
   const dup = { id: SENT.dupId, name: SENT.orgName };
   const allOrgs = [uat, other, dup];
   const userOrgs = world === 'wrong-org' ? [other] : [uat, other];
-  const rec = { gqlCalls: 0, creates: [], deleted: [] };
+  const rec = { gqlCalls: 0, calls: 0, creates: [], deleted: [] };
   const state = { loggedIn: false, currentOrgId: world === 'switch-ignored' ? dup.id : '' };
   const scans = new Map();
   const reply = (status, text = '', location = '') => ({ status, text, location });
@@ -308,6 +329,7 @@ function makeFake(world) {
   };
 
   const transport = async (req) => {
+    rec.calls += 1;
     const authed = state.loggedIn;
     if (req.method === 'GET' && req.path === '/login') return reply(200, '<input type="hidden" name="_csrf" value="csrf-login">');
     if (req.method === 'POST' && req.path === '/login') {
@@ -411,6 +433,37 @@ const WORLDS = [
       return un;
     },
   },
+  ...[
+    ['plain-http-refused', 'http://base-url-sentinel.invalid'],
+    ['loopback-lookalike-refused', 'http://127.0.0.1.base-url-sentinel.invalid:80'],
+    ['userinfo-loopback-refused', 'http://127.0.0.1:80@base-url-sentinel.invalid'],
+    ['non-http-scheme-refused', 'ftp://base-url-sentinel.invalid'],
+  ].map(([name, base]) => ({
+    name,
+    base,
+    expect: ({ code, lines, rec }) => {
+      const un = [];
+      if (code !== 2) un.push(`exit ${code} instead of 2`);
+      if (rec.calls !== 0) un.push(`${rec.calls} request(s) sent to a refused base url`);
+      if (lines.length !== 1 || !lines[0].startsWith('REFUSED LUQEN_UAT_BASE_URL ')) un.push('no single REFUSED line naming LUQEN_UAT_BASE_URL');
+      return un;
+    },
+  })),
+  ...[
+    ['loopback-ip-http-allowed', 'http://127.0.0.1:8080'],
+    ['localhost-http-allowed', 'http://localhost:8080/'],
+  ].map(([name, base]) => ({
+    name,
+    base,
+    fake: 'completes',
+    expect: ({ code, lines }) => {
+      const un = [];
+      if (code !== 0) un.push(`exit ${code} instead of 0`);
+      if (startsWith(lines, 'REFUSED')) un.push('a loopback http base url was refused');
+      for (const l of ALL_PASS_FULL) if (!hasLine(lines, l)) un.push(`missing line: ${l}`);
+      return un;
+    },
+  })),
   {
     name: 'preflight',
     mode: 'preflight',
@@ -426,11 +479,11 @@ const WORLDS = [
 ];
 
 async function runWorld(world) {
-  const { transport, rec } = makeFake(world.name);
+  const { transport, rec } = makeFake(world.fake ?? world.name);
   const lines = [];
   let clock = 0;
   const env = {
-    LUQEN_UAT_BASE_URL: SENT.base,
+    LUQEN_UAT_BASE_URL: world.base ?? SENT.base,
     LUQEN_UAT_ADMIN_USER: SENT.user,
     LUQEN_UAT_ADMIN_PASS: SENT.pass,
     LUQEN_UAT_ORG_NAME: SENT.orgName,
@@ -460,7 +513,7 @@ export async function selftest(log) {
       unmet = world.expect(out);
       const text = out.lines.join('\n');
       if (SENTINELS.some((s) => text.includes(s))) unmet.push('output contains a sentinel value (url, user, password, org name/id, scan id or target)');
-      if (out.lines.some((l) => !/^(PASS|FAIL|INFO|WARN|SKIP) /.test(l))) unmet.push('an output line has no PASS/FAIL/INFO/WARN/SKIP prefix');
+      if (out.lines.some((l) => !/^(PASS|FAIL|INFO|WARN|SKIP|REFUSED) /.test(l))) unmet.push('an output line has no PASS/FAIL/INFO/WARN/SKIP prefix');
     } catch {
       unmet = ['the world crashed'];
     }
