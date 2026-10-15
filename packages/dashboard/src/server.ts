@@ -1118,7 +1118,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   const sharedScanService = new ScanService(storage, orchestrator, config, undefined, scanStartLimiter);
   await compareRoutes(server, storage);
   await trendRoutes(server, storage);
-  await scheduleRoutes(server, storage);
+  await scheduleRoutes(server, storage, (raw) => sharedScanService.validateStartUrl(raw));
   // LLM client is owned by serviceClientRegistry (constructed above).
   // Routes receive getLLMClient and resolve the current live instance per
   // request so a runtime reload is picked up without a restart.
