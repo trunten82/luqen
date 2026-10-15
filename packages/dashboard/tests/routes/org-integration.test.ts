@@ -71,6 +71,9 @@ async function createOrgTestServer(
       role,
       currentOrgId,
     };
+    // These tests pin org derivation; the permission refusal is pinned by the
+    // SCAN-02 parity tests in tests/routes/scan.test.ts.
+    (request as unknown as Record<string, unknown>)['permissions'] = new Set(['scans.create']);
   });
 
   await homeRoutes(server, storage);

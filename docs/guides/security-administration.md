@@ -136,8 +136,8 @@ Plugin configuration secrets (API keys, OAuth client secrets, SMTP passwords) ar
 ### SSRF protection
 
 Scan start URLs are validated before a scan is created — on the scan form,
-the REST/GraphQL `createScan` paths, and the agent `dashboard_scan_page` MCP
-tool. The check uses the same `@luqen/core` predicate as discovery (below):
+the GraphQL `createScan` mutation (which shares the scan form's validation
+function), and the agent `dashboard_scan_page` MCP tool. The check uses the same `@luqen/core` predicate as discovery (below):
 the hostname is refused when it is a private or reserved literal in any
 spelling, AND when it **resolves** (DNS, all A/AAAA records) to any private
 address — so a public name pointed at `127.0.0.1` or a LAN address is refused

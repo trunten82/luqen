@@ -358,8 +358,15 @@ Parameters:
 | `standard` | `string` | `WCAG2A`, `WCAG2AA` (default), or `WCAG2AAA` |
 | `jurisdictions` | `string[]` | Jurisdiction codes for compliance enrichment (max 50) |
 | `concurrency` | `number` | Pages to scan in parallel (1-10) |
+| `includeWarnings` | `boolean` | Include warning-level issues. On the scan form an unchecked box sends no value and means `false` |
+| `includeNotices` | `boolean` | Include notice-level issues. On the scan form an unchecked box sends no value and means `false` |
 
-Rate limited: 10 requests per 10 minutes per session.
+Responses:
+
+- Without the `scans.create` permission the endpoint answers `403` (an HTMX request receives JSON with `error` set to `Forbidden: requires scans.create`; any other request receives the standard 403 response). The GraphQL `createScan` mutation applies the same check. An API key is held to the same check: a key whose role does not carry `scans.create` receives `403`.
+- Scans started from the scan form (`POST /scan/new`) or the GraphQL `createScan` mutation are limited to 30 per 10 minutes per user (per API key for key-authenticated callers). The two share one budget, and every permitted attempt counts toward it, including attempts later refused for the URL or the standard.
+- Over the limit the endpoint answers `429` with a `Retry-After` header (seconds until the oldest counted start leaves the window). API callers receive JSON `{ "error": "..." }`; browser callers see the scan form with the message. The message is `Scan start limit reached: at most 30 scans per 10 minutes. Try again later.`
+- Otherwise a refused start answers `400` with the reason, and a started scan redirects to `/scan/:id/progress`.
 
 ---
 

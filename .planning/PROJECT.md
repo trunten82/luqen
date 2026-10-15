@@ -8,9 +8,24 @@ Luqen is a WCAG accessibility compliance platform built as a monorepo of Fastify
 
 AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control of the whole stack through the dashboard, not config files.
 
+## Current Milestone: v3.9.0 Dismissal follow-through
+
+**Goal:** Close the follow-ups v3.8.0 left open: scans created through GraphQL actually run, the false-positive
+dismissal feature and its permissions are hardened against the review's deferred findings, and users get
+documentation for it.
+
+**Owner ruling:** APPROVED by Alessandro 2026-10-15, directly to Allanon in session (question card), relayed to
+luqen by a2a 01M4ZHSH3Y4SE3V6WNHDHCH0J3. Scope (a)+(b)+(c) exactly as proposed in a2a 01M4XX2RSV4MH61PZJ7ECS1TB1.
+
+**Target features:**
+- GraphQL `createScan` starts the scan through the same path and guards as `/scan/new` (D-89-07-01)
+- Dismissal/permission hardening from the quick 261013-dr7 deferred list (review WR-05, IN-01..IN-08, /api/v1
+  cookie-CSRF sweep, list API read predicate, scope-aware grantability D-89-09-01, MCP user role validation)
+- User documentation for false-positive dismissals (D-89-09-02)
+
 ## Last Milestone (shipped 2026-10-13): v3.8.0 Mark as false positive
 
-**Status:** SHIPPED and archived 2026-10-13, prod 23c40aaf. No next milestone: DORMANT-BY-CHOICE per the closure ruling of 2026-10-12.
+**Status:** SHIPPED and archived 2026-10-13, prod 23c40aaf. Follow-up milestone v3.9.0 opened 2026-10-15.
 
 **Goal:** Let a dashboard user dismiss a scan finding they have verified is a false positive, with a
 required reason and a full audit trail, so it stops counting against the site everywhere a count, a
@@ -212,7 +227,7 @@ but it ADDS a capability while this milestone protects the ones already shipped 
 
 ### Active
 
-v3.8.0 Mark as false positive — see REQUIREMENTS.md (FP-*). Unchanged and still pending with the owner:
+v3.9.0 Dismissal follow-through — see REQUIREMENTS.md (SCAN-*, HARD-*, DOCS-*). Unchanged and still pending with the owner:
 a pre-registered, noise-aware v2 false-PASS gate (register 01M3K97VY409DDC376SWQ2YK09).
 
 ### Out of Scope
@@ -299,4 +314,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-13 after v3.8.0 milestone (shipped; dormant-by-choice)*
+*Last updated: 2026-10-15 after starting v3.9.0 milestone*

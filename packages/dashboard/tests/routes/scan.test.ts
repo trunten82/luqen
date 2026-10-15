@@ -14,6 +14,15 @@ import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { registerSession } from '../../src/auth/session.js';
 import { scanRoutes } from '../../src/routes/scan.js';
 import { ScanOrchestrator } from '../../src/scanner/orchestrator.js';
+import {
+  PRIVATE_TARGET_ERROR,
+  SCAN_RATE_LIMIT_ERROR,
+  ScanService,
+  createScanStartLimiter,
+  type ScanStartLimiter,
+} from '../../src/services/scan-service.js';
+import { resolvers } from '../../src/graphql/resolvers.js';
+import type { GraphQLContext } from '../../src/graphql/resolvers.js';
 import type { DashboardConfig } from '../../src/config.js';
 
 const TEST_SESSION_SECRET = 'test-session-secret-at-least-32b';
@@ -26,7 +35,10 @@ interface TestContext {
   cleanup: () => void;
 }
 
-async function createTestServer(permissions: string[] = ['scans.create', 'reports.view']): Promise<TestContext> {
+async function createTestServer(
+  permissions: string[] = ['scans.create', 'reports.view'],
+  scanStartLimiter?: ScanStartLimiter,
+): Promise<TestContext> {
   const dbPath = join(tmpdir(), `test-scan-${randomUUID()}.db`);
   const reportsDir = join(tmpdir(), `test-scan-reports-${randomUUID()}`);
   mkdirSync(reportsDir, { recursive: true });
@@ -59,18 +71,25 @@ async function createTestServer(permissions: string[] = ['scans.create', 'report
   server.decorateReply(
     'view',
     function (this: FastifyReply, template: string, data: unknown) {
-      return this.code(200).header('content-type', 'application/json').send(
+      // No forced status: a status the route set (400, 429) must survive.
+      return this.header('content-type', 'application/json').send(
         JSON.stringify({ template, data }),
       );
     },
   );
 
   server.addHook('preHandler', async (request) => {
-    request.user = { id: 'user-1', username: 'alice', role: 'admin', currentOrgId: 'system' };
+    const headerUserId = request.headers['x-test-user-id'];
+    request.user = {
+      id: typeof headerUserId === 'string' ? headerUserId : 'user-1',
+      username: 'alice',
+      role: 'admin',
+      currentOrgId: 'system',
+    };
     (request as unknown as Record<string, unknown>)['permissions'] = new Set(permissions);
   });
 
-  await scanRoutes(server, storage, orchestrator, config);
+  await scanRoutes(server, storage, orchestrator, config, undefined, scanStartLimiter);
   await server.ready();
 
   const cleanup = (): void => {
@@ -1070,5 +1089,156 @@ describe('Scan Routes', () => {
       // (the response was already ended after complete)
       expect(response.body).toContain('event: complete');
     });
+  });
+});
+
+// Parity with GraphQL createScan: the scan form goes through the same shared
+// ScanService.initiateScanAuthorized function, so it refuses the same way.
+describe('scan form parity with graphql createScan', () => {
+  let pctx: TestContext;
+
+  afterEach(() => {
+    pctx.cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('SCAN-02 parity scan new refuses a caller without the scan create permission', async () => {
+    stubFetchOk();
+    pctx = await createTestServer(['reports.view']);
+
+    const response = await pctx.server.inject({
+      method: 'POST',
+      url: '/scan/new',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: 'siteUrl=https%3A%2F%2Fexample.com&standard=WCAG2AA',
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(pctx.orchestrator.startScan).not.toHaveBeenCalled();
+    expect(await pctx.storage.scans.listScans({ orgId: 'system' })).toEqual([]);
+  });
+
+  it('SCAN-02 parity scan new answers an htmx caller without the permission with 403', async () => {
+    stubFetchOk();
+    pctx = await createTestServer(['reports.view']);
+
+    const response = await pctx.server.inject({
+      method: 'POST',
+      url: '/scan/new',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', 'hx-request': 'true' },
+      payload: 'siteUrl=https%3A%2F%2Fexample.com&standard=WCAG2AA',
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect((response.json() as { error: string }).error).toBe('Forbidden: requires scans.create');
+    expect(pctx.orchestrator.startScan).not.toHaveBeenCalled();
+    expect(await pctx.storage.scans.listScans({ orgId: 'system' })).toEqual([]);
+  });
+
+  it('SCAN-02 parity scan new refuses a loopback target', async () => {
+    stubFetchOk();
+    pctx = await createTestServer();
+
+    const response = await pctx.server.inject({
+      method: 'POST',
+      url: '/scan/new',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: 'siteUrl=http%3A%2F%2F127.0.0.1%2F&standard=WCAG2AA',
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect((response.json() as { error: string }).error).toBe(PRIVATE_TARGET_ERROR);
+    expect(pctx.orchestrator.startScan).not.toHaveBeenCalled();
+  });
+
+  const FORM = 'siteUrl=https%3A%2F%2Fexample.com&standard=WCAG2AA';
+  const frozenLimiter = (): ScanStartLimiter => createScanStartLimiter({ now: () => 1_000_000 });
+
+  async function postScan(
+    c: TestContext,
+    extraHeaders: Record<string, string> = {},
+  ): Promise<Awaited<ReturnType<TestContext['server']['inject']>>> {
+    return c.server.inject({
+      method: 'POST',
+      url: '/scan/new',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', ...extraHeaders },
+      payload: FORM,
+    });
+  }
+
+  it('SCAN-02 parity scan new answers the 31st start in ten minutes with 429 and the shared rate limit message', async () => {
+    stubFetchOk();
+    pctx = await createTestServer(undefined, frozenLimiter());
+
+    for (let i = 0; i < 30; i += 1) {
+      expect((await postScan(pctx)).statusCode).toBe(302);
+    }
+    const refused = await postScan(pctx);
+
+    expect(refused.statusCode).toBe(429);
+    expect((refused.json() as { error: string }).error).toBe(SCAN_RATE_LIMIT_ERROR);
+    const retryAfter = String(refused.headers['retry-after']);
+    expect(retryAfter).toMatch(/^\d+$/);
+    expect(Number(retryAfter)).toBeGreaterThanOrEqual(1);
+    expect(Number(retryAfter)).toBeLessThanOrEqual(600);
+    expect(pctx.orchestrator.startScan).toHaveBeenCalledTimes(30);
+  });
+
+  it('SCAN-02 parity scan new shows the rate limit message on the form for an htmx caller with 429', async () => {
+    stubFetchOk();
+    pctx = await createTestServer(undefined, frozenLimiter());
+
+    for (let i = 0; i < 30; i += 1) {
+      expect((await postScan(pctx)).statusCode).toBe(302);
+    }
+    const refused = await postScan(pctx, { 'hx-request': 'true' });
+
+    expect(refused.statusCode).toBe(429);
+    expect(Number(String(refused.headers['retry-after']))).toBeGreaterThanOrEqual(1);
+    const payload = refused.json() as { template: string; data: { scanError: string } };
+    expect(payload.template).toBe('scan-new.hbs');
+    expect(payload.data.scanError).toBe(SCAN_RATE_LIMIT_ERROR);
+  });
+
+  it('SCAN-02 parity scan new and graphql createScan draw from one rate limit bucket', async () => {
+    stubFetchOk();
+    const limiter = frozenLimiter();
+    pctx = await createTestServer(undefined, limiter);
+    const scanService = new ScanService(pctx.storage, pctx.orchestrator, pctx.config, undefined, limiter);
+    const gqlCtx = {
+      storage: pctx.storage,
+      user: { id: 'user-1', username: 'alice', role: 'admin', currentOrgId: 'system' },
+      permissions: new Set(['scans.create']),
+      orgId: 'system',
+      brandingOrchestrator: {},
+      scanService,
+      complianceToken: 'ctx-compliance-token',
+      clientIp: '127.0.0.1',
+    } as unknown as GraphQLContext;
+    const createScan = resolvers.Mutation.createScan as (
+      r: unknown, a: unknown, c: GraphQLContext,
+    ) => Promise<unknown>;
+
+    for (let i = 0; i < 30; i += 1) {
+      await createScan({}, { input: { siteUrl: 'https://example.com' } }, gqlCtx);
+    }
+    const refused = await postScan(pctx);
+
+    expect(refused.statusCode).toBe(429);
+    expect((refused.json() as { error: string }).error).toBe(SCAN_RATE_LIMIT_ERROR);
+    expect(pctx.orchestrator.startScan).toHaveBeenCalledTimes(30);
+  });
+
+  it('SCAN-02 parity scan new rate limit refuses one user and still lets a different user start', async () => {
+    stubFetchOk();
+    pctx = await createTestServer(undefined, frozenLimiter());
+
+    for (let i = 0; i < 30; i += 1) {
+      expect((await postScan(pctx)).statusCode).toBe(302);
+    }
+    expect((await postScan(pctx)).statusCode).toBe(429);
+
+    const other = await postScan(pctx, { 'x-test-user-id': 'user-2' });
+    expect(other.statusCode).toBe(302);
   });
 });

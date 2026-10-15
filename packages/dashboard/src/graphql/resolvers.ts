@@ -11,7 +11,7 @@ import { randomUUID } from 'node:crypto';
 import type { StorageAdapter, ScanRecord } from '../db/index.js';
 import { VERSION } from '../version.js';
 import { validatePassword, validateUsername } from '../validation.js';
-import { validateScanUrl, VALID_STANDARDS } from '../services/scan-service.js';
+import type { ScanService } from '../services/scan-service.js';
 import { retagScansForSite } from '../services/branding-retag.js';
 import { applyActiveDismissals } from '../services/issue-dismissals/load-dismissed-report.js';
 import type { BrandingOrchestrator } from '../services/branding/branding-orchestrator.js';
@@ -33,10 +33,16 @@ export interface GraphQLContext {
     role: string;
     readonly currentOrgId?: string;
     readonly orgScopedApiKey?: boolean;
+    /** api_keys row id when the caller authenticated with an API key. */
+    readonly apiKeyId?: string;
   } | undefined;
   readonly permissions: Set<string>;
   readonly orgId: string;
   readonly brandingOrchestrator: BrandingOrchestrator;
+  readonly scanService: Pick<ScanService, 'initiateScanAuthorized'>;
+  readonly complianceToken: string;
+  /** Caller address, the scan-start limit's last-resort key. */
+  readonly clientIp?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -425,35 +431,45 @@ export const resolvers = {
 
     createScan: async (
       _root: unknown,
-      args: { input: { siteUrl: string; standard?: string; jurisdictions?: string[] } },
+      args: {
+        input: {
+          siteUrl: string;
+          standard?: string;
+          jurisdictions?: string[] | null;
+          includeWarnings?: boolean;
+          includeNotices?: boolean;
+        };
+      },
       ctx: GraphQLContext,
     ) => {
-      requirePerm(ctx, 'scans.create');
+      requireAuth(ctx);
 
-      // SSRF protection: validate URL before creating scan
-      const urlResult = await validateScanUrl(args.input.siteUrl);
-      if ('error' in urlResult) {
-        throw new Error(urlResult.error);
+      // Same function the scan form uses: permission, SSRF/DNS guard, probe,
+      // limits and defaults are all decided there, then the scan is started.
+      const result = await ctx.scanService.initiateScanAuthorized(
+        {
+          siteUrl: args.input.siteUrl,
+          standard: args.input.standard,
+          jurisdictions: args.input.jurisdictions,
+          includeWarnings: args.input.includeWarnings,
+          includeNotices: args.input.includeNotices,
+        },
+        {
+          username: ctx.user!.username,
+          orgId: ctx.orgId,
+          complianceToken: ctx.complianceToken,
+          permissions: ctx.permissions,
+          startSubject: {
+            userId: ctx.user!.id,
+            apiKeyId: ctx.user!.apiKeyId,
+            clientIp: ctx.clientIp,
+          },
+        },
+      );
+      if (!result.ok) {
+        throw new Error(result.error);
       }
-
-      // Validate standard
-      const standard = args.input.standard ?? 'WCAG2AA';
-      if (!(VALID_STANDARDS as readonly string[]).includes(standard)) {
-        throw new Error(`standard must be one of: ${VALID_STANDARDS.join(', ')}`);
-      }
-
-      const id = randomUUID();
-      const now = new Date().toISOString();
-
-      return await ctx.storage.scans.createScan({
-        id,
-        siteUrl: urlResult.url.toString(),
-        standard,
-        jurisdictions: args.input.jurisdictions ?? [],
-        createdBy: ctx.user!.username,
-        createdAt: now,
-        orgId: ctx.orgId,
-      });
+      return result.scan;
     },
 
     deleteScan: async (

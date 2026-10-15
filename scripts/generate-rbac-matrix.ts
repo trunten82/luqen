@@ -52,6 +52,24 @@
  *      - packages/llm/src/api/routes/providers.ts:46    POST /api/v1/providers (admin)
  *      - packages/compliance/src/api/routes/orgs.ts:9   DELETE /api/v1/orgs/:id/data (admin)
  *
+ * 4) Shared-guard routes (surfaceType: dashboard-page | http-route, via classifyDashboardSurface)
+ *    File glob:          packages/dashboard/src/routes/**\/*.ts
+ *    Field carrying perm: the permission check is made INSIDE a service function, so no
+ *                         requirePermission(...) token exists on the route. The route
+ *                         registration calls `.initiateScanAuthorized(`, which refuses a
+ *                         caller lacking the SCAN_CREATE_PERMISSION constant declared in
+ *                         packages/dashboard/src/services/scan-service.ts. The generator
+ *                         reads that constant's literal (it never duplicates it).
+ *    Detection rule:     split the file into regions, each running from a
+ *                        server.METHOD('path' registration to the next one (or end of
+ *                        file); every region containing `.initiateScanAuthorized(` yields
+ *                        a row for that registration.
+ *    Fails loudly:       the constant cannot be parsed, or the file calls
+ *                        `.initiateScanAuthorized(` more often than the regions account
+ *                        for (a call above the first registration would otherwise vanish).
+ *    Concrete example:
+ *      - packages/dashboard/src/routes/scan.ts  POST /scan/new (scans.create)
+ *
  * Output columns: | Permission | Surface | Surface Type | Source |
  *
  * Determinism: rows are sorted by Permission asc, then Surface asc. Re-running
@@ -199,6 +217,70 @@ function extractDashboardRoutes(): MatrixRow[] {
 }
 
 // ---------------------------------------------------------------------------
+// Shared-guard extraction (permission checked inside a service function)
+// ---------------------------------------------------------------------------
+
+const SCAN_SERVICE_PATH = 'packages/dashboard/src/services/scan-service.ts';
+
+function readScanCreatePermission(): string {
+  const full = join(REPO_ROOT, SCAN_SERVICE_PATH);
+  const src = readFileSync(full, 'utf8');
+  const m = /export\s+const\s+SCAN_CREATE_PERMISSION\s*=\s*['"]([a-z0-9._-]+)['"]/.exec(src);
+  if (!m) {
+    throw new Error(
+      `generate-rbac-matrix: cannot find the SCAN_CREATE_PERMISSION string literal in ${SCAN_SERVICE_PATH}`,
+    );
+  }
+  return m[1]!;
+}
+
+function extractSharedGuardRoutes(): MatrixRow[] {
+  const rows: MatrixRow[] = [];
+  const permission = readScanCreatePermission();
+  const routesDir = join(REPO_ROOT, 'packages/dashboard/src/routes');
+  const registrationRe = /server\.(get|post|put|patch|delete)\s*\(\s*['"]([^'"]+)['"]/g;
+  const guardCallRe = /\.initiateScanAuthorized\s*\(/g;
+
+  for (const file of walkTs(routesDir)) {
+    const src = readFileSync(file, 'utf8');
+    const totalCalls = (src.match(guardCallRe) ?? []).length;
+    if (totalCalls === 0) continue;
+    const rel = relative(REPO_ROOT, file);
+
+    const starts: Array<{ index: number; method: string; path: string }> = [];
+    let m: RegExpExecArray | null;
+    const reg = new RegExp(registrationRe.source, 'g');
+    while ((m = reg.exec(src)) !== null) {
+      starts.push({ index: m.index, method: m[1]!.toUpperCase(), path: m[2]! });
+    }
+
+    let captured = 0;
+    starts.forEach((start, i) => {
+      const end = i + 1 < starts.length ? starts[i + 1]!.index : src.length;
+      const region = src.slice(start.index, end);
+      const calls = (region.match(guardCallRe) ?? []).length;
+      if (calls === 0) return;
+      captured += calls;
+      const path = start.path;
+      rows.push({
+        permission,
+        surface: `${start.method} ${path}`,
+        surfaceType: classifyDashboardSurface(path),
+        source: rel,
+      });
+    });
+
+    if (captured !== totalCalls) {
+      throw new Error(
+        `generate-rbac-matrix: ${rel} calls initiateScanAuthorized ${totalCalls} time(s) but only ` +
+          `${captured} fall inside a server.METHOD(...) route region; the shared guard would be missing from the matrix`,
+      );
+    }
+  }
+  return rows;
+}
+
+// ---------------------------------------------------------------------------
 // MCP tool extraction
 // ---------------------------------------------------------------------------
 
@@ -329,6 +411,7 @@ function renderMarkdown(rows: readonly MatrixRow[]): string {
 function main(): void {
   const all: MatrixRow[] = [
     ...extractDashboardRoutes(),
+    ...extractSharedGuardRoutes(),
     ...extractMcpTools(),
     ...extractOAuthScopedRoutes(),
   ];

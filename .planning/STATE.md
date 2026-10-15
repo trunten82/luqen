@@ -1,21 +1,21 @@
 ---
 gsd_state_version: "1.0"
-milestone: v3.8.0
-milestone_name: Mark as false positive
-status: "dormant: dormant-by-choice — closure ruling 2026-10-12 (v3.8.0 shipped; no next milestone opened)"
-stopped_at: "v3.8.0 shipped and archived 2026-10-13 (prod 23c40aaf); dormant-by-choice"
-last_updated: "2026-10-13T04:28:21.274Z"
-last_activity: 2026-10-13
-last_activity_desc: Milestone v3.8.0 completed and archived
-state_head: d39d8b69cf86c55c68ae8675b15a85895258c0ae
+milestone: v3.9.0
+milestone_name: Dismissal follow-through
+current_phase: 90
+current_phase_name: GraphQL createScan starts scans
+status: executing
+stopped_at: Completed 90-04-PLAN.md (M1-M26 break-tests; M6 category finding)
+last_updated: "2026-10-15T14:20:31.695Z"
+last_activity: 2026-10-15
+last_activity_desc: Phase 90 execution started
+state_head: 19cea24959d87f404e1f0bbd0251eff360ae0de1
 progress:
   total_phases: 3
-  completed_phases: 3
-  total_plans: 35
-  completed_plans: 35
-  percent: 100
-current_phase: 89
-current_phase_name: Dismissal UI, dark launch and role grant
+  completed_phases: 0
+  total_plans: 6
+  completed_plans: 5
+  percent: 0
 ---
 
 # Project State
@@ -123,16 +123,24 @@ verdict and resurfaces automatically if its file changes.
 See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** none — DORMANT-BY-CHOICE, reason: closure ruling 2026-10-12 (Alessandro, relayed by Allanon): close v3.8.0 and do not open a next milestone.
+**Current focus:** Phase 90 — GraphQL createScan starts scans
 
 ## Current Position
 
-Phase: Milestone v3.8.0 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-10-13 — Milestone v3.8.0 completed and archived
+Phase: 90 (GraphQL createScan starts scans) — EXECUTING
+Plan: 6 of 6
+Status: Ready to execute
+Last activity: 2026-10-15 — Phase 90 execution started
 
-## Phase Map (v3.7.0 — AI output quality)
+## Phase Map (v3.9.0 — Dismissal follow-through)
+
+| # | Phase | Requirements | Depends on |
+|---|-------|--------------|------------|
+| 90 | GraphQL createScan starts scans | SCAN-01, SCAN-02 | — |
+| 91 | Dismissal and permission hardening | HARD-01..HARD-13 | — (functionally independent of 90) |
+| 92 | Dismissal user documentation | DOCS-01..DOCS-03 | 91 (documents the hardened behaviour; HARD-03 and HARD-12 change who can do what) |
+
+## Phase Map (v3.7.0 — AI output quality, archived)
 
 | # | Phase | Requirements | Depends on |
 |---|-------|--------------|------------|
@@ -155,6 +163,8 @@ measures a candidate model — that is explicitly next-milestone work.
 - 2026-06-07: **v3.5.0 redefined** as "Anti-overlay wedge — dev + exec first wave". Roadmap recreated: Phase 78 (shipped) preserved; new phases 79-82 (CIGATE / MCPFIX / EXPO / DIGEST) replace the retired monetization phases — same numbers, entirely new concepts. 20/20 requirements mapped, no orphans, coarse granularity (4 feature tracks → 4 phases). Key sequencing: developer tracks 79+80 are independent and parallelizable; EXPO (81, flagship) sequences before DIGEST (82) because the digest reports the exposure trend EXPO produces.
 - 2026-09-04: v3.6.0 (agent surface + semantic depth) shipped directly to master with no numbered phases; v3.7.0 opened same day (approved via orchestrator, on the owner's register).
 - 2026-09-05: **v3.7.0 roadmap created.** 16 requirements (EVALSET/HARNESS/BASELINE/BARS) mapped 1:1 onto the four requirement groups from the approved brief, giving 4 phases (83-86), coarse granularity, zero orphans. Bars (Phase 85) deliberately sequenced BEFORE baseline (Phase 86) — a stronger guarantee than the literal requirement text ("before any candidate measurement"), chosen so neither the non-inferiority margin nor the `analyse-visual` bar can be shaped by having already seen any real measurement, including the baseline's own.
+
+- 2026-10-15: **v3.9.0 roadmap created.** 18 requirements (SCAN/HARD/DOCS) mapped onto the owner-approved 3-phase shape (90 GraphQL createScan, 91 hardening, 92 docs), coarse granularity, zero orphans. Docs sequenced last so they describe the hardened permission behaviour. HARD-08 flagged: raise with the owner before building if it needs a schema change.
 
 ### Decisions (v3.7.0 — AI output quality)
 
@@ -209,8 +219,8 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-12T20:18:50.119Z
-Stopped at: Completed 89-09-PLAN.md (grant PR #5 open, CI green, HELD)
+Last session: 2026-10-15T14:20:31.659Z
+Stopped at: Completed 90-04-PLAN.md (M1-M26 break-tests; M6 category finding)
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -246,6 +256,11 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 89 P06 | ~3h | 3 tasks | 12 files |
 | Phase 89 P11 | 2h48m | 3 tasks | 25 files |
 | Phase 89 P09 | 27min | 3 tasks | 9 files |
+| Phase 90 P01 | 70m | 2 tasks | 10 files |
+| Phase 90 P02 | 35min | 3 tasks | 10 files |
+| Phase 90 P03 | 35min | 3 tasks | 2 files |
+| Phase 90 P06 | ~50min | 3 tasks | 6 files |
+| Phase 90 P04 | 1h25m | 3 tasks | 0 files |
 
 ## Decisions
 
@@ -257,3 +272,10 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 89]: 89-11: UAT harness --keep-going (local only) so break-tests show the whole red set
 - [Phase 89]: 89-09: grant PR #5 (head 9bf30d1c) HELD — issues.dismiss to org Owner/Admin + migration 091; merge needs the owner's direct OK (Plan 10)
 - [Phase 89]: 89-09 open point D-89-09-01: after the lift a global admin can put issues.dismiss on a global (system-org) role; not decided at D-15; D-17 read-back flags it
+- [Phase 90]: Phase 90-01: GraphQL createScan routes through ScanService.initiateScanAuthorized (permission check in the shared function, not initiateScan; MCP exception documented)
+- [Phase 90]: 90-03: read-back script switch-ignored world uses a same-named other org, so the org assertion must compare name AND id; selftest lives in the script file
+- [Phase 90]: 90-04: all 26 guard mutations watched failing; 25 reddened exactly the declared set, M6 reddened the declared set plus one positive-control test outside its stated category (recorded as a MISMATCH, declaration not edited); M25 first run hit nine load timeouts, re-run clean
+
+### Blockers
+
+- 90-03 B1: admin persona belongs to no org and the prod UAT org has no members - prod read-back (plan 05) cannot enter the UAT org; owner decision needed (not worked around)

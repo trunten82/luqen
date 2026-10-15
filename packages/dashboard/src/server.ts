@@ -67,7 +67,7 @@ import { seedSystemNotificationTemplates } from './notifications/seed-templates.
 import { PluginManager } from './plugins/manager.js';
 import { loadRegistry } from './plugins/registry.js';
 import { ScanOrchestrator } from './scanner/orchestrator.js';
-import { ScanService } from './services/scan-service.js';
+import { ScanService, createScanStartLimiter } from './services/scan-service.js';
 import { DirectScanner, probeChromium } from '@luqen/core';
 import { registerHealthRoute, logBrowserResolution } from './routes/health.js';
 import { checkAtRestDecryption, logAtRestCheck, logAtRestKeyPosture } from './at-rest/startup-check.js';
@@ -120,6 +120,7 @@ import { schema as graphqlSchema } from './graphql/schema.js';
 import { resolvers as graphqlResolvers } from './graphql/resolvers.js';
 import type { GraphQLContext } from './graphql/resolvers.js';
 import { registerGraphqlCsrfGuard } from './graphql/csrf-guard.js';
+import { getToken } from './routes/admin/helpers.js';
 import { runApiKeySweep } from './api-key-sweep.js';
 import { registerMcpRoutes } from './routes/api/mcp.js';
 import { createDashboardJwtVerifier } from './mcp/verifier.js';
@@ -1108,7 +1109,10 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await glossaryRoutes(server);
   await badgeRoutes(server, storage, config.selfScanId);
   await unsubscribeRoutes(server, storage);
-  await scanRoutes(server, storage, orchestrator, config, complianceService);
+  // The single scan-start bucket: the scan form and GraphQL createScan both
+  // draw from this one limiter (D-90-07).
+  const scanStartLimiter = createScanStartLimiter();
+  await scanRoutes(server, storage, orchestrator, config, complianceService, scanStartLimiter);
   await compareRoutes(server, storage);
   await trendRoutes(server, storage);
   await scheduleRoutes(server, storage);
@@ -1286,12 +1290,14 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     legacyPem: config.jwtPublicKey,
   });
   // Phase 30-02: build a ScanService instance for the MCP data tools (the
-  // route-level scanRoutes constructs its own ScanService for HTTP handlers;
-  // having a second instance here is safe because ScanService is stateless
-  // other than through its injected storage + orchestrator + config). The
-  // dashboard_scan_site tool invokes initiateScan; dashboard_get_report and
+  // route-level scanRoutes constructs its own ScanService for HTTP handlers).
+  // The dashboard_scan_site tool invokes initiateScan; dashboard_get_report and
   // dashboard_query_issues call getScanForOrg for the cross-org guard.
-  const mcpScanService = new ScanService(storage, orchestrator, config);
+  // ScanService is no longer stateless: it holds a scan-start limiter. This
+  // instance is also the one the GraphQL context uses, so it shares the one
+  // scanStartLimiter created before scanRoutes and the scan form and GraphQL
+  // createScan draw from one bucket instead of one each.
+  const mcpScanService = new ScanService(storage, orchestrator, config, undefined, scanStartLimiter);
   // Compliance discovery tools (dashboard_list_regulations etc.) and the
   // expanded dashboard_scan_site need a live compliance bearer. Resolve via
   // the registry per call so admin secret rotations propagate without a
@@ -1446,6 +1452,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         new Set<string>(),
       orgId: request.user?.currentOrgId ?? 'system',
       brandingOrchestrator,
+      scanService: mcpScanService,
+      complianceToken: getToken(request),
+      clientIp: request.ip,
     }),
   });
 
