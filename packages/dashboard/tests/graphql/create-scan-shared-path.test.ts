@@ -19,7 +19,13 @@ vi.mock('../../src/services/host-resolver.js', () => ({
 
 import { resolvers } from '../../src/graphql/resolvers.js';
 import type { GraphQLContext } from '../../src/graphql/resolvers.js';
-import { ScanService, PRIVATE_TARGET_ERROR } from '../../src/services/scan-service.js';
+import {
+  ScanService,
+  PRIVATE_TARGET_ERROR,
+  SCAN_RATE_LIMIT_ERROR,
+  createScanStartLimiter,
+  type ScanStartLimiter,
+} from '../../src/services/scan-service.js';
 import type { DashboardConfig } from '../../src/config.js';
 import type { ScanOrchestrator } from '../../src/scanner/orchestrator.js';
 import { makeOrgCtx, FABRIKAM_ORG, NORTHWIND_ORG } from './helpers/org-ctx.js';
@@ -56,11 +62,19 @@ interface Harness {
   readonly ctx: GraphQLContext;
 }
 
+interface CallerOverrides {
+  readonly user?: NonNullable<GraphQLContext['user']> & { apiKeyId?: string };
+  readonly orgId?: string;
+  readonly permissions?: readonly string[];
+  readonly clientIp?: string;
+}
+
 function build(opts: {
   readonly config?: Partial<DashboardConfig>;
   readonly permissions?: readonly string[];
   readonly resolveHost?: () => Promise<readonly string[]>;
-} = {}): Harness {
+  readonly limiter?: ScanStartLimiter;
+} & CallerOverrides = {}): Harness {
   const storage = makeStorage();
   const startScan = vi.fn();
   const orchestrator = { startScan } as unknown as ScanOrchestrator;
@@ -69,11 +83,44 @@ function build(opts: {
     orchestrator,
     makeConfig(opts.config),
     opts.resolveHost,
+    opts.limiter,
   );
   const base = makeOrgCtx(storage, { permissions: opts.permissions ?? ['scans.create'] });
-  const ctx = { ...base, scanService, complianceToken: COMPLIANCE_TOKEN } as GraphQLContext;
+  const ctx = {
+    ...base,
+    ...(opts.user !== undefined ? { user: opts.user } : {}),
+    ...(opts.orgId !== undefined ? { orgId: opts.orgId } : {}),
+    ...(opts.clientIp !== undefined ? { clientIp: opts.clientIp } : {}),
+    scanService,
+    complianceToken: COMPLIANCE_TOKEN,
+  } as GraphQLContext;
   return { storage, startScan, ctx };
 }
+
+/** A context for another caller that shares the harness's scan service. */
+function as(base: GraphQLContext, caller: CallerOverrides): GraphQLContext {
+  return {
+    ...base,
+    ...(caller.user !== undefined ? { user: caller.user } : {}),
+    ...(caller.orgId !== undefined ? { orgId: caller.orgId } : {}),
+    ...(caller.permissions !== undefined ? { permissions: new Set(caller.permissions) } : {}),
+    ...(caller.clientIp !== undefined ? { clientIp: caller.clientIp } : {}),
+  } as GraphQLContext;
+}
+
+/** A limiter whose clock never moves: every start in one test is inside one window. */
+function frozenLimiter(): ScanStartLimiter {
+  return createScanStartLimiter({ now: () => 1_000_000 });
+}
+
+async function startMany(ctx: GraphQLContext, count: number): Promise<void> {
+  for (let i = 0; i < count; i += 1) {
+    await createScan(ctx, { siteUrl: 'https://example.com' });
+  }
+}
+
+const IP_A = '203.0.113.7';
+const IP_B = '198.51.100.7';
 
 function createScan(ctx: GraphQLContext, input: Record<string, unknown>): Promise<Record<string, unknown>> {
   return (resolvers.Mutation.createScan as (r: unknown, a: unknown, c: GraphQLContext) => Promise<Record<string, unknown>>)(
@@ -292,5 +339,139 @@ describe('graphql createScan shares the scan form path', () => {
     );
     expect(storage.scans.createScan).not.toHaveBeenCalled();
     expect(startScan).not.toHaveBeenCalled();
+  });
+});
+
+describe('graphql createScan scan start rate limit', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }));
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('SCAN-02 graphql createScan refuses the 31st start in ten minutes with the shared rate limit message', async () => {
+    const { ctx, storage, startScan } = build({ limiter: frozenLimiter(), clientIp: IP_A });
+    await startMany(ctx, 30);
+    expect(startScan).toHaveBeenCalledTimes(30);
+    expect(storage.scans.createScan).toHaveBeenCalledTimes(30);
+
+    await expect(createScan(ctx, { siteUrl: 'https://example.com' })).rejects.toThrow(
+      new Error(SCAN_RATE_LIMIT_ERROR),
+    );
+    expect(startScan).toHaveBeenCalledTimes(30);
+    expect(storage.scans.createScan).toHaveBeenCalledTimes(30);
+  });
+
+  it('SCAN-02 graphql createScan rate limit refuses one user and still lets a different user start', async () => {
+    const { ctx, startScan } = build({
+      limiter: frozenLimiter(),
+      clientIp: IP_A,
+      user: { id: 'user-a', username: 'user-a', role: 'user', currentOrgId: FABRIKAM_ORG },
+    });
+    await startMany(ctx, 30);
+    await expect(createScan(ctx, { siteUrl: 'https://example.com' })).rejects.toThrow(
+      new Error(SCAN_RATE_LIMIT_ERROR),
+    );
+    expect(startScan).toHaveBeenCalledTimes(30);
+
+    const other = as(ctx, {
+      user: { id: 'user-b', username: 'user-b', role: 'user', currentOrgId: FABRIKAM_ORG },
+    });
+    await createScan(other, { siteUrl: 'https://example.com' });
+    expect(startScan).toHaveBeenCalledTimes(31);
+  });
+
+  it('SCAN-02 graphql createScan rate limit is not reset by switching org or by the admin role', async () => {
+    const fabrikam = build({
+      limiter: frozenLimiter(),
+      clientIp: IP_A,
+      orgId: FABRIKAM_ORG,
+      permissions: ['scans.create'],
+      user: { id: 'user-shared', username: 'shared', role: 'user', currentOrgId: FABRIKAM_ORG },
+    });
+    const system = as(fabrikam.ctx, {
+      orgId: 'system',
+      permissions: ['scans.create', 'admin.system'],
+      user: { id: 'user-shared', username: 'shared', role: 'admin', currentOrgId: 'system' },
+    });
+    const northwind = as(fabrikam.ctx, {
+      orgId: NORTHWIND_ORG,
+      permissions: ['scans.create'],
+      user: { id: 'user-shared', username: 'shared', role: 'user', currentOrgId: NORTHWIND_ORG },
+    });
+
+    await startMany(fabrikam.ctx, 15);
+    await startMany(system, 15);
+    expect(fabrikam.startScan).toHaveBeenCalledTimes(30);
+    await expect(createScan(northwind, { siteUrl: 'https://example.com' })).rejects.toThrow(
+      new Error(SCAN_RATE_LIMIT_ERROR),
+    );
+    expect(fabrikam.startScan).toHaveBeenCalledTimes(30);
+  });
+
+  it('SCAN-02 graphql createScan rate limit gives each api key its own bucket', async () => {
+    const { ctx, startScan } = build({
+      limiter: frozenLimiter(),
+      clientIp: IP_A,
+      user: { id: 'api-key', username: 'api-key', role: 'admin', currentOrgId: 'system', apiKeyId: 'key-fabrikam' },
+    });
+    await startMany(ctx, 30);
+    await expect(createScan(ctx, { siteUrl: 'https://example.com' })).rejects.toThrow(
+      new Error(SCAN_RATE_LIMIT_ERROR),
+    );
+
+    const otherKey = as(ctx, {
+      user: { id: 'api-key', username: 'api-key', role: 'admin', currentOrgId: 'system', apiKeyId: 'key-northwind' },
+    });
+    await createScan(otherKey, { siteUrl: 'https://example.com' });
+    expect(startScan).toHaveBeenCalledTimes(31);
+  });
+
+  it('SCAN-02 graphql createScan rate limit falls back to the caller address for an api key without a key id', async () => {
+    const { ctx, startScan } = build({
+      limiter: frozenLimiter(),
+      clientIp: IP_A,
+      user: { id: 'api-key', username: 'api-key', role: 'admin', currentOrgId: 'system' },
+    });
+    await startMany(ctx, 30);
+    const second = as(ctx, {
+      user: { id: 'api-key', username: 'api-key', role: 'admin', currentOrgId: 'system' },
+    });
+    await expect(createScan(second, { siteUrl: 'https://example.com' })).rejects.toThrow(
+      new Error(SCAN_RATE_LIMIT_ERROR),
+    );
+
+    const elsewhere = as(ctx, {
+      user: { id: 'api-key', username: 'api-key', role: 'admin', currentOrgId: 'system' },
+      clientIp: IP_B,
+    });
+    await createScan(elsewhere, { siteUrl: 'https://example.com' });
+    expect(startScan).toHaveBeenCalledTimes(31);
+  });
+
+  it('SCAN-02 graphql createScan counts refused start attempts toward the rate limit', async () => {
+    const { ctx, storage, startScan } = build({ limiter: frozenLimiter(), clientIp: IP_A });
+    for (let i = 0; i < 30; i += 1) {
+      await expect(createScan(ctx, { siteUrl: 'ftp://files.example' })).rejects.toThrow(
+        new Error('URL must use http or https'),
+      );
+    }
+    expect(startScan).not.toHaveBeenCalled();
+
+    await expect(createScan(ctx, { siteUrl: 'https://example.com' })).rejects.toThrow(
+      new Error(SCAN_RATE_LIMIT_ERROR),
+    );
+    expect(startScan).not.toHaveBeenCalled();
+    expect(storage.scans.createScan).not.toHaveBeenCalled();
+  });
+
+  it('SCAN-02 graphql createScan is rate limited when the scan service gets no injected limiter', async () => {
+    const { ctx, startScan } = build({ clientIp: IP_A });
+    await startMany(ctx, 30);
+    await expect(createScan(ctx, { siteUrl: 'https://example.com' })).rejects.toThrow(
+      new Error(SCAN_RATE_LIMIT_ERROR),
+    );
+    expect(startScan).toHaveBeenCalledTimes(30);
   });
 });

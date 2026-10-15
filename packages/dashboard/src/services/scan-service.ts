@@ -62,6 +62,8 @@ export const SCAN_CREATE_PERMISSION = 'scans.create';
 /** A {@link ScanContext} that also carries the caller's resolved permission set. */
 export interface AuthorizedScanContext extends ScanContext {
   readonly permissions: ReadonlySet<string>;
+  /** Who is starting the scan, for the start limit (no org: the limit is per caller). */
+  readonly startSubject: ScanStartSubject;
 }
 
 // ── Result types ─────────────────────────────────────────────────────────────
@@ -70,7 +72,9 @@ export interface ScanValidationError {
   readonly ok: false;
   readonly error: string;
   /** Set when the refusal is an authorization failure rather than invalid input. */
-  readonly kind?: 'forbidden';
+  readonly kind?: 'forbidden' | 'rate_limited';
+  /** Set with kind 'rate_limited': whole seconds until a start is allowed again. */
+  readonly retryAfterSeconds?: number;
 }
 
 export interface ScanInitiationSuccess {
@@ -109,6 +113,106 @@ function normalizeStringArray(value: string | string[] | undefined): string[] {
 
 /** User-facing refusal for a private / internal scan target (unchanged text). */
 export const PRIVATE_TARGET_ERROR = 'Scanning internal or private addresses is not allowed.';
+/** Scan starts allowed per caller in one window (D-90-07). */
+export const SCAN_START_LIMIT = 30;
+/** The window the start limit applies to: ten minutes. */
+export const SCAN_START_WINDOW_MS = 10 * 60 * 1000;
+/** User-facing refusal when a caller has used up their scan starts for the window. */
+export const SCAN_RATE_LIMIT_ERROR =
+  `Scan start limit reached: at most ${SCAN_START_LIMIT} scans per ${SCAN_START_WINDOW_MS / 60000} minutes. Try again later.`;
+
+/** Who is starting a scan, as far as the start limit is concerned. No org: the limit is per caller. */
+export interface ScanStartSubject {
+  readonly userId: string | undefined;
+  readonly apiKeyId: string | undefined;
+  readonly clientIp: string | undefined;
+}
+
+export type ScanStartCheck =
+  | { readonly allowed: true }
+  | { readonly allowed: false; readonly retryAfterMs: number };
+
+export interface ScanStartLimiter {
+  check(key: string): ScanStartCheck;
+  record(key: string): void;
+}
+
+export interface ScanStartLimiterOptions {
+  readonly limit?: number;
+  readonly windowMs?: number;
+  readonly now?: () => number;
+  readonly store?: Map<string, readonly number[]>;
+}
+
+/**
+ * The limiter key for a caller. Pure; never reads an org: the limit is per
+ * caller, so switching org or holding a broader role neither resets nor
+ * bypasses it. An API key is named by its api_keys row id (every key shares
+ * the user id 'api-key', and keying on that would let one key spend every
+ * key's budget); the caller address is used only when nothing better exists.
+ */
+export function scanStartKey(subject: ScanStartSubject): string {
+  const { userId, apiKeyId, clientIp } = subject;
+  const addressKey = `ip:${clientIp !== undefined && clientIp !== '' ? clientIp : 'unknown'}`;
+  if (userId === 'api-key') {
+    return apiKeyId !== undefined && apiKeyId !== '' ? `api-key:${apiKeyId}` : addressKey;
+  }
+  if (userId !== undefined && userId !== '') {
+    return `user:${userId}`;
+  }
+  return addressKey;
+}
+
+/**
+ * Sliding-window start limiter (D-90-07). It follows the notifications
+ * limiter in keying by user id and answering with a wait time, and departs
+ * from it in three ways: it is an instance rather than module scope (the
+ * server hands ONE instance to every ScanService, and tests need no reset
+ * helper), it takes an injected clock (tests never sleep), and it sweeps keys
+ * idle for a full window (the precedent never expires entries). At most
+ * `limit` timestamps are held per key.
+ */
+export function createScanStartLimiter(options: ScanStartLimiterOptions = {}): ScanStartLimiter {
+  const limit = options.limit ?? SCAN_START_LIMIT;
+  const windowMs = options.windowMs ?? SCAN_START_WINDOW_MS;
+  const now = options.now ?? Date.now;
+  const store = options.store ?? new Map<string, readonly number[]>();
+  let lastSweep = now();
+
+  function sweep(at: number): void {
+    if (at - lastSweep < windowMs) return;
+    lastSweep = at;
+    for (const [key, stamps] of store) {
+      const newest = stamps[stamps.length - 1];
+      if (newest === undefined || newest <= at - windowMs) {
+        store.delete(key);
+      }
+    }
+  }
+
+  return {
+    check(key: string): ScanStartCheck {
+      const at = now();
+      sweep(at);
+      const stamps = store.get(key) ?? [];
+      const live = stamps.filter((stamp) => stamp > at - windowMs);
+      if (live.length === 0) {
+        store.delete(key);
+      } else if (live.length !== stamps.length) {
+        store.set(key, live);
+      }
+      if (live.length >= limit) {
+        return { allowed: false, retryAfterMs: Math.max(1, live[0]! + windowMs - at) };
+      }
+      return { allowed: true };
+    },
+    record(key: string): void {
+      const stamps = store.get(key) ?? [];
+      store.set(key, [...stamps, now()].slice(-limit));
+    },
+  };
+}
+
 /** User-facing refusal when the start URL's host does not resolve. */
 export const UNRESOLVABLE_TARGET_ERROR = 'Domain not found — check the URL for typos.';
 
@@ -213,15 +317,27 @@ export class ScanService {
     private readonly config: DashboardConfig,
     /** DNS seam for the start-URL check; defaults to the system resolver. */
     private readonly resolveHost?: HostResolver,
+    /**
+     * Scan-start limiter. Fail-closed: an instance built without one still
+     * limits. The server injects ONE instance into every ScanService so the
+     * scan form and GraphQL createScan draw from one bucket.
+     */
+    private readonly startLimiter: ScanStartLimiter = createScanStartLimiter(),
   ) {}
 
   /**
    * The one entry for request-permission surfaces (the scan form and GraphQL
-   * createScan): refuses a caller whose permission set lacks
-   * {@link SCAN_CREATE_PERMISSION}, otherwise behaves exactly as
-   * {@link ScanService.initiateScan}. The check lives here and not in
+   * createScan). Both the permission and the start rate are decided here
+   * (D-90-01, D-90-07): a caller whose permission set lacks
+   * {@link SCAN_CREATE_PERMISSION} is refused, then the caller's start budget
+   * is checked and spent, then the call behaves exactly as
+   * {@link ScanService.initiateScan}. The checks live here and not in
    * initiateScan because other callers (the MCP tool) are gated by their own
    * metadata and do not carry a request permission set.
+   *
+   * The budget is checked and spent before any URL validation, DNS lookup or
+   * reachability probe, with no await between the two steps, so an attempt
+   * later refused still counts and concurrent attempts cannot overspend.
    */
   async initiateScanAuthorized(
     input: InitiateScanInput,
@@ -230,6 +346,17 @@ export class ScanService {
     if (!context.permissions.has(SCAN_CREATE_PERMISSION)) {
       return { ok: false, kind: 'forbidden', error: `Forbidden: requires ${SCAN_CREATE_PERMISSION}` };
     }
+    const key = scanStartKey(context.startSubject);
+    const verdict = this.startLimiter.check(key);
+    if (!verdict.allowed) {
+      return {
+        ok: false,
+        kind: 'rate_limited',
+        error: SCAN_RATE_LIMIT_ERROR,
+        retryAfterSeconds: Math.max(1, Math.ceil(verdict.retryAfterMs / 1000)),
+      };
+    }
+    this.startLimiter.record(key);
     return this.initiateScan(input, context);
   }
 

@@ -160,6 +160,11 @@ export async function scanRoutes(
         orgId: request.user?.currentOrgId ?? 'system',
         complianceToken: getToken(request),
         permissions: permissions ?? new Set<string>(),
+        startSubject: {
+          userId: request.user?.id,
+          apiKeyId: request.user?.apiKeyId,
+          clientIp: request.ip,
+        },
       });
 
       if (!result.ok) {

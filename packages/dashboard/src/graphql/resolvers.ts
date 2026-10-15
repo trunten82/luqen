@@ -33,12 +33,16 @@ export interface GraphQLContext {
     role: string;
     readonly currentOrgId?: string;
     readonly orgScopedApiKey?: boolean;
+    /** api_keys row id when the caller authenticated with an API key. */
+    readonly apiKeyId?: string;
   } | undefined;
   readonly permissions: Set<string>;
   readonly orgId: string;
   readonly brandingOrchestrator: BrandingOrchestrator;
   readonly scanService: Pick<ScanService, 'initiateScanAuthorized'>;
   readonly complianceToken: string;
+  /** Caller address, the scan-start limit's last-resort key. */
+  readonly clientIp?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -455,6 +459,11 @@ export const resolvers = {
           orgId: ctx.orgId,
           complianceToken: ctx.complianceToken,
           permissions: ctx.permissions,
+          startSubject: {
+            userId: ctx.user!.id,
+            apiKeyId: ctx.user!.apiKeyId,
+            clientIp: ctx.clientIp,
+          },
         },
       );
       if (!result.ok) {
