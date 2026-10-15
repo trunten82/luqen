@@ -11,6 +11,7 @@
 //   LUQEN_UAT_ORG_NAME            default 'Fabrikam UAT'
 //   LUQEN_UAT_SCAN_TARGET         default 'https://example.com'
 //   LUQEN_UAT_PRIVATE_PROBE       'on' (default) | 'off'
+//   LUQEN_UAT_SCHEDULE_PROBE      'on' (default) | 'off'  (the schedule-create start-validation check; full mode only)
 //   LUQEN_UAT_LEAVE_QUEUED_S (120), LUQEN_UAT_TERMINAL_S (600), LUQEN_UAT_POLL_MS (5000)
 //
 // Hard rules, pinned by --selftest:
@@ -18,12 +19,15 @@
 //     the switch; the script never falls through to the system org;
 //   - output carries check names, status words and elapsed seconds only: never a URL, username, password,
 //     org name or id, scan id, or server error text (a sentinel grep runs over every selftest world's output);
-//   - every scan this run created is deleted in a finally block and read back as null.
+//   - every scan this run created is deleted in a finally block and read back as null;
+//   - a schedule the server accepted for the loopback probe is deleted and read back as absent (--preflight never posts one).
 import { pathToFileURL } from 'node:url';
 
 export const REQUIRED_VARS = ['LUQEN_UAT_BASE_URL', 'LUQEN_UAT_ADMIN_USER', 'LUQEN_UAT_ADMIN_PASS'];
 export const PRIVATE_TARGET_ERROR = 'Scanning internal or private addresses is not allowed.';
 const LOOPBACK_TARGET = 'http://127.0.0.1/';
+const SCHEDULE_CHECK = 'a loopback target is refused for a new schedule';
+const SCHEDULE_CLEANUP = 'cleanup removed the probe schedule';
 const KNOWN_STATUS = ['queued', 'running', 'completed', 'failed'];
 
 /** Names (never values) of the required variables that are absent or empty. */
@@ -59,10 +63,25 @@ function readConfig(env) {
     orgName: env.LUQEN_UAT_ORG_NAME?.trim() || 'Fabrikam UAT',
     target: env.LUQEN_UAT_SCAN_TARGET?.trim() || 'https://example.com',
     probe: (env.LUQEN_UAT_PRIVATE_PROBE ?? 'on').trim().toLowerCase() !== 'off',
+    scheduleProbe: (env.LUQEN_UAT_SCHEDULE_PROBE ?? 'on').trim().toLowerCase() !== 'off',
     leaveS: positive(env.LUQEN_UAT_LEAVE_QUEUED_S, 120),
     terminalS: positive(env.LUQEN_UAT_TERMINAL_S, 600),
     pollMs: positive(env.LUQEN_UAT_POLL_MS, 5000),
   };
+}
+
+/**
+ * Ids of the schedules whose listed start URL equals `target`, read from the /schedules HTML listing:
+ * a row carries its start URL in the cell--url cell and its id in the hx-delete path.
+ */
+export function parseScheduleIds(html, target) {
+  const ids = [];
+  for (const row of String(html).split('<tr>').slice(1)) {
+    const cell = /<td[^>]*class="cell--url"[^>]*>([^<]*)<\/td>/.exec(row);
+    const del = /hx-delete="\/schedules\/([^"]+)"/.exec(row);
+    if (cell !== null && del !== null && cell[1].trim() === target) ids.push(del[1]);
+  }
+  return ids;
 }
 
 const Q_CREATE = 'mutation($input: CreateScanInput!) { createScan(input: $input) { id status } }';
@@ -124,6 +143,16 @@ export async function run({ env, mode, transport, sleep, now, log }) {
     } catch { /* best effort */ }
   };
 
+  // Schedule probe state: the ids that already listed the loopback target before the probe POST (never touched),
+  // and whether the POST was sent (so the sweep below runs even when the verdict check threw).
+  const sched = { before: null, sent: false };
+  const scheduleIdsNow = async () => {
+    const res = await transport({ method: 'GET', path: '/schedules' });
+    if (res.status !== 200) throw new Error('schedules listing status');
+    return parseScheduleIds(res.text, LOOPBACK_TARGET);
+  };
+  const newScheduleIds = async () => (await scheduleIdsNow()).filter((id) => !sched.before.has(id));
+
   // ── session preconditions (checks 1-4) ───────────────────────────────────
   const preconditionsOk =
     (await check('login as the admin persona', async () => {
@@ -174,6 +203,25 @@ export async function run({ env, mode, transport, sleep, now, log }) {
       log('SKIP a loopback target is refused through GraphQL (LUQEN_UAT_PRIVATE_PROBE=off)');
     }
 
+    if (cfg.scheduleProbe) {
+      const scheduleOk = await check(SCHEDULE_CHECK, async () => {
+        sched.before = new Set(await scheduleIdsNow());
+        sched.sent = true;
+        const res = await transport({
+          method: 'POST',
+          path: '/schedules',
+          form: { siteUrl: LOOPBACK_TARGET, standard: 'WCAG2AA', frequency: 'weekly', _csrf: session.csrf },
+          csrf: session.csrf,
+          htmx: true,
+        });
+        const made = await newScheduleIds();
+        return res.status === 400 && res.text.includes(PRIVATE_TARGET_ERROR) && made.length === 0;
+      });
+      if (!scheduleOk) return;
+    } else {
+      log(`SKIP ${SCHEDULE_CHECK} (disabled by LUQEN_UAT_SCHEDULE_PROBE)`);
+    }
+
     let scanId = null;
     const created = await check('graphql createScan returned a queued scan', async () => {
       const r = await gql(Q_CREATE, { input: { siteUrl: cfg.target, standard: 'WCAG2AA' } });
@@ -220,9 +268,22 @@ export async function run({ env, mode, transport, sleep, now, log }) {
     if (terminal === 'failed') log('WARN the scan ended failed - inspect it on the server by hand (details withheld)');
   };
 
+  const sweepSchedules = async () => {
+    if (!sched.sent) return;
+    let ids = null;
+    try { ids = await newScheduleIds(); } catch { ids = null; }
+    if (ids !== null && ids.length === 0) return;
+    await check(SCHEDULE_CLEANUP, async () => {
+      if (ids === null) return false;
+      for (const id of ids) await transport({ method: 'DELETE', path: `/schedules/${id}`, csrf: session.csrf, htmx: true });
+      return (await newScheduleIds()).length === 0;
+    });
+  };
+
   try {
     await readBack();
   } finally {
+    await sweepSchedules();
     if (cleanupIds.length > 0) {
       await check('cleanup left no UAT scan behind', async () => {
         let clean = true;
@@ -257,8 +318,9 @@ export function createFetchTransport(baseUrl) {
       else jar.set(name, value);
     }
   };
-  return async ({ method, path, form, json, csrf }) => {
+  return async ({ method, path, form, json, csrf, htmx }) => {
     const headers = {};
+    if (htmx === true) headers['hx-request'] = 'true';
     if (jar.size > 0) headers.cookie = [...jar].map(([k, v]) => `${k}=${v}`).join('; ');
     if (csrf) headers['x-csrf-token'] = csrf;
     let body;
@@ -288,6 +350,7 @@ const SENT = {
   dupId: 'org-id-sentinel-dup',
   scanId: 'scan-id-sentinel-1',
   privateScanId: 'scan-id-sentinel-private',
+  scheduleId: 'schedule-id-sentinel-1',
 };
 
 /** One fake dashboard. `world` picks the behaviour under test; the fake records what the script did to it. */
@@ -297,7 +360,8 @@ function makeFake(world) {
   const dup = { id: SENT.dupId, name: SENT.orgName };
   const allOrgs = [uat, other, dup];
   const userOrgs = world === 'wrong-org' ? [other] : [uat, other];
-  const rec = { gqlCalls: 0, calls: 0, creates: [], deleted: [] };
+  const schedules = new Map();
+  const rec = { gqlCalls: 0, calls: 0, creates: [], deleted: [], schedulePosts: 0, scheduleDeletes: [], get scheduleStored() { return schedules.size; } };
   const state = { loggedIn: false, currentOrgId: world === 'switch-ignored' ? dup.id : '' };
   const scans = new Map();
   const reply = (status, text = '', location = '') => ({ status, text, location });
@@ -352,6 +416,27 @@ function makeFake(world) {
       return reply(302, '', '/');
     }
     if (req.method === 'POST' && req.path === '/graphql') return graphql(req);
+    if (req.method === 'POST' && req.path === '/schedules') {
+      if (req.csrf !== 'csrf-page' || req.form?._csrf !== 'csrf-page' || req.htmx !== true) return reply(403, 'csrf');
+      rec.schedulePosts += 1;
+      const url = String(req.form.siteUrl);
+      if (world === 'schedule-accepted') {
+        schedules.set(SENT.scheduleId, url);
+        return reply(200, '<div class="toast">Schedule created</div>');
+      }
+      if (world === 'schedule-wrong-text') return reply(400, '<div class="toast">Site URL must be a valid URL</div>');
+      return reply(400, `<div class="toast">${PRIVATE_TARGET_ERROR}</div>`);
+    }
+    if (req.method === 'GET' && req.path === '/schedules') {
+      const rows = [...schedules].map(([id, url]) => `<tr><td data-label="Site URL" class="cell--url">${url}</td><td><button hx-delete="/schedules/${id}">x</button></td></tr>`);
+      return reply(200, `<table><thead><tr><th>Site URL</th></tr></thead><tbody>${rows.join('')}</tbody></table>`);
+    }
+    if (req.method === 'DELETE' && req.path.startsWith('/schedules/')) {
+      if (req.csrf !== 'csrf-page') return reply(403, 'csrf');
+      const id = req.path.slice('/schedules/'.length);
+      if (schedules.delete(id)) rec.scheduleDeletes.push(id);
+      return reply(200, '<div class="toast">Schedule deleted</div>');
+    }
     if (req.method === 'POST' && req.path === '/logout') { state.loggedIn = false; return reply(302, '', '/login'); }
     return reply(404, 'not found');
   };
@@ -367,6 +452,7 @@ const ALL_PASS_FULL = [
   'PASS switch to the UAT org',
   'PASS the current org is the UAT org by name and id before any write',
   'PASS a loopback target is refused through GraphQL',
+  `PASS ${SCHEDULE_CHECK}`,
   'PASS graphql createScan returned a queued scan',
   'PASS the scan left queued within 3 s',
   'PASS the scan reached completed or failed within 6 s',
@@ -386,6 +472,50 @@ const WORLDS = [
       const real = rec.creates.filter((c) => c.siteUrl === SENT.target);
       if (real.length !== 1 || real[0].standard !== 'WCAG2AA') un.push('the target scan was not created once with WCAG2AA');
       if (!startsWith(lines, 'INFO running after')) un.push('no INFO line for the running status');
+      if (rec.schedulePosts !== 1) un.push(`${rec.schedulePosts} schedule POST(s) instead of exactly 1`);
+      if (rec.scheduleStored !== 0) un.push('a schedule is still stored');
+      if (startsWith(lines, `PASS ${SCHEDULE_CLEANUP}`)) un.push('a schedule cleanup ran although nothing was stored');
+      return un;
+    },
+  },
+  {
+    name: 'schedule-accepted',
+    expect: ({ code, lines, rec }) => {
+      const un = [];
+      if (code !== 1) un.push(`exit ${code} instead of 1`);
+      if (!hasLine(lines, `FAIL ${SCHEDULE_CHECK} (details withheld)`)) un.push('the schedule check did not fail');
+      if (rec.schedulePosts !== 1) un.push(`${rec.schedulePosts} schedule POST(s) instead of exactly 1`);
+      if (rec.scheduleDeletes.join() !== SENT.scheduleId) un.push('the stored schedule was not deleted exactly once');
+      if (rec.scheduleStored !== 0) un.push('the probe schedule is still stored after cleanup');
+      if (!hasLine(lines, `PASS ${SCHEDULE_CLEANUP}`)) un.push('the schedule cleanup did not pass');
+      if (rec.creates.some((c) => c.siteUrl === SENT.target)) un.push('a createScan ran after the schedule check failed');
+      if (startsWith(lines, 'PASS graphql createScan')) un.push('a createScan passed after the schedule check failed');
+      return un;
+    },
+  },
+  {
+    name: 'schedule-wrong-text',
+    expect: ({ code, lines, rec }) => {
+      const un = [];
+      if (code !== 1) un.push(`exit ${code} instead of 1`);
+      if (!hasLine(lines, `FAIL ${SCHEDULE_CHECK} (details withheld)`)) un.push('the schedule check did not fail');
+      if (rec.schedulePosts !== 1) un.push(`${rec.schedulePosts} schedule POST(s) instead of exactly 1`);
+      if (rec.scheduleDeletes.length !== 0) un.push('a schedule delete was sent although nothing was stored');
+      if (rec.creates.some((c) => c.siteUrl === SENT.target)) un.push('a createScan ran after the schedule check failed');
+      return un;
+    },
+  },
+  {
+    name: 'schedule-probe-off',
+    fake: 'completes',
+    env: { LUQEN_UAT_SCHEDULE_PROBE: 'off' },
+    expect: ({ code, lines, rec }) => {
+      const un = [];
+      if (code !== 0) un.push(`exit ${code} instead of 0`);
+      if (!hasLine(lines, `SKIP ${SCHEDULE_CHECK} (disabled by LUQEN_UAT_SCHEDULE_PROBE)`)) un.push('no SKIP line for the disabled schedule check');
+      if (rec.schedulePosts !== 0) un.push(`${rec.schedulePosts} schedule POST(s) with the probe disabled`);
+      for (const l of ALL_PASS_FULL) if (l !== `PASS ${SCHEDULE_CHECK}` && !hasLine(lines, l)) un.push(`missing line: ${l}`);
+      if (startsWith(lines, 'FAIL')) un.push('a FAIL line was printed');
       return un;
     },
   },
@@ -471,6 +601,7 @@ const WORLDS = [
       const un = [];
       if (code !== 0) un.push(`exit ${code} instead of 0`);
       if (rec.gqlCalls !== 0) un.push(`${rec.gqlCalls} GraphQL call(s) in preflight mode`);
+      if (rec.schedulePosts !== 0) un.push(`${rec.schedulePosts} schedule POST(s) in preflight mode`);
       for (const l of ALL_PASS_FULL.slice(0, 4)) if (!hasLine(lines, l)) un.push(`missing line: ${l}`);
       if (lines.length !== 4) un.push(`${lines.length} output lines instead of 4`);
       return un;
@@ -491,6 +622,7 @@ async function runWorld(world) {
     LUQEN_UAT_LEAVE_QUEUED_S: '3',
     LUQEN_UAT_TERMINAL_S: '6',
     LUQEN_UAT_POLL_MS: '1000',
+    ...(world.env ?? {}),
   };
   const code = await run({
     env,
