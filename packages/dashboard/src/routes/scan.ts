@@ -16,6 +16,7 @@ import {
   ScanService,
   VALID_STANDARDS,
   type InitiateScanInput,
+  type ScanStartLimiter,
 } from '../services/scan-service.js';
 import { ComplianceService } from '../services/compliance-service.js';
 
@@ -48,8 +49,13 @@ export async function scanRoutes(
    * will return its graceful-degradation fallback.
    */
   complianceService?: ComplianceService,
+  /**
+   * The scan-start limiter shared with GraphQL createScan (D-90-07). When
+   * omitted the scan service keeps its own default limiter.
+   */
+  scanStartLimiter?: ScanStartLimiter,
 ): Promise<void> {
-  const scanService = new ScanService(storage, orchestrator, config);
+  const scanService = new ScanService(storage, orchestrator, config, undefined, scanStartLimiter);
   const complianceSvc = complianceService ?? new ComplianceService(config, () => null);
 
   // GET /scan/new — render new scan form
@@ -101,7 +107,6 @@ export async function scanRoutes(
   server.post(
     '/scan/new',
     {
-      config: { rateLimit: { max: 30, timeWindow: '10 minutes' } },
       schema: { ...HtmlPageSchema, tags: ['scan'] },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -179,26 +184,34 @@ export async function scanRoutes(
           err.statusCode = 403;
           throw err;
         }
-        if (isHtmx || request.headers['accept']?.includes('text/html')) {
-          const token = getToken(request);
-          const orgId = getOrgId(request);
-          const lookupData = await complianceSvc.getComplianceLookupData(token, orgId);
-          return reply.code(400).view('scan-new.hbs', {
-            pageTitle: 'New Scan',
-            currentPath: '/scan/new',
-            scanError: result.error,
-            prefillUrl: body.siteUrl,
-            jurisdictions: lookupData.jurisdictions,
-            regulations: lookupData.regulations,
-            complianceWarning: lookupData.warning,
-            standards: VALID_STANDARDS,
-            defaultStandard: body.standard || 'WCAG2AA',
-            maxConcurrency: 10,
-            defaultConcurrency: config.maxConcurrentScans,
-            maxPages: config.maxPages,
-          });
+        // The scan form (HTMX or HTML callers) or a JSON body, same message either way.
+        const refuse = async (status: 400 | 429): Promise<FastifyReply> => {
+          if (isHtmx || request.headers['accept']?.includes('text/html')) {
+            const token = getToken(request);
+            const orgId = getOrgId(request);
+            const lookupData = await complianceSvc.getComplianceLookupData(token, orgId);
+            return reply.code(status).view('scan-new.hbs', {
+              pageTitle: 'New Scan',
+              currentPath: '/scan/new',
+              scanError: result.error,
+              prefillUrl: body.siteUrl,
+              jurisdictions: lookupData.jurisdictions,
+              regulations: lookupData.regulations,
+              complianceWarning: lookupData.warning,
+              standards: VALID_STANDARDS,
+              defaultStandard: body.standard || 'WCAG2AA',
+              maxConcurrency: 10,
+              defaultConcurrency: config.maxConcurrentScans,
+              maxPages: config.maxPages,
+            });
+          }
+          return reply.code(status).send({ error: result.error });
+        };
+        if (result.kind === 'rate_limited') {
+          void reply.header('Retry-After', String(result.retryAfterSeconds ?? 1));
+          return refuse(429);
         }
-        return reply.code(400).send({ error: result.error });
+        return refuse(400);
       }
 
       await reply.redirect(`/scan/${result.scanId}/progress`);
