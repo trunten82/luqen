@@ -29,7 +29,7 @@
 
 ## Phases
 
-- [ ] **Phase 90: GraphQL createScan starts scans** - A scan created through GraphQL runs to a terminal state and is validated by the same code path as `/scan/new`
+- [x] **Phase 90: GraphQL createScan starts scans** - A scan created through GraphQL runs to a terminal state and is validated by the same code path as `/scan/new` (completed 2026-10-15)
 - [ ] **Phase 91: Dismissal and permission hardening** - Close the 15 review and deferred-list items so dismissal and permission boundaries hold on every path
 - [ ] **Phase 92: Dismissal user documentation** - Users can follow written docs to mark, understand, revoke and audit false-positive dismissals
 
@@ -47,14 +47,15 @@
   3. Each guard on the GraphQL path has been watched failing: with the guard broken, only the targeted test goes red, and the evidence (command, output, commit) is recorded before the guard lands
   4. Merged to master via PR, CI green, auto-deploy to prod succeeded, and the GraphQL-created scan read back on prod
 
-**Plans:** 6 plans
+**Plans:** 7/6 plans complete
 
 Plans:
+
 - [x] 90-01-PLAN.md — Tracer: GraphQL createScan goes through the shared authorized scan function and reaches the orchestrator (RED first); docs
 - [x] 90-02-PLAN.md — POST /scan/new refuses callers without scans.create through the same function; one scan-start rate limit inside it, one bucket for both paths (D-90-07)
 - [x] 90-03-PLAN.md — Env-only prod read-back script with selftest, its guards broken, and the read-only prod preflight
 - [x] 90-04-PLAN.md — Break every guard (permission, SSRF, wiring, generator, shared rate limit) one at a time against pre-declared red sets
-- [ ] 90-05-PLAN.md — Ship: content scan, PR with green checks, pre-merge prod gates, merge, deploy, prod read-back
+- [x] 90-05-PLAN.md — Ship: content scan, PR with green checks, pre-merge prod gates, merge, deploy, prod read-back
 - [x] 90-06-PLAN.md — RBAC matrix shows the guard; docs for the 403 and the shared rate limit; full gates and local end-to-end rehearsal with a rate-limit probe (wave 3, runs before 90-04)
 
 ### Phase 91: Dismissal and permission hardening

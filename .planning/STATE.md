@@ -2,20 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v3.9.0
 milestone_name: Dismissal follow-through
-current_phase: 90
-current_phase_name: GraphQL createScan starts scans
-status: executing
-stopped_at: Completed 90-04-PLAN.md (M1-M26 break-tests; M6 category finding)
-last_updated: "2026-10-15T14:20:31.695Z"
+current_phase: 91
+current_phase_name: Dismissal and permission hardening
+status: planning
+stopped_at: Phase 90 complete, ready to plan Phase 91
+last_updated: "2026-10-15T15:05:13.523Z"
 last_activity: 2026-10-15
-last_activity_desc: Phase 90 execution started
-state_head: 19cea24959d87f404e1f0bbd0251eff360ae0de1
+last_activity_desc: Phase 90 complete, transitioned to Phase 91
+state_head: bbed77f4954b2523091957c8ceaed5807d83571c
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 6
-  completed_plans: 5
-  percent: 0
+  completed_plans: 6
+  percent: 33
 ---
 
 # Project State
@@ -127,10 +127,10 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 
 ## Current Position
 
-Phase: 90 (GraphQL createScan starts scans) — EXECUTING
-Plan: 6 of 6
-Status: Ready to execute
-Last activity: 2026-10-15 — Phase 90 execution started
+Phase: 91 — Dismissal and permission hardening
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-10-15 — Phase 90 complete, transitioned to Phase 91
 
 ## Phase Map (v3.9.0 — Dismissal follow-through)
 
@@ -220,7 +220,7 @@ measures a candidate model — that is explicitly next-milestone work.
 ## Session Continuity
 
 Last session: 2026-10-15T14:20:31.659Z
-Stopped at: Completed 90-04-PLAN.md (M1-M26 break-tests; M6 category finding)
+Stopped at: Phase 90 complete, ready to plan Phase 91
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
