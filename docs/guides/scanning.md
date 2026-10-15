@@ -81,6 +81,8 @@ The dashboard supports recurring scans without external cron. When creating a sc
 
 Scheduled scans inherit the original scan's URL, standard, jurisdictions, runner, and concurrency settings. Manage active schedules from **Settings > Schedules** in the dashboard sidebar. Each schedule shows its next run time, last result, and can be paused or deleted.
 
+A schedule's start URL is checked with the same rules as the scan form when the schedule is created, and again at every run. A run whose URL is refused records a failed scan with the reason, and the schedule moves on to its next run. Startup recovery applies the same check to queued scans before it restarts them.
+
 CLI equivalent: use `luqen scan --schedule daily|weekly|monthly` to create a schedule via the API.
 
 ---

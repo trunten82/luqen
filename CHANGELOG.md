@@ -8,6 +8,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Scheduled scans, schedule creation, report retry and startup recovery use the
+  same start-URL validation as the scan form: a schedule's URL is checked when
+  it is created and at every run, and a refused run records a failed scan.
+- Report retry and cancel require `scans.create` and act on scans of the
+  caller's organization. The report page shows Retry and Cancel only to viewers
+  who may use them, and the RBAC matrix lists both routes.
+- Scans started from the scan form, GraphQL `createScan`, report retry and the
+  MCP tools `dashboard_scan_site` and `dashboard_scan_page` share one scan-start
+  limit of 30 starts per 10 minutes per user.
+
 ### Added
 
 - Live discovery progress: a full-site scan's progress page now shows

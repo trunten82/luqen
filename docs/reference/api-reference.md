@@ -364,9 +364,21 @@ Parameters:
 Responses:
 
 - Without the `scans.create` permission the endpoint answers `403` (an HTMX request receives JSON with `error` set to `Forbidden: requires scans.create`; any other request receives the standard 403 response). The GraphQL `createScan` mutation applies the same check. An API key is held to the same check: a key whose role does not carry `scans.create` receives `403`.
-- Scans started from the scan form (`POST /scan/new`) or the GraphQL `createScan` mutation are limited to 30 per 10 minutes per user (per API key for key-authenticated callers). The two share one budget, and every permitted attempt counts toward it, including attempts later refused for the URL or the standard.
+- Scans started from the scan form (`POST /scan/new`), the GraphQL `createScan` mutation, report retry (`POST /reports/:id/retry`) and the MCP tools `dashboard_scan_site` and `dashboard_scan_page` are limited to 30 per 10 minutes per user (per API key for key-authenticated callers). All of them draw from one budget, and every permitted attempt counts toward it, including attempts later refused for the URL or the standard.
 - Over the limit the endpoint answers `429` with a `Retry-After` header (seconds until the oldest counted start leaves the window). API callers receive JSON `{ "error": "..." }`; browser callers see the scan form with the message. The message is `Scan start limit reached: at most 30 scans per 10 minutes. Try again later.`
 - Otherwise a refused start answers `400` with the reason, and a started scan redirects to `/scan/:id/progress`.
+
+### `POST /reports/:id/retry` and `POST /reports/:id/cancel`
+
+Re-run a queued or failed scan, or stop a queued or running one. Both require the `scans.create` permission and act only on scans of the caller's organization; a global admin may act on a scan of any organization. The report page shows the Retry and Cancel buttons only to viewers who may use them.
+
+Responses:
+
+- `403` when the caller does not hold `scans.create`.
+- `404` when the scan does not exist or belongs to another organization (the two cases are indistinguishable).
+- `400` when the scan is not in a state the action applies to (retry: queued or failed; cancel: queued or running).
+- Retry only: the stored start URL is validated with the same rules as the scan form, and a refused URL answers `400` and marks the scan failed with the reason. Retry draws one start from the shared scan-start limit and answers `429` with a `Retry-After` header when it is reached.
+- On success an HTMX request receives an `HX-Redirect` header and any other request is redirected: retry to `/scan/:id/progress`, cancel to `/reports/:id`.
 
 ---
 
