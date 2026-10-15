@@ -211,6 +211,8 @@ generated):
   `POST /oauth/register` (default sensible; tighten on public-internet
   deployments).
 
+**Scan-start limit:** the `dashboard_scan_site` and `dashboard_scan_page` tools draw from the same scan-start limit as the scan form, GraphQL `createScan` and report retry: 30 starts per 10 minutes per user. When the limit is reached the tool returns an error result carrying the shared message (`Scan start limit reached: at most 30 scans per 10 minutes. Try again later.`); retry after the window moves on.
+
 **Per-org client registration (admin):** for service-to-service
 integrations that don't go through the user-consent path, register a
 client at `/admin/clients` (Inbound OAuth Clients). This is the

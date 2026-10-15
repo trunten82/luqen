@@ -2,20 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v3.9.0
 milestone_name: Dismissal follow-through
-current_phase: 90
-current_phase_name: GraphQL createScan starts scans
+current_phase: 91
+current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: Completed 90-04-PLAN.md (M1-M26 break-tests; M6 category finding)
-last_updated: "2026-10-15T14:20:31.695Z"
+stopped_at: Completed 91-06b gap closure for PR1
+last_updated: "2026-10-15T19:40:37.797Z"
 last_activity: 2026-10-15
-last_activity_desc: Phase 90 execution started
-state_head: 19cea24959d87f404e1f0bbd0251eff360ae0de1
+last_activity_desc: Phase 91 execution started
+state_head: 53c8935988ac76dccf5db248a15c1c6952a22618
 progress:
   total_phases: 3
-  completed_phases: 0
-  total_plans: 6
-  completed_plans: 5
-  percent: 0
+  completed_phases: 1
+  total_plans: 24
+  completed_plans: 11
+  percent: 33
 ---
 
 # Project State
@@ -123,14 +123,14 @@ verdict and resurfaces automatically if its file changes.
 See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** Phase 90 — GraphQL createScan starts scans
+**Current focus:** Phase 91 — Dismissal and permission hardening
 
 ## Current Position
 
-Phase: 90 (GraphQL createScan starts scans) — EXECUTING
-Plan: 6 of 6
+Phase: 91 (Dismissal and permission hardening) — EXECUTING
+Plan: 7 of 18
 Status: Ready to execute
-Last activity: 2026-10-15 — Phase 90 execution started
+Last activity: 2026-10-15 — Phase 91 execution started
 
 ## Phase Map (v3.9.0 — Dismissal follow-through)
 
@@ -219,8 +219,8 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-15T14:20:31.659Z
-Stopped at: Completed 90-04-PLAN.md (M1-M26 break-tests; M6 category finding)
+Last session: 2026-10-15T19:40:37.745Z
+Stopped at: Completed 91-06b gap closure for PR1
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -261,6 +261,13 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 90 P03 | 35min | 3 tasks | 2 files |
 | Phase 90 P06 | ~50min | 3 tasks | 6 files |
 | Phase 90 P04 | 1h25m | 3 tasks | 0 files |
+| Phase 91 P01 | 35min | 3 tasks | 3 files |
+| Phase 91 P02 | 35min | 3 tasks | 10 files |
+| Phase 91 P03 | 25min | 3 tasks | 11 files |
+| Phase 91 P04 | 30min | 3 tasks | 8 files |
+| Phase 91 P05 | 30min | 3 tasks | 7 files |
+| Phase 91 P06 | 140min | 3 tasks | 3 files |
+| Phase 91 P06b | ~75min | 7 items | 19 files |
 
 ## Decisions
 
@@ -275,6 +282,27 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 90]: Phase 90-01: GraphQL createScan routes through ScanService.initiateScanAuthorized (permission check in the shared function, not initiateScan; MCP exception documented)
 - [Phase 90]: 90-03: read-back script switch-ignored world uses a same-named other org, so the org assertion must compare name AND id; selftest lives in the script file
 - [Phase 90]: 90-04: all 26 guard mutations watched failing; 25 reddened exactly the declared set, M6 reddened the declared set plus one positive-control test outside its stated category (recorded as a MISMATCH, declaration not edited); M25 first run hit nine load timeouts, re-run clean
+- [Phase 91]: 91-01: the at-rest key list is anchored on call expressions with a per-site line window; every other reference to the encryption key must be a listed site or a named exemption
+- [Phase 91]: 91-01: the prod read-back script checks that schedule creation goes through the shared start validation, and sweeps any probe schedule it finds stored
+- [Phase 91]: Phase 91 P02: retry and cancel need the scan create permission and the scan's organization; the organization predicate is the dismissal write-side predicate under a second name (delegation plus an agreement table), no exception for the system organization
+- [Phase 91]: Phase 91 P02: retry order is permission, organization, status, one start from the shared scan-start limit, then the stored start-URL check and the start; a refused stored start URL marks the row failed with the refusal text and starts nothing
+- [Phase 91]: Phase 91 P02: the report page offers Retry and Cancel through a route-computed scanControls key, absent unless the viewer holds the permission and may control the scan's organization
+- [Phase 91]: Phase 91 P03: a due schedule is handed to the scan service, which creates its row and starts it only after the stored start URL passes the shared start validation at run time; a refused run leaves a failed row with the refusal text and the schedule still advances
+- [Phase 91]: Phase 91 P03: scheduled runs and startup recovery draw nothing from the scan-start limit and run no reachability probe (validation only)
+- [Phase 91]: Phase 91 P03: schedule creation uses one injected start-URL validator; the strict default fails closed, the server injects the shared scan service's check which honours allowPrivateScanTargets
+- [Phase 91]: Phase 91 P03: startup recovery validates queued rows concurrently; refused or unresolvable rows are marked failed with 'Not restarted: ' plus the refusal text, and recovery logs scan ids and counts only
+- [Phase 91]: Phase 91 P04: MCP scan starts draw from the shared scan-start limit (30 per 10 minutes per caller, keyed by the tool context user id); no permission check is added to either MCP scan tool, so agent-bridge org users with an empty permission set still start scans
+- [Phase 91]: Phase 91 P04: the form, GraphQL, MCP site tool and retry spend through one limiter code path; the page tool spends one start per url or html invocation after the presence check, with a fail-closed default limiter when none is injected
+- [Phase 91]: Phase 91 P04: the one-bucket property for MCP and retry is proven through the real createServer wiring and both proofs were watched failing under a separate limiter and a spend that never happens
+- [Phase 91]: Phase 91 P05: the RBAC generator matches the start, retry and cancel scan service entry points from one list and reads the scan-create permission constant from the module that defines it; a named test pins the two new matrix rows
+- [Phase 91]: Phase 91 P05: docs and CHANGELOG state the shared scan-start rules as behaviour only; every PR1 gate is green against the PR1 base and the local rehearsal showed recovery failing refused rows closed, the viewer retry refusal and the full read-back
+- [Phase 91]: Phase 91 P06: every PR1 guard was broken one at a time against pre-declared red sets; 27 of 29 breaks reddened exactly the declared set, and the two that did not (B8b, B10) are analysed as other tests covering the same proposition from another side, not guard defects
+- [Phase 91]: Phase 91 P06: removing the MCP page tool's scan-service hand-off in mcp/server.ts reddened nothing, so a test through createDashboardMcpServer was added and now reddens alone when the hand-off is removed
+- [Phase 91]: Phase 91 P06: the schedule runner's throw path, the startup-recovery throw branch and the RBAC generator's own startup and region refusals each gained a mutation-watched test
+- [Phase 91]: Phase 91 P06b: the scheduler's due query takes the pass instant, a due schedule's last and next run are written before its start work, ticks never overlap, and one schedule's failure never stops the others; the scheduler tests hold under a shifted clock
+- [Phase 91]: Phase 91 P06b: a stored row is started only while it is in the state it was read in (re-read after the start-URL check); a retry clears the old error and completion time
+- [Phase 91]: Phase 91 P06b: startup recovery runs beside startup, bounds each host lookup at 5 s and checks at most 5 rows at once; a lookup that is unavailable leaves the row queued while unknown names, private targets and invalid URLs mark it failed
+- [Phase 91]: Phase 91 P06b: the callers of the scheduled start, stored-row start, recovery, retry and cancel entries are pinned to their intended files by a structural test with a walker control
 
 ### Blockers
 

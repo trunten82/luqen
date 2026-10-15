@@ -1,4 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+// Hermetic DNS for the start-URL check: a name containing `private-name` resolves to a
+// private address, every other name to a public documentation address.
+vi.mock('../../src/services/host-resolver.js', () => ({
+  systemHostResolver: async (hostname: string): Promise<readonly string[]> =>
+    hostname.includes('private-name') ? ['10.0.0.5'] : ['93.184.215.14'],
+}));
 import Fastify, { FastifyInstance, FastifyReply } from 'fastify';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -8,6 +15,10 @@ import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { registerSession } from '../../src/auth/session.js';
 import { scheduleRoutes } from '../../src/routes/schedules.js';
 import { ALL_PERMISSION_IDS } from '../../src/permissions.js';
+import type { StartUrlValidator } from '../../src/routes/schedules.js';
+import { PRIVATE_TARGET_ERROR, ScanService } from '../../src/services/scan-service.js';
+import type { ScanOrchestrator } from '../../src/scanner/orchestrator.js';
+import type { DashboardConfig } from '../../src/config.js';
 
 const TEST_SESSION_SECRET = 'test-session-secret-at-least-32b';
 
@@ -17,7 +28,10 @@ interface TestContext {
   cleanup: () => void;
 }
 
-async function createTestServer(permissions: string[] = ALL_PERMISSION_IDS as unknown as string[]): Promise<TestContext> {
+async function createTestServer(
+  permissions: string[] = ALL_PERMISSION_IDS as unknown as string[],
+  validateStartUrl?: StartUrlValidator,
+): Promise<TestContext> {
   const dbPath = join(tmpdir(), `test-schedules-${randomUUID()}.db`);
   const storage = new SqliteStorageAdapter(dbPath);
   await storage.migrate();
@@ -40,7 +54,7 @@ async function createTestServer(permissions: string[] = ALL_PERMISSION_IDS as un
     (request as unknown as Record<string, unknown>)['permissions'] = new Set(permissions);
   });
 
-  await scheduleRoutes(server, storage);
+  await scheduleRoutes(server, storage, validateStartUrl);
   await server.ready();
 
   const cleanup = (): void => {
@@ -145,6 +159,58 @@ describe('Schedule routes', () => {
         payload: 'siteUrl=not-a-url&standard=WCAG2AA&frequency=weekly',
       });
       expect(response.statusCode).toBe(400);
+    });
+  });
+
+  describe('POST /schedules start url validation', () => {
+    const post = (ctx: TestContext, siteUrl: string) =>
+      ctx.server.inject({
+        method: 'POST',
+        url: '/schedules',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        payload: `siteUrl=${encodeURIComponent(siteUrl)}&standard=WCAG2AA&frequency=weekly`,
+      });
+
+    it('HARD-14 schedule create validates the start url with the shared start validation', async () => {
+      const ctx = await createTestServer(['scans.schedule']);
+      const response = await post(ctx, 'http://127.0.0.1/');
+      const stored = await ctx.storage.schedules.listSchedules('system');
+      ctx.cleanup();
+      expect(response.statusCode).toBe(400);
+      expect(response.body).toContain(PRIVATE_TARGET_ERROR);
+      expect(stored).toHaveLength(0);
+    });
+
+    it('HARD-14 schedule create refuses a name that resolves to a private address', async () => {
+      const ctx = await createTestServer(['scans.schedule']);
+      const response = await post(ctx, 'https://private-name.example.com/');
+      const stored = await ctx.storage.schedules.listSchedules('system');
+      ctx.cleanup();
+      expect(response.statusCode).toBe(400);
+      expect(response.body).toContain(PRIVATE_TARGET_ERROR);
+      expect(stored).toHaveLength(0);
+    });
+
+    it('HARD-14 schedule create stores a schedule for a public start url', async () => {
+      const ctx = await createTestServer(['scans.schedule']);
+      const response = await post(ctx, 'https://www.example.com');
+      const stored = await ctx.storage.schedules.listSchedules('system');
+      ctx.cleanup();
+      expect(response.statusCode).toBe(200);
+      expect(stored).toHaveLength(1);
+      expect(stored[0]!.siteUrl).toBe('https://www.example.com/');
+    });
+
+    it('HARD-14 schedule create honours allowPrivateScanTargets through the shared validation', async () => {
+      const config = { allowPrivateScanTargets: true, maxPages: 100 } as unknown as DashboardConfig;
+      const service = new ScanService({} as never, {} as unknown as ScanOrchestrator, config);
+      const ctx = await createTestServer(['scans.schedule'], (raw) => service.validateStartUrl(raw));
+      const response = await post(ctx, 'http://127.0.0.1/');
+      const stored = await ctx.storage.schedules.listSchedules('system');
+      ctx.cleanup();
+      expect(response.statusCode).toBe(200);
+      expect(stored).toHaveLength(1);
+      expect(stored[0]!.siteUrl).toBe('http://127.0.0.1/');
     });
   });
 

@@ -134,7 +134,12 @@ export interface ScanFilters {
   readonly includeReport?: boolean;
 }
 
-export type ScanUpdateData = Partial<Omit<ScanRecord, 'id' | 'createdBy' | 'createdAt'>>;
+export type ScanUpdateData = Partial<Omit<ScanRecord, 'id' | 'createdBy' | 'createdAt' | 'error' | 'completedAt'>> & {
+  /** `null` clears the stored value. */
+  readonly error?: string | null;
+  /** `null` clears the stored value. */
+  readonly completedAt?: string | null;
+};
 
 export interface CreateScanInput {
   readonly id: string;

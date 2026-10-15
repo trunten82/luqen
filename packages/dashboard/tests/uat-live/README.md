@@ -28,20 +28,25 @@ UAT which surfaced 11 production bugs the unit suites missed.
   script exits 2 without sending anything, except a loopback `http://` URL with
   an explicit port for a local rehearsal), `LUQEN_UAT_ORG_NAME` (default `Fabrikam UAT`),
   `LUQEN_UAT_SCAN_TARGET` (default `https://example.com`),
-  `LUQEN_UAT_PRIVATE_PROBE` (`on`/`off`), and the timing knobs
+  `LUQEN_UAT_PRIVATE_PROBE` (`on`/`off`), `LUQEN_UAT_SCHEDULE_PROBE` (`on`/`off`),
+  and the timing knobs
   `LUQEN_UAT_LEAVE_QUEUED_S`, `LUQEN_UAT_TERMINAL_S`, `LUQEN_UAT_POLL_MS`.
   Full mode logs in, finds the UAT org by name, switches to it and asserts it
   by name AND id (no GraphQL call is made before that), checks that a loopback
-  target is refused through GraphQL, creates one scan, watches it leave
+  target is refused through GraphQL, checks that a loopback start URL posted
+  to `POST /schedules` is refused with the shared private-target text and
+  creates no schedule (a schedule the server accepted is deleted again and
+  read back as absent, and the run stops before creating a scan), creates one
+  scan, watches it leave
   `queued` and reach `completed`/`failed`, then deletes it in a finally block
   and reads it back as null. `--preflight` stops after the org assertion and
   never calls `/graphql`. `--selftest` drives the same code against an
-  in-process fake server in twelve worlds and greps the output for sentinel
+  in-process fake server in fifteen worlds and greps the output for sentinel
   values. Output is check names, status words and elapsed seconds only.
   **Run full mode against production only after the fix is deployed and the
-  Deploy run succeeded; never before** (a row created by the old code would
-  stay queued and block the deploy drain). `--preflight` and `--selftest` are
-  always safe.
+  Deploy run succeeded; never before** (operators should confirm no queued
+  scans first). `--preflight` and `--selftest` are always safe; `--preflight`
+  never posts a schedule.
 
 Ground rules learned: login rate-limit is 10/15min (reuse jars, don't relogin
 per probe); deploys restart the service and kill sessions mid-sweep; permission

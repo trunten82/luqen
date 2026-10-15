@@ -1,5 +1,6 @@
 import { bypassesOrgScope, hasPermission } from '../permissions.js';
 import { mayTouchDismissalOrg, mayViewScanReport } from '../services/issue-dismissals/scan-access.js';
+import { mayControlScan, SCAN_CREATE_PERMISSION } from '../services/scan-lifecycle.js';
 import { toSiteKey } from '../services/issue-dismissals/site-key.js';
 import {
   buildDismissalsView,
@@ -627,6 +628,11 @@ export async function reportRoutes(
           ? { reasonMax: DISMISSAL_REASON_MAX_LENGTH, commentMax: DISMISSAL_COMMENT_MAX_LENGTH }
           : undefined;
 
+      // Retry and Cancel are offered only to a viewer the retry and cancel routes accept: the scan
+      // create permission AND the scan-control organization predicate. The key is absent otherwise.
+      const scanControls =
+        hasPermission(request, SCAN_CREATE_PERMISSION) && mayControlScan(request.user, scan.orgId);
+
       // Phase 89 Plan 05 (FP-15, D-07): the Dismissed section lists the SCAN's org and site (never
       // the requester's). It needs report access only, not issues.dismiss. Quick 261013-dr7 (CR-02,
       // owner ruling SC2 option B): it follows the predicate that admitted the viewer to this page,
@@ -661,6 +667,7 @@ export async function reportRoutes(
         liveBadgeId,
         reportData,
         ...(dismissalControls !== undefined ? { dismissalControls } : {}),
+        ...(scanControls ? { scanControls: true } : {}),
         ...(dismissals !== undefined ? { dismissals } : {}),
         ...(reportDismissedCount > 0 ? { reportDismissedCount } : {}),
         complianceStatus: verdictColourClass,

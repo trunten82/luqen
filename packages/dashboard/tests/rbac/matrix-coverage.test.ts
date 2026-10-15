@@ -93,4 +93,17 @@ describe('RBAC matrix coverage', () => {
       '| scans.create | POST /scan/new | dashboard-page | packages/dashboard/src/routes/scan.ts |',
     );
   });
+
+  // Report retry and cancel check scans.create inside the scan service
+  // (retryScanAuthorized / cancelScanAuthorized), the same way the scan form
+  // does, so the generator reads those entry points from the route source.
+  it('HARD-14 rbac matrix lists the scan create permission for retry and cancel', () => {
+    const matrix = readFileSync(MATRIX_PATH, 'utf8');
+    expect(matrix).toContain(
+      '| scans.create | POST /reports/:id/retry | dashboard-page | packages/dashboard/src/routes/scan.ts |',
+    );
+    expect(matrix).toContain(
+      '| scans.create | POST /reports/:id/cancel | dashboard-page | packages/dashboard/src/routes/scan.ts |',
+    );
+  });
 });

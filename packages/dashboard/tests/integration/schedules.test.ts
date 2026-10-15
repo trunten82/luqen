@@ -1,4 +1,11 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+
+// Hermetic DNS for the start-URL check: a name containing `private-name` resolves to a
+// private address, every other name to a public documentation address.
+vi.mock('../../src/services/host-resolver.js', () => ({
+  systemHostResolver: async (hostname: string): Promise<readonly string[]> =>
+    hostname.includes('private-name') ? ['10.0.0.5'] : ['93.184.215.14'],
+}));
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';

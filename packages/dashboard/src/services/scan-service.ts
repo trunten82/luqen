@@ -11,7 +11,7 @@ import { randomUUID } from 'node:crypto';
 import type { StorageAdapter } from '../db/index.js';
 import type { ScanOrchestrator } from '../scanner/orchestrator.js';
 import type { DashboardConfig } from '../config.js';
-import type { ScanRecord } from '../db/types.js';
+import type { ScanRecord, ScanSchedule } from '../db/types.js';
 import {
   assertPublicUrl,
   isPrivateHostname as isPrivateHostnameCore,
@@ -19,6 +19,23 @@ import {
   type HostResolver,
 } from '@luqen/core';
 import { systemHostResolver } from './host-resolver.js';
+import { DNS_LOOKUP_TIMEOUT_MS, withLookupTimeout } from './lookup-timeout.js';
+import {
+  SCAN_CREATE_PERMISSION,
+  cancelScan,
+  recoverQueuedScans,
+  retryScan,
+  startStoredScan,
+  type ScanControlCaller,
+  type ScanControlRefusalKind,
+  type ScanControlResult,
+  type RecoveryResult,
+  type ScanLifecycleDeps,
+  type StartBudgetRefusal,
+} from './scan-lifecycle.js';
+
+export { SCAN_CREATE_PERMISSION };
+export type { ScanControlCaller, ScanControlRefusalKind, ScanControlResult };
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -55,9 +72,6 @@ export interface ScanContext {
   readonly orgId: string;
   readonly complianceToken: string;
 }
-
-/** Permission a caller needs to start a scan through a request-permission surface. */
-export const SCAN_CREATE_PERMISSION = 'scans.create';
 
 /** A {@link ScanContext} that also carries the caller's resolved permission set. */
 export interface AuthorizedScanContext extends ScanContext {
@@ -222,6 +236,9 @@ export function createScanStartLimiter(options: ScanStartLimiterOptions = {}): S
   };
 }
 
+/** Resolver failures that say nothing about the target: the lookup may succeed later. */
+const TRANSIENT_RESOLVER_ERROR = /\b(EAI_AGAIN|ETIMEOUT|ETIMEDOUT|ESERVFAIL|EREFUSED|ECONNREFUSED)\b/;
+
 /** User-facing refusal when the start URL's host does not resolve. */
 export const UNRESOLVABLE_TARGET_ERROR = 'Domain not found — check the URL for typos.';
 
@@ -279,13 +296,23 @@ export async function validateScanUrl(
     await assertPublicUrl(parsedUrl.toString(), { resolve: resolve ?? systemHostResolver });
   } catch (err) {
     if (!(err instanceof SsrfBlockedError)) throw err;
-    return { error: err.reason.startsWith('DNS resolution') ? UNRESOLVABLE_TARGET_ERROR : PRIVATE_TARGET_ERROR };
+    if (!err.reason.startsWith('DNS resolution')) return { error: PRIVATE_TARGET_ERROR };
+    return TRANSIENT_RESOLVER_ERROR.test(err.reason)
+      ? { error: UNRESOLVABLE_TARGET_ERROR, transient: true }
+      : { error: UNRESOLVABLE_TARGET_ERROR };
   }
 
   return { url: parsedUrl };
 }
 
-export type UrlValidation = { readonly url: URL } | { readonly error: string };
+/**
+ * A refused start URL carries `transient: true` when the refusal is a resolver
+ * failure that may pass (timeout, temporary failure, server failure) rather
+ * than an answer about the target itself.
+ */
+export type UrlValidation =
+  | { readonly url: URL }
+  | { readonly error: string; readonly transient?: true };
 
 /**
  * Pre-validate that the URL is reachable before starting a scan.
@@ -332,6 +359,8 @@ export class ScanService {
      * scan form and GraphQL createScan draw from one bucket.
      */
     private readonly startLimiter: ScanStartLimiter = createScanStartLimiter(),
+    /** Bound for one hostname lookup in the start-URL check, in milliseconds. */
+    private readonly dnsTimeoutMs: number = DNS_LOOKUP_TIMEOUT_MS,
   ) {}
 
   /**
@@ -355,18 +384,131 @@ export class ScanService {
     if (!context.permissions.has(SCAN_CREATE_PERMISSION)) {
       return { ok: false, kind: 'forbidden', error: `Forbidden: requires ${SCAN_CREATE_PERMISSION}` };
     }
-    const key = scanStartKey(context.startSubject);
+    return this.initiateScanRateLimited(input, context);
+  }
+
+  /**
+   * The entry for callers whose permission is enforced elsewhere (the MCP site
+   * tool: tool metadata, D-90-02). It checks and spends the caller's start
+   * budget, then behaves exactly as {@link ScanService.initiateScan}. No
+   * permission check: the in-app agent bridge stamps an empty permission set
+   * for org users, who must still be able to start scans. The three metered
+   * entries (this one, the authorized one, retry) share one limiter path.
+   */
+  async initiateScanRateLimited(
+    input: InitiateScanInput,
+    context: ScanContext & { readonly startSubject: ScanStartSubject },
+  ): Promise<ScanInitiationResult> {
+    const refusal = this.consumeScanStart(context.startSubject);
+    if (refusal !== undefined) {
+      return refusal;
+    }
+    return this.initiateScan(input, context);
+  }
+
+  /**
+   * Spend one start from the shared limiter for a caller that starts work
+   * without creating a scan row (the MCP page tool). Returns the refusal when
+   * the budget is used up, else undefined.
+   */
+  consumeScanStart(subject: ScanStartSubject): ScanValidationError | undefined {
+    const refusal = this.spendStartBudget(subject);
+    return refusal === undefined ? undefined : { ok: false, kind: 'rate_limited', ...refusal };
+  }
+
+  /**
+   * Check and spend one start from the shared limiter for this caller. No
+   * await between the check and the record, so concurrent attempts cannot
+   * overspend. Returns the refusal when the budget is used up, else undefined.
+   */
+  private spendStartBudget(subject: ScanStartSubject): StartBudgetRefusal | undefined {
+    const key = scanStartKey(subject);
     const verdict = this.startLimiter.check(key);
     if (!verdict.allowed) {
       return {
-        ok: false,
-        kind: 'rate_limited',
         error: SCAN_RATE_LIMIT_ERROR,
         retryAfterSeconds: Math.max(1, Math.ceil(verdict.retryAfterMs / 1000)),
       };
     }
     this.startLimiter.record(key);
-    return this.initiateScan(input, context);
+    return undefined;
+  }
+
+  /** The start-URL check every scan start applies (honours allowPrivateScanTargets). */
+  validateStartUrl(raw: string): Promise<UrlValidation> {
+    return validateScanUrl(
+      raw,
+      this.config.allowPrivateScanTargets ?? false,
+      withLookupTimeout(this.resolveHost ?? systemHostResolver, this.dnsTimeoutMs),
+    );
+  }
+
+  private lifecycleDeps(): ScanLifecycleDeps {
+    return {
+      storage: this.storage,
+      orchestrator: this.orchestrator,
+      config: this.config,
+      validateStartUrl: (raw) => this.validateStartUrl(raw),
+      spendStartBudget: (subject) => this.spendStartBudget(subject),
+    };
+  }
+
+  /**
+   * Retry a queued or failed scan: permission, organization, status, one start
+   * from the shared limit, then the start-URL check, then the start.
+   */
+  retryScanAuthorized(scanId: string, caller: ScanControlCaller): Promise<ScanControlResult> {
+    return retryScan(this.lifecycleDeps(), scanId, caller);
+  }
+
+  /** Cancel a queued or running scan: permission and organization checks, no start budget. */
+  cancelScanAuthorized(scanId: string, caller: ScanControlCaller): Promise<ScanControlResult> {
+    return cancelScan(this.lifecycleDeps(), scanId, caller);
+  }
+
+  /**
+   * Start the scan for a due schedule: create its row (so a refused run leaves
+   * a visible record), then start it through {@link startStoredScan}, which
+   * validates the stored start URL first. A refused or failed start marks the
+   * row failed and starts nothing. No start-limit interaction and no
+   * reachability probe: validation only.
+   */
+  async startScheduledScan(schedule: ScanSchedule, now: Date = new Date()): Promise<ScanControlResult> {
+    const scan = await this.storage.scans.createScan({
+      id: randomUUID(),
+      siteUrl: schedule.siteUrl,
+      standard: schedule.standard,
+      jurisdictions: schedule.jurisdictions,
+      regulations: [],
+      createdBy: `scheduler:${schedule.createdBy}`,
+      createdAt: now.toISOString(),
+      orgId: schedule.orgId,
+    });
+    const overrides = {
+      scanMode: schedule.scanMode as 'single' | 'site',
+      maxPages: this.config.maxPages,
+      ...(schedule.runner !== null ? { runner: schedule.runner as 'htmlcs' | 'axe' } : {}),
+      ...(schedule.incremental ? { incremental: true } : {}),
+    };
+    try {
+      return await startStoredScan(this.lifecycleDeps(), scan, overrides);
+    } catch (err) {
+      const error = 'Scheduled scan could not be started';
+      await this.storage.scans.updateScan(scan.id, {
+        status: 'failed',
+        error,
+        completedAt: new Date().toISOString(),
+      });
+      throw err;
+    }
+  }
+
+  /**
+   * Startup recovery: restart each queued row whose stored start URL passes the
+   * shared start validation, mark every other one failed and start nothing for it.
+   */
+  recoverQueuedScans(): Promise<RecoveryResult> {
+    return recoverQueuedScans(this.lifecycleDeps());
   }
 
   /**
@@ -378,11 +520,7 @@ export class ScanService {
     context: ScanContext,
   ): Promise<ScanInitiationResult> {
     // 1. Validate URL
-    const urlResult = await validateScanUrl(
-      input.siteUrl,
-      this.config.allowPrivateScanTargets ?? false,
-      this.resolveHost,
-    );
+    const urlResult = await this.validateStartUrl(input.siteUrl);
     if ('error' in urlResult) {
       return { ok: false, error: urlResult.error };
     }

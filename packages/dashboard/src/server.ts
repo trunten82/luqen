@@ -1113,9 +1113,12 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // draw from this one limiter (D-90-07).
   const scanStartLimiter = createScanStartLimiter();
   await scanRoutes(server, storage, orchestrator, config, complianceService, scanStartLimiter);
+  // The one ScanService every start path shares: the MCP tools, GraphQL, the
+  // scheduler and startup recovery. It holds the scan-start limiter above.
+  const sharedScanService = new ScanService(storage, orchestrator, config, undefined, scanStartLimiter);
   await compareRoutes(server, storage);
   await trendRoutes(server, storage);
-  await scheduleRoutes(server, storage);
+  await scheduleRoutes(server, storage, (raw) => sharedScanService.validateStartUrl(raw));
   // LLM client is owned by serviceClientRegistry (constructed above).
   // Routes receive getLLMClient and resolve the current live instance per
   // request so a runtime reload is picked up without a restart.
@@ -1289,15 +1292,12 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     expectedAudience: dashboardMcpAudience,
     legacyPem: config.jwtPublicKey,
   });
-  // Phase 30-02: build a ScanService instance for the MCP data tools (the
-  // route-level scanRoutes constructs its own ScanService for HTTP handlers).
+  // Phase 30-02: the MCP data tools use the shared ScanService built above
+  // (the route-level scanRoutes constructs its own for HTTP handlers).
   // The dashboard_scan_site tool invokes initiateScan; dashboard_get_report and
   // dashboard_query_issues call getScanForOrg for the cross-org guard.
-  // ScanService is no longer stateless: it holds a scan-start limiter. This
-  // instance is also the one the GraphQL context uses, so it shares the one
-  // scanStartLimiter created before scanRoutes and the scan form and GraphQL
-  // createScan draw from one bucket instead of one each.
-  const mcpScanService = new ScanService(storage, orchestrator, config, undefined, scanStartLimiter);
+  // The instance holds the one scanStartLimiter, so the scan form, GraphQL
+  // createScan and the MCP tools draw from one bucket instead of one each.
   // Compliance discovery tools (dashboard_list_regulations etc.) and the
   // expanded dashboard_scan_site need a live compliance bearer. Resolve via
   // the registry per call so admin secret rotations propagate without a
@@ -1331,7 +1331,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await registerMcpRoutes(server, {
     verifyToken: mcpVerifier,
     storage,
-    scanService: mcpScanService,
+    scanService: sharedScanService,
     serviceConnections: serviceConnectionsRepo,
     complianceAccess: mcpComplianceAccess,
     llmAccess: mcpLlmAccess,
@@ -1371,7 +1371,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // ToolManifestEntry[] for ToolDispatcher and AgentToolCatalogEntry for the LLM.
   const agentMcpServer = (await createDashboardMcpServer({
     storage,
-    scanService: mcpScanService,
+    scanService: sharedScanService,
     serviceConnections: serviceConnectionsRepo,
     complianceAccess: mcpComplianceAccess,
   })).server;
@@ -1452,7 +1452,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         new Set<string>(),
       orgId: request.user?.currentOrgId ?? 'system',
       brandingOrchestrator,
-      scanService: mcpScanService,
+      scanService: sharedScanService,
       complianceToken: getToken(request),
       clientIp: request.ip,
     }),
@@ -1467,7 +1467,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── Scheduler — start after server is ready ────────────────────────────
   server.addHook('onReady', async () => {
-    const timer = startScheduler(storage, orchestrator, config);
+    const timer = startScheduler(storage, sharedScanService);
     const emailTimer = startEmailScheduler(storage, pluginManager);
     // Phase 82: digest sweep — runs every 60 s, picks up due digest schedules.
     const digestTimer = startDigestScheduler(storage, pluginManager);
@@ -1548,11 +1548,35 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
       server.log.warn({ err }, 'OAuth client backfill encountered an error');
     }
 
+    async function runQueuedScanRecovery(markedFailed: number): Promise<void> {
+      try {
+        const recovery = await sharedScanService.recoverQueuedScans();
+        for (const id of recovery.refused) {
+          server.log.info(`Queued scan ${id} was not restarted and is marked failed`);
+        }
+        for (const id of recovery.deferred) {
+          server.log.info(`Queued scan ${id} was left queued: the host lookup was unavailable`);
+        }
+        for (const failure of recovery.errors) {
+          server.log.warn(`Start check for queued scan ${failure.id} failed (${failure.name})`);
+        }
+
+        if (markedFailed > 0 || recovery.restarted > 0 || recovery.refused.length > 0 || recovery.deferred.length > 0) {
+          server.log.info(
+            `Scan recovery: ${markedFailed} marked failed, ${recovery.restarted} re-enqueued, ${recovery.refused.length} not restarted, ${recovery.deferred.length} left queued`,
+          );
+        }
+      } catch (err) {
+        server.log.warn({ err }, 'Scan recovery encountered an error');
+      }
+    }
+
     // ── Recover stuck scans ─────────────────────────────────────────────
     // Scans left in queued/running state after a restart will never complete.
-    // Re-enqueue queued scans; mark running scans as failed (partial state).
+    // Queued rows are restarted only when their stored start URL still passes
+    // the shared start validation (the rest are marked failed); running rows
+    // are marked failed (partial state). Logs carry scan ids and counts only.
     try {
-      const stuckQueued = await storage.scans.listScans({ status: 'queued' });
       const stuckRunning = await storage.scans.listScans({ status: 'running' });
 
       for (const scan of stuckRunning) {
@@ -1561,29 +1585,12 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
           error: 'Interrupted by server restart',
           completedAt: new Date().toISOString(),
         });
-        server.log.info(`Marked interrupted scan ${scan.id} (${scan.siteUrl}) as failed`);
+        server.log.info(`Marked interrupted scan ${scan.id} as failed`);
       }
 
-      for (const scan of stuckQueued) {
-        orchestrator.startScan(scan.id, {
-          siteUrl: scan.siteUrl,
-          standard: scan.standard,
-          concurrency: config.maxConcurrentScans,
-          jurisdictions: scan.jurisdictions,
-          regulations: scan.regulations ?? [],
-          ...(config.webserviceUrl !== undefined ? { webserviceUrl: config.webserviceUrl } : {}),
-          ...(config.webserviceUrls !== undefined && config.webserviceUrls.length > 0
-            ? { webserviceUrls: config.webserviceUrls }
-            : {}),
-          complianceUrl: config.complianceUrl,
-          orgId: scan.orgId,
-        });
-        server.log.info(`Re-enqueued stuck scan ${scan.id} (${scan.siteUrl})`);
-      }
-
-      if (stuckRunning.length > 0 || stuckQueued.length > 0) {
-        server.log.info(`Scan recovery: ${stuckRunning.length} marked failed, ${stuckQueued.length} re-enqueued`);
-      }
+      // The queued-row recovery checks start URLs over DNS, so it runs beside startup
+      // rather than holding readiness: it logs its own outcome and its own failure.
+      void runQueuedScanRecovery(stuckRunning.length);
     } catch (err) {
       server.log.warn({ err }, 'Scan recovery encountered an error');
     }

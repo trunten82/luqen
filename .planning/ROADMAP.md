@@ -29,7 +29,7 @@
 
 ## Phases
 
-- [ ] **Phase 90: GraphQL createScan starts scans** - A scan created through GraphQL runs to a terminal state and is validated by the same code path as `/scan/new`
+- [x] **Phase 90: GraphQL createScan starts scans** - A scan created through GraphQL runs to a terminal state and is validated by the same code path as `/scan/new` (completed 2026-10-15)
 - [ ] **Phase 91: Dismissal and permission hardening** - Close the 15 review and deferred-list items so dismissal and permission boundaries hold on every path
 - [ ] **Phase 92: Dismissal user documentation** - Users can follow written docs to mark, understand, revoke and audit false-positive dismissals
 
@@ -47,14 +47,15 @@
   3. Each guard on the GraphQL path has been watched failing: with the guard broken, only the targeted test goes red, and the evidence (command, output, commit) is recorded before the guard lands
   4. Merged to master via PR, CI green, auto-deploy to prod succeeded, and the GraphQL-created scan read back on prod
 
-**Plans:** 6 plans
+**Plans:** 7/6 plans complete
 
 Plans:
+
 - [x] 90-01-PLAN.md — Tracer: GraphQL createScan goes through the shared authorized scan function and reaches the orchestrator (RED first); docs
 - [x] 90-02-PLAN.md — POST /scan/new refuses callers without scans.create through the same function; one scan-start rate limit inside it, one bucket for both paths (D-90-07)
 - [x] 90-03-PLAN.md — Env-only prod read-back script with selftest, its guards broken, and the read-only prod preflight
 - [x] 90-04-PLAN.md — Break every guard (permission, SSRF, wiring, generator, shared rate limit) one at a time against pre-declared red sets
-- [ ] 90-05-PLAN.md — Ship: content scan, PR with green checks, pre-merge prod gates, merge, deploy, prod read-back
+- [x] 90-05-PLAN.md — Ship: content scan, PR with green checks, pre-merge prod gates, merge, deploy, prod read-back
 - [x] 90-06-PLAN.md — RBAC matrix shows the guard; docs for the 403 and the shared rate limit; full gates and local end-to-end rehearsal with a rate-limit probe (wave 3, runs before 90-04)
 
 ### Phase 91: Dismissal and permission hardening
@@ -70,7 +71,29 @@ Plans:
   4. The test and harness guards hold: the dark-permission filters take an injectable set with one red/green test per path even while `DARK_PERMISSIONS` is empty; the remote dismissal UAT harness refuses to run against anything but a dedicated UAT org/site (and the README says so); the at-rest key-invariant test anchors on the `server.ts` wiring call expressions, not line numbers (HARD-06, 07, 09)
   5. Each new guard has been watched failing (only the targeted test goes red, evidence recorded before it lands), and the phase is merged to master via PR, CI green, auto-deploy to prod succeeded, with a read-back on prod of the changed behaviour
 
-**Plans**: TBD
+**Plans:** 18 plans (three PRs, each shipped and read back before the next merges)
+
+Plans:
+
+- [x] 91-01-PLAN.md — PR1: at-rest wiring test anchored on call expressions; read-back probe for schedule creation; read-only prod preflight
+- [x] 91-02-PLAN.md — PR1: report retry and cancel go through the scan service (scans.create, the scan's organization, shared start validation, shared scan-start limit); Retry/Cancel shown only to viewers who may use them
+- [x] 91-03-PLAN.md — PR1: scheduled runs, schedule creation and startup recovery go through the shared start validation
+- [x] 91-04-PLAN.md — PR1: MCP scan starts draw from the shared scan-start limit; one bucket proven through createServer
+- [x] 91-05-PLAN.md — PR1: RBAC matrix, docs and CHANGELOG; full gates; local rehearsal of startup recovery and the read-back
+- [x] 91-06-PLAN.md — PR1: break every new guard against pre-declared red sets
+- [ ] 91-07-PLAN.md — PR1 ship: outgoing-content scan, PR, pre-merge prod gates, merge, deploy, prod read-back
+- [ ] 91-08-PLAN.md — PR2: injectable dark-permission set per path; issues.dismiss refused on global roles (route and repository)
+- [ ] 91-09-PLAN.md — PR2: mark, preview and revoke require reports.view; the dismissals list API returns the rows the Dismissed section shows
+- [ ] 91-10-PLAN.md — PR2: MCP user tools validate role names, usernames, passwords and duplicates like the dashboard
+- [ ] 91-11-PLAN.md — PR2: cookie sessions send the CSRF token on every /api write; route inventory test; read-back probe
+- [ ] 91-12-PLAN.md — PR2: gates (incl. the dismissal browser UAT) and break every new guard
+- [ ] 91-13-PLAN.md — PR2 ship: outgoing-content scan, PR, permission read-back on a prod DB copy, merge, deploy, prod read-back
+- [ ] 91-14-PLAN.md — PR3: Dismiss/Assign need technical-details access; the Dismiss button refuses what the server validator refuses
+- [ ] 91-15-PLAN.md — PR3: API-key dismissals keep the key's label and creation time (migration 092); dismissal dates in the viewer's locale
+- [ ] 91-16-PLAN.md — PR3: the remote UAT harness requires a dedicated target; i18n values render literally
+- [ ] 91-17-PLAN.md — PR3: gates, break every new guard, real-browser UAT read by eye
+- [ ] 91-18-PLAN.md — PR3 ship: migration dry-run on prod, outgoing-content scan, PR, merge, deploy, schema and harness read-back
+
 **UI hint**: yes
 
 ### Phase 92: Dismissal user documentation

@@ -215,8 +215,18 @@ export async function driveReportDetail(ctx: SurfaceContext, scanId: string): Pr
   return withReportServer(ctx, () => null, async (server) => {
     const res = await server.inject({ method: 'GET', url: `/reports/${scanId}` });
     ok(res.statusCode, 'report detail');
-    return viewData(res.body);
+    return withoutScanControls(viewData(res.body));
   });
+}
+
+/**
+ * This baseline compares dismissal-related output only. The retry/cancel control flag the report
+ * page also carries is not dismissal output; tests/routes/scan-controls-view.test.ts pins it.
+ */
+function withoutScanControls(data: unknown): unknown {
+  if (typeof data !== 'object' || data === null) return data;
+  const { scanControls: _scanControls, ...rest } = data as Record<string, unknown>;
+  return rest;
 }
 
 /** GET /reports/:id/print — the HTML string the handler sent. */

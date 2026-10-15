@@ -13,6 +13,7 @@ import { reportRoutes } from '../../src/routes/reports.js';
 import { compareRoutes } from '../../src/routes/compare.js';
 import { scanRoutes } from '../../src/routes/scan.js';
 import { scheduleRoutes } from '../../src/routes/schedules.js';
+import { validateScanUrl } from '../../src/services/scan-service.js';
 import { manualTestRoutes } from '../../src/routes/manual-tests.js';
 import { assignmentRoutes } from '../../src/routes/assignments.js';
 import { trendRoutes } from '../../src/routes/trends.js';
@@ -148,7 +149,8 @@ export async function createTestServer(): Promise<TestContext> {
   await reportRoutes(server, storage);
 
   // ── Additional core routes ─────────────────────────────────────────────────
-  await scheduleRoutes(server, storage);
+  // Hermetic start-URL validation: every host resolves to a public documentation address.
+  await scheduleRoutes(server, storage, (raw) => validateScanUrl(raw, false, async () => ['93.184.215.14']));
   await manualTestRoutes(server, storage);
   await assignmentRoutes(server, storage);
   await trendRoutes(server, storage);

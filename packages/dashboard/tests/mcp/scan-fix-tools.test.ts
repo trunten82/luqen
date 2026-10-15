@@ -24,7 +24,12 @@ import { DASHBOARD_AGENT_TOOL_METADATA } from '../../src/mcp/metadata.js';
 import type { DirectScanner } from '@luqen/core';
 import type { McpTokenPayload, McpTokenVerifier } from '../../src/mcp/middleware.js';
 import type { StorageAdapter } from '../../src/db/index.js';
-import type { ScanService } from '../../src/services/scan-service.js';
+import {
+  ScanService,
+  SCAN_RATE_LIMIT_ERROR,
+  createScanStartLimiter,
+} from '../../src/services/scan-service.js';
+import { runInToolContext, type ToolContext } from '@luqen/core/mcp';
 import type { ServiceConnectionsRepository } from '../../src/db/service-connections-repository.js';
 
 // ---------------------------------------------------------------------------
@@ -528,7 +533,8 @@ function makeIntegrationStubStorage(perms: readonly string[] = []): StorageAdapt
 
 function makeIntegrationStubScanService(): ScanService {
   return {
-    initiateScan: async () => ({ ok: true, scanId: 'stub-scan' }),
+    initiateScanRateLimited: async () => ({ ok: true, scanId: 'stub-scan' }),
+    consumeScanStart: () => undefined,
     getScanForOrg: async () => ({ ok: false, error: 'Scan not found' }),
   } as unknown as ScanService;
 }
@@ -984,5 +990,87 @@ describe('Agent MCP tools — never-apply guarantee (D-09)', () => {
   it('SCAN_TOOL_NAMES and FIX_TOOL_NAMES contain exactly the agent tool names', () => {
     expect(SCAN_TOOL_NAMES).toContain('dashboard_scan_page');
     expect(FIX_TOOL_NAMES).toContain('dashboard_generate_fix');
+  });
+});
+
+// ============================================================================
+// TEST SUITE: dashboard_scan_page scan start limit
+// ============================================================================
+
+describe('dashboard_scan_page scan start limit', () => {
+  const CALLER = 'user-meter-2';
+  const closers: Array<() => Promise<void>> = [];
+
+  afterEach(async () => {
+    for (const close of closers.splice(0)) await close();
+  });
+
+  async function build() {
+    const store = new Map<string, readonly number[]>();
+    const limiter = createScanStartLimiter({ now: () => 1_000_000, store });
+    // consumeScanStart reads only the limiter; storage, orchestrator and config are not touched.
+    const scanStarts = new ScanService({} as never, {} as never, {} as never, undefined, limiter);
+    const scan = vi.fn().mockResolvedValue({ url: 'http://example.com', issues: [] });
+    const scanner = { scan } as unknown as DirectScanner;
+    const built = await makeServerAndClient((server) => {
+      registerScanTools(server, {
+        scanner,
+        scanStarts,
+        resolveHost: async () => ['93.184.215.14'],
+      });
+    });
+    closers.push(built.closeAll);
+    const context: ToolContext = {
+      orgId: 'org-fabrikam',
+      userId: CALLER,
+      scopes: ['read'],
+      permissions: new Set<string>(),
+      authType: 'jwt',
+    };
+    const call = (args: Record<string, unknown>) =>
+      runInToolContext(context, () => built.client.callTool({ name: 'dashboard_scan_page', arguments: args }));
+    return { call, scan, store, limiter };
+  }
+
+  const textOf = (r: Awaited<ReturnType<Client['callTool']>>): string =>
+    (r.content as Array<{ text: string }>)[0]?.text ?? '';
+
+  it('HARD-15 mcp scan page draws from the shared scan start limit', async () => {
+    const full = await build();
+    for (let i = 0; i < 30; i += 1) full.limiter.record(`user:${CALLER}`);
+    const refused = await full.call({ url: 'https://example.com' });
+    expect(refused.isError).toBe(true);
+    expect(textOf(refused)).toContain(SCAN_RATE_LIMIT_ERROR);
+    expect(full.scan).not.toHaveBeenCalled();
+
+    const room = await build();
+    const ok = await room.call({ url: 'https://example.com' });
+    expect(ok.isError).toBeFalsy();
+    expect(room.store.get(`user:${CALLER}`)).toHaveLength(1);
+    expect(room.scan).toHaveBeenCalledTimes(1);
+  });
+
+  it('HARD-15 mcp scan page refuses with the shared message when the start limit is reached', async () => {
+    const h = await build();
+    for (let i = 0; i < 30; i += 1) {
+      const ok = await h.call({ html: '<p>x</p>' });
+      expect(ok.isError).toBeFalsy();
+    }
+    expect(h.scan).toHaveBeenCalledTimes(30);
+    const refused = await h.call({ html: '<p>x</p>' });
+    expect(refused.isError).toBe(true);
+    expect(textOf(refused)).toContain(SCAN_RATE_LIMIT_ERROR);
+    expect(h.scan).toHaveBeenCalledTimes(30);
+  });
+
+  it('HARD-15 mcp scan page spends no start on a request with neither url nor html', async () => {
+    const h = await build();
+    const refused = await h.call({});
+    expect(refused.isError).toBe(true);
+    expect((JSON.parse(textOf(refused)) as { error: string }).error).toBe(
+      'Either "url" or "html" must be supplied.',
+    );
+    expect(h.store.get(`user:${CALLER}`)).toBeUndefined();
+    expect(h.scan).not.toHaveBeenCalled();
   });
 });

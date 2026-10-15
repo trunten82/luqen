@@ -125,12 +125,11 @@ export class SqliteScheduleRepository implements ScheduleRepository {
     this.db.prepare('DELETE FROM scan_schedules WHERE id = ?').run(id);
   }
 
-  async getDueSchedules(): Promise<ScanSchedule[]> {
-    const now = new Date().toISOString();
+  async getDueSchedules(now: Date = new Date()): Promise<ScanSchedule[]> {
     const stmt = this.db.prepare(
       'SELECT * FROM scan_schedules WHERE next_run_at <= @now AND enabled = 1',
     );
-    const rows = stmt.all({ now }) as ScheduleRow[];
+    const rows = stmt.all({ now: now.toISOString() }) as ScheduleRow[];
     return rows.map(scheduleRowToRecord);
   }
 }

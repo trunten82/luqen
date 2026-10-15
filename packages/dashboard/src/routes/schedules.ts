@@ -6,6 +6,7 @@ import type { StorageAdapter } from '../db/index.js';
 import { toastHtml, escapeHtml } from './admin/helpers.js';
 import { hasPermission } from '../permissions.js';
 import { HtmlPageSchema } from '../api/schemas/envelope.js';
+import { validateScanUrl, type UrlValidation } from '../services/scan-service.js';
 
 const ScheduleIdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
 
@@ -42,9 +43,20 @@ function computeNextRunAt(frequency: string, fromDate: Date = new Date()): strin
 
 export { computeNextRunAt };
 
+/** The start-URL check a schedule's site URL must pass. */
+export type StartUrlValidator = (raw: string) => Promise<UrlValidation>;
+
+/**
+ * The default check: the strict form of the shared start validation with the
+ * system resolver. It fails closed and never honours the private-target opt-out;
+ * the server passes the shared scan service's check, which does.
+ */
+const strictStartUrlValidator: StartUrlValidator = (raw) => validateScanUrl(raw, false);
+
 export async function scheduleRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
+  validateStartUrl: StartUrlValidator = strictStartUrlValidator,
 ): Promise<void> {
   // GET /schedules — list all schedules (admin and user roles only)
   server.get(
@@ -99,16 +111,12 @@ export async function scheduleRoutes(
         return reply.code(400).send(toastHtml('Site URL is required', 'error'));
       }
 
-      let parsedUrl: URL;
-      try {
-        parsedUrl = new URL(body.siteUrl.trim());
-      } catch {
-        return reply.code(400).send(toastHtml('Site URL must be a valid URL', 'error'));
+      // One validator: the same start-URL check the scan form applies.
+      const verdict = await validateStartUrl(body.siteUrl);
+      if ('error' in verdict) {
+        return reply.code(400).send(toastHtml(verdict.error, 'error'));
       }
-
-      if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
-        return reply.code(400).send(toastHtml('URL must use http or https', 'error'));
-      }
+      const parsedUrl = verdict.url;
 
       const standard = body.standard ?? 'WCAG2AA';
       if (!VALID_STANDARDS.includes(standard)) {

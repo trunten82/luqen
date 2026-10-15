@@ -21,7 +21,13 @@ import { z } from 'zod';
 import { getCurrentToolContext } from '@luqen/core/mcp';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { DirectScanner, HostResolver } from '@luqen/core';
-import { validateScanUrl } from '../../services/scan-service.js';
+import {
+  validateScanUrl,
+  createScanStartLimiter,
+  ScanService,
+  type ScanStartSubject,
+  type ScanValidationError,
+} from '../../services/scan-service.js';
 
 export const SCAN_TOOL_NAMES = ['dashboard_scan_page'] as const;
 
@@ -30,6 +36,34 @@ export interface RegisterScanToolsOptions {
   readonly scanner: DirectScanner;
   /** DNS seam for the URL SSRF check (tests inject it); defaults to the system resolver. */
   readonly resolveHost?: HostResolver;
+  /**
+   * Spends one start from the shared scan-start limit. Production hands the
+   * shared scan service; when omitted the tool uses its own limiter, so an
+   * unwired tool still limits (fail closed).
+   */
+  readonly scanStarts?: ScanStarts;
+}
+
+/** The part of the scan service this tool needs: spend one start for a caller. */
+export interface ScanStarts {
+  consumeScanStart(subject: ScanStartSubject): ScanValidationError | undefined;
+}
+
+/**
+ * Fail-closed default spender, shared by every registration made without
+ * `scanStarts`: a scan service over its own limiter. Only consumeScanStart is
+ * used, which reads nothing but the limiter.
+ */
+let defaultScanStarts: ScanStarts | undefined;
+function getDefaultScanStarts(): ScanStarts {
+  defaultScanStarts ??= new ScanService(
+    {} as never,
+    {} as never,
+    {} as never,
+    undefined,
+    createScanStartLimiter(),
+  );
+  return defaultScanStarts;
 }
 
 // ── Shared helpers (copied verbatim from compliance.ts lines 62-83) ──────────
@@ -64,6 +98,7 @@ export function registerScanTools(
   opts: RegisterScanToolsOptions,
 ): void {
   const { scanner, resolveHost } = opts;
+  const scanStarts = opts.scanStarts ?? getDefaultScanStarts();
 
   // ---- dashboard_scan_page ----
   server.registerTool(
@@ -106,6 +141,19 @@ export function registerScanTools(
       // Require exactly one of url or html
       if (url === undefined && html === undefined) {
         return errorEnvelope('Either "url" or "html" must be supplied.');
+      }
+
+      // Every invocation is a scan, so each one draws one start from the
+      // shared scan-start limit, keyed by the caller's user id. No permission
+      // check: the permission stays at tool-metadata level (D-90-02).
+      const ctx = getCurrentToolContext();
+      const refusal = scanStarts.consumeScanStart({
+        userId: ctx?.userId,
+        apiKeyId: undefined,
+        clientIp: undefined,
+      });
+      if (refusal !== undefined) {
+        return errorEnvelope(refusal.error);
       }
 
       // SSRF protection (T-80-05, START-URL-DNS-1): validateScanUrl applies the

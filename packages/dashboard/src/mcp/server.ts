@@ -115,7 +115,7 @@ export async function createDashboardMcpServer(
   // happen — routes/api/mcp.ts always provides one), the tool returns an
   // error from the scanner.scan call path rather than silently missing.
   if (scanner !== undefined) {
-    registerScanTools(server, { scanner });
+    registerScanTools(server, { scanner, scanStarts: scanService });
   }
   // Agent fix tool: registered only when llmAccess is provided (mirrors
   // registerComplianceTools guard — without llmAccess the tool would only
