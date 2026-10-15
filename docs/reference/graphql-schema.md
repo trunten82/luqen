@@ -148,7 +148,11 @@ dashboard scan form: the same URL and private-target checks (honouring
 `includeNotices` are applied. The scan is created in the caller's current
 organisation (the input cannot name one). The mutation returns the created
 scan with status `queued`; the scan then runs to `completed` or `failed`.
-`scans.create` is required.
+`scans.create` is required. Starts share the scan form's limit of 30 per
+10 minutes per user (per API key for key-authenticated callers), counting
+every permitted attempt including ones later refused; over the limit the
+mutation returns an error with the message `Scan start limit reached: at most
+30 scans per 10 minutes. Try again later.`
 
 ### Assign an issue
 

@@ -215,6 +215,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   process could no longer decrypt its own OAuth signing key at boot. Setting
   `DASHBOARD_ENCRYPTION_KEY` before rotating the session secret avoids this
   entirely — see the new rotation runbook above.
+- `POST /scan/new` now enforces the `scans.create` permission. The permission
+  was documented as required but the route did not check it; a signed-in
+  caller without it could start scans through the scan form. The route now
+  goes through the same `ScanService` check as the GraphQL `createScan`
+  mutation, and a caller without the permission receives `403`.
+- GraphQL `createScan` and `POST /scan/new` now share one scan-start limit of
+  30 starts per 10 minutes per user (per API key for key-authenticated
+  callers), enforced inside the shared scan function and replacing the scan
+  form's per-address route limit. Every permitted attempt counts, including
+  attempts later refused for the URL or the standard. GraphQL scan creation,
+  which now actually starts scans, previously had only the global request
+  limit. Over the limit both surfaces answer with the same message.
 
 ## [3.6.0] - 2026-09-04
 
