@@ -217,6 +217,42 @@ describe('RoleRepository', () => {
     });
   });
 
+  describe('global role permission invariants (HARD-12 backstop)', () => {
+    it('HARD-12 repository refuses a system org role carrying issues dismiss', async () => {
+      await expect(
+        storage.roles.createRole({
+          name: 'global-auditors',
+          description: 'must not be stored',
+          permissions: ['reports.view', 'issues.dismiss'],
+          orgId: 'system',
+        }),
+      ).rejects.toThrow();
+      expect(await storage.roles.getRoleByName('global-auditors')).toBeNull();
+    });
+
+    it('HARD-12 repository refuses adding issues dismiss to a built in role', async () => {
+      const userRole = await storage.roles.getRoleByName('user');
+      expect(userRole, 'the built in user role must exist').not.toBeNull();
+      expect(userRole!.isSystem).toBe(true);
+      const before = [...userRole!.permissions].sort();
+
+      await expect(
+        storage.roles.updateRole(userRole!.id, { permissions: [...before, 'issues.dismiss'] }),
+      ).rejects.toThrow();
+
+      const after = await storage.roles.getRole(userRole!.id);
+      expect([...after!.permissions].sort()).toEqual(before);
+    });
+
+    it('HARD-12 repository still accepts a built in role update without issues dismiss', async () => {
+      const userRole = await storage.roles.getRoleByName('user');
+      expect(userRole).not.toBeNull();
+      await expect(
+        storage.roles.updateRole(userRole!.id, { permissions: ['reports.view', 'scans.create'] }),
+      ).resolves.toBeUndefined();
+    });
+  });
+
   describe('deleteRole', () => {
     it('deletes a custom role', async () => {
       const role = await storage.roles.createRole({

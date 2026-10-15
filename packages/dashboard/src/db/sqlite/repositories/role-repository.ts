@@ -3,6 +3,7 @@ import type { RoleRepository } from '../../interfaces/role-repository.js';
 import type { Role } from '../../types.js';
 import {
   ALL_PERMISSION_IDS,
+  forbiddenGlobalRolePermissions,
   forbiddenOrgRolePermissions,
   isReservedGlobalRoleName,
   ORG_ROLE_FORBIDDEN_PERMISSIONS,
@@ -92,7 +93,7 @@ export class SqliteRoleRepository implements RoleRepository {
     readonly permissions: readonly string[];
     readonly orgId: string;
   }): Promise<Role> {
-    this.assertOrgRoleInvariants(data.orgId, data.name, data.permissions);
+    this.assertRoleInvariants(data.orgId, data.name, data.permissions, false);
     const id = `role-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const now = new Date().toISOString();
 
@@ -135,9 +136,7 @@ export class SqliteRoleRepository implements RoleRepository {
     if (role === null) {
       throw new Error(`Role not found: ${id}`);
     }
-    if (!role.isSystem) {
-      this.assertOrgRoleInvariants(role.orgId, data.name ?? role.name, data.permissions ?? []);
-    }
+    this.assertRoleInvariants(role.orgId, data.name ?? role.name, data.permissions ?? [], role.isSystem);
 
     this.db.transaction(() => {
       const setClauses: string[] = [];
@@ -271,11 +270,24 @@ export class SqliteRoleRepository implements RoleRepository {
   // ── Private helpers ──────────────────────────────────────────────────
 
   /**
-   * Backstop for every write path (routes refuse first with a 422): an ORG role may neither take a
-   * global role's name nor carry admin.system. Global (org 'system') roles are unrestricted here.
+   * Backstop for every write path (routes refuse first with a 422). A GLOBAL (org 'system') role,
+   * built-in rows included, may not carry a permission in GLOBAL_ROLE_FORBIDDEN_PERMISSIONS. An ORG
+   * role may neither take a global role's name nor carry admin.system; those name and admin.system
+   * rules never applied to built-in rows and still do not.
    */
-  private assertOrgRoleInvariants(orgId: string, name: string, permissions: readonly string[]): void {
-    if (orgId === 'system') return;
+  private assertRoleInvariants(
+    orgId: string,
+    name: string,
+    permissions: readonly string[],
+    isSystem: boolean,
+  ): void {
+    if (orgId === 'system') {
+      if (forbiddenGlobalRolePermissions(permissions).length > 0) {
+        throw new Error('A global role cannot carry issues.dismiss');
+      }
+      return;
+    }
+    if (isSystem) return;
     const systemNames = (this.db.prepare("SELECT name FROM roles WHERE org_id = 'system'").all() as Array<{ name: string }>)
       .map((r) => r.name);
     if (isReservedGlobalRoleName(name, systemNames)) {
