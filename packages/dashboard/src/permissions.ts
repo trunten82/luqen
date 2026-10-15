@@ -65,16 +65,21 @@ export const ALL_PERMISSION_IDS: readonly string[] = ALL_PERMISSIONS.map((p) => 
  * existing orgs' Owner and Admin roles, custom org roles may carry it (D-15
  * Q3 = A), and org-scoped admin API keys hold it through the ORG_OWNER cap
  * (D-15 Q4 = accept). The mechanism stays for the next dark permission: add its
- * id here and pin the four paths above again, because with an empty set the
- * filters below have nothing to filter and no test can watch them work.
+ * id here. With the set empty the filters below have nothing to filter, so each
+ * of them takes an injectable dark set (defaulting to this one) and
+ * tests/permissions/dark-permissions.test.ts pins every path through an
+ * injected id.
  */
 export const DARK_PERMISSIONS: ReadonlySet<PermissionId> = new Set<PermissionId>();
 
 /** A new Set of `ids` without any dark permission. Never mutates its argument. */
-export function withoutDarkPermissions(ids: Iterable<string>): Set<string> {
+export function withoutDarkPermissions(
+  ids: Iterable<string>,
+  dark: ReadonlySet<string> = DARK_PERMISSIONS,
+): Set<string> {
   const out = new Set<string>();
   for (const id of ids) {
-    if (!(DARK_PERMISSIONS as ReadonlySet<string>).has(id)) out.add(id);
+    if (!dark.has(id)) out.add(id);
   }
   return out;
 }
@@ -109,18 +114,19 @@ export function forbiddenOrgRolePermissions(ids: Iterable<string>): string[] {
 }
 
 /** May a role row carry this permission id? In the catalogue and not dark. */
-export function isRoleGrantablePermission(id: string): boolean {
-  return ALL_PERMISSION_IDS.includes(id) && !(DARK_PERMISSIONS as ReadonlySet<string>).has(id);
+export function isRoleGrantablePermission(id: string, dark: ReadonlySet<string> = DARK_PERMISSIONS): boolean {
+  return ALL_PERMISSION_IDS.includes(id) && !dark.has(id);
 }
 
 /** Permission groups for the management UI (dark ids are not listed). */
-export function getPermissionGroups(): Array<{
+export function getPermissionGroups(opts: { readonly dark?: ReadonlySet<string> } = {}): Array<{
   readonly group: string;
   readonly permissions: ReadonlyArray<{ readonly id: string; readonly label: string }>;
 }> {
+  const dark: ReadonlySet<string> = opts.dark ?? DARK_PERMISSIONS;
   const groupMap = new Map<string, Array<{ id: string; label: string }>>();
   for (const p of ALL_PERMISSIONS) {
-    if ((DARK_PERMISSIONS as ReadonlySet<string>).has(p.id)) continue;
+    if (dark.has(p.id)) continue;
     const existing = groupMap.get(p.group);
     if (existing !== undefined) {
       existing.push({ id: p.id, label: p.label });
@@ -154,13 +160,13 @@ export async function resolveEffectivePermissions(
   userId: string,
   userRole: string,
   orgId?: string,
-  opts: { readonly orgScopedApiKey?: boolean } = {},
+  opts: { readonly orgScopedApiKey?: boolean; readonly darkPermissions?: ReadonlySet<string> } = {},
 ): Promise<Set<string>> {
   // ORG-KEY-CONTAINMENT-1: an org-scoped key with role 'admin' administers ITS
   // org, so it holds at most what an org Owner holds — never the global
   // permissions (admin.system, ...).
   if (userRole === 'admin' && opts.orgScopedApiKey === true) {
-    return withoutDarkPermissions(ORG_OWNER_PERMISSIONS);
+    return withoutDarkPermissions(ORG_OWNER_PERMISSIONS, opts.darkPermissions);
   }
   // Admin users get all permissions regardless of org context
   if (userRole === 'admin') {
@@ -169,7 +175,7 @@ export async function resolveEffectivePermissions(
 
   // D-07: dark ids are filtered where permissions are RESOLVED, not only where
   // a role form is parsed, so a role row written by any other path stays dark.
-  return withoutDarkPermissions(await roleRepository.getEffectivePermissions(userId, orgId));
+  return withoutDarkPermissions(await roleRepository.getEffectivePermissions(userId, orgId), opts.darkPermissions);
 }
 
 // ---------------------------------------------------------------------------

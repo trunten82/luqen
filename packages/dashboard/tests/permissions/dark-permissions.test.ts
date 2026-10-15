@@ -89,3 +89,61 @@ describe('issues.dismiss after the Phase 89 grant (dark set lifted)', () => {
     expect(perms.has('admin.system')).toBe(false);
   });
 });
+
+/**
+ * HARD-06: with the module dark set empty the filters have nothing to filter, so each path takes an
+ * injectable dark set and is pinned here through it. {'reports.view'} is a catalogue id that the org
+ * Owner set also holds, so every path (including the org-scoped admin key cap) has something to strip.
+ */
+describe('HARD-06 the dark-permission filters take an injectable set', () => {
+  const dark: ReadonlySet<string> = new Set(['reports.view']);
+  const holdsEverything = {
+    async getEffectivePermissions(): Promise<Set<string>> {
+      return new Set<string>(['reports.view', 'scans.create']);
+    },
+  };
+
+  it('HARD-06 withoutDarkPermissions drops an injected dark id', () => {
+    const out = withoutDarkPermissions(['reports.view', 'scans.create'], dark);
+    expect([...out]).toEqual(['scans.create']);
+  });
+
+  it('HARD-06 isRoleGrantablePermission refuses an injected dark id', () => {
+    expect(isRoleGrantablePermission('reports.view', dark)).toBe(false);
+  });
+
+  it('HARD-06 getPermissionGroups hides an injected dark id', () => {
+    const listed = getPermissionGroups({ dark }).flatMap((g) => g.permissions.map((p) => p.id));
+    expect(listed).not.toContain('reports.view');
+    expect(listed).toContain('scans.create');
+  });
+
+  it('HARD-06 resolveEffectivePermissions strips an injected dark id for a non admin', async () => {
+    const perms = await resolveEffectivePermissions(holdsEverything, 'u1', 'user', 'org-1', { darkPermissions: dark });
+    expect(perms.has('reports.view')).toBe(false);
+    expect(perms.has('scans.create')).toBe(true);
+  });
+
+  it('HARD-06 resolveEffectivePermissions strips an injected dark id for an org scoped admin key', async () => {
+    const perms = await resolveEffectivePermissions(noRepo, 'k1', 'admin', 'org-1', {
+      orgScopedApiKey: true,
+      darkPermissions: dark,
+    });
+    expect(perms.has('reports.view')).toBe(false);
+    expect(perms.has('scans.create')).toBe(true);
+  });
+
+  it('HARD-06 an id outside the injected dark set passes every filter', async () => {
+    expect([...withoutDarkPermissions(['scans.create'], dark)]).toEqual(['scans.create']);
+    expect(isRoleGrantablePermission('scans.create', dark)).toBe(true);
+    const listed = getPermissionGroups({ dark }).flatMap((g) => g.permissions.map((p) => p.id));
+    expect(listed).toContain('scans.create');
+    const nonAdmin = await resolveEffectivePermissions(holdsEverything, 'u1', 'user', 'org-1', { darkPermissions: dark });
+    expect(nonAdmin.has('scans.create')).toBe(true);
+    const key = await resolveEffectivePermissions(noRepo, 'k1', 'admin', 'org-1', {
+      orgScopedApiKey: true,
+      darkPermissions: dark,
+    });
+    expect(key.has('scans.create')).toBe(true);
+  });
+});
