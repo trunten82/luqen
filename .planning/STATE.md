@@ -5,16 +5,16 @@ milestone_name: Dismissal follow-through
 current_phase: 90
 current_phase_name: GraphQL createScan starts scans
 status: executing
-stopped_at: Completed 90-02-PLAN.md
-last_updated: "2026-10-15T12:26:11.944Z"
+stopped_at: Completed 90-03-PLAN.md (blocking finding B1 open)
+last_updated: "2026-10-15T12:33:48.154Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 90 execution started
-state_head: e00d15787c31c052fdfe84c1ddfc191878356958
+state_head: 18adf8069e61f59c37816f5daf2190f5104e2d13
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 6
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -128,7 +128,7 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 ## Current Position
 
 Phase: 90 (GraphQL createScan starts scans) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 90 execution started
 
@@ -219,8 +219,8 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-15T12:26:11.888Z
-Stopped at: Completed 90-02-PLAN.md
+Last session: 2026-10-15T12:33:48.119Z
+Stopped at: Completed 90-03-PLAN.md (blocking finding B1 open)
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -258,6 +258,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 89 P09 | 27min | 3 tasks | 9 files |
 | Phase 90 P01 | 70m | 2 tasks | 10 files |
 | Phase 90 P02 | 35min | 3 tasks | 10 files |
+| Phase 90 P03 | 35min | 3 tasks | 2 files |
 
 ## Decisions
 
@@ -270,3 +271,8 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 89]: 89-09: grant PR #5 (head 9bf30d1c) HELD — issues.dismiss to org Owner/Admin + migration 091; merge needs the owner's direct OK (Plan 10)
 - [Phase 89]: 89-09 open point D-89-09-01: after the lift a global admin can put issues.dismiss on a global (system-org) role; not decided at D-15; D-17 read-back flags it
 - [Phase 90]: Phase 90-01: GraphQL createScan routes through ScanService.initiateScanAuthorized (permission check in the shared function, not initiateScan; MCP exception documented)
+- [Phase 90]: 90-03: read-back script switch-ignored world uses a same-named other org, so the org assertion must compare name AND id; selftest lives in the script file
+
+### Blockers
+
+- 90-03 B1: admin persona belongs to no org and the prod UAT org has no members - prod read-back (plan 05) cannot enter the UAT org; owner decision needed (not worked around)

@@ -50,9 +50,9 @@
 **Plans:** 6 plans
 
 Plans:
-- [ ] 90-01-PLAN.md — Tracer: GraphQL createScan goes through the shared authorized scan function and reaches the orchestrator (RED first); docs
+- [x] 90-01-PLAN.md — Tracer: GraphQL createScan goes through the shared authorized scan function and reaches the orchestrator (RED first); docs
 - [x] 90-02-PLAN.md — POST /scan/new refuses callers without scans.create through the same function; one scan-start rate limit inside it, one bucket for both paths (D-90-07)
-- [ ] 90-03-PLAN.md — Env-only prod read-back script with selftest, its guards broken, and the read-only prod preflight
+- [x] 90-03-PLAN.md — Env-only prod read-back script with selftest, its guards broken, and the read-only prod preflight
 - [ ] 90-04-PLAN.md — Break every guard (permission, SSRF, wiring, generator, shared rate limit) one at a time against pre-declared red sets
 - [ ] 90-05-PLAN.md — Ship: content scan, PR with green checks, pre-merge prod gates, merge, deploy, prod read-back
 - [ ] 90-06-PLAN.md — RBAC matrix shows the guard; docs for the 403 and the shared rate limit; full gates and local end-to-end rehearsal with a rate-limit probe (wave 3, runs before 90-04)
