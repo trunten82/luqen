@@ -1,21 +1,21 @@
 ---
 gsd_state_version: "1.0"
-milestone: v3.8.0
-milestone_name: Mark as false positive
-status: "dormant: dormant-by-choice — closure ruling 2026-10-12 (v3.8.0 shipped; no next milestone opened)"
-stopped_at: "v3.8.0 shipped and archived 2026-10-13 (prod 23c40aaf); dormant-by-choice"
-last_updated: "2026-10-13T04:28:21.274Z"
-last_activity: 2026-10-13
-last_activity_desc: Milestone v3.8.0 completed and archived
-state_head: d39d8b69cf86c55c68ae8675b15a85895258c0ae
+milestone: v3.9.0
+milestone_name: Dismissal follow-through
+current_phase: 90
+current_phase_name: GraphQL createScan starts scans
+status: executing
+stopped_at: "Completed 89-09-PLAN.md (grant PR #5 open, CI green, HELD)"
+last_updated: "2026-10-15T11:19:40.290Z"
+last_activity: 2026-10-15
+last_activity_desc: Phase 90 execution started
+state_head: dc425f6baca0ad998e308cde50767e9f45a0056f
 progress:
   total_phases: 3
-  completed_phases: 3
-  total_plans: 35
-  completed_plans: 35
-  percent: 100
-current_phase: 89
-current_phase_name: Dismissal UI, dark launch and role grant
+  completed_phases: 0
+  total_plans: 5
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -123,16 +123,24 @@ verdict and resurfaces automatically if its file changes.
 See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** none — DORMANT-BY-CHOICE, reason: closure ruling 2026-10-12 (Alessandro, relayed by Allanon): close v3.8.0 and do not open a next milestone.
+**Current focus:** Phase 90 — GraphQL createScan starts scans
 
 ## Current Position
 
-Phase: Milestone v3.8.0 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-10-13 — Milestone v3.8.0 completed and archived
+Phase: 90 (GraphQL createScan starts scans) — EXECUTING
+Plan: 1 of 5
+Status: Executing Phase 90
+Last activity: 2026-10-15 — Phase 90 execution started
 
-## Phase Map (v3.7.0 — AI output quality)
+## Phase Map (v3.9.0 — Dismissal follow-through)
+
+| # | Phase | Requirements | Depends on |
+|---|-------|--------------|------------|
+| 90 | GraphQL createScan starts scans | SCAN-01, SCAN-02 | — |
+| 91 | Dismissal and permission hardening | HARD-01..HARD-13 | — (functionally independent of 90) |
+| 92 | Dismissal user documentation | DOCS-01..DOCS-03 | 91 (documents the hardened behaviour; HARD-03 and HARD-12 change who can do what) |
+
+## Phase Map (v3.7.0 — AI output quality, archived)
 
 | # | Phase | Requirements | Depends on |
 |---|-------|--------------|------------|
@@ -155,6 +163,8 @@ measures a candidate model — that is explicitly next-milestone work.
 - 2026-06-07: **v3.5.0 redefined** as "Anti-overlay wedge — dev + exec first wave". Roadmap recreated: Phase 78 (shipped) preserved; new phases 79-82 (CIGATE / MCPFIX / EXPO / DIGEST) replace the retired monetization phases — same numbers, entirely new concepts. 20/20 requirements mapped, no orphans, coarse granularity (4 feature tracks → 4 phases). Key sequencing: developer tracks 79+80 are independent and parallelizable; EXPO (81, flagship) sequences before DIGEST (82) because the digest reports the exposure trend EXPO produces.
 - 2026-09-04: v3.6.0 (agent surface + semantic depth) shipped directly to master with no numbered phases; v3.7.0 opened same day (approved via orchestrator, on the owner's register).
 - 2026-09-05: **v3.7.0 roadmap created.** 16 requirements (EVALSET/HARNESS/BASELINE/BARS) mapped 1:1 onto the four requirement groups from the approved brief, giving 4 phases (83-86), coarse granularity, zero orphans. Bars (Phase 85) deliberately sequenced BEFORE baseline (Phase 86) — a stronger guarantee than the literal requirement text ("before any candidate measurement"), chosen so neither the non-inferiority margin nor the `analyse-visual` bar can be shaped by having already seen any real measurement, including the baseline's own.
+
+- 2026-10-15: **v3.9.0 roadmap created.** 18 requirements (SCAN/HARD/DOCS) mapped onto the owner-approved 3-phase shape (90 GraphQL createScan, 91 hardening, 92 docs), coarse granularity, zero orphans. Docs sequenced last so they describe the hardened permission behaviour. HARD-08 flagged: raise with the owner before building if it needs a schema change.
 
 ### Decisions (v3.7.0 — AI output quality)
 
