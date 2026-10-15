@@ -5,16 +5,16 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: Completed 91-03-PLAN.md
-last_updated: "2026-10-15T16:55:22.417Z"
+stopped_at: Completed 91-04-PLAN.md
+last_updated: "2026-10-15T17:10:06.198Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
-state_head: b1156cf6c253bac8f71bfe8e982cda4211de3f69
+state_head: f081b2f9e463c91b92b929879ea32cfac53aa746
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 24
-  completed_plans: 9
+  completed_plans: 10
   percent: 33
 ---
 
@@ -128,7 +128,7 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 ## Current Position
 
 Phase: 91 (Dismissal and permission hardening) — EXECUTING
-Plan: 4 of 18
+Plan: 5 of 18
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 91 execution started
 
@@ -219,8 +219,8 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-15T16:55:15.928Z
-Stopped at: Completed 91-03-PLAN.md
+Last session: 2026-10-15T17:10:06.144Z
+Stopped at: Completed 91-04-PLAN.md
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -264,6 +264,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 91 P01 | 35min | 3 tasks | 3 files |
 | Phase 91 P02 | 35min | 3 tasks | 10 files |
 | Phase 91 P03 | 25min | 3 tasks | 11 files |
+| Phase 91 P04 | 30min | 3 tasks | 8 files |
 
 ## Decisions
 
@@ -287,6 +288,9 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 91]: Phase 91 P03: scheduled runs and startup recovery draw nothing from the scan-start limit and run no reachability probe (validation only)
 - [Phase 91]: Phase 91 P03: schedule creation uses one injected start-URL validator; the strict default fails closed, the server injects the shared scan service's check which honours allowPrivateScanTargets
 - [Phase 91]: Phase 91 P03: startup recovery validates queued rows concurrently; refused or unresolvable rows are marked failed with 'Not restarted: ' plus the refusal text, and recovery logs scan ids and counts only
+- [Phase 91]: Phase 91 P04: MCP scan starts draw from the shared scan-start limit (30 per 10 minutes per caller, keyed by the tool context user id); no permission check is added to either MCP scan tool, so agent-bridge org users with an empty permission set still start scans
+- [Phase 91]: Phase 91 P04: the form, GraphQL, MCP site tool and retry spend through one limiter code path; the page tool spends one start per url or html invocation after the presence check, with a fail-closed default limiter when none is injected
+- [Phase 91]: Phase 91 P04: the one-bucket property for MCP and retry is proven through the real createServer wiring and both proofs were watched failing under a separate limiter and a spend that never happens
 
 ### Blockers
 
