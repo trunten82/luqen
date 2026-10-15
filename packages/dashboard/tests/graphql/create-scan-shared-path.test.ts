@@ -286,6 +286,33 @@ describe('graphql createScan shares the scan form path', () => {
   });
 
   /*
+   * Start-site guard. Every call that hands a scan to the orchestrator lives in the scan
+   * service layer: services/scan-service.ts and services/scan-lifecycle.ts. The two
+   * TRANSITIONAL entries (scheduler.ts, server.ts) are being moved into that layer by a
+   * later plan of this phase; this list only shrinks.
+   */
+  it('HARD-14 only the scan service starts scans', () => {
+    const lifecycle = ['services', 'scan-lifecycle.ts'].join(sep);
+    const ALLOWED = new Set([
+      ['services', 'scan-service.ts'].join(sep),
+      lifecycle,
+      // TRANSITIONAL: removed from this list by the scheduler/recovery plan.
+      'scheduler.ts',
+      'server.ts',
+    ]);
+    const matched: string[] = [];
+    for (const abs of walkTs(SRC_ROOT)) {
+      const lines = readFileSync(abs, 'utf8').split('\n');
+      if (lines.some((line) => !isCommentLine(line) && /\.startScan\(/.test(line))) {
+        matched.push(relative(SRC_ROOT, abs));
+      }
+    }
+    expect(matched, 'the walker must be able to match the lifecycle start call').toContain(lifecycle);
+    const offenders = matched.filter((rel) => !ALLOWED.has(rel));
+    expect(offenders).toEqual([]);
+  });
+
+  /*
    * Call-site guard for the two entry points. Exactly two source files call
    * initiateScan directly: the service itself (inside initiateScanAuthorized)
    * and the MCP dashboard_scan_site tool, a documented exception (D-90-02):

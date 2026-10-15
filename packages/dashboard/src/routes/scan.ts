@@ -3,7 +3,7 @@ import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../db/index.js';
 import type { ScanOrchestrator } from '../scanner/orchestrator.js';
 import type { DashboardConfig } from '../config.js';
-import { getToken, getOrgId } from './admin/helpers.js';
+import { getToken, getOrgId, toastHtml } from './admin/helpers.js';
 import { HtmlPageSchema } from '../api/schemas/envelope.js';
 
 const ScanIdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
@@ -16,7 +16,9 @@ import {
   ScanService,
   VALID_STANDARDS,
   type InitiateScanInput,
+  type ScanControlRefusalKind,
   type ScanStartLimiter,
+  type ScanStartSubject,
 } from '../services/scan-service.js';
 import { ComplianceService } from '../services/compliance-service.js';
 
@@ -36,6 +38,59 @@ interface NewScanBody {
   includeNotices?: string | boolean;
   authHeaders?: string;
   authActions?: string;
+}
+
+/** The caller identity the shared scan-start limit is keyed on (form and retry use this one). */
+function startSubjectOf(request: FastifyRequest): ScanStartSubject {
+  return {
+    userId: request.user?.id,
+    apiKeyId: request.user?.apiKeyId,
+    clientIp: request.ip,
+  };
+}
+
+function permissionsOf(request: FastifyRequest): ReadonlySet<string> {
+  const granted = (request as unknown as Record<string, unknown>)['permissions'] as
+    | Set<string>
+    | undefined;
+  return granted ?? new Set<string>();
+}
+
+const CONTROL_STATUS: Readonly<Record<ScanControlRefusalKind, 400 | 403 | 404 | 429>> = {
+  forbidden: 403,
+  not_found: 404,
+  invalid_state: 400,
+  url_refused: 400,
+  rate_limited: 429,
+};
+
+/**
+ * Answer a refused retry or cancel. An HTMX caller gets the status with a
+ * no-swap header and an error toast (a swapped 4xx body would replace the page);
+ * everyone else gets the standard 403 page or a JSON error.
+ */
+function refuseScanControl(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  refusal: { readonly kind: ScanControlRefusalKind; readonly error: string; readonly retryAfterSeconds?: number },
+): FastifyReply {
+  const status = CONTROL_STATUS[refusal.kind];
+  if (refusal.kind === 'rate_limited') {
+    void reply.header('Retry-After', String(refusal.retryAfterSeconds ?? 1));
+  }
+  if (request.headers['hx-request'] === 'true') {
+    return reply
+      .code(status)
+      .header('HX-Reswap', 'none')
+      .header('content-type', 'text/html')
+      .send(toastHtml(refusal.error, 'error'));
+  }
+  if (refusal.kind === 'forbidden') {
+    const err = new Error('Forbidden') as Error & { statusCode: number };
+    err.statusCode = 403;
+    throw err;
+  }
+  return reply.code(status).send({ error: refusal.error });
 }
 
 export async function scanRoutes(
@@ -158,18 +213,12 @@ export async function scanRoutes(
 
       // Same function GraphQL createScan uses: the scans.create permission and
       // the start rules are decided there (D-90-01).
-      const permissions =
-        (request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined;
       const result = await scanService.initiateScanAuthorized(input, {
         username: request.user?.username ?? 'unknown',
         orgId: request.user?.currentOrgId ?? 'system',
         complianceToken: getToken(request),
-        permissions: permissions ?? new Set<string>(),
-        startSubject: {
-          userId: request.user?.id,
-          apiKeyId: request.user?.apiKeyId,
-          clientIp: request.ip,
-        },
+        permissions: permissionsOf(request),
+        startSubject: startSubjectOf(request),
       });
 
       if (!result.ok) {
@@ -327,31 +376,14 @@ export async function scanRoutes(
     { schema: { ...HtmlPageSchema, tags: ['scan'], params: ScanIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      const scan = await storage.scans.getScan(id);
-
-      if (scan === null) {
-        return reply.code(404).send({ error: 'Scan not found' });
-      }
-
-      if (scan.status !== 'queued' && scan.status !== 'failed') {
-        return reply.code(400).send({ error: 'Only queued or failed scans can be retried' });
-      }
-
-      await storage.scans.updateScan(id, { status: 'queued' });
-
-      orchestrator.startScan(id, {
-        siteUrl: scan.siteUrl,
-        standard: scan.standard,
-        concurrency: config.maxConcurrentScans,
-        jurisdictions: scan.jurisdictions,
-        regulations: scan.regulations ?? [],
-        ...(config.webserviceUrl !== undefined ? { webserviceUrl: config.webserviceUrl } : {}),
-        ...(config.webserviceUrls !== undefined && config.webserviceUrls.length > 0
-          ? { webserviceUrls: config.webserviceUrls }
-          : {}),
-        complianceUrl: config.complianceUrl,
-        orgId: scan.orgId,
+      const result = await scanService.retryScanAuthorized(id, {
+        permissions: permissionsOf(request),
+        user: request.user,
+        startSubject: startSubjectOf(request),
       });
+      if (!result.ok) {
+        return refuseScanControl(request, reply, result);
+      }
 
       const isHtmx = request.headers['hx-request'] === 'true';
       if (isHtmx) {

@@ -19,6 +19,18 @@ import {
   type HostResolver,
 } from '@luqen/core';
 import { systemHostResolver } from './host-resolver.js';
+import {
+  SCAN_CREATE_PERMISSION,
+  retryScan,
+  type ScanControlCaller,
+  type ScanControlRefusalKind,
+  type ScanControlResult,
+  type ScanLifecycleDeps,
+  type StartBudgetRefusal,
+} from './scan-lifecycle.js';
+
+export { SCAN_CREATE_PERMISSION };
+export type { ScanControlCaller, ScanControlRefusalKind, ScanControlResult };
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -55,9 +67,6 @@ export interface ScanContext {
   readonly orgId: string;
   readonly complianceToken: string;
 }
-
-/** Permission a caller needs to start a scan through a request-permission surface. */
-export const SCAN_CREATE_PERMISSION = 'scans.create';
 
 /** A {@link ScanContext} that also carries the caller's resolved permission set. */
 export interface AuthorizedScanContext extends ScanContext {
@@ -355,18 +364,52 @@ export class ScanService {
     if (!context.permissions.has(SCAN_CREATE_PERMISSION)) {
       return { ok: false, kind: 'forbidden', error: `Forbidden: requires ${SCAN_CREATE_PERMISSION}` };
     }
-    const key = scanStartKey(context.startSubject);
+    const refusal = this.spendStartBudget(context.startSubject);
+    if (refusal !== undefined) {
+      return { ok: false, kind: 'rate_limited', ...refusal };
+    }
+    return this.initiateScan(input, context);
+  }
+
+  /**
+   * Check and spend one start from the shared limiter for this caller. No
+   * await between the check and the record, so concurrent attempts cannot
+   * overspend. Returns the refusal when the budget is used up, else undefined.
+   */
+  private spendStartBudget(subject: ScanStartSubject): StartBudgetRefusal | undefined {
+    const key = scanStartKey(subject);
     const verdict = this.startLimiter.check(key);
     if (!verdict.allowed) {
       return {
-        ok: false,
-        kind: 'rate_limited',
         error: SCAN_RATE_LIMIT_ERROR,
         retryAfterSeconds: Math.max(1, Math.ceil(verdict.retryAfterMs / 1000)),
       };
     }
     this.startLimiter.record(key);
-    return this.initiateScan(input, context);
+    return undefined;
+  }
+
+  /** The start-URL check every scan start applies (honours allowPrivateScanTargets). */
+  validateStartUrl(raw: string): Promise<UrlValidation> {
+    return validateScanUrl(raw, this.config.allowPrivateScanTargets ?? false, this.resolveHost);
+  }
+
+  private lifecycleDeps(): ScanLifecycleDeps {
+    return {
+      storage: this.storage,
+      orchestrator: this.orchestrator,
+      config: this.config,
+      validateStartUrl: (raw) => this.validateStartUrl(raw),
+      spendStartBudget: (subject) => this.spendStartBudget(subject),
+    };
+  }
+
+  /**
+   * Retry a queued or failed scan: permission, organization, status, one start
+   * from the shared limit, then the start-URL check, then the start.
+   */
+  retryScanAuthorized(scanId: string, caller: ScanControlCaller): Promise<ScanControlResult> {
+    return retryScan(this.lifecycleDeps(), scanId, caller);
   }
 
   /**
@@ -378,11 +421,7 @@ export class ScanService {
     context: ScanContext,
   ): Promise<ScanInitiationResult> {
     // 1. Validate URL
-    const urlResult = await validateScanUrl(
-      input.siteUrl,
-      this.config.allowPrivateScanTargets ?? false,
-      this.resolveHost,
-    );
+    const urlResult = await this.validateStartUrl(input.siteUrl);
     if ('error' in urlResult) {
       return { ok: false, error: urlResult.error };
     }
