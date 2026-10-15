@@ -80,7 +80,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - GraphQL `createScan` now starts the scan (it previously stored a `queued`
   row that never ran) and applies the scan form's validation, including
   `allowPrivateScanTargets`, the reachability probe, the 50-jurisdiction cap
-  and `includeWarnings` / `includeNotices`.
+  and `includeWarnings` / `includeNotices`. In GraphQL an omitted or `null`
+  `includeWarnings` / `includeNotices` means `true`, whereas on the scan form
+  an unchecked box means `false`.
 - The issues Excel export (`issues.xlsx`) now has one row per issue
   occurrence, so its row count matches the PDF and report page TOTAL ISSUES.
   It used to omit every occurrence of an issue repeated on 3+ pages (the
@@ -220,9 +222,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   caller without it could start scans through the scan form. The route now
   goes through the same `ScanService` check as the GraphQL `createScan`
   mutation, and a caller without the permission receives `403`.
-- GraphQL `createScan` and `POST /scan/new` now share one scan-start limit of
-  30 starts per 10 minutes per user (per API key for key-authenticated
-  callers), enforced inside the shared scan function and replacing the scan
+- Scans started from the scan form (`POST /scan/new`) or the GraphQL
+  `createScan` mutation now share one limit of 30 starts per 10 minutes per
+  user (per API key for key-authenticated callers), replacing the scan
   form's per-address route limit. Every permitted attempt counts, including
   attempts later refused for the URL or the standard. GraphQL scan creation,
   which now actually starts scans, previously had only the global request

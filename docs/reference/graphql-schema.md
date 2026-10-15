@@ -65,7 +65,7 @@ Resolvers enforce permissions identically to the REST endpoints:
 
 ### Input types
 
-* **CreateScanInput** -- `siteUrl` (required), `standard`, `jurisdictions`
+* **CreateScanInput** -- `siteUrl` (required), `standard`, `jurisdictions`, `includeWarnings`, `includeNotices`
 * **AssignIssueInput** -- `scanId`, `issueFingerprint`, `severity`, `message`, and optional fields
 
 ## Example queries
@@ -144,14 +144,17 @@ mutation {
 `createScan` validates and starts the scan through the same code path as the
 dashboard scan form: the same URL and private-target checks (honouring
 `allowPrivateScanTargets`), the same reachability probe, standard check and
-50-jurisdiction cap, and the same refusal messages. `includeWarnings` and
-`includeNotices` are applied. The scan is created in the caller's current
+50-jurisdiction cap, and the same refusal messages. A `null` `jurisdictions`
+means the same as leaving it out. `includeWarnings` and `includeNotices` are
+applied; when omitted or `null` they default to `true`, so warnings and notices
+are included. This differs from the scan form, where an unchecked box means
+`false`; pass `false` explicitly to get errors only. The scan is created in the caller's current
 organisation (the input cannot name one). The mutation returns the created
 scan with status `queued`; the scan then runs to `completed` or `failed`.
-`scans.create` is required. Starts share the scan form's limit of 30 per
-10 minutes per user (per API key for key-authenticated callers), counting
-every permitted attempt including ones later refused; over the limit the
-mutation returns an error with the message `Scan start limit reached: at most
+`scans.create` is required. Scans started from the scan form (`POST /scan/new`)
+or the `createScan` mutation share one limit of 30 per 10 minutes per user (per
+API key for key-authenticated callers), counting every permitted attempt
+including ones later refused; over the limit the mutation returns an error with the message `Scan start limit reached: at most
 30 scans per 10 minutes. Try again later.`
 
 ### Assign an issue
