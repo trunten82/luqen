@@ -41,10 +41,13 @@ export function startKeyHousekeeping(
  * Run every schedule that is due now. One pass of the scheduler tick, exported
  * so a test can drive it without a timer.
  *
- * Each due schedule is handed to the scan service, which validates the stored
- * start URL before anything starts. The schedule always advances, whether the
- * start succeeded, was refused or threw, so a refused schedule is not
- * re-evaluated every minute. A failure of one schedule never stops the others.
+ * Each due schedule is claimed first: its last and next run are written before
+ * the slow start work, so a later pass over the same instant does not find it
+ * due and start it twice. The claim holds whether the start then succeeds, is
+ * refused or throws. The stored start URL is validated by the scan service
+ * before anything starts. Each schedule is handled on its own: a failure of one
+ * (its claim or its start) is logged by id and error name and never stops the
+ * others. A schedule whose claim could not be written starts nothing this pass.
  */
 export async function runDueSchedules(
   storage: StorageAdapter,
@@ -55,33 +58,51 @@ export async function runDueSchedules(
 
   for (const schedule of due) {
     try {
-      await scanService.startScheduledScan(schedule, now);
+      await storage.schedules.updateSchedule(schedule.id, {
+        lastRunAt: now.toISOString(),
+        nextRunAt: computeNextRunAt(schedule.frequency, now),
+      });
     } catch (err) {
-      // Log the schedule id and error name only: never the site URL.
-      console.error(
-        `[scheduler] Schedule ${schedule.id} could not start:`,
-        err instanceof Error ? err.name : 'unknown error',
-      );
+      logScheduleFailure(schedule.id, 'could not be claimed', err);
+      continue;
     }
 
-    await storage.schedules.updateSchedule(schedule.id, {
-      lastRunAt: now.toISOString(),
-      nextRunAt: computeNextRunAt(schedule.frequency, now),
-    });
+    try {
+      await scanService.startScheduledScan(schedule, now);
+    } catch (err) {
+      logScheduleFailure(schedule.id, 'could not start', err);
+    }
   }
 }
 
+/** Log the schedule id and the error name only: never the site URL or the message. */
+function logScheduleFailure(id: string, what: string, err: unknown): void {
+  console.error(
+    `[scheduler] Schedule ${id} ${what}:`,
+    err instanceof Error ? err.name : 'unknown error',
+  );
+}
+
+/**
+ * Run {@link runDueSchedules} on an interval. A tick that finds the previous
+ * one still running does nothing: passes never overlap.
+ */
 export function startScheduler(
   storage: StorageAdapter,
   scanService: ScanService,
   intervalMs = 60_000,
 ): NodeJS.Timeout {
+  let inFlight = false;
   return setInterval(async () => {
+    if (inFlight) return;
+    inFlight = true;
     try {
       await runDueSchedules(storage, scanService);
     } catch (err) {
       // Log but don't crash — the scheduler should be resilient
       console.error('[scheduler] Error processing due schedules:', err instanceof Error ? err.message : String(err));
+    } finally {
+      inFlight = false;
     }
   }, intervalMs);
 }
