@@ -120,6 +120,7 @@ import { schema as graphqlSchema } from './graphql/schema.js';
 import { resolvers as graphqlResolvers } from './graphql/resolvers.js';
 import type { GraphQLContext } from './graphql/resolvers.js';
 import { registerGraphqlCsrfGuard } from './graphql/csrf-guard.js';
+import { getToken } from './routes/admin/helpers.js';
 import { runApiKeySweep } from './api-key-sweep.js';
 import { registerMcpRoutes } from './routes/api/mcp.js';
 import { createDashboardJwtVerifier } from './mcp/verifier.js';
@@ -1446,6 +1447,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         new Set<string>(),
       orgId: request.user?.currentOrgId ?? 'system',
       brandingOrchestrator,
+      scanService: mcpScanService,
+      complianceToken: getToken(request),
     }),
   });
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Hermetic DNS for the start-URL SSRF check (START-URL-DNS-1): every test host
 // resolves to a public documentation address; no real DNS lookups.
@@ -26,6 +26,7 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { resolvers } from '../../src/graphql/resolvers.js';
 import type { GraphQLContext } from '../../src/graphql/resolvers.js';
+import { ScanService } from '../../src/services/scan-service.js';
 
 const mockedReadFile = vi.mocked(readFile);
 const mockedExistsSync = vi.mocked(existsSync);
@@ -34,9 +35,26 @@ const mockedExistsSync = vi.mocked(existsSync);
 // Test helpers
 // ---------------------------------------------------------------------------
 
+/** A real ScanService over the given storage and a stub orchestrator, as createServer builds it. */
+function makeScanService(storage: any): GraphQLContext['scanService'] {
+  return new ScanService(
+    storage,
+    { startScan: vi.fn() } as any,
+    {
+      maxConcurrentScans: 2,
+      maxPages: 100,
+      runner: 'htmlcs',
+      complianceUrl: 'http://compliance.invalid',
+    } as any,
+  );
+}
+
 function makeCtx(overrides: Partial<GraphQLContext> = {}): GraphQLContext {
+  const storage = makeStorage();
   return {
-    storage: makeStorage(),
+    storage,
+    scanService: makeScanService(storage),
+    complianceToken: 'test-compliance-token',
     user: { id: 'user-1', username: 'testuser', role: 'admin' },
     permissions: new Set(['scans.create', 'reports.delete', 'issues.assign', 'trends.view',
       'users.create', 'users.delete', 'users.activate', 'users.reset_password', 'users.roles',
@@ -47,8 +65,11 @@ function makeCtx(overrides: Partial<GraphQLContext> = {}): GraphQLContext {
 }
 
 function makeUnauthCtx(): GraphQLContext {
+  const storage = makeStorage();
   return {
-    storage: makeStorage(),
+    storage,
+    scanService: makeScanService(storage),
+    complianceToken: '',
     user: undefined,
     permissions: new Set(),
     orgId: 'org-1',
@@ -660,6 +681,14 @@ describe('GraphQL resolvers', () => {
 
   // ── Mutation.createScan ─────────────────────────────────────────────
   describe('Mutation.createScan', () => {
+    // createScan now runs the scan form's reachability probe; keep it offline.
+    beforeEach(() => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }));
+    });
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
     it('creates a scan with defaults', async () => {
       const ctx = makeCtx();
       const result = await resolvers.Mutation.createScan({}, {

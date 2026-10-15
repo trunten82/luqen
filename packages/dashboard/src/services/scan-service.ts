@@ -56,16 +56,28 @@ export interface ScanContext {
   readonly complianceToken: string;
 }
 
+/** Permission a caller needs to start a scan through a request-permission surface. */
+export const SCAN_CREATE_PERMISSION = 'scans.create';
+
+/** A {@link ScanContext} that also carries the caller's resolved permission set. */
+export interface AuthorizedScanContext extends ScanContext {
+  readonly permissions: ReadonlySet<string>;
+}
+
 // ── Result types ─────────────────────────────────────────────────────────────
 
 export interface ScanValidationError {
   readonly ok: false;
   readonly error: string;
+  /** Set when the refusal is an authorization failure rather than invalid input. */
+  readonly kind?: 'forbidden';
 }
 
 export interface ScanInitiationSuccess {
   readonly ok: true;
   readonly scanId: string;
+  /** The row that was created, as returned by storage. */
+  readonly scan: ScanRecord;
 }
 
 export type ScanInitiationResult = ScanValidationError | ScanInitiationSuccess;
@@ -204,6 +216,24 @@ export class ScanService {
   ) {}
 
   /**
+   * The one entry for request-permission surfaces (the scan form and GraphQL
+   * createScan): refuses a caller whose permission set lacks
+   * {@link SCAN_CREATE_PERMISSION}, otherwise behaves exactly as
+   * {@link ScanService.initiateScan}. The check lives here and not in
+   * initiateScan because other callers (the MCP tool) are gated by their own
+   * metadata and do not carry a request permission set.
+   */
+  async initiateScanAuthorized(
+    input: InitiateScanInput,
+    context: AuthorizedScanContext,
+  ): Promise<ScanInitiationResult> {
+    if (!context.permissions.has(SCAN_CREATE_PERMISSION)) {
+      return { ok: false, kind: 'forbidden', error: `Forbidden: requires ${SCAN_CREATE_PERMISSION}` };
+    }
+    return this.initiateScan(input, context);
+  }
+
+  /**
    * Validate inputs, create a scan record, and start the scanner.
    * Returns the scan ID on success or an error message on validation failure.
    */
@@ -285,7 +315,7 @@ export class ScanService {
 
     // 9. Create scan record
     const scanId = randomUUID();
-    await this.storage.scans.createScan({
+    const scan = await this.storage.scans.createScan({
       id: scanId,
       siteUrl: parsedUrl.toString(),
       standard,
@@ -322,7 +352,7 @@ export class ScanService {
       ...(input.actions !== undefined && input.actions.length > 0 ? { actions: input.actions } : {}),
     });
 
-    return { ok: true, scanId };
+    return { ok: true, scanId, scan };
   }
 
   /**
