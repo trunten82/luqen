@@ -76,7 +76,7 @@ Plans:
 Plans:
 
 - [x] 91-01-PLAN.md — PR1: at-rest wiring test anchored on call expressions; read-back probe for schedule creation; read-only prod preflight
-- [ ] 91-02-PLAN.md — PR1: report retry and cancel go through the scan service (scans.create, the scan's organization, shared start validation, shared scan-start limit); Retry/Cancel shown only to viewers who may use them
+- [x] 91-02-PLAN.md — PR1: report retry and cancel go through the scan service (scans.create, the scan's organization, shared start validation, shared scan-start limit); Retry/Cancel shown only to viewers who may use them
 - [ ] 91-03-PLAN.md — PR1: scheduled runs, schedule creation and startup recovery go through the shared start validation
 - [ ] 91-04-PLAN.md — PR1: MCP scan starts draw from the shared scan-start limit; one bucket proven through createServer
 - [ ] 91-05-PLAN.md — PR1: RBAC matrix, docs and CHANGELOG; full gates; local rehearsal of startup recovery and the read-back

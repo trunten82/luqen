@@ -5,17 +5,17 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: Completed 91-01-PLAN.md
-last_updated: "2026-10-15T16:27:24.840Z"
+stopped_at: Completed 91-02-PLAN.md
+last_updated: "2026-10-15T16:42:44.664Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
-state_head: 95514f53c98997ff09ea9eccf24631b0bca0259c
+state_head: fee670e62b9e5f297e01e54f3b9c5e1bb52b9e5d
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 24
-  completed_plans: 7
-  percent: 29
+  completed_plans: 8
+  percent: 33
 ---
 
 # Project State
@@ -128,7 +128,7 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 ## Current Position
 
 Phase: 91 (Dismissal and permission hardening) — EXECUTING
-Plan: 2 of 18
+Plan: 3 of 18
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 91 execution started
 
@@ -219,8 +219,8 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-15T16:27:24.787Z
-Stopped at: Completed 91-01-PLAN.md
+Last session: 2026-10-15T16:42:44.613Z
+Stopped at: Completed 91-02-PLAN.md
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -262,6 +262,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 90 P06 | ~50min | 3 tasks | 6 files |
 | Phase 90 P04 | 1h25m | 3 tasks | 0 files |
 | Phase 91 P01 | 35min | 3 tasks | 3 files |
+| Phase 91 P02 | 35min | 3 tasks | 10 files |
 
 ## Decisions
 
@@ -278,6 +279,9 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 90]: 90-04: all 26 guard mutations watched failing; 25 reddened exactly the declared set, M6 reddened the declared set plus one positive-control test outside its stated category (recorded as a MISMATCH, declaration not edited); M25 first run hit nine load timeouts, re-run clean
 - [Phase 91]: 91-01: the at-rest key list is anchored on call expressions with a per-site line window; every other reference to the encryption key must be a listed site or a named exemption
 - [Phase 91]: 91-01: the prod read-back script checks that schedule creation goes through the shared start validation, and sweeps any probe schedule it finds stored
+- [Phase 91]: Phase 91 P02: retry and cancel need the scan create permission and the scan's organization; the organization predicate is the dismissal write-side predicate under a second name (delegation plus an agreement table), no exception for the system organization
+- [Phase 91]: Phase 91 P02: retry order is permission, organization, status, one start from the shared scan-start limit, then the stored start-URL check and the start; a refused stored start URL marks the row failed with the refusal text and starts nothing
+- [Phase 91]: Phase 91 P02: the report page offers Retry and Cancel through a route-computed scanControls key, absent unless the viewer holds the permission and may control the scan's organization
 
 ### Blockers
 
