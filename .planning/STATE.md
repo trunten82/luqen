@@ -5,16 +5,16 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: Completed 91-04-PLAN.md
-last_updated: "2026-10-15T17:10:06.198Z"
+stopped_at: Completed 91-05-PLAN.md
+last_updated: "2026-10-15T17:21:18.065Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
-state_head: f081b2f9e463c91b92b929879ea32cfac53aa746
+state_head: 44b3dd52e83e8fa5872038845060a2d9b4e130cd
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 24
-  completed_plans: 10
+  completed_plans: 11
   percent: 33
 ---
 
@@ -128,7 +128,7 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 ## Current Position
 
 Phase: 91 (Dismissal and permission hardening) — EXECUTING
-Plan: 5 of 18
+Plan: 6 of 18
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 91 execution started
 
@@ -219,8 +219,8 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-15T17:10:06.144Z
-Stopped at: Completed 91-04-PLAN.md
+Last session: 2026-10-15T17:21:18.012Z
+Stopped at: Completed 91-05-PLAN.md
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -265,6 +265,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 91 P02 | 35min | 3 tasks | 10 files |
 | Phase 91 P03 | 25min | 3 tasks | 11 files |
 | Phase 91 P04 | 30min | 3 tasks | 8 files |
+| Phase 91 P05 | 30min | 3 tasks | 7 files |
 
 ## Decisions
 
@@ -291,6 +292,8 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 91]: Phase 91 P04: MCP scan starts draw from the shared scan-start limit (30 per 10 minutes per caller, keyed by the tool context user id); no permission check is added to either MCP scan tool, so agent-bridge org users with an empty permission set still start scans
 - [Phase 91]: Phase 91 P04: the form, GraphQL, MCP site tool and retry spend through one limiter code path; the page tool spends one start per url or html invocation after the presence check, with a fail-closed default limiter when none is injected
 - [Phase 91]: Phase 91 P04: the one-bucket property for MCP and retry is proven through the real createServer wiring and both proofs were watched failing under a separate limiter and a spend that never happens
+- [Phase 91]: Phase 91 P05: the RBAC generator matches the start, retry and cancel scan service entry points from one list and reads the scan-create permission constant from the module that defines it; a named test pins the two new matrix rows
+- [Phase 91]: Phase 91 P05: docs and CHANGELOG state the shared scan-start rules as behaviour only; every PR1 gate is green against the PR1 base and the local rehearsal showed recovery failing refused rows closed, the viewer retry refusal and the full read-back
 
 ### Blockers
 
