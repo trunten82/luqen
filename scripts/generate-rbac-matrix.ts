@@ -56,16 +56,18 @@
  *    File glob:          packages/dashboard/src/routes/**\/*.ts
  *    Field carrying perm: the permission check is made INSIDE a service function, so no
  *                         requirePermission(...) token exists on the route. The route
- *                         registration calls `.initiateScanAuthorized(`, which refuses a
- *                         caller lacking the SCAN_CREATE_PERMISSION constant declared in
- *                         packages/dashboard/src/services/scan-service.ts. The generator
+ *                         registration calls one of the scan service entry points
+ *                         `.initiateScanAuthorized(`, `.retryScanAuthorized(` or
+ *                         `.cancelScanAuthorized(`, which refuse a caller without the
+ *                         SCAN_CREATE_PERMISSION constant declared in
+ *                         packages/dashboard/src/services/scan-lifecycle.ts. The generator
  *                         reads that constant's literal (it never duplicates it).
  *    Detection rule:     split the file into regions, each running from a
  *                        server.METHOD('path' registration to the next one (or end of
- *                        file); every region containing `.initiateScanAuthorized(` yields
+ *                        file); every region containing one of those three calls yields
  *                        a row for that registration.
  *    Fails loudly:       the constant cannot be parsed, or the file calls
- *                        `.initiateScanAuthorized(` more often than the regions account
+ *                        one of those three entry points more often than the regions account
  *                        for (a call above the first registration would otherwise vanish).
  *    Concrete example:
  *      - packages/dashboard/src/routes/scan.ts  POST /scan/new (scans.create)
@@ -220,7 +222,7 @@ function extractDashboardRoutes(): MatrixRow[] {
 // Shared-guard extraction (permission checked inside a service function)
 // ---------------------------------------------------------------------------
 
-const SCAN_SERVICE_PATH = 'packages/dashboard/src/services/scan-service.ts';
+const SCAN_SERVICE_PATH = 'packages/dashboard/src/services/scan-lifecycle.ts';
 
 function readScanCreatePermission(): string {
   const full = join(REPO_ROOT, SCAN_SERVICE_PATH);
@@ -234,12 +236,20 @@ function readScanCreatePermission(): string {
   return m[1]!;
 }
 
+// The scan service entry points that check SCAN_CREATE_PERMISSION on behalf of
+// a route: the scan form start, and report retry and cancel.
+const SHARED_GUARD_ENTRY_POINTS = [
+  'initiateScanAuthorized',
+  'retryScanAuthorized',
+  'cancelScanAuthorized',
+] as const;
+
 function extractSharedGuardRoutes(): MatrixRow[] {
   const rows: MatrixRow[] = [];
   const permission = readScanCreatePermission();
   const routesDir = join(REPO_ROOT, 'packages/dashboard/src/routes');
   const registrationRe = /server\.(get|post|put|patch|delete)\s*\(\s*['"]([^'"]+)['"]/g;
-  const guardCallRe = /\.initiateScanAuthorized\s*\(/g;
+  const guardCallRe = new RegExp(`\\.(?:${SHARED_GUARD_ENTRY_POINTS.join('|')})\\s*\\(`, 'g');
 
   for (const file of walkTs(routesDir)) {
     const src = readFileSync(file, 'utf8');
@@ -272,7 +282,7 @@ function extractSharedGuardRoutes(): MatrixRow[] {
 
     if (captured !== totalCalls) {
       throw new Error(
-        `generate-rbac-matrix: ${rel} calls initiateScanAuthorized ${totalCalls} time(s) but only ` +
+        `generate-rbac-matrix: ${rel} calls a shared scan guard (${SHARED_GUARD_ENTRY_POINTS.join(', ')}) ${totalCalls} time(s) but only ` +
           `${captured} fall inside a server.METHOD(...) route region; the shared guard would be missing from the matrix`,
       );
     }
