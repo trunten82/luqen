@@ -21,6 +21,7 @@ import {
 import { systemHostResolver } from './host-resolver.js';
 import {
   SCAN_CREATE_PERMISSION,
+  cancelScan,
   retryScan,
   type ScanControlCaller,
   type ScanControlRefusalKind,
@@ -410,6 +411,11 @@ export class ScanService {
    */
   retryScanAuthorized(scanId: string, caller: ScanControlCaller): Promise<ScanControlResult> {
     return retryScan(this.lifecycleDeps(), scanId, caller);
+  }
+
+  /** Cancel a queued or running scan: permission and organization checks, no start budget. */
+  cancelScanAuthorized(scanId: string, caller: ScanControlCaller): Promise<ScanControlResult> {
+    return cancelScan(this.lifecycleDeps(), scanId, caller);
   }
 
   /**

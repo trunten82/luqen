@@ -402,21 +402,14 @@ export async function scanRoutes(
     { schema: { ...HtmlPageSchema, tags: ['scan'], params: ScanIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      const scan = await storage.scans.getScan(id);
-
-      if (scan === null) {
-        return reply.code(404).send({ error: 'Scan not found' });
-      }
-
-      if (scan.status !== 'queued' && scan.status !== 'running') {
-        return reply.code(400).send({ error: 'Only queued or running scans can be cancelled' });
-      }
-
-      await storage.scans.updateScan(id, {
-        status: 'failed',
-        error: 'Cancelled by user',
-        completedAt: new Date().toISOString(),
+      const result = await scanService.cancelScanAuthorized(id, {
+        permissions: permissionsOf(request),
+        user: request.user,
+        startSubject: startSubjectOf(request),
       });
+      if (!result.ok) {
+        return refuseScanControl(request, reply, result);
+      }
 
       const isHtmx = request.headers['hx-request'] === 'true';
       if (isHtmx) {

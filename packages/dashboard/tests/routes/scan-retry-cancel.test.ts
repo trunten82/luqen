@@ -29,6 +29,8 @@ import {
   SCAN_RATE_LIMIT_ERROR,
   createScanStartLimiter,
 } from '../../src/services/scan-service.js';
+import { mayControlScan } from '../../src/services/scan-lifecycle.js';
+import { mayTouchDismissalOrg } from '../../src/services/issue-dismissals/scan-access.js';
 import type { DashboardConfig } from '../../src/config.js';
 import type { ScanRecord } from '../../src/db/types.js';
 
@@ -257,5 +259,89 @@ describe('POST /reports/:id/retry', () => {
     expect(htmx.statusCode).toBe(200);
     expect(htmx.headers['hx-redirect']).toBe(`/scan/${second}/progress`);
     expect(h.startScan).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('POST /reports/:id/cancel', () => {
+  it('HARD-14 cancel requires the scan create permission', async () => {
+    const id = await seed(h, h.orgA, 'queued');
+    h.caller.permissions = ['reports.view'];
+
+    const plain = await h.server.inject({ method: 'POST', url: `/reports/${id}/cancel` });
+    expect(plain.statusCode).toBe(403);
+    const htmx = await h.server.inject({ method: 'POST', url: `/reports/${id}/cancel`, headers: HTMX });
+    expect(htmx.statusCode).toBe(403);
+    expect(htmx.headers['hx-reswap']).toBe('none');
+    expect((await row(h, id)).status).toBe('queued');
+  });
+
+  it('HARD-14 cancel is scoped to the scan organization', async () => {
+    const foreign = await seed(h, h.orgB, 'queued');
+    const system = await seed(h, 'system', 'running');
+
+    const other = await h.server.inject({ method: 'POST', url: `/reports/${foreign}/cancel` });
+    expect(other.statusCode).toBe(404);
+    expect(other.json()).toEqual({ error: 'Scan not found' });
+    const onSystem = await h.server.inject({ method: 'POST', url: `/reports/${system}/cancel` });
+    expect(onSystem.statusCode).toBe(404);
+
+    expect((await row(h, foreign)).status).toBe('queued');
+    expect((await row(h, system)).status).toBe('running');
+  });
+
+  it('HARD-14 global admin may retry and cancel a scan of any organization', async () => {
+    h.caller.role = 'admin';
+    h.caller.currentOrgId = h.orgB;
+    const failed = await seed(h, h.orgA, 'failed');
+    const queued = await seed(h, h.orgA, 'queued');
+
+    const retried = await h.server.inject({ method: 'POST', url: `/reports/${failed}/retry` });
+    expect(retried.statusCode).toBe(302);
+    expect(h.startScan).toHaveBeenCalledTimes(1);
+
+    const cancelled = await h.server.inject({ method: 'POST', url: `/reports/${queued}/cancel` });
+    expect(cancelled.statusCode).toBe(302);
+    const stored = await row(h, queued);
+    expect(stored.status).toBe('failed');
+    expect(stored.error).toBe('Cancelled by user');
+  });
+
+  it('HARD-14 an org scoped admin key may not retry or cancel a scan of another organization', async () => {
+    h.caller.role = 'admin';
+    h.caller.orgScopedApiKey = true;
+    h.caller.currentOrgId = h.orgB;
+    const failed = await seed(h, h.orgA, 'failed');
+    const queued = await seed(h, h.orgA, 'queued');
+
+    const retried = await h.server.inject({ method: 'POST', url: `/reports/${failed}/retry` });
+    const cancelled = await h.server.inject({ method: 'POST', url: `/reports/${queued}/cancel` });
+    expect(retried.statusCode).toBe(404);
+    expect(cancelled.statusCode).toBe(404);
+    expect(h.startScan).not.toHaveBeenCalled();
+    expect((await row(h, failed)).status).toBe('failed');
+    expect((await row(h, queued)).status).toBe('queued');
+  });
+});
+
+describe('scan control predicate', () => {
+  it('HARD-14 scan control uses the dismissal write side organization predicate', () => {
+    const cases: ReadonlyArray<readonly [string, Parameters<typeof mayControlScan>[0], string]> = [
+      ['no caller', undefined, 'org-fabrikam'],
+      ['global admin, other org', { role: 'admin', currentOrgId: 'org-northwind' } as never, 'org-fabrikam'],
+      ['global admin, no org', { role: 'admin' } as never, 'system'],
+      ['org scoped admin key, own org', { role: 'admin', orgScopedApiKey: true, currentOrgId: 'org-fabrikam' } as never, 'org-fabrikam'],
+      ['org scoped admin key, other org', { role: 'admin', orgScopedApiKey: true, currentOrgId: 'org-northwind' } as never, 'org-fabrikam'],
+      ['org user, own org', { role: 'user', currentOrgId: 'org-fabrikam' } as never, 'org-fabrikam'],
+      ['org user, other org', { role: 'user', currentOrgId: 'org-northwind' } as never, 'org-fabrikam'],
+      ['org user, system scan', { role: 'user', currentOrgId: 'org-fabrikam' } as never, 'system'],
+      ['no-org user, system scan', { role: 'user' } as never, 'system'],
+      ['empty org user, empty scan org', { role: 'user', currentOrgId: '' } as never, ''],
+    ];
+    for (const [label, user, scanOrg] of cases) {
+      expect(mayControlScan(user, scanOrg), label).toBe(mayTouchDismissalOrg(user, scanOrg));
+    }
+    // The table is not vacuous: it holds both verdicts.
+    const verdicts = new Set(cases.map(([, user, scanOrg]) => mayControlScan(user, scanOrg)));
+    expect(verdicts).toEqual(new Set([true, false]));
   });
 });

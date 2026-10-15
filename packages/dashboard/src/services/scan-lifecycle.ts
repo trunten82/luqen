@@ -161,3 +161,26 @@ export async function retryScan(
   }
   return startStoredScan(deps, scan);
 }
+
+/**
+ * Cancel a queued or running scan. Same permission and organization checks as
+ * retry; no start budget (nothing starts) and no URL check.
+ */
+export async function cancelScan(
+  deps: ScanLifecycleDeps,
+  scanId: string,
+  caller: ScanControlCaller,
+): Promise<ScanControlResult> {
+  const loaded = await loadControllable(deps, scanId, caller);
+  if ('ok' in loaded) return loaded;
+  const { scan } = loaded;
+  if (scan.status !== 'queued' && scan.status !== 'running') {
+    return refuse('invalid_state', 'Only queued or running scans can be cancelled');
+  }
+  await deps.storage.scans.updateScan(scan.id, {
+    status: 'failed',
+    error: 'Cancelled by user',
+    completedAt: new Date().toISOString(),
+  });
+  return { ok: true, scan };
+}
