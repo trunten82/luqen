@@ -68,7 +68,14 @@ function buildTree(options: TreeOptions = {}): string {
   linkEntries(realSrc, src, ['services', 'routes']);
 
   const services = join(src, 'services');
-  linkEntries(join(realSrc, 'services'), services, ['scan-lifecycle.ts']);
+  // The orphan-call tree also declares the constant in a one-line scan-service.ts, so the
+  // route-region refusal is reachable wherever the generator looks for the constant.
+  const serviceExcept =
+    options.withOrphanCall === true ? ['scan-lifecycle.ts', 'scan-service.ts'] : ['scan-lifecycle.ts'];
+  linkEntries(join(realSrc, 'services'), services, serviceExcept);
+  if (options.withOrphanCall === true) {
+    writeFileSync(join(services, 'scan-service.ts'), `${CONSTANT_LINE}\n`);
+  }
   const lifecycle = readFileSync(join(REPO_ROOT, LIFECYCLE), 'utf8');
   expect(lifecycle, 'the real lifecycle file must still declare the constant on one line').toContain(
     CONSTANT_LINE,
