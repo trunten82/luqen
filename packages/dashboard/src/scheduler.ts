@@ -1,7 +1,5 @@
-import { randomUUID } from 'node:crypto';
 import type { StorageAdapter } from './db/index.js';
-import type { ScanOrchestrator } from './scanner/orchestrator.js';
-import type { DashboardConfig } from './config.js';
+import type { ScanService } from './services/scan-service.js';
 import { computeNextRunAt } from './routes/schedules.js';
 import { runKeyHousekeeping } from './auth/oauth-key-rotation.js';
 
@@ -39,58 +37,48 @@ export function startKeyHousekeeping(
   return timer;
 }
 
+/**
+ * Run every schedule that is due now. One pass of the scheduler tick, exported
+ * so a test can drive it without a timer.
+ *
+ * Each due schedule is handed to the scan service, which validates the stored
+ * start URL before anything starts. The schedule always advances, whether the
+ * start succeeded, was refused or threw, so a refused schedule is not
+ * re-evaluated every minute. A failure of one schedule never stops the others.
+ */
+export async function runDueSchedules(
+  storage: StorageAdapter,
+  scanService: ScanService,
+  now: Date = new Date(),
+): Promise<void> {
+  const due = await storage.schedules.getDueSchedules();
+
+  for (const schedule of due) {
+    try {
+      await scanService.startScheduledScan(schedule, now);
+    } catch (err) {
+      // Log the schedule id and error name only: never the site URL.
+      console.error(
+        `[scheduler] Schedule ${schedule.id} could not start:`,
+        err instanceof Error ? err.name : 'unknown error',
+      );
+    }
+
+    await storage.schedules.updateSchedule(schedule.id, {
+      lastRunAt: now.toISOString(),
+      nextRunAt: computeNextRunAt(schedule.frequency, now),
+    });
+  }
+}
+
 export function startScheduler(
   storage: StorageAdapter,
-  orchestrator: ScanOrchestrator,
-  config: DashboardConfig,
+  scanService: ScanService,
   intervalMs = 60_000,
 ): NodeJS.Timeout {
   return setInterval(async () => {
     try {
-      const due = await storage.schedules.getDueSchedules();
-
-      for (const schedule of due) {
-        const scanId = randomUUID();
-        const now = new Date();
-
-        // Create a scan record
-        await storage.scans.createScan({
-          id: scanId,
-          siteUrl: schedule.siteUrl,
-          standard: schedule.standard,
-          jurisdictions: schedule.jurisdictions,
-          regulations: [],
-          createdBy: `scheduler:${schedule.createdBy}`,
-          createdAt: now.toISOString(),
-          orgId: schedule.orgId,
-        });
-
-        // Start the scan via orchestrator
-        orchestrator.startScan(scanId, {
-          siteUrl: schedule.siteUrl,
-          standard: schedule.standard,
-          concurrency: config.maxConcurrentScans,
-          jurisdictions: schedule.jurisdictions,
-          regulations: [],
-          scanMode: schedule.scanMode as 'single' | 'site',
-          ...(config.webserviceUrl !== undefined ? { webserviceUrl: config.webserviceUrl } : {}),
-          ...(config.webserviceUrls !== undefined && config.webserviceUrls.length > 0
-            ? { webserviceUrls: config.webserviceUrls }
-            : {}),
-          complianceUrl: config.complianceUrl,
-          maxPages: config.maxPages,
-          ...(schedule.runner !== null ? { runner: schedule.runner as 'htmlcs' | 'axe' } : {}),
-          ...(schedule.incremental ? { incremental: true } : {}),
-          orgId: schedule.orgId,
-        });
-
-        // Update schedule: set last_run_at and compute next_run_at
-        const nextRunAt = computeNextRunAt(schedule.frequency, now);
-        await storage.schedules.updateSchedule(schedule.id, {
-          lastRunAt: now.toISOString(),
-          nextRunAt,
-        });
-      }
+      await runDueSchedules(storage, scanService);
     } catch (err) {
       // Log but don't crash — the scheduler should be resilient
       console.error('[scheduler] Error processing due schedules:', err instanceof Error ? err.message : String(err));

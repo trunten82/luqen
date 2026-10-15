@@ -11,7 +11,7 @@ import { randomUUID } from 'node:crypto';
 import type { StorageAdapter } from '../db/index.js';
 import type { ScanOrchestrator } from '../scanner/orchestrator.js';
 import type { DashboardConfig } from '../config.js';
-import type { ScanRecord } from '../db/types.js';
+import type { ScanRecord, ScanSchedule } from '../db/types.js';
 import {
   assertPublicUrl,
   isPrivateHostname as isPrivateHostnameCore,
@@ -23,6 +23,7 @@ import {
   SCAN_CREATE_PERMISSION,
   cancelScan,
   retryScan,
+  startStoredScan,
   type ScanControlCaller,
   type ScanControlRefusalKind,
   type ScanControlResult,
@@ -416,6 +417,43 @@ export class ScanService {
   /** Cancel a queued or running scan: permission and organization checks, no start budget. */
   cancelScanAuthorized(scanId: string, caller: ScanControlCaller): Promise<ScanControlResult> {
     return cancelScan(this.lifecycleDeps(), scanId, caller);
+  }
+
+  /**
+   * Start the scan for a due schedule: create its row (so a refused run leaves
+   * a visible record), then start it through {@link startStoredScan}, which
+   * validates the stored start URL first. A refused or failed start marks the
+   * row failed and starts nothing. No start-limit interaction and no
+   * reachability probe: validation only.
+   */
+  async startScheduledScan(schedule: ScanSchedule, now: Date = new Date()): Promise<ScanControlResult> {
+    const scan = await this.storage.scans.createScan({
+      id: randomUUID(),
+      siteUrl: schedule.siteUrl,
+      standard: schedule.standard,
+      jurisdictions: schedule.jurisdictions,
+      regulations: [],
+      createdBy: `scheduler:${schedule.createdBy}`,
+      createdAt: now.toISOString(),
+      orgId: schedule.orgId,
+    });
+    const overrides = {
+      scanMode: schedule.scanMode as 'single' | 'site',
+      maxPages: this.config.maxPages,
+      ...(schedule.runner !== null ? { runner: schedule.runner as 'htmlcs' | 'axe' } : {}),
+      ...(schedule.incremental ? { incremental: true } : {}),
+    };
+    try {
+      return await startStoredScan(this.lifecycleDeps(), scan, overrides);
+    } catch (err) {
+      const error = 'Scheduled scan could not be started';
+      await this.storage.scans.updateScan(scan.id, {
+        status: 'failed',
+        error,
+        completedAt: new Date().toISOString(),
+      });
+      throw err;
+    }
   }
 
   /**

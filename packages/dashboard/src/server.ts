@@ -1113,6 +1113,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // draw from this one limiter (D-90-07).
   const scanStartLimiter = createScanStartLimiter();
   await scanRoutes(server, storage, orchestrator, config, complianceService, scanStartLimiter);
+  // The one ScanService every start path shares: the MCP tools, GraphQL, the
+  // scheduler and startup recovery. It holds the scan-start limiter above.
+  const sharedScanService = new ScanService(storage, orchestrator, config, undefined, scanStartLimiter);
   await compareRoutes(server, storage);
   await trendRoutes(server, storage);
   await scheduleRoutes(server, storage);
@@ -1289,15 +1292,12 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     expectedAudience: dashboardMcpAudience,
     legacyPem: config.jwtPublicKey,
   });
-  // Phase 30-02: build a ScanService instance for the MCP data tools (the
-  // route-level scanRoutes constructs its own ScanService for HTTP handlers).
+  // Phase 30-02: the MCP data tools use the shared ScanService built above
+  // (the route-level scanRoutes constructs its own for HTTP handlers).
   // The dashboard_scan_site tool invokes initiateScan; dashboard_get_report and
   // dashboard_query_issues call getScanForOrg for the cross-org guard.
-  // ScanService is no longer stateless: it holds a scan-start limiter. This
-  // instance is also the one the GraphQL context uses, so it shares the one
-  // scanStartLimiter created before scanRoutes and the scan form and GraphQL
-  // createScan draw from one bucket instead of one each.
-  const mcpScanService = new ScanService(storage, orchestrator, config, undefined, scanStartLimiter);
+  // The instance holds the one scanStartLimiter, so the scan form, GraphQL
+  // createScan and the MCP tools draw from one bucket instead of one each.
   // Compliance discovery tools (dashboard_list_regulations etc.) and the
   // expanded dashboard_scan_site need a live compliance bearer. Resolve via
   // the registry per call so admin secret rotations propagate without a
@@ -1331,7 +1331,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await registerMcpRoutes(server, {
     verifyToken: mcpVerifier,
     storage,
-    scanService: mcpScanService,
+    scanService: sharedScanService,
     serviceConnections: serviceConnectionsRepo,
     complianceAccess: mcpComplianceAccess,
     llmAccess: mcpLlmAccess,
@@ -1371,7 +1371,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // ToolManifestEntry[] for ToolDispatcher and AgentToolCatalogEntry for the LLM.
   const agentMcpServer = (await createDashboardMcpServer({
     storage,
-    scanService: mcpScanService,
+    scanService: sharedScanService,
     serviceConnections: serviceConnectionsRepo,
     complianceAccess: mcpComplianceAccess,
   })).server;
@@ -1452,7 +1452,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         new Set<string>(),
       orgId: request.user?.currentOrgId ?? 'system',
       brandingOrchestrator,
-      scanService: mcpScanService,
+      scanService: sharedScanService,
       complianceToken: getToken(request),
       clientIp: request.ip,
     }),
@@ -1467,7 +1467,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── Scheduler — start after server is ready ────────────────────────────
   server.addHook('onReady', async () => {
-    const timer = startScheduler(storage, orchestrator, config);
+    const timer = startScheduler(storage, sharedScanService);
     const emailTimer = startEmailScheduler(storage, pluginManager);
     // Phase 82: digest sweep — runs every 60 s, picks up due digest schedules.
     const digestTimer = startDigestScheduler(storage, pluginManager);
