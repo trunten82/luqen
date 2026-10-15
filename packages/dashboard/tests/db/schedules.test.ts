@@ -215,6 +215,19 @@ describe('ScheduleRepository', () => {
       expect(due.some((s) => s.id === id)).toBe(false);
     });
 
+    it('judges due-ness against the instant it is given, not the wall clock', async () => {
+      const id = randomUUID();
+      await storage.schedules.createSchedule(makeScheduleInput({
+        id,
+        nextRunAt: '2030-06-01T00:00:00.000Z',
+      }));
+
+      const before = await storage.schedules.getDueSchedules(new Date('2030-05-31T23:59:59.000Z'));
+      expect(before.some((s) => s.id === id)).toBe(false);
+      const at = await storage.schedules.getDueSchedules(new Date('2030-06-01T00:00:00.000Z'));
+      expect(at.some((s) => s.id === id)).toBe(true);
+    });
+
     it('excludes future schedules', async () => {
       const id = randomUUID();
       await storage.schedules.createSchedule(makeScheduleInput({

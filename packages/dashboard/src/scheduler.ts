@@ -51,7 +51,7 @@ export async function runDueSchedules(
   scanService: ScanService,
   now: Date = new Date(),
 ): Promise<void> {
-  const due = await storage.schedules.getDueSchedules();
+  const due = await storage.schedules.getDueSchedules(now);
 
   for (const schedule of due) {
     try {

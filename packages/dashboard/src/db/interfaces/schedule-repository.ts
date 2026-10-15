@@ -6,5 +6,6 @@ export interface ScheduleRepository {
   createSchedule(data: CreateScheduleInput): Promise<ScanSchedule>;
   updateSchedule(id: string, data: Partial<{ enabled: boolean; nextRunAt: string; lastRunAt: string }>): Promise<void>;
   deleteSchedule(id: string): Promise<void>;
-  getDueSchedules(): Promise<ScanSchedule[]>;
+  /** Enabled schedules whose next run is at or before `now` (default: the current time). */
+  getDueSchedules(now?: Date): Promise<ScanSchedule[]>;
 }

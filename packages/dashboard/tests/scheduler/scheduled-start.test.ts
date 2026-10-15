@@ -152,7 +152,7 @@ describe('scheduled runs', () => {
     expect(schedule).not.toBeNull();
     expect(schedule!.lastRunAt).toBe(NOW.toISOString());
     expect(schedule!.nextRunAt).toBe(computeNextRunAt('daily', NOW));
-    expect(await h.storage.schedules.getDueSchedules()).toHaveLength(0);
+    expect(await h.storage.schedules.getDueSchedules(NOW)).toHaveLength(0);
   });
 
   it('HARD-14 scheduled run does not draw from any user start limit', async () => {
@@ -185,7 +185,7 @@ describe('scheduled runs', () => {
       expect(schedule!.lastRunAt).toBe(NOW.toISOString());
       expect(schedule!.nextRunAt).toBe(computeNextRunAt('daily', NOW));
     }
-    expect(await h.storage.schedules.getDueSchedules()).toHaveLength(0);
+    expect(await h.storage.schedules.getDueSchedules(NOW)).toHaveLength(0);
 
     // The throwing start left a failed row, and the other schedule still started.
     expect(h.startScan).toHaveBeenCalledTimes(2);
