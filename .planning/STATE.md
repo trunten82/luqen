@@ -5,7 +5,7 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: Completed 91-07-PLAN.md (PR1 shipped and read back)
+stopped_at: Completed 91-08-PLAN.md (PR2 opened: dark-permission filters injectable, issues.dismiss refused on global roles)
 last_updated: "2026-10-15T20:45:31.955Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
@@ -14,7 +14,7 @@ progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 24
-  completed_plans: 12
+  completed_plans: 13
   percent: 33
 ---
 
@@ -220,7 +220,7 @@ measures a candidate model — that is explicitly next-milestone work.
 ## Session Continuity
 
 Last session: 2026-10-15T20:45:31.873Z
-Stopped at: Completed 91-07-PLAN.md (PR1 shipped and read back)
+Stopped at: Completed 91-08-PLAN.md (PR2 opened: dark-permission filters injectable, issues.dismiss refused on global roles)
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -269,6 +269,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 91 P06 | 140min | 3 tasks | 3 files |
 | Phase 91 P06b | ~75min | 7 items | 19 files |
 | Phase 91 P07 | ~65min | 2 tasks | 0 files |
+| Phase 91 P08 | ~70min | 3 tasks | 6 files |
 
 ## Decisions
 
@@ -305,6 +306,8 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 91]: Phase 91 P06b: startup recovery runs beside startup, bounds each host lookup at 5 s and checks at most 5 rows at once; a lookup that is unavailable leaves the row queued while unknown names, private targets and invalid URLs mark it failed
 - [Phase 91]: Phase 91 P06b: the callers of the scheduled start, stored-row start, recovery, retry and cancel entries are pinned to their intended files by a structural test with a walker control
 - [Phase 91]: Phase 91 P07: PR1 shipped; the merge commit passed CI and Deploy, production HEAD equals it, and the read-back showed a loopback start URL refused for a new schedule and through GraphQL, a GraphQL-created scan reaching a terminal state and no UAT residue
+- [Phase 91]: Phase 91 P08: every dark-permission filter (the strip helper, the grantable check, the form groups and both branches of effective-permission resolution) takes an injectable dark set that defaults to the module set, and each path has one test that reddens when it ignores the set
+- [Phase 91]: Phase 91 P08: the issues.dismiss permission is refused with 422 on any global role at create, update and method-override (built-in roles included), the global role form does not offer it, and the role repository refuses the same write as a backstop; org roles may still carry it
 
 ### Blockers
 

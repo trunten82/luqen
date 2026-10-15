@@ -82,7 +82,7 @@ Plans:
 - [x] 91-05-PLAN.md — PR1: RBAC matrix, docs and CHANGELOG; full gates; local rehearsal of startup recovery and the read-back
 - [x] 91-06-PLAN.md — PR1: break every new guard against pre-declared red sets
 - [x] 91-07-PLAN.md — PR1 ship: outgoing-content scan, PR, pre-merge prod gates, merge, deploy, prod read-back
-- [ ] 91-08-PLAN.md — PR2: injectable dark-permission set per path; issues.dismiss refused on global roles (route and repository)
+- [x] 91-08-PLAN.md — PR2: injectable dark-permission set per path; issues.dismiss refused on global roles (route and repository)
 - [ ] 91-09-PLAN.md — PR2: mark, preview and revoke require reports.view; the dismissals list API returns the rows the Dismissed section shows
 - [ ] 91-10-PLAN.md — PR2: MCP user tools validate role names, usernames, passwords and duplicates like the dashboard
 - [ ] 91-11-PLAN.md — PR2: cookie sessions send the CSRF token on every /api write; route inventory test; read-back probe
