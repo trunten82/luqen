@@ -167,4 +167,39 @@ describe('scheduled runs', () => {
     expect(h.limiterStore.get('ip:unknown')).toEqual(full);
     expect([...h.limiterStore.keys()].sort()).toEqual([`user:${CREATOR}`, 'ip:unknown'].sort());
   });
+
+  it('HARD-14 a scheduled run whose start throws still advances that schedule and the next one runs', async () => {
+    // The orchestrator throws on the first start only; both schedules are due.
+    h.startScan.mockImplementationOnce(() => {
+      throw new Error('orchestrator unavailable');
+    });
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const first = await dueSchedule(h, PUBLIC_URL);
+    const second = await dueSchedule(h, 'https://www.example.org/');
+
+    await expect(run(h)).resolves.toBeUndefined();
+
+    // Both schedules advanced, so neither is due again on the next tick.
+    for (const id of [first, second]) {
+      const schedule = await h.storage.schedules.getSchedule(id);
+      expect(schedule!.lastRunAt).toBe(NOW.toISOString());
+      expect(schedule!.nextRunAt).toBe(computeNextRunAt('daily', NOW));
+    }
+    expect(await h.storage.schedules.getDueSchedules()).toHaveLength(0);
+
+    // The throwing start left a failed row, and the other schedule still started.
+    expect(h.startScan).toHaveBeenCalledTimes(2);
+    const statuses = (await h.storage.scans.listScans({})).map((row) => row.status).sort();
+    expect(statuses).toEqual(['failed', 'queued']);
+
+    // The log names the schedule and the error type, never the start URL or the message.
+    const lines = logged.mock.calls.map((args) => args.map(String).join(' '));
+    expect(lines.some((line) => line.includes(first) || line.includes(second))).toBe(true);
+    for (const line of lines) {
+      expect(line).not.toContain('example.com');
+      expect(line).not.toContain('example.org');
+      expect(line).not.toContain('orchestrator unavailable');
+    }
+    logged.mockRestore();
+  });
 });
