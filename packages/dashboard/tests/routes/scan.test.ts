@@ -14,6 +14,7 @@ import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { registerSession } from '../../src/auth/session.js';
 import { scanRoutes } from '../../src/routes/scan.js';
 import { ScanOrchestrator } from '../../src/scanner/orchestrator.js';
+import { PRIVATE_TARGET_ERROR } from '../../src/services/scan-service.js';
 import type { DashboardConfig } from '../../src/config.js';
 
 const TEST_SESSION_SECRET = 'test-session-secret-at-least-32b';
@@ -1070,5 +1071,65 @@ describe('Scan Routes', () => {
       // (the response was already ended after complete)
       expect(response.body).toContain('event: complete');
     });
+  });
+});
+
+// Parity with GraphQL createScan: the scan form goes through the same shared
+// ScanService.initiateScanAuthorized function, so it refuses the same way.
+describe('scan form parity with graphql createScan', () => {
+  let pctx: TestContext;
+
+  afterEach(() => {
+    pctx.cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('SCAN-02 parity scan new refuses a caller without the scan create permission', async () => {
+    stubFetchOk();
+    pctx = await createTestServer(['reports.view']);
+
+    const response = await pctx.server.inject({
+      method: 'POST',
+      url: '/scan/new',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: 'siteUrl=https%3A%2F%2Fexample.com&standard=WCAG2AA',
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(pctx.orchestrator.startScan).not.toHaveBeenCalled();
+    expect(await pctx.storage.scans.listScans({ orgId: 'system' })).toEqual([]);
+  });
+
+  it('SCAN-02 parity scan new answers an htmx caller without the permission with 403', async () => {
+    stubFetchOk();
+    pctx = await createTestServer(['reports.view']);
+
+    const response = await pctx.server.inject({
+      method: 'POST',
+      url: '/scan/new',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', 'hx-request': 'true' },
+      payload: 'siteUrl=https%3A%2F%2Fexample.com&standard=WCAG2AA',
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect((response.json() as { error: string }).error).toBe('Forbidden: requires scans.create');
+    expect(pctx.orchestrator.startScan).not.toHaveBeenCalled();
+    expect(await pctx.storage.scans.listScans({ orgId: 'system' })).toEqual([]);
+  });
+
+  it('SCAN-02 parity scan new refuses a loopback target', async () => {
+    stubFetchOk();
+    pctx = await createTestServer();
+
+    const response = await pctx.server.inject({
+      method: 'POST',
+      url: '/scan/new',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: 'siteUrl=http%3A%2F%2F127.0.0.1%2F&standard=WCAG2AA',
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect((response.json() as { error: string }).error).toBe(PRIVATE_TARGET_ERROR);
+    expect(pctx.orchestrator.startScan).not.toHaveBeenCalled();
   });
 });

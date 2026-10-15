@@ -151,14 +151,29 @@ export async function scanRoutes(
         actions: parsedActions.length > 0 ? parsedActions : undefined,
       };
 
-      const result = await scanService.initiateScan(input, {
+      // Same function GraphQL createScan uses: the scans.create permission and
+      // the start rules are decided there (D-90-01).
+      const permissions =
+        (request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined;
+      const result = await scanService.initiateScanAuthorized(input, {
         username: request.user?.username ?? 'unknown',
         orgId: request.user?.currentOrgId ?? 'system',
         complianceToken: getToken(request),
+        permissions: permissions ?? new Set<string>(),
       });
 
       if (!result.ok) {
         const isHtmx = request.headers['hx-request'] === 'true';
+        if (result.kind === 'forbidden') {
+          // Same refusal shape as requirePermission(): JSON for HTMX callers,
+          // the standard 403 page for everyone else.
+          if (isHtmx) {
+            return reply.code(403).send({ error: result.error });
+          }
+          const err = new Error('Forbidden') as Error & { statusCode: number };
+          err.statusCode = 403;
+          throw err;
+        }
         if (isHtmx || request.headers['accept']?.includes('text/html')) {
           const token = getToken(request);
           const orgId = getOrgId(request);
