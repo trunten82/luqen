@@ -4,18 +4,18 @@ milestone: v3.9.0
 milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
-status: planning
-stopped_at: Phase 90 complete, ready to plan Phase 91
-last_updated: "2026-10-15T15:05:13.523Z"
+status: executing
+stopped_at: Completed 91-01-PLAN.md
+last_updated: "2026-10-15T16:27:24.840Z"
 last_activity: 2026-10-15
-last_activity_desc: Phase 90 complete, transitioned to Phase 91
-state_head: bbed77f4954b2523091957c8ceaed5807d83571c
+last_activity_desc: Phase 91 execution started
+state_head: 95514f53c98997ff09ea9eccf24631b0bca0259c
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 6
-  completed_plans: 6
-  percent: 33
+  total_plans: 24
+  completed_plans: 7
+  percent: 29
 ---
 
 # Project State
@@ -123,14 +123,14 @@ verdict and resurfaces automatically if its file changes.
 See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** Phase 90 — GraphQL createScan starts scans
+**Current focus:** Phase 91 — Dismissal and permission hardening
 
 ## Current Position
 
-Phase: 91 — Dismissal and permission hardening
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-10-15 — Phase 90 complete, transitioned to Phase 91
+Phase: 91 (Dismissal and permission hardening) — EXECUTING
+Plan: 2 of 18
+Status: Ready to execute
+Last activity: 2026-10-15 — Phase 91 execution started
 
 ## Phase Map (v3.9.0 — Dismissal follow-through)
 
@@ -219,8 +219,8 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-15T14:20:31.659Z
-Stopped at: Phase 90 complete, ready to plan Phase 91
+Last session: 2026-10-15T16:27:24.787Z
+Stopped at: Completed 91-01-PLAN.md
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -261,6 +261,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 90 P03 | 35min | 3 tasks | 2 files |
 | Phase 90 P06 | ~50min | 3 tasks | 6 files |
 | Phase 90 P04 | 1h25m | 3 tasks | 0 files |
+| Phase 91 P01 | 35min | 3 tasks | 3 files |
 
 ## Decisions
 
@@ -275,6 +276,8 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 90]: Phase 90-01: GraphQL createScan routes through ScanService.initiateScanAuthorized (permission check in the shared function, not initiateScan; MCP exception documented)
 - [Phase 90]: 90-03: read-back script switch-ignored world uses a same-named other org, so the org assertion must compare name AND id; selftest lives in the script file
 - [Phase 90]: 90-04: all 26 guard mutations watched failing; 25 reddened exactly the declared set, M6 reddened the declared set plus one positive-control test outside its stated category (recorded as a MISMATCH, declaration not edited); M25 first run hit nine load timeouts, re-run clean
+- [Phase 91]: 91-01: the at-rest key list is anchored on call expressions with a per-site line window; every other reference to the encryption key must be a listed site or a named exemption
+- [Phase 91]: 91-01: the prod read-back script checks that schedule creation goes through the shared start validation, and sweeps any probe schedule it finds stored
 
 ### Blockers
 
