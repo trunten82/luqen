@@ -86,8 +86,8 @@ function buildTree(options: TreeOptions = {}): string {
     writeFileSync(
       join(routes, 'zz-orphan-guard-call.ts'),
       [
-        'export function orphan(service: { retryScanAuthorized(id: string): void }): void {',
-        "  service.retryScanAuthorized('example');",
+        'export function orphan(service: { initiateScanAuthorized(id: string): void }): void {',
+        "  service.initiateScanAuthorized('example');",
         '}',
         '',
       ].join('\n'),
