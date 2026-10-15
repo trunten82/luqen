@@ -62,6 +62,7 @@ export interface ScanLifecycleDeps {
 }
 
 const NOT_FOUND = 'Scan not found';
+const NOT_RETRYABLE = 'Only queued or failed scans can be retried';
 
 /**
  * May this caller restart or cancel a scan owned by `scanOrgId`? This IS the
@@ -104,6 +105,11 @@ function refuse(kind: ScanControlRefusalKind, error: string): ScanControlRefusal
 /**
  * Start a stored row: validate its start URL first. A refused URL marks the
  * row failed with the refusal text and nothing is started.
+ *
+ * The check awaits DNS, so the row can change meanwhile (a cancel, another
+ * retry). The row is read again right after the check and acted on only while
+ * it is still in the state it was read in; otherwise nothing is written or
+ * started and the not-retryable refusal is returned.
  */
 export async function startStoredScan(
   deps: ScanLifecycleDeps,
@@ -112,6 +118,10 @@ export async function startStoredScan(
   refusalPrefix = '',
 ): Promise<ScanControlResult> {
   const verdict = await deps.validateStartUrl(scan.siteUrl);
+  const current = await deps.storage.scans.getScan(scan.id);
+  if (current === null || current.status !== scan.status) {
+    return refuse('invalid_state', NOT_RETRYABLE);
+  }
   if ('error' in verdict) {
     await deps.storage.scans.updateScan(scan.id, {
       status: 'failed',
@@ -154,7 +164,7 @@ export async function retryScan(
   if ('ok' in loaded) return loaded;
   const { scan } = loaded;
   if (scan.status !== 'queued' && scan.status !== 'failed') {
-    return refuse('invalid_state', 'Only queued or failed scans can be retried');
+    return refuse('invalid_state', NOT_RETRYABLE);
   }
   const budget = deps.spendStartBudget(caller.startSubject);
   if (budget !== undefined) {
