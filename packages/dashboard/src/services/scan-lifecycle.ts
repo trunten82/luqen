@@ -109,12 +109,13 @@ export async function startStoredScan(
   deps: ScanLifecycleDeps,
   scan: ScanRecord,
   overrides: Partial<ScanConfig> = {},
+  refusalPrefix = '',
 ): Promise<ScanControlResult> {
   const verdict = await deps.validateStartUrl(scan.siteUrl);
   if ('error' in verdict) {
     await deps.storage.scans.updateScan(scan.id, {
       status: 'failed',
-      error: verdict.error,
+      error: `${refusalPrefix}${verdict.error}`,
       completedAt: new Date().toISOString(),
     });
     return refuse('url_refused', verdict.error);
@@ -183,4 +184,52 @@ export async function cancelScan(
     completedAt: new Date().toISOString(),
   });
   return { ok: true, scan };
+}
+
+/** What startup recovery did: how many rows it restarted, which it refused, and which checks threw. */
+export interface RecoveryResult {
+  readonly restarted: number;
+  /** Ids of rows marked failed instead of restarted (includes the ones whose check threw). */
+  readonly refused: readonly string[];
+  /** Rows whose check or start threw: the id and the error's name, never its message or a URL. */
+  readonly errors: readonly { readonly id: string; readonly name: string }[];
+}
+
+const NOT_RESTARTED = 'Not restarted: ';
+const RECOVERY_START_FAILED = 'the start could not be completed.';
+
+/**
+ * Restart the rows a previous process left queued, but only those whose stored
+ * start URL passes the shared start validation; every other row is marked
+ * failed with a reason and never started. The checks run concurrently. A row
+ * whose check or start throws is failed closed and reported by error name only. No
+ * start budget, no user, no reachability probe: validation only.
+ */
+export async function recoverQueuedScans(deps: ScanLifecycleDeps): Promise<RecoveryResult> {
+  const queued = await deps.storage.scans.listScans({ status: 'queued' });
+  const settled = await Promise.allSettled(
+    queued.map((scan) => startStoredScan(deps, scan, {}, NOT_RESTARTED)),
+  );
+  let restarted = 0;
+  const refused: string[] = [];
+  const errors: { id: string; name: string }[] = [];
+  for (const [index, outcome] of settled.entries()) {
+    const scan = queued[index]!;
+    if (outcome.status === 'fulfilled') {
+      if (outcome.value.ok) {
+        restarted += 1;
+      } else {
+        refused.push(scan.id);
+      }
+      continue;
+    }
+    refused.push(scan.id);
+    errors.push({ id: scan.id, name: outcome.reason instanceof Error ? outcome.reason.name : 'Error' });
+    await deps.storage.scans.updateScan(scan.id, {
+      status: 'failed',
+      error: `${NOT_RESTARTED}${RECOVERY_START_FAILED}`,
+      completedAt: new Date().toISOString(),
+    });
+  }
+  return { restarted, refused, errors };
 }

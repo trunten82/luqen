@@ -1550,9 +1550,10 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
     // ── Recover stuck scans ─────────────────────────────────────────────
     // Scans left in queued/running state after a restart will never complete.
-    // Re-enqueue queued scans; mark running scans as failed (partial state).
+    // Queued rows are restarted only when their stored start URL still passes
+    // the shared start validation (the rest are marked failed); running rows
+    // are marked failed (partial state). Logs carry scan ids and counts only.
     try {
-      const stuckQueued = await storage.scans.listScans({ status: 'queued' });
       const stuckRunning = await storage.scans.listScans({ status: 'running' });
 
       for (const scan of stuckRunning) {
@@ -1561,28 +1562,21 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
           error: 'Interrupted by server restart',
           completedAt: new Date().toISOString(),
         });
-        server.log.info(`Marked interrupted scan ${scan.id} (${scan.siteUrl}) as failed`);
+        server.log.info(`Marked interrupted scan ${scan.id} as failed`);
       }
 
-      for (const scan of stuckQueued) {
-        orchestrator.startScan(scan.id, {
-          siteUrl: scan.siteUrl,
-          standard: scan.standard,
-          concurrency: config.maxConcurrentScans,
-          jurisdictions: scan.jurisdictions,
-          regulations: scan.regulations ?? [],
-          ...(config.webserviceUrl !== undefined ? { webserviceUrl: config.webserviceUrl } : {}),
-          ...(config.webserviceUrls !== undefined && config.webserviceUrls.length > 0
-            ? { webserviceUrls: config.webserviceUrls }
-            : {}),
-          complianceUrl: config.complianceUrl,
-          orgId: scan.orgId,
-        });
-        server.log.info(`Re-enqueued stuck scan ${scan.id} (${scan.siteUrl})`);
+      const recovery = await sharedScanService.recoverQueuedScans();
+      for (const id of recovery.refused) {
+        server.log.info(`Queued scan ${id} was not restarted and is marked failed`);
+      }
+      for (const failure of recovery.errors) {
+        server.log.warn(`Start check for queued scan ${failure.id} failed (${failure.name})`);
       }
 
-      if (stuckRunning.length > 0 || stuckQueued.length > 0) {
-        server.log.info(`Scan recovery: ${stuckRunning.length} marked failed, ${stuckQueued.length} re-enqueued`);
+      if (stuckRunning.length > 0 || recovery.restarted > 0 || recovery.refused.length > 0) {
+        server.log.info(
+          `Scan recovery: ${stuckRunning.length} marked failed, ${recovery.restarted} re-enqueued, ${recovery.refused.length} not restarted`,
+        );
       }
     } catch (err) {
       server.log.warn({ err }, 'Scan recovery encountered an error');

@@ -257,8 +257,9 @@ describe('graphql createScan shares the scan form path', () => {
    *   - services/scan-service.ts: ScanService.initiateScan, the one shared
    *     function behind the scan form, GraphQL createScan (through
    *     initiateScanAuthorized) and the MCP dashboard_scan_site tool.
-   *   - scheduler.ts: the recurring-schedule runner.
-   *   - db/migrate-data.ts: storage-to-storage data migration.
+   *     ScanService.startScheduledScan creates the row for a due schedule.
+   *   - db/migrate-data.ts: storage-to-storage data migration (copies rows
+   *     between storages; it does not start scans).
    * The MCP dashboard_scan_site tool creates its row through initiateScan
    * (validation shared) but deliberately NOT through initiateScanAuthorized:
    * the in-app agent bridge stamps an empty permission set for org users and
@@ -268,7 +269,6 @@ describe('graphql createScan shares the scan form path', () => {
   it('SCAN-02 no source file outside the shared path creates a scan row', () => {
     const ALLOWED = new Set([
       ['services', 'scan-service.ts'].join(sep),
-      'scheduler.ts',
       ['db', 'migrate-data.ts'].join(sep),
     ]);
     const matched: string[] = [];
@@ -286,19 +286,15 @@ describe('graphql createScan shares the scan form path', () => {
   });
 
   /*
-   * Start-site guard. Every call that hands a scan to the orchestrator lives in the scan
-   * service layer: services/scan-service.ts and services/scan-lifecycle.ts. The two
-   * TRANSITIONAL entries (scheduler.ts, server.ts) are being moved into that layer by a
-   * later plan of this phase; this list only shrinks.
+   * Start-site guard. Every scan row is created and every scan is started by the scan
+   * service: calls that hand a scan to the orchestrator live in services/scan-service.ts and
+   * services/scan-lifecycle.ts only; db/migrate-data.ts copies rows between storages.
    */
   it('HARD-14 only the scan service starts scans', () => {
     const lifecycle = ['services', 'scan-lifecycle.ts'].join(sep);
     const ALLOWED = new Set([
       ['services', 'scan-service.ts'].join(sep),
       lifecycle,
-      // TRANSITIONAL: removed from this list by the scheduler/recovery plan.
-      'scheduler.ts',
-      'server.ts',
     ]);
     const matched: string[] = [];
     for (const abs of walkTs(SRC_ROOT)) {

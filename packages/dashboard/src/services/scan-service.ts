@@ -22,11 +22,13 @@ import { systemHostResolver } from './host-resolver.js';
 import {
   SCAN_CREATE_PERMISSION,
   cancelScan,
+  recoverQueuedScans,
   retryScan,
   startStoredScan,
   type ScanControlCaller,
   type ScanControlRefusalKind,
   type ScanControlResult,
+  type RecoveryResult,
   type ScanLifecycleDeps,
   type StartBudgetRefusal,
 } from './scan-lifecycle.js';
@@ -454,6 +456,14 @@ export class ScanService {
       });
       throw err;
     }
+  }
+
+  /**
+   * Startup recovery: restart each queued row whose stored start URL passes the
+   * shared start validation, mark every other one failed and start nothing for it.
+   */
+  recoverQueuedScans(): Promise<RecoveryResult> {
+    return recoverQueuedScans(this.lifecycleDeps());
   }
 
   /**
