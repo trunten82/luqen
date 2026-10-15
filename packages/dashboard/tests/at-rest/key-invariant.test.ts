@@ -5,8 +5,9 @@
  *   INV-1: the identifier `sessionSecret` appears ONLY in config.ts,
  *          auth/session.ts and server.ts (server.ts has exactly one
  *          occurrence: the registerSession(server, config.sessionSecret) line).
- *   INV-2: the at-rest wiring sites form an EXACT list, each referencing
- *          `config.encryptionKey` (or a local bound from it).
+ *   HARD-09: the at-rest wiring sites form an EXACT list, each found by its call
+ *          expression (never a line number) and referencing `config.encryptionKey`
+ *          (or a local bound from it); every other reference is a named exemption.
  *   INV-3 (walk proof): the walk inspected more than 100 files and includes
  *          known sites.
  *
@@ -76,6 +77,75 @@ const SESSION_SECRET_ALLOWLIST = new Set([CONFIG_TS, SESSION_TS, SERVER_TS]);
 
 const REGISTER_SESSION_LINE_PATTERN = /registerSession\(server,\s*config\.sessionSecret/;
 
+// ── at-rest consumers of the encryption key, found by call expression ──────────
+const KEY_REFERENCE = /config\.encryptionKey\b/;
+
+interface AnchoredSite {
+  readonly file: string;
+  /** The call expression the site is anchored on; exactly one non-comment line of the file must match it. */
+  readonly anchor: RegExp;
+  /** How many lines after the anchor line may carry the key reference (0 = the anchor line itself). */
+  readonly window: number;
+  readonly label: string;
+}
+
+const SRC = (...p: string[]): string => join('packages', 'dashboard', 'src', ...p);
+
+interface ResolvedSite {
+  readonly problem?: string;
+  /** `file:line` of every key-reference line this site claims. */
+  readonly claimed: readonly string[];
+}
+
+/** Resolves one anchored site; the problem text names the label and what was wrong. */
+function resolveAnchoredSite(site: AnchoredSite): ResolvedSite {
+  let lines: string[];
+  try {
+    lines = readFileSync(join(REPO_ROOT, site.file), 'utf8').split('\n');
+  } catch {
+    return { problem: `${site.label}: ${site.file} could not be read`, claimed: [] };
+  }
+  const hits: number[] = [];
+  lines.forEach((line, idx) => {
+    if (!isCommentLine(line) && site.anchor.test(line)) hits.push(idx);
+  });
+  if (hits.length !== 1) {
+    const what = hits.length === 0 ? 'no line matches' : `${hits.length} lines match`;
+    return { problem: `${site.label}: ${what} the anchor ${String(site.anchor)} in ${site.file}`, claimed: [] };
+  }
+  const start = hits[0];
+  const claimed: string[] = [];
+  for (let i = start; i <= start + site.window && i < lines.length; i++) {
+    if (!isCommentLine(lines[i]) && KEY_REFERENCE.test(lines[i])) claimed.push(`${site.file}:${i + 1}`);
+  }
+  if (claimed.length === 0) {
+    return { problem: `${site.label}: config.encryptionKey is not within ${site.window} line(s) of the anchor in ${site.file}`, claimed: [] };
+  }
+  return { claimed };
+}
+
+// Each at-rest consumer of the encryption key, anchored by its call expression (never by line number).
+// The list is exact: a new at-rest call site needs a conscious edit here.
+const ANCHORED_SITES: readonly AnchoredSite[] = [
+  { file: SERVER_TS, anchor: /new PluginManager\(/, window: 5, label: 'R1 PluginManager options' },
+  { file: SERVER_TS, anchor: /new SqliteServiceConnectionsRepository\(/, window: 3, label: 'R3 SqliteServiceConnectionsRepository' },
+  { file: SERVER_TS, anchor: /registerOauthKeysRoutes\(/, window: 0, label: 'R7 registerOauthKeysRoutes' },
+  { file: SERVER_TS, anchor: /ensureInitialSigningKey\(/, window: 0, label: 'R8 ensureInitialSigningKey' },
+  { file: SERVER_TS, anchor: /createDashboardSigner\(/, window: 0, label: 'R9 createDashboardSigner' },
+  { file: SERVER_TS, anchor: /startKeyHousekeeping\(/, window: 0, label: 'R10 startKeyHousekeeping' },
+  { file: SRC('cli.ts'), anchor: /new PluginManager\(/, window: 3, label: 'R2 cli.ts PluginManager options' },
+  { file: SRC('routes', 'git-credentials.ts'), anchor: /const encryptionKey = /, window: 0, label: 'R4 git-credentials encryptionKey local' },
+  { file: SRC('routes', 'repos.ts'), anchor: /decryptSecret\(credential\.encryptedToken/, window: 0, label: 'R5 repos.ts decryptSecret' },
+  { file: SRC('routes', 'fix-pr.ts'), anchor: /decryptSecret\(credential\.encryptedToken/, window: 0, label: 'R6 fix-pr.ts decryptSecret' },
+];
+
+// References that are deliberately not at-rest wiring sites.
+const NAMED_EXEMPTIONS: readonly AnchoredSite[] = [
+  { file: SERVER_TS, anchor: /checkAtRestDecryption\(/, window: 2, label: 'E1 read-only startup decrypt check' },
+];
+// E2: src/config.ts defines and validates the key; every line of it is exempt.
+const CONFIG_EXEMPT_FILE = CONFIG_TS;
+
 describe('at-rest key-invariant (PBH-A)', () => {
   it('INV-3: the walk inspected more than 100 files and includes known sites', () => {
     expect(allFiles.length).toBeGreaterThan(100);
@@ -112,72 +182,33 @@ describe('at-rest key-invariant (PBH-A)', () => {
     expect(serverOccurrences, 'server.ts must reference sessionSecret exactly once').toBe(1);
   });
 
-  it('INV-2: the at-rest wiring sites form an exact list, each referencing config.encryptionKey', () => {
-    interface WiringSite {
-      readonly file: string;
-      readonly line: number;
-      readonly label: string;
+  it('HARD-09 wiring sites are found by expression not by line number', () => {
+    const problems: string[] = [];
+    for (const site of [...ANCHORED_SITES, ...NAMED_EXEMPTIONS]) {
+      const found = resolveAnchoredSite(site);
+      if (found.problem !== undefined) problems.push(found.problem);
+    }
+    expect(problems, `anchored at-rest sites that did not resolve:\n${problems.join('\n')}`).toEqual([]);
+  });
+
+  it('HARD-09 every config encryptionKey reference is a listed wiring site or a named exemption', () => {
+    // Whether each site resolves is the other test's job; here only the claimed lines matter.
+    const claims = new Map<string, number>();
+    for (const site of [...ANCHORED_SITES, ...NAMED_EXEMPTIONS]) {
+      for (const ref of resolveAnchoredSite(site).claimed) claims.set(ref, (claims.get(ref) ?? 0) + 1);
+    }
+    const doubleClaimed = [...claims].filter(([, n]) => n > 1).map(([ref, n]) => `${ref} (claimed by ${n} sites)`);
+
+    const unclaimed: string[] = [];
+    for (const relPath of allFiles) {
+      if (relPath === CONFIG_EXEMPT_FILE) continue;
+      readFileSync(join(REPO_ROOT, relPath), 'utf8').split('\n').forEach((line, idx) => {
+        if (isCommentLine(line) || !KEY_REFERENCE.test(line)) return;
+        if (!claims.has(`${relPath}:${idx + 1}`)) unclaimed.push(`${relPath}:${idx + 1}`);
+      });
     }
 
-    const REL = (...p: string[]): string => join('packages', 'dashboard', 'src', ...p);
-
-    // MEASURED 2026-09-28 at cddd3475 (plan Consumer Inventory, group R).
-    // Re-measured after Task 4 inserted the PBH-D startup-check block ahead
-    // of `new PluginManager` in server.ts, shifting every site below it by
-    // +14 lines (299->313, 341->355, 1101->1115, 1298->1312, 1299->1313,
-    // 1412->1430). DISCOVERY-SSRF-1 then added one line (the orchestrator's
-    // allowPrivateScanTargets option) above R7, shifting R7-R10 by +1
-    // (1115->1116, 1312->1313, 1313->1314, 1430->1431). Phase 87-04 then added the
-    // issueDismissalRoutes import (+1 for every site) and its registration above R8
-    // (+1 more for R8-R10): 313->314, 355->356, 1117->1118, 1314->1316, 1315->1317,
-    // 1432->1434. Phase 88-09 then wired dismissals into fix-pr.ts and repos.ts above
-    // their decrypt calls: R5 repos.ts 405->460, R6 fix-pr.ts 306->307.
-    // Phase 89-04 then added the isWholePageSelector import and the exported dismissalRefused
-    // predicate above createServer (+11 for every server.ts site) and its registerHelper line
-    // below R3 (+2 more for R7-R10): R1 314->325, R3 356->367, R7 1118->1131, R8 1316->1329,
-    // R9 1317->1330, R10 1434->1447. Measured by watching this test go red first.
-    // The /graphql CSRF guard then added its import (+1 for every site) and a 3-line
-    // registration above R10 (+3 more for R10): 325->326, 367->368, 1131->1132,
-    // 1329->1330, 1330->1331, 1447->1451. Quick 261013-dr7 (WR-02) then added the 16-line
-    // needsCookieCsrf helper above createServer (+16 for every server.ts site): 326->342,
-    // 368->384, 1132->1148, 1330->1346, 1331->1347, 1451->1467. Phase 90 GraphQL createScan
-    // wiring then added the getToken import (+1 for every site) and two context lines above
-    // R10 (+2 more): 342->343, 384->385, 1148->1149, 1346->1347, 1347->1348, 1467->1470.
-    // The one shared scan-start limiter (D-90-07) then added its scan-service import extension
-    // (same line, +0), a 3-line limiter creation above R7 (+3 for R7-R10), a net +2 comment
-    // lines above R8 (+2 more for R8-R10) and one GraphQL context line above R10 (+1 more):
-    // 1149->1152, 1347->1352, 1348->1353, 1470->1476. Measured by watching this test go red first.
-    // The startup-check's own `encryptionKey: config.encryptionKey`
-    // reference (server.ts ~289) is NOT a new wiring site requiring a list
-    // update — it is the read-only decrypt CHECK, not a write/consumer path,
-    // and this test asserts an exact fixed-position list, not a generic scan.
-    // A NEW at-rest call site forces a conscious update of this list.
-    const EXPECTED_WIRING_SITES: readonly WiringSite[] = [
-      { file: SERVER_TS, line: 343, label: 'R1 PluginManager options' },
-      { file: SERVER_TS, line: 385, label: 'R3 SqliteServiceConnectionsRepository' },
-      { file: SERVER_TS, line: 1152, label: 'R7 registerOauthKeysRoutes' },
-      { file: SERVER_TS, line: 1352, label: 'R8 ensureInitialSigningKey' },
-      { file: SERVER_TS, line: 1353, label: 'R9 createDashboardSigner' },
-      { file: SERVER_TS, line: 1476, label: 'R10 startKeyHousekeeping' },
-      { file: REL('cli.ts'), line: 219, label: 'R2 cli.ts PluginManager options' },
-      { file: REL('routes', 'git-credentials.ts'), line: 32, label: 'R4 git-credentials encryptionKey local' },
-      { file: REL('routes', 'repos.ts'), line: 460, label: 'R5 repos.ts decryptSecret' },
-      { file: REL('routes', 'fix-pr.ts'), line: 307, label: 'R6 fix-pr.ts decryptSecret' },
-    ];
-
-    const results = EXPECTED_WIRING_SITES.map((site) => {
-      const abs = join(REPO_ROOT, site.file);
-      let text = '';
-      try {
-        const lines = readFileSync(abs, 'utf8').split('\n');
-        text = lines[site.line - 1] ?? '';
-      } catch {
-        text = '';
-      }
-      return { ...site, matchesEncryptionKey: /config\.encryptionKey\b/.test(text) };
-    });
-
-    const failing = results.filter((r) => !r.matchesEncryptionKey);
-    expect(failing, `wiring sites not referencing config.encryptionKey:\n${JSON.stringify(failing, null, 2)}`).toEqual([]);
+    expect(doubleClaimed, `lines claimed by more than one site:\n${doubleClaimed.join('\n')}`).toEqual([]);
+    expect(unclaimed, `config.encryptionKey references that are neither a listed site nor an exemption:\n${unclaimed.join('\n')}`).toEqual([]);
   });
 });
