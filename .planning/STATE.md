@@ -5,7 +5,7 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: Completed 91-06-PLAN.md
+stopped_at: Completed 91-06b gap closure for PR1
 last_updated: "2026-10-15T19:40:37.797Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
@@ -220,7 +220,7 @@ measures a candidate model — that is explicitly next-milestone work.
 ## Session Continuity
 
 Last session: 2026-10-15T19:40:37.745Z
-Stopped at: Completed 91-06-PLAN.md
+Stopped at: Completed 91-06b gap closure for PR1
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -267,6 +267,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 91 P04 | 30min | 3 tasks | 8 files |
 | Phase 91 P05 | 30min | 3 tasks | 7 files |
 | Phase 91 P06 | 140min | 3 tasks | 3 files |
+| Phase 91 P06b | ~75min | 7 items | 19 files |
 
 ## Decisions
 
@@ -298,6 +299,10 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 91]: Phase 91 P06: every PR1 guard was broken one at a time against pre-declared red sets; 27 of 29 breaks reddened exactly the declared set, and the two that did not (B8b, B10) are analysed as other tests covering the same proposition from another side, not guard defects
 - [Phase 91]: Phase 91 P06: removing the MCP page tool's scan-service hand-off in mcp/server.ts reddened nothing, so a test through createDashboardMcpServer was added and now reddens alone when the hand-off is removed
 - [Phase 91]: Phase 91 P06: the schedule runner's throw path, the startup-recovery throw branch and the RBAC generator's own startup and region refusals each gained a mutation-watched test
+- [Phase 91]: Phase 91 P06b: the scheduler's due query takes the pass instant, a due schedule's last and next run are written before its start work, ticks never overlap, and one schedule's failure never stops the others; the scheduler tests hold under a shifted clock
+- [Phase 91]: Phase 91 P06b: a stored row is started only while it is in the state it was read in (re-read after the start-URL check); a retry clears the old error and completion time
+- [Phase 91]: Phase 91 P06b: startup recovery runs beside startup, bounds each host lookup at 5 s and checks at most 5 rows at once; a lookup that is unavailable leaves the row queued while unknown names, private targets and invalid URLs mark it failed
+- [Phase 91]: Phase 91 P06b: the callers of the scheduled start, stored-row start, recovery, retry and cancel entries are pinned to their intended files by a structural test with a walker control
 
 ### Blockers
 
