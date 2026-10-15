@@ -62,6 +62,15 @@ describe('POST /api/v1/dismissals/:id/revoke', () => {
     expect((await store.storage.issueDismissals!.getById(d.id))?.status).toBe('active');
   });
 
+  it('HARD-03 revoke returns 403 for a role holding only issues dismiss', async () => {
+    const org = await seedOrg(store.storage, 'org_a');
+    const d = await seedDismissal(store.storage, { orgId: org });
+    const srv = await as({ role: 'user', currentOrgId: org }, ['issues.dismiss']);
+    const res = await revoke(srv, d.id);
+    expect(res.statusCode).toBe(403);
+    expect((await store.storage.issueDismissals!.getById(d.id))?.status).toBe('active');
+  });
+
   it('revokes with a trimmed comment, keeps the record and audits it (200)', async () => {
     const org = await seedOrg(store.storage, 'org_a');
     const d = await seedDismissal(store.storage, { orgId: org });

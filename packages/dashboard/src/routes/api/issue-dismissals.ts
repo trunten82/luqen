@@ -186,7 +186,7 @@ export async function issueDismissalRoutes(
   server.post(
     '/api/v1/dismissals/:id/revoke',
     {
-      preHandler: requirePermission('issues.dismiss'),
+      preHandler: [requirePermission('issues.dismiss'), requirePermission('reports.view')],
       config: MUTATION_CONFIG,
       schema: {
         tags: ['issue-dismissals'],
@@ -238,7 +238,7 @@ export async function issueDismissalRoutes(
   server.get(
     '/api/v1/scans/:scanId/dismissals/preview',
     {
-      preHandler: requirePermission('issues.dismiss'),
+      preHandler: [requirePermission('issues.dismiss'), requirePermission('reports.view')],
       config: RATE_LIMIT,
       schema: {
         tags: ['issue-dismissals'],

@@ -106,4 +106,20 @@ describe('RBAC matrix coverage', () => {
       '| scans.create | POST /reports/:id/cancel | dashboard-page | packages/dashboard/src/routes/scan.ts |',
     );
   });
+
+  // Mark, preview and revoke take report access as well as the dismiss permission (an array of two
+  // requirePermission calls, all-of). The generator reads every call in the option block, so each
+  // route has a row for each permission.
+  it('HARD-03 rbac matrix lists reports view for mark preview and revoke', () => {
+    const matrix = readFileSync(MATRIX_PATH, 'utf8');
+    const file = 'packages/dashboard/src/routes/api/issue-dismissals.ts';
+    for (const route of [
+      'POST /api/v1/scans/:scanId/dismissals',
+      'GET /api/v1/scans/:scanId/dismissals/preview',
+      'POST /api/v1/dismissals/:id/revoke',
+    ]) {
+      expect(matrix).toContain(`| reports.view | ${route} | http-route | ${file} |`);
+      expect(matrix).toContain(`| issues.dismiss | ${route} | http-route | ${file} |`);
+    }
+  });
 });
