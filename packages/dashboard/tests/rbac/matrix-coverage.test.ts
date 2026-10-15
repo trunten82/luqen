@@ -81,4 +81,16 @@ describe('RBAC matrix coverage', () => {
     }
     expect(missing).toEqual([]);
   });
+
+  // The permission check for POST /scan/new is made inside the shared scan
+  // function (ScanService.initiateScanAuthorized), not by a requirePermission
+  // option on the route, so the regex coverage test above cannot see it. The
+  // generator reads the call and the permission constant from source; this
+  // pins the resulting row.
+  it('SCAN-02 rbac matrix lists the scan create permission for POST scan new', () => {
+    const matrix = readFileSync(MATRIX_PATH, 'utf8');
+    expect(matrix).toContain(
+      '| scans.create | POST /scan/new | dashboard-page | packages/dashboard/src/routes/scan.ts |',
+    );
+  });
 });
