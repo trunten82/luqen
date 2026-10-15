@@ -11,6 +11,7 @@ import {
   CODE,
   SELECTOR,
   OTHER_SELECTOR,
+  SITE_URL,
   openStore,
   buildRouteServer,
   seedOrg,
@@ -21,6 +22,7 @@ import {
 } from '../helpers/issue-dismissal-route-harness.js';
 
 import { DISMISSAL_COMMENT_MAX_LENGTH } from '../../src/services/issue-dismissals/validate-input.js';
+import { toSiteKey } from '../../src/services/issue-dismissals/site-key.js';
 
 let store: Store;
 let server: FastifyInstance | undefined;
@@ -239,6 +241,80 @@ describe('GET /api/v1/scans/:scanId/dismissals', () => {
     const bare = Object.create(store.storage, { issueDismissals: { value: undefined } });
     server = await buildRouteServer(bare, { user: { role: 'user', currentOrgId: org }, permissions: DISMISS });
     expect((await list(server, scan)).statusCode).toBe(503);
+  });
+});
+
+describe('GET /api/v1/scans/:scanId/dismissals — what the report page shows (HARD-11)', () => {
+  const KEY_ONE = 'api-key:key-id-001';
+  const KEY_TWO = 'api-key:key-id-002';
+
+  /** A 'system' scan whose dismissals were written by an API key and by a named user, one revoked by another key. */
+  async function seedSystemWorld() {
+    const scan = await seedScan(store.storage, { orgId: 'system' });
+    const repo = store.storage.issueDismissals!;
+    const base = { orgId: 'system', siteUrl: SITE_URL, siteKey: toSiteKey(SITE_URL), reason: 'seeded' };
+    const byKey = await repo.mark({ ...base, code: CODE, selector: SELECTOR, actor: KEY_ONE, actorId: KEY_ONE });
+    const byUser = await repo.mark({ ...base, code: CODE, selector: OTHER_SELECTOR, actor: 'alice', actorId: 'u-alice' });
+    if (byKey.kind !== 'created' || byUser.kind !== 'created') throw new Error('seed failed');
+    await repo.revoke({ id: byUser.dismissal.id, orgId: 'system', actor: KEY_TWO, actorId: KEY_TWO, comment: 'undo' });
+    return { scan, keyRowId: byKey.dismissal.id, userRowId: byUser.dismissal.id };
+  }
+
+  it('HARD-11 list withholds key identifiers from a viewer who may not touch the scan org', async () => {
+    const org = await seedOrg(store.storage, 'org_a');
+    const { scan, keyRowId, userRowId } = await seedSystemWorld();
+    const srv = await as({ role: 'user', currentOrgId: org });
+    const res = await list(srv, scan);
+    expect(res.statusCode).toBe(200);
+    type Item = {
+      id: string;
+      created_by: string;
+      created_by_id: string | null;
+      revoked_by: string | null;
+      revoked_by_id: string | null;
+      events: Array<{ actor: string; actor_id: string | null }>;
+    };
+    const items = res.json().dismissals as Item[];
+    expect(items.map((i) => i.id).sort()).toEqual([keyRowId, userRowId].sort());
+    for (const item of items) {
+      expect(item.created_by_id).toBeNull();
+      expect(item.revoked_by_id).toBeNull();
+      for (const e of item.events) expect(e.actor_id).toBeNull();
+    }
+    const keyRow = items.find((i) => i.id === keyRowId)!;
+    const userRow = items.find((i) => i.id === userRowId)!;
+    expect(keyRow.created_by).toBe('api-key');
+    expect(keyRow.events.map((e) => e.actor)).toEqual(['api-key']);
+    // A named user stays named, as on the page; the key that revoked that row is generic.
+    expect(userRow.created_by).toBe('alice');
+    expect(userRow.revoked_by).toBe('api-key');
+    expect(userRow.events.map((e) => e.actor)).toEqual(['alice', 'api-key']);
+    expect(res.body).not.toContain('api-key:');
+    expect(res.body).not.toContain('u-alice');
+  });
+
+  it('HARD-11 list keeps key identifiers for a viewer who may touch the scan org', async () => {
+    const { scan, keyRowId } = await seedSystemWorld();
+    const srv = await as({ role: 'admin' });
+    const res = await list(srv, scan);
+    expect(res.statusCode).toBe(200);
+    const row = (res.json().dismissals as Array<{ id: string; created_by: string; created_by_id: string | null }>).find(
+      (i) => i.id === keyRowId,
+    )!;
+    expect(row.created_by).toBe(KEY_ONE);
+    expect(row.created_by_id).toBe(KEY_ONE);
+    expect(res.body).toContain('u-alice');
+  });
+
+  it('HARD-11 list still returns 404 for a scan of another org', async () => {
+    const orgA = await seedOrg(store.storage, 'org_a');
+    const orgB = await seedOrg(store.storage, 'org_b');
+    await seedDismissal(store.storage, { orgId: orgA });
+    const scanA = await seedScan(store.storage, { orgId: orgA });
+    const srv = await as({ role: 'user', currentOrgId: orgB });
+    const res = await list(srv, scanA);
+    expect(res.statusCode).toBe(404);
+    expect(res.body).not.toContain('dismissals');
   });
 });
 

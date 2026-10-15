@@ -8,17 +8,19 @@
  *
  * The API is keyed by SCAN (D-01): the org and the site URL come from the scan
  * record, never from the client; revoke takes the org from the dismissal row.
- * Mark and revoke require `issues.dismiss`, a DARK permission (D-07): only
- * global admins hold it until Phase 89. List requires `reports.view`.
+ * Mark, revoke and preview require `issues.dismiss` AND `reports.view` (all-of, HARD-03); list
+ * requires `reports.view`.
  *
- * Scan access is the one `mayTouchDismissalOrg` predicate (services/issue-dismissals/
- * scan-access.ts); its header explains why it differs from the shared guard.
+ * The WRITE side (mark, revoke, preview) gates on `mayTouchDismissalOrg`; the READ side (list)
+ * follows the report page's predicate `mayViewScanReport` (HARD-11), so the list returns the rows
+ * the page's Dismissed section shows, and withholds from a viewer who may not touch the scan's org
+ * what the page withholds. Both predicates live in services/issue-dismissals/scan-access.ts.
  */
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { StorageAdapter } from '../../db/index.js';
 import type { IssueDismissalRepository } from '../../db/interfaces/issue-dismissal-repository.js';
 import { requirePermission } from '../../auth/middleware.js';
-import { mayTouchDismissalOrg } from '../../services/issue-dismissals/scan-access.js';
+import { mayTouchDismissalOrg, mayViewScanReport } from '../../services/issue-dismissals/scan-access.js';
 import { toSiteKey } from '../../services/issue-dismissals/site-key.js';
 import { applyDismissals } from '../../services/issue-dismissals/apply-dismissals.js';
 import { loadReportForScan } from '../../services/issue-dismissals/load-dismissed-report.js';
@@ -52,6 +54,7 @@ import {
   type PreviewQueryPayload,
   type RevokePayload,
 } from './issue-dismissals-schemas.js';
+import { redactDismissalJson } from './issue-dismissals-redaction.js';
 
 const NOT_SUPPORTED = 'Dismissals are not supported by this storage adapter';
 
@@ -332,7 +335,10 @@ export async function issueDismissalRoutes(
       if (dismissals === undefined) return reply.code(503).send({ error: NOT_SUPPORTED });
 
       const scan = await storage.scans.getScan(request.params.scanId);
-      if (scan === null || !mayTouchDismissalOrg(request.user, scan.orgId)) {
+      // READ side (HARD-11): the predicate that admits a viewer to the report page, so this list
+      // and the page's Dismissed section agree, system scans included. A scan of another org is
+      // still a 404.
+      if (scan === null || !mayViewScanReport(request.user, scan.orgId)) {
         return reply.code(404).send({ error: 'Scan not found' });
       }
 
@@ -343,7 +349,12 @@ export async function issueDismissalRoutes(
           events: (await dismissals.listEvents(record.id)).map(eventToJson),
         })),
       );
-      return reply.code(200).send({ dismissals: withEvents });
+      // A viewer who may open the report but not touch the scan's org gets what the page gives
+      // them: no actor ids, and the generic key name instead of any key's id.
+      const visible = mayTouchDismissalOrg(request.user, scan.orgId)
+        ? withEvents
+        : withEvents.map(redactDismissalJson);
+      return reply.code(200).send({ dismissals: visible });
     },
   );
 }
