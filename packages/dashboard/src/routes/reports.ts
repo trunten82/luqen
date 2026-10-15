@@ -638,7 +638,7 @@ export async function reportRoutes(
       // owner ruling SC2 option B): it follows the predicate that admitted the viewer to this page,
       // because the scan org's dismissals were applied for that viewer above - an org user on a
       // 'system' scan used to get the filtered report and no trace of what was removed. The list
-      // API keeps the write-side predicate (recorded deferral). No rows (or a failed read) -> no
+      // API follows the same predicate and withholds the same things (HARD-11). No rows (or a failed read) -> no
       // key at all, so the zero-dismissal render is unchanged.
       let dismissals: DismissalsView | undefined;
       if (mayViewScanReport(request.user, scan.orgId) && storage.issueDismissals !== undefined) {
