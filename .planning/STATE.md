@@ -5,16 +5,16 @@ milestone_name: Dismissal follow-through
 current_phase: 90
 current_phase_name: GraphQL createScan starts scans
 status: executing
-stopped_at: "Completed 89-09-PLAN.md (grant PR #5 open, CI green, HELD)"
-last_updated: "2026-10-15T11:19:40.290Z"
+stopped_at: Completed 90-01-PLAN.md
+last_updated: "2026-10-15T11:29:08.021Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 90 execution started
-state_head: dc425f6baca0ad998e308cde50767e9f45a0056f
+state_head: 7b27dff8b35cc7c28629da11db62aff318d72de7
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 5
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -128,8 +128,8 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 ## Current Position
 
 Phase: 90 (GraphQL createScan starts scans) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 90
+Plan: 2 of 5
+Status: Ready to execute
 Last activity: 2026-10-15 — Phase 90 execution started
 
 ## Phase Map (v3.9.0 — Dismissal follow-through)
@@ -219,8 +219,8 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-12T20:18:50.119Z
-Stopped at: Completed 89-09-PLAN.md (grant PR #5 open, CI green, HELD)
+Last session: 2026-10-15T11:29:07.986Z
+Stopped at: Completed 90-01-PLAN.md
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -256,6 +256,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 89 P06 | ~3h | 3 tasks | 12 files |
 | Phase 89 P11 | 2h48m | 3 tasks | 25 files |
 | Phase 89 P09 | 27min | 3 tasks | 9 files |
+| Phase 90 P01 | 70m | 2 tasks | 10 files |
 
 ## Decisions
 
@@ -267,3 +268,4 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 89]: 89-11: UAT harness --keep-going (local only) so break-tests show the whole red set
 - [Phase 89]: 89-09: grant PR #5 (head 9bf30d1c) HELD — issues.dismiss to org Owner/Admin + migration 091; merge needs the owner's direct OK (Plan 10)
 - [Phase 89]: 89-09 open point D-89-09-01: after the lift a global admin can put issues.dismiss on a global (system-org) role; not decided at D-15; D-17 read-back flags it
+- [Phase 90]: Phase 90-01: GraphQL createScan routes through ScanService.initiateScanAuthorized (permission check in the shared function, not initiateScan; MCP exception documented)
