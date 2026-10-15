@@ -77,6 +77,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- GraphQL `createScan` now starts the scan (it previously stored a `queued`
+  row that never ran) and applies the scan form's validation, including
+  `allowPrivateScanTargets`, the reachability probe, the 50-jurisdiction cap
+  and `includeWarnings` / `includeNotices`.
 - The issues Excel export (`issues.xlsx`) now has one row per issue
   occurrence, so its row count matches the PDF and report page TOTAL ISSUES.
   It used to omit every occurrence of an issue repeated on 3+ pages (the

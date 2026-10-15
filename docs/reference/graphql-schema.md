@@ -141,6 +141,15 @@ mutation {
 }
 ```
 
+`createScan` validates and starts the scan through the same code path as the
+dashboard scan form: the same URL and private-target checks (honouring
+`allowPrivateScanTargets`), the same reachability probe, standard check and
+50-jurisdiction cap, and the same refusal messages. `includeWarnings` and
+`includeNotices` are applied. The scan is created in the caller's current
+organisation (the input cannot name one). The mutation returns the created
+scan with status `queued`; the scan then runs to `completed` or `failed`.
+`scans.create` is required.
+
 ### Assign an issue
 
 ```graphql
