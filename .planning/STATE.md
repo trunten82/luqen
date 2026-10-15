@@ -5,16 +5,16 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: Completed 91-06b gap closure for PR1
-last_updated: "2026-10-15T19:40:37.797Z"
+stopped_at: Completed 91-07-PLAN.md (PR1 shipped and read back)
+last_updated: "2026-10-15T20:45:31.955Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
-state_head: 53c8935988ac76dccf5db248a15c1c6952a22618
+state_head: f1fc7d790604cee103f34421c2dc345ae8ffa720
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 24
-  completed_plans: 11
+  completed_plans: 12
   percent: 33
 ---
 
@@ -128,7 +128,7 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 ## Current Position
 
 Phase: 91 (Dismissal and permission hardening) — EXECUTING
-Plan: 7 of 18
+Plan: 8 of 18
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 91 execution started
 
@@ -219,8 +219,8 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-15T19:40:37.745Z
-Stopped at: Completed 91-06b gap closure for PR1
+Last session: 2026-10-15T20:45:31.873Z
+Stopped at: Completed 91-07-PLAN.md (PR1 shipped and read back)
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -268,6 +268,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 91 P05 | 30min | 3 tasks | 7 files |
 | Phase 91 P06 | 140min | 3 tasks | 3 files |
 | Phase 91 P06b | ~75min | 7 items | 19 files |
+| Phase 91 P07 | ~65min | 2 tasks | 0 files |
 
 ## Decisions
 
@@ -303,6 +304,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 91]: Phase 91 P06b: a stored row is started only while it is in the state it was read in (re-read after the start-URL check); a retry clears the old error and completion time
 - [Phase 91]: Phase 91 P06b: startup recovery runs beside startup, bounds each host lookup at 5 s and checks at most 5 rows at once; a lookup that is unavailable leaves the row queued while unknown names, private targets and invalid URLs mark it failed
 - [Phase 91]: Phase 91 P06b: the callers of the scheduled start, stored-row start, recovery, retry and cancel entries are pinned to their intended files by a structural test with a walker control
+- [Phase 91]: Phase 91 P07: PR1 shipped; the merge commit passed CI and Deploy, production HEAD equals it, and the read-back showed a loopback start URL refused for a new schedule and through GraphQL, a GraphQL-created scan reaching a terminal state and no UAT residue
 
 ### Blockers
 
