@@ -435,7 +435,7 @@ export const resolvers = {
         input: {
           siteUrl: string;
           standard?: string;
-          jurisdictions?: string[];
+          jurisdictions?: string[] | null;
           includeWarnings?: boolean;
           includeNotices?: boolean;
         };

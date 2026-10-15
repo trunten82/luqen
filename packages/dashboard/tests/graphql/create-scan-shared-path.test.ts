@@ -475,3 +475,69 @@ describe('graphql createScan scan start rate limit', () => {
     expect(startScan).toHaveBeenCalledTimes(30);
   });
 });
+
+describe('graphql createScan null list inputs mean none', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }));
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function startedWith(startScan: ReturnType<typeof vi.fn>): Record<string, unknown> {
+    return startScan.mock.calls[0]![1] as Record<string, unknown>;
+  }
+
+  function storedWith(storage: ReturnType<typeof makeStorage>): Record<string, unknown> {
+    return storage.scans.createScan.mock.calls[0]![0] as Record<string, unknown>;
+  }
+
+  it('NULL-01 jurisdictions null reaches storage and orchestrator as none', async () => {
+    const { ctx, storage, startScan } = build();
+    await createScan(ctx, { siteUrl: 'https://example.com', jurisdictions: null });
+
+    expect(startScan).toHaveBeenCalledTimes(1);
+    expect(storedWith(storage)['jurisdictions']).toEqual([]);
+    expect(startedWith(startScan)['jurisdictions']).toEqual([]);
+  });
+
+  it('NULL-01 jurisdictions null behaves exactly like jurisdictions omitted', async () => {
+    const omitted = build();
+    await createScan(omitted.ctx, { siteUrl: 'https://example.com' });
+    const withNull = build();
+    await createScan(withNull.ctx, { siteUrl: 'https://example.com', jurisdictions: null });
+
+    expect(storedWith(withNull.storage)['jurisdictions']).toEqual(
+      storedWith(omitted.storage)['jurisdictions'],
+    );
+    expect(startedWith(withNull.startScan)['jurisdictions']).toEqual(
+      startedWith(omitted.startScan)['jurisdictions'],
+    );
+  });
+
+  it('NULL-02 jurisdictions with null elements keep only the strings', async () => {
+    const { ctx, storage, startScan } = build();
+    await createScan(ctx, { siteUrl: 'https://example.com', jurisdictions: [null, 'EU', '', 'US'] });
+
+    expect(storedWith(storage)['jurisdictions']).toEqual(['EU', 'US']);
+    expect(startedWith(startScan)['jurisdictions']).toEqual(['EU', 'US']);
+  });
+
+  it('NULL-03 regulations null reaches storage and orchestrator as none', async () => {
+    const { ctx, storage, startScan } = build();
+    const result = await ctx.scanService.initiateScanAuthorized(
+      { siteUrl: 'https://example.com', regulations: null as unknown as string[] },
+      {
+        username: ctx.user!.username,
+        orgId: ctx.orgId,
+        complianceToken: COMPLIANCE_TOKEN,
+        permissions: ctx.permissions,
+        startSubject: { userId: ctx.user!.id, apiKeyId: undefined, clientIp: IP_A },
+      },
+    );
+
+    expect(result.ok).toBe(true);
+    expect(storedWith(storage)['regulations']).toEqual([]);
+    expect(startedWith(startScan)['regulations']).toEqual([]);
+  });
+});

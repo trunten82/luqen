@@ -33,9 +33,9 @@ export interface InitiateScanInput {
   readonly siteUrl: string;
   readonly standard?: string;
   readonly scanMode?: string;
-  readonly jurisdictions?: string | string[];
+  readonly jurisdictions?: string | string[] | null;
   /** Explicit regulation ids selected on the scan form (07-P02). */
-  readonly regulations?: string | string[];
+  readonly regulations?: string | string[] | null;
   readonly concurrency?: string | number;
   readonly maxPages?: string | number;
   readonly runner?: string;
@@ -95,20 +95,29 @@ export type ScanLookupResult = ScanValidationError | ScanProgressResult;
 
 // ── Validation helpers (pure functions) ──────────────────────────────────────
 
-function normalizeJurisdictions(value: string | string[] | undefined): string[] {
-  if (value === undefined) return [];
-  if (Array.isArray(value)) return value;
-  return [value];
+/**
+ * Normalize a multi-value field into a string[].
+ *
+ * One shared normaliser for every caller (scan form, GraphQL, MCP): a missing
+ * or null value means none, a single string means one entry, and only
+ * non-empty strings survive, so a null never reaches storage or the orchestrator.
+ */
+function normalizeStringList(value: unknown): string[] {
+  if (value === undefined || value === null) return [];
+  const items: readonly unknown[] = Array.isArray(value) ? value : [value];
+  return items.filter((v): v is string => typeof v === 'string' && v.length > 0);
+}
+
+function normalizeJurisdictions(value: string | string[] | null | undefined): string[] {
+  return normalizeStringList(value);
 }
 
 /**
  * Normalize a form-submitted multi-value field into a string[].
- * Handles single string, array, and undefined consistently (07-P02).
+ * Handles single string, array, null and undefined consistently (07-P02).
  */
-function normalizeStringArray(value: string | string[] | undefined): string[] {
-  if (value === undefined) return [];
-  if (Array.isArray(value)) return value;
-  return [value];
+function normalizeStringArray(value: string | string[] | null | undefined): string[] {
+  return normalizeStringList(value);
 }
 
 /** User-facing refusal for a private / internal scan target (unchanged text). */
