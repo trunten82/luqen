@@ -1548,6 +1548,29 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
       server.log.warn({ err }, 'OAuth client backfill encountered an error');
     }
 
+    async function runQueuedScanRecovery(markedFailed: number): Promise<void> {
+      try {
+        const recovery = await sharedScanService.recoverQueuedScans();
+        for (const id of recovery.refused) {
+          server.log.info(`Queued scan ${id} was not restarted and is marked failed`);
+        }
+        for (const id of recovery.deferred) {
+          server.log.info(`Queued scan ${id} was left queued: the host lookup was unavailable`);
+        }
+        for (const failure of recovery.errors) {
+          server.log.warn(`Start check for queued scan ${failure.id} failed (${failure.name})`);
+        }
+
+        if (markedFailed > 0 || recovery.restarted > 0 || recovery.refused.length > 0 || recovery.deferred.length > 0) {
+          server.log.info(
+            `Scan recovery: ${markedFailed} marked failed, ${recovery.restarted} re-enqueued, ${recovery.refused.length} not restarted, ${recovery.deferred.length} left queued`,
+          );
+        }
+      } catch (err) {
+        server.log.warn({ err }, 'Scan recovery encountered an error');
+      }
+    }
+
     // ── Recover stuck scans ─────────────────────────────────────────────
     // Scans left in queued/running state after a restart will never complete.
     // Queued rows are restarted only when their stored start URL still passes
@@ -1565,19 +1588,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         server.log.info(`Marked interrupted scan ${scan.id} as failed`);
       }
 
-      const recovery = await sharedScanService.recoverQueuedScans();
-      for (const id of recovery.refused) {
-        server.log.info(`Queued scan ${id} was not restarted and is marked failed`);
-      }
-      for (const failure of recovery.errors) {
-        server.log.warn(`Start check for queued scan ${failure.id} failed (${failure.name})`);
-      }
-
-      if (stuckRunning.length > 0 || recovery.restarted > 0 || recovery.refused.length > 0) {
-        server.log.info(
-          `Scan recovery: ${stuckRunning.length} marked failed, ${recovery.restarted} re-enqueued, ${recovery.refused.length} not restarted`,
-        );
-      }
+      // The queued-row recovery checks start URLs over DNS, so it runs beside startup
+      // rather than holding readiness: it logs its own outcome and its own failure.
+      void runQueuedScanRecovery(stuckRunning.length);
     } catch (err) {
       server.log.warn({ err }, 'Scan recovery encountered an error');
     }

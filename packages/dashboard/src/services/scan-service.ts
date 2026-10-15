@@ -19,6 +19,7 @@ import {
   type HostResolver,
 } from '@luqen/core';
 import { systemHostResolver } from './host-resolver.js';
+import { DNS_LOOKUP_TIMEOUT_MS, withLookupTimeout } from './lookup-timeout.js';
 import {
   SCAN_CREATE_PERMISSION,
   cancelScan,
@@ -235,6 +236,9 @@ export function createScanStartLimiter(options: ScanStartLimiterOptions = {}): S
   };
 }
 
+/** Resolver failures that say nothing about the target: the lookup may succeed later. */
+const TRANSIENT_RESOLVER_ERROR = /\b(EAI_AGAIN|ETIMEOUT|ETIMEDOUT|ESERVFAIL|EREFUSED|ECONNREFUSED)\b/;
+
 /** User-facing refusal when the start URL's host does not resolve. */
 export const UNRESOLVABLE_TARGET_ERROR = 'Domain not found — check the URL for typos.';
 
@@ -292,13 +296,23 @@ export async function validateScanUrl(
     await assertPublicUrl(parsedUrl.toString(), { resolve: resolve ?? systemHostResolver });
   } catch (err) {
     if (!(err instanceof SsrfBlockedError)) throw err;
-    return { error: err.reason.startsWith('DNS resolution') ? UNRESOLVABLE_TARGET_ERROR : PRIVATE_TARGET_ERROR };
+    if (!err.reason.startsWith('DNS resolution')) return { error: PRIVATE_TARGET_ERROR };
+    return TRANSIENT_RESOLVER_ERROR.test(err.reason)
+      ? { error: UNRESOLVABLE_TARGET_ERROR, transient: true }
+      : { error: UNRESOLVABLE_TARGET_ERROR };
   }
 
   return { url: parsedUrl };
 }
 
-export type UrlValidation = { readonly url: URL } | { readonly error: string };
+/**
+ * A refused start URL carries `transient: true` when the refusal is a resolver
+ * failure that may pass (timeout, temporary failure, server failure) rather
+ * than an answer about the target itself.
+ */
+export type UrlValidation =
+  | { readonly url: URL }
+  | { readonly error: string; readonly transient?: true };
 
 /**
  * Pre-validate that the URL is reachable before starting a scan.
@@ -345,6 +359,8 @@ export class ScanService {
      * scan form and GraphQL createScan draw from one bucket.
      */
     private readonly startLimiter: ScanStartLimiter = createScanStartLimiter(),
+    /** Bound for one hostname lookup in the start-URL check, in milliseconds. */
+    private readonly dnsTimeoutMs: number = DNS_LOOKUP_TIMEOUT_MS,
   ) {}
 
   /**
@@ -420,7 +436,11 @@ export class ScanService {
 
   /** The start-URL check every scan start applies (honours allowPrivateScanTargets). */
   validateStartUrl(raw: string): Promise<UrlValidation> {
-    return validateScanUrl(raw, this.config.allowPrivateScanTargets ?? false, this.resolveHost);
+    return validateScanUrl(
+      raw,
+      this.config.allowPrivateScanTargets ?? false,
+      withLookupTimeout(this.resolveHost ?? systemHostResolver, this.dnsTimeoutMs),
+    );
   }
 
   private lifecycleDeps(): ScanLifecycleDeps {

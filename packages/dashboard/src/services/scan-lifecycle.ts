@@ -102,27 +102,40 @@ function refuse(kind: ScanControlRefusalKind, error: string): ScanControlRefusal
   return { ok: false, kind, error };
 }
 
+/** A stored start that was neither made nor refused: the lookup was unavailable and the row stays as it is. */
+interface DeferredStart {
+  readonly ok: false;
+  readonly kind: 'deferred';
+  readonly error: string;
+}
+
 /**
- * Start a stored row: validate its start URL first. A refused URL marks the
- * row failed with the refusal text and nothing is started.
+ * Validate a stored row's start URL, then start it. With `deferOnTransient`, a
+ * resolver failure that may pass (timeout, temporary failure) returns a
+ * {@link DeferredStart} and writes nothing; without it that failure is a
+ * refusal like any other.
  *
  * The check awaits DNS, so the row can change meanwhile (a cancel, another
  * retry). The row is read again right after the check and acted on only while
  * it is still in the state it was read in; otherwise nothing is written or
  * started and the not-retryable refusal is returned.
  */
-export async function startStoredScan(
+async function validateAndStart(
   deps: ScanLifecycleDeps,
   scan: ScanRecord,
-  overrides: Partial<ScanConfig> = {},
-  refusalPrefix = '',
-): Promise<ScanControlResult> {
+  overrides: Partial<ScanConfig>,
+  refusalPrefix: string,
+  deferOnTransient: boolean,
+): Promise<ScanControlResult | DeferredStart> {
   const verdict = await deps.validateStartUrl(scan.siteUrl);
   const current = await deps.storage.scans.getScan(scan.id);
   if (current === null || current.status !== scan.status) {
     return refuse('invalid_state', NOT_RETRYABLE);
   }
   if ('error' in verdict) {
+    if (deferOnTransient && verdict.transient === true) {
+      return { ok: false, kind: 'deferred', error: verdict.error };
+    }
     await deps.storage.scans.updateScan(scan.id, {
       status: 'failed',
       error: `${refusalPrefix}${verdict.error}`,
@@ -133,6 +146,20 @@ export async function startStoredScan(
   await deps.storage.scans.updateScan(scan.id, { status: 'queued' });
   deps.orchestrator.startScan(scan.id, configFromRow(scan, deps.config, overrides));
   return { ok: true, scan };
+}
+
+/**
+ * Start a stored row: validate its start URL first. A refused URL marks the
+ * row failed with the refusal text and nothing is started.
+ */
+export async function startStoredScan(
+  deps: ScanLifecycleDeps,
+  scan: ScanRecord,
+  overrides: Partial<ScanConfig> = {},
+  refusalPrefix = '',
+): Promise<ScanControlResult> {
+  const outcome = await validateAndStart(deps, scan, overrides, refusalPrefix, false);
+  return outcome.ok || outcome.kind !== 'deferred' ? outcome : refuse('url_refused', outcome.error);
 }
 
 /** Load a scan the caller may control, or the refusal that applies. */
@@ -196,50 +223,113 @@ export async function cancelScan(
   return { ok: true, scan };
 }
 
-/** What startup recovery did: how many rows it restarted, which it refused, and which checks threw. */
+/** What startup recovery did: how many rows it restarted, which it refused, which it left queued, and which checks threw. */
 export interface RecoveryResult {
   readonly restarted: number;
   /** Ids of rows marked failed instead of restarted (includes the ones whose check threw). */
   readonly refused: readonly string[];
-  /** Rows whose check or start threw: the id and the error's name, never its message or a URL. */
+  /** Ids of rows left queued and not started because the host lookup was unavailable (timeout, temporary failure). */
+  readonly deferred: readonly string[];
+  /** Rows whose check, start or failure write threw: the id and the error's name, never its message or a URL. */
   readonly errors: readonly { readonly id: string; readonly name: string }[];
 }
 
 const NOT_RESTARTED = 'Not restarted: ';
 const RECOVERY_START_FAILED = 'the start could not be completed.';
 
+/** How many stored rows recovery checks and starts at the same time. */
+export const RECOVERY_CONCURRENCY = 5;
+
+type RecoveryOutcome =
+  | { readonly kind: 'restarted' }
+  | { readonly kind: 'refused' }
+  | { readonly kind: 'deferred' }
+  | { readonly kind: 'threw'; readonly name: string; readonly marked: boolean; readonly writeError?: string };
+
+function errorName(err: unknown): string {
+  return err instanceof Error ? err.name : 'Error';
+}
+
+/** Check and start one queued row; every failure becomes a returned outcome, never a throw. */
+async function recoverOne(deps: ScanLifecycleDeps, scan: ScanRecord): Promise<RecoveryOutcome> {
+  try {
+    const outcome = await validateAndStart(deps, scan, {}, NOT_RESTARTED, true);
+    if (outcome.ok) return { kind: 'restarted' };
+    return { kind: outcome.kind === 'deferred' ? 'deferred' : 'refused' };
+  } catch (err) {
+    const name = errorName(err);
+    try {
+      await deps.storage.scans.updateScan(scan.id, {
+        status: 'failed',
+        error: `${NOT_RESTARTED}${RECOVERY_START_FAILED}`,
+        completedAt: new Date().toISOString(),
+      });
+      return { kind: 'threw', name, marked: true };
+    } catch (writeErr) {
+      return { kind: 'threw', name, marked: false, writeError: errorName(writeErr) };
+    }
+  }
+}
+
+/** Run `work` over `items` with at most `limit` in flight; results keep the input order. */
+async function mapWithLimit<T, R>(
+  items: readonly T[],
+  limit: number,
+  work: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  const worker = async (): Promise<void> => {
+    while (next < items.length) {
+      const index = next;
+      next += 1;
+      results[index] = await work(items[index]!);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
 /**
  * Restart the rows a previous process left queued, but only those whose stored
- * start URL passes the shared start validation; every other row is marked
- * failed with a reason and never started. The checks run concurrently. A row
- * whose check or start throws is failed closed and reported by error name only. No
- * start budget, no user, no reachability probe: validation only.
+ * start URL passes the shared start validation. A definitive refusal (private
+ * target, unknown name, invalid URL) marks the row failed with a reason and
+ * starts nothing. A lookup that is unavailable right now (timeout, temporary
+ * failure) leaves the row queued and starts nothing. At most
+ * {@link RECOVERY_CONCURRENCY} rows are checked at once. A row whose check or
+ * start throws is failed closed and reported by error name only; a row whose
+ * failure cannot be written is reported and the others carry on. No start
+ * budget, no user, no reachability probe: validation only. Always returns the
+ * counts.
  */
 export async function recoverQueuedScans(deps: ScanLifecycleDeps): Promise<RecoveryResult> {
   const queued = await deps.storage.scans.listScans({ status: 'queued' });
-  const settled = await Promise.allSettled(
-    queued.map((scan) => startStoredScan(deps, scan, {}, NOT_RESTARTED)),
-  );
+  const outcomes = await mapWithLimit(queued, RECOVERY_CONCURRENCY, (scan) => recoverOne(deps, scan));
   let restarted = 0;
   const refused: string[] = [];
+  const deferred: string[] = [];
   const errors: { id: string; name: string }[] = [];
-  for (const [index, outcome] of settled.entries()) {
-    const scan = queued[index]!;
-    if (outcome.status === 'fulfilled') {
-      if (outcome.value.ok) {
+  for (const [index, outcome] of outcomes.entries()) {
+    const id = queued[index]!.id;
+    switch (outcome.kind) {
+      case 'restarted':
         restarted += 1;
-      } else {
-        refused.push(scan.id);
-      }
-      continue;
+        break;
+      case 'refused':
+        refused.push(id);
+        break;
+      case 'deferred':
+        deferred.push(id);
+        break;
+      case 'threw':
+        errors.push({ id, name: outcome.name });
+        if (outcome.marked) {
+          refused.push(id);
+        } else {
+          errors.push({ id, name: outcome.writeError ?? 'Error' });
+        }
+        break;
     }
-    refused.push(scan.id);
-    errors.push({ id: scan.id, name: outcome.reason instanceof Error ? outcome.reason.name : 'Error' });
-    await deps.storage.scans.updateScan(scan.id, {
-      status: 'failed',
-      error: `${NOT_RESTARTED}${RECOVERY_START_FAILED}`,
-      completedAt: new Date().toISOString(),
-    });
   }
-  return { restarted, refused, errors };
+  return { restarted, refused, deferred, errors };
 }
