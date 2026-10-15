@@ -43,7 +43,7 @@
 **Success Criteria** (what must be TRUE):
 
   1. A scan created with the GraphQL `createScan` mutation moves out of `queued` and reaches `completed` or `failed`, exactly like a scan started from `/scan/new`; it is never left `queued` forever (read back on prod with a real GraphQL-created scan)
-  2. An input refused on `/scan/new` (invalid URL, private/SSRF target, org the caller cannot access, missing permission, over the concurrency/queue limit) is refused identically through GraphQL `createScan`, because both go through one shared code path
+  2. An input refused on `/scan/new` (invalid URL, private/SSRF target including a name that resolves to a private address, org the caller cannot access, missing permission, invalid standard, page concurrency outside 1-10, more than 50 jurisdictions, more than 30 scan starts per user in 10 minutes) is refused identically through GraphQL `createScan`, because both go through one shared code path. Reworded at verification per D-90-04 and D-90-07: neither path has a queue or concurrency refusal; these are the limits both enforce through the shared scan function. The scan-start rate limit (30 per 10 minutes per user, per API key for key callers) is one bucket that both paths draw from.
   3. Each guard on the GraphQL path has been watched failing: with the guard broken, only the targeted test goes red, and the evidence (command, output, commit) is recorded before the guard lands
   4. Merged to master via PR, CI green, auto-deploy to prod succeeded, and the GraphQL-created scan read back on prod
 
