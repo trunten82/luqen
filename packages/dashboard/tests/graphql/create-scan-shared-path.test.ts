@@ -309,21 +309,17 @@ describe('graphql createScan shares the scan form path', () => {
   });
 
   /*
-   * Call-site guard for the two entry points. Exactly two source files call
-   * initiateScan directly: the service itself (inside initiateScanAuthorized)
-   * and the MCP dashboard_scan_site tool, a documented exception (D-90-02):
-   * the in-app agent bridge stamps an empty permission set for org users, so
-   * that tool is gated by tool metadata and cannot carry a request permission
-   * set. The scan form route and the GraphQL resolver call
-   * initiateScanAuthorized, and the POST /scan/new registration carries no
-   * route-level permission guard that would refuse before the shared function
-   * runs (it would hide a broken shared check).
+   * Call-site guard for the scan service entry points. Every scan start goes
+   * through one of them: only services/scan-service.ts calls initiateScan
+   * itself. The scan form route and the GraphQL resolver call
+   * initiateScanAuthorized; the MCP site tool calls initiateScanRateLimited
+   * (its permission is enforced by tool metadata, D-90-02: the in-app agent
+   * bridge stamps an empty permission set for org users). The POST /scan/new
+   * registration carries no route-level permission guard that would refuse
+   * before the shared function runs (it would hide a broken shared check).
    */
-  it('SCAN-02 only the authorized shared path and the documented MCP exception call initiateScan', () => {
-    const ALLOWED = new Set([
-      ['services', 'scan-service.ts'].join(sep),
-      ['mcp', 'tools', 'data.ts'].join(sep),
-    ]);
+  it('HARD-15 every scan start caller uses a scan service entry point', () => {
+    const service = ['services', 'scan-service.ts'].join(sep);
     const matched: string[] = [];
     for (const abs of walkTs(SRC_ROOT)) {
       const lines = readFileSync(abs, 'utf8').split('\n');
@@ -331,10 +327,8 @@ describe('graphql createScan shares the scan form path', () => {
         matched.push(relative(SRC_ROOT, abs));
       }
     }
-    expect(matched, 'the walker must be able to match the MCP tool call').toContain(
-      ['mcp', 'tools', 'data.ts'].join(sep),
-    );
-    expect(matched.filter((rel) => !ALLOWED.has(rel))).toEqual([]);
+    expect(matched, 'the walker must be able to match the service call').toContain(service);
+    expect(matched.filter((rel) => rel !== service)).toEqual([]);
 
     const codeOf = (rel: string[]): string =>
       readFileSync(join(SRC_ROOT, ...rel), 'utf8')
@@ -344,6 +338,7 @@ describe('graphql createScan shares the scan form path', () => {
     const routeCode = codeOf(['routes', 'scan.ts']);
     expect(routeCode).toMatch(/initiateScanAuthorized\(/);
     expect(codeOf(['graphql', 'resolvers.ts'])).toMatch(/initiateScanAuthorized\(/);
+    expect(codeOf(['mcp', 'tools', 'data.ts'])).toMatch(/initiateScanRateLimited\(/);
 
     const start = routeCode.indexOf("server.post(\n    '/scan/new'");
     expect(start, 'the POST /scan/new registration must be found').toBeGreaterThanOrEqual(0);

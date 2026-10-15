@@ -368,11 +368,36 @@ export class ScanService {
     if (!context.permissions.has(SCAN_CREATE_PERMISSION)) {
       return { ok: false, kind: 'forbidden', error: `Forbidden: requires ${SCAN_CREATE_PERMISSION}` };
     }
-    const refusal = this.spendStartBudget(context.startSubject);
+    return this.initiateScanRateLimited(input, context);
+  }
+
+  /**
+   * The entry for callers whose permission is enforced elsewhere (the MCP site
+   * tool: tool metadata, D-90-02). It checks and spends the caller's start
+   * budget, then behaves exactly as {@link ScanService.initiateScan}. No
+   * permission check: the in-app agent bridge stamps an empty permission set
+   * for org users, who must still be able to start scans. The three metered
+   * entries (this one, the authorized one, retry) share one limiter path.
+   */
+  async initiateScanRateLimited(
+    input: InitiateScanInput,
+    context: ScanContext & { readonly startSubject: ScanStartSubject },
+  ): Promise<ScanInitiationResult> {
+    const refusal = this.consumeScanStart(context.startSubject);
     if (refusal !== undefined) {
-      return { ok: false, kind: 'rate_limited', ...refusal };
+      return refusal;
     }
     return this.initiateScan(input, context);
+  }
+
+  /**
+   * Spend one start from the shared limiter for a caller that starts work
+   * without creating a scan row (the MCP page tool). Returns the refusal when
+   * the budget is used up, else undefined.
+   */
+  consumeScanStart(subject: ScanStartSubject): ScanValidationError | undefined {
+    const refusal = this.spendStartBudget(subject);
+    return refusal === undefined ? undefined : { ok: false, kind: 'rate_limited', ...refusal };
   }
 
   /**

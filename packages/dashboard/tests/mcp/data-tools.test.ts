@@ -15,7 +15,11 @@
  *      error (bug: z.number() rejects strings; fix: z.coerce.number())
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { runInToolContext, type ToolContext } from '@luqen/core/mcp';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { readFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
@@ -26,12 +30,24 @@ import { DASHBOARD_DATA_TOOL_METADATA } from '../../src/mcp/metadata.js';
 import { DATA_TOOL_NAMES } from '../../src/mcp/tools/data.js';
 import type { McpTokenPayload, McpTokenVerifier } from '../../src/mcp/middleware.js';
 import type { StorageAdapter } from '../../src/db/index.js';
-import type { ScanService } from '../../src/services/scan-service.js';
+import {
+  ScanService,
+  SCAN_RATE_LIMIT_ERROR,
+  createScanStartLimiter,
+} from '../../src/services/scan-service.js';
+import { registerDataTools } from '../../src/mcp/tools/data.js';
+import type { DashboardConfig } from '../../src/config.js';
+import type { ScanOrchestrator } from '../../src/scanner/orchestrator.js';
 import type { ScanRecord } from '../../src/db/types.js';
 import type {
   ServiceConnection,
   ServiceConnectionsRepository,
 } from '../../src/db/service-connections-repository.js';
+
+// Hermetic DNS for the start-URL check: every host resolves to a public documentation address.
+vi.mock('../../src/services/host-resolver.js', () => ({
+  systemHostResolver: async (): Promise<readonly string[]> => ['93.184.215.14'],
+}));
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -40,7 +56,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // ---------------------------------------------------------------------------
 
 interface StubOverrides {
-  readonly initiateScan?: ScanService['initiateScan'];
+  readonly initiateScanRateLimited?: ScanService['initiateScanRateLimited'];
   readonly getScanForOrg?: ScanService['getScanForOrg'];
   readonly listScans?: StorageAdapter['scans']['listScans'];
   readonly getReport?: StorageAdapter['scans']['getReport'];
@@ -102,7 +118,7 @@ function makeStubStorage(o: StubOverrides = {}): StorageAdapter {
 
 function makeStubScanService(o: StubOverrides = {}): ScanService {
   return {
-    initiateScan: o.initiateScan ?? (async () => ({ ok: true, scanId: 'stub-scan' })),
+    initiateScanRateLimited: o.initiateScanRateLimited ?? (async () => ({ ok: true, scanId: 'stub-scan' })),
     getScanForOrg: o.getScanForOrg ?? (async () => ({ ok: false, error: 'Scan not found' })),
   } as unknown as ScanService;
 }
@@ -472,7 +488,7 @@ describe('Phase 30 data tools — handler behaviour via tools/call', () => {
       getEffectivePermissions: async () => new Set(['scans.create']),
     });
     const scanService = makeStubScanService({
-      initiateScan: async () => ({ ok: true, scanId: 'scan-xyz' }),
+      initiateScanRateLimited: async () => ({ ok: true, scanId: 'scan-xyz' }),
     });
     app = await buildApp({ verifier, storage, scanService });
     const resp = await callTool('dashboard_scan_site', { siteUrl: 'https://example.com' }, app);
@@ -1013,5 +1029,98 @@ describe('Phase 46 — dashboard_get_scan_progress', () => {
       tools: Array<{ name: string }>;
     }).tools.map((t) => t.name);
     expect(names).not.toContain('dashboard_get_scan_progress');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// dashboard_scan_site draws from the shared scan start limit
+// ---------------------------------------------------------------------------
+
+describe('dashboard_scan_site scan start limit', () => {
+  const CALLER = 'user-meter-1';
+  const closers: Array<() => Promise<void>> = [];
+
+  afterEach(async () => {
+    for (const close of closers.splice(0)) await close();
+    vi.unstubAllGlobals();
+  });
+
+  async function build(permissions: readonly string[]) {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }));
+    const store = new Map<string, readonly number[]>();
+    const limiter = createScanStartLimiter({ now: () => 1_000_000, store });
+    const createScan = vi.fn().mockImplementation((input: Record<string, unknown>) =>
+      Promise.resolve({ ...input, status: 'queued' }));
+    const startScan = vi.fn();
+    const scanService = new ScanService(
+      { scans: { createScan }, organizations: { getDeepScanDefault: vi.fn().mockResolvedValue(false) } } as never,
+      { startScan } as unknown as ScanOrchestrator,
+      {
+        maxConcurrentScans: 2,
+        maxPages: 100,
+        runner: 'htmlcs',
+        complianceUrl: 'http://compliance.invalid',
+        allowPrivateScanTargets: false,
+      } as unknown as DashboardConfig,
+      undefined,
+      limiter,
+    );
+    const server = new McpServer({ name: 'test', version: '0.0.0' }, { capabilities: { tools: {} } });
+    registerDataTools(server, { storage: makeStubStorage(), scanService });
+    const client = new Client({ name: 'test-client', version: '1.0.0' });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+    closers.push(() => client.close());
+    const context: ToolContext = {
+      orgId: 'org-fabrikam',
+      userId: CALLER,
+      scopes: ['read', 'write'],
+      permissions: new Set(permissions),
+      authType: 'jwt',
+    };
+    const call = (): Promise<Awaited<ReturnType<Client['callTool']>>> =>
+      runInToolContext(context, () =>
+        client.callTool({ name: 'dashboard_scan_site', arguments: { siteUrl: 'https://example.com' } }));
+    return { call, store, limiter, createScan, startScan };
+  }
+
+  const textOf = (r: Awaited<ReturnType<Client['callTool']>>): string =>
+    (r.content as Array<{ text: string }>)[0]?.text ?? '';
+
+  it('HARD-15 mcp scan site draws from the shared scan start limit', async () => {
+    const full = await build(['scans.create']);
+    for (let i = 0; i < 30; i += 1) full.limiter.record(`user:${CALLER}`);
+    const refused = await full.call();
+    expect(refused.isError).toBe(true);
+    expect(textOf(refused)).toContain(SCAN_RATE_LIMIT_ERROR);
+    expect(full.createScan).not.toHaveBeenCalled();
+    expect(full.startScan).not.toHaveBeenCalled();
+
+    const empty = await build(['scans.create']);
+    const started = await empty.call();
+    expect(started.isError).toBeFalsy();
+    expect(empty.store.get(`user:${CALLER}`)).toHaveLength(1);
+    expect(empty.createScan).toHaveBeenCalledTimes(1);
+  });
+
+  it('HARD-15 mcp scan site refuses the thirty first start in ten minutes with the shared message', async () => {
+    const h = await build(['scans.create']);
+    for (let i = 0; i < 30; i += 1) {
+      const ok = await h.call();
+      expect(ok.isError).toBeFalsy();
+    }
+    expect(h.createScan).toHaveBeenCalledTimes(30);
+    const refused = await h.call();
+    expect(refused.isError).toBe(true);
+    expect(textOf(refused)).toContain(SCAN_RATE_LIMIT_ERROR);
+    expect(h.createScan).toHaveBeenCalledTimes(30);
+  });
+
+  it('HARD-15 mcp scan site still starts for a caller with an empty permission set', async () => {
+    const h = await build([]);
+    const started = await h.call();
+    expect(started.isError).toBeFalsy();
+    expect(h.createScan).toHaveBeenCalledTimes(1);
   });
 });

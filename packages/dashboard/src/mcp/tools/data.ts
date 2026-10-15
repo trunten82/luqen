@@ -264,7 +264,7 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
       }),
       annotations: { destructiveHint: true, readOnlyHint: false },
     },
-    // orgId: ctx.orgId (org-scoped — scan is recorded against caller's org via ScanService.initiateScan)
+    // orgId: ctx.orgId (org-scoped — scan is recorded against caller's org via ScanService.initiateScanRateLimited)
     async (args) => {
       const ctx = getCurrentToolContext();
       const orgId = resolveOrgId();
@@ -288,7 +288,7 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
       // into 'site' explicitly. Dashboard UI uses routes/scan.ts and is
       // unaffected.
       const scanMode = args.scanMode ?? 'single';
-      const initiateInput: Parameters<typeof scanService.initiateScan>[0] = {
+      const initiateInput: Parameters<typeof scanService.initiateScanRateLimited>[0] = {
         siteUrl: args.siteUrl,
         standard: args.standard ?? 'WCAG2AA',
         scanMode,
@@ -303,10 +303,14 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
         ...(args.headers !== undefined ? { headers: { ...args.headers } } : {}),
         ...(args.actions !== undefined ? { actions: [...args.actions] } : {}),
       };
-      const result = await scanService.initiateScan(initiateInput, {
+      // No permission check here (D-90-02: the in-app agent bridge stamps an
+      // empty permission set for org users); the start draws from the shared
+      // scan-start limit, keyed by the tool context's user id.
+      const result = await scanService.initiateScanRateLimited(initiateInput, {
         orgId,
         username: ctx?.userId ?? 'system',
         complianceToken,
+        startSubject: { userId: ctx?.userId, apiKeyId: undefined, clientIp: undefined },
       });
       if (result.ok === false) {
         return errorEnvelope(result.error);
