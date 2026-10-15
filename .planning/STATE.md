@@ -5,16 +5,16 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: Completed 91-02-PLAN.md
-last_updated: "2026-10-15T16:42:44.664Z"
+stopped_at: Completed 91-03-PLAN.md
+last_updated: "2026-10-15T16:55:22.417Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
-state_head: fee670e62b9e5f297e01e54f3b9c5e1bb52b9e5d
+state_head: b1156cf6c253bac8f71bfe8e982cda4211de3f69
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 24
-  completed_plans: 8
+  completed_plans: 9
   percent: 33
 ---
 
@@ -128,7 +128,7 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 ## Current Position
 
 Phase: 91 (Dismissal and permission hardening) — EXECUTING
-Plan: 3 of 18
+Plan: 4 of 18
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 91 execution started
 
@@ -219,8 +219,8 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-15T16:42:44.613Z
-Stopped at: Completed 91-02-PLAN.md
+Last session: 2026-10-15T16:55:15.928Z
+Stopped at: Completed 91-03-PLAN.md
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -263,6 +263,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 90 P04 | 1h25m | 3 tasks | 0 files |
 | Phase 91 P01 | 35min | 3 tasks | 3 files |
 | Phase 91 P02 | 35min | 3 tasks | 10 files |
+| Phase 91 P03 | 25min | 3 tasks | 11 files |
 
 ## Decisions
 
@@ -282,6 +283,10 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 91]: Phase 91 P02: retry and cancel need the scan create permission and the scan's organization; the organization predicate is the dismissal write-side predicate under a second name (delegation plus an agreement table), no exception for the system organization
 - [Phase 91]: Phase 91 P02: retry order is permission, organization, status, one start from the shared scan-start limit, then the stored start-URL check and the start; a refused stored start URL marks the row failed with the refusal text and starts nothing
 - [Phase 91]: Phase 91 P02: the report page offers Retry and Cancel through a route-computed scanControls key, absent unless the viewer holds the permission and may control the scan's organization
+- [Phase 91]: Phase 91 P03: a due schedule is handed to the scan service, which creates its row and starts it only after the stored start URL passes the shared start validation at run time; a refused run leaves a failed row with the refusal text and the schedule still advances
+- [Phase 91]: Phase 91 P03: scheduled runs and startup recovery draw nothing from the scan-start limit and run no reachability probe (validation only)
+- [Phase 91]: Phase 91 P03: schedule creation uses one injected start-URL validator; the strict default fails closed, the server injects the shared scan service's check which honours allowPrivateScanTargets
+- [Phase 91]: Phase 91 P03: startup recovery validates queued rows concurrently; refused or unresolvable rows are marked failed with 'Not restarted: ' plus the refusal text, and recovery logs scan ids and counts only
 
 ### Blockers
 
