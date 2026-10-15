@@ -113,13 +113,27 @@ export function forbiddenOrgRolePermissions(ids: Iterable<string>): string[] {
   return [...new Set(ids)].filter((id) => ORG_ROLE_FORBIDDEN_PERMISSIONS.has(id));
 }
 
+/**
+ * Permissions no GLOBAL (org 'system') role may carry. issues.dismiss is a per-org decision: a
+ * global role is held by users of every org, so it reaches orgs that never chose to grant it.
+ * Org roles may carry it (the org Owner and Admin sets do).
+ */
+export const GLOBAL_ROLE_FORBIDDEN_PERMISSIONS: ReadonlySet<string> = new Set(['issues.dismiss']);
+
+/** The forbidden ids present in `ids` (empty when the set is allowed on a global role). */
+export function forbiddenGlobalRolePermissions(ids: Iterable<string>): string[] {
+  return [...new Set(ids)].filter((id) => GLOBAL_ROLE_FORBIDDEN_PERMISSIONS.has(id));
+}
+
 /** May a role row carry this permission id? In the catalogue and not dark. */
 export function isRoleGrantablePermission(id: string, dark: ReadonlySet<string> = DARK_PERMISSIONS): boolean {
   return ALL_PERMISSION_IDS.includes(id) && !dark.has(id);
 }
 
-/** Permission groups for the management UI (dark ids are not listed). */
-export function getPermissionGroups(opts: { readonly dark?: ReadonlySet<string> } = {}): Array<{
+/** Permission groups for the management UI (dark ids are not listed; `forGlobalRole` also hides the ids a global role may not carry). */
+export function getPermissionGroups(
+  opts: { readonly dark?: ReadonlySet<string>; readonly forGlobalRole?: boolean } = {},
+): Array<{
   readonly group: string;
   readonly permissions: ReadonlyArray<{ readonly id: string; readonly label: string }>;
 }> {
@@ -127,6 +141,7 @@ export function getPermissionGroups(opts: { readonly dark?: ReadonlySet<string> 
   const groupMap = new Map<string, Array<{ id: string; label: string }>>();
   for (const p of ALL_PERMISSIONS) {
     if (dark.has(p.id)) continue;
+    if (opts.forGlobalRole === true && GLOBAL_ROLE_FORBIDDEN_PERMISSIONS.has(p.id)) continue;
     const existing = groupMap.get(p.group);
     if (existing !== undefined) {
       existing.push({ id: p.id, label: p.label });
