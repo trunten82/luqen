@@ -143,7 +143,7 @@ async function validateAndStart(
     });
     return refuse('url_refused', verdict.error);
   }
-  await deps.storage.scans.updateScan(scan.id, { status: 'queued' });
+  await deps.storage.scans.updateScan(scan.id, { status: 'queued', error: null, completedAt: null });
   deps.orchestrator.startScan(scan.id, configFromRow(scan, deps.config, overrides));
   return { ok: true, scan };
 }

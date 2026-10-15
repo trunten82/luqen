@@ -162,6 +162,23 @@ describe('starting a stored scan while its state changes', () => {
     expect(h.startScan).not.toHaveBeenCalled();
   });
 
+  it('stored start: a retry of a failed scan clears its old error and completion time', async () => {
+    const id = await queuedRow(h, 'https://www.example.com/');
+    await h.storage.scans.updateScan(id, {
+      status: 'failed',
+      error: 'An earlier problem',
+      completedAt: '2026-10-14T09:00:00.000Z',
+    });
+
+    const result = await h.service.retryScanAuthorized(id, h.caller);
+
+    expect(result.ok).toBe(true);
+    const row = await h.storage.scans.getScan(id);
+    expect(row!.status).toBe('queued');
+    expect(row!.error).toBeUndefined();
+    expect(row!.completedAt).toBeUndefined();
+  });
+
   it('stored start: a retry of a scan whose state did not change still starts it', async () => {
     const id = await queuedRow(h, 'https://held.example.com/');
 
