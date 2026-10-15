@@ -106,7 +106,8 @@ export async function issueDismissalRoutes(
   server.post(
     '/api/v1/scans/:scanId/dismissals',
     {
-      preHandler: requirePermission('issues.dismiss'),
+      // All-of: requirePermission(a, b) is ANY-of, so two calls in an array.
+      preHandler: [requirePermission('issues.dismiss'), requirePermission('reports.view')],
       config: MUTATION_CONFIG,
       schema: {
         tags: ['issue-dismissals'],
