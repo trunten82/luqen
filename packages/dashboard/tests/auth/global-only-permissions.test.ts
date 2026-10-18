@@ -216,6 +216,14 @@ describe('global only permissions: resolution', () => {
     for (const id of GLOBAL_ONLY) expect(perms.has(id), id).toBe(false);
   });
 
+  it('global only permissions: the resolver keeps the repository answer when the caller role names no global role', async () => {
+    // A token without a role claim reaches the resolver as 'member'; the repository reads the stored
+    // row, and for a stored global admin it answers every permission. That answer stands.
+    const stub = { getEffectivePermissions: async (): Promise<Set<string>> => new Set(ALL_PERMISSION_IDS) };
+    const perms = await resolveEffectivePermissions(stub, 'admin-1', 'member', 'org-1');
+    for (const id of GLOBAL_ONLY) expect(perms.has(id), id).toBe(true);
+  });
+
   it('global only permissions: a global admin still resolves every permission', async () => {
     const stub = { getEffectivePermissions: async (): Promise<Set<string>> => new Set<string>() };
     const perms = await resolveEffectivePermissions(stub, 'admin-1', 'admin', 'org-1');

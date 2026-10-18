@@ -9,6 +9,7 @@ import {
   isReservedGlobalRoleName,
   forbiddenOrgRolePermissions,
   forbiddenGlobalRolePermissions,
+  permissionLabel,
   ALL_PERMISSION_IDS,
   DEFAULT_ORG_ROLES,
 } from '../../permissions.js';
@@ -104,10 +105,11 @@ function parsePermissions(rawPerms: string | string[] | undefined): string[] {
 
 /**
  * CR-01 (quick 261013-dr7) and HARD-12: why a role with this name and these permissions may not be
- * written into this org, or null when it may. Org roles may not take a global role name nor carry
- * admin.system; global (org 'system') roles may not carry the permissions in
- * GLOBAL_ROLE_FORBIDDEN_PERMISSIONS (built-in roles included). The same rules are the repository's
- * backstop; this one answers with a 422 instead of a 500.
+ * written into this org, or null when it may. Org roles may not take a global role name nor carry a
+ * global-only permission (ORG_ROLE_FORBIDDEN_PERMISSIONS: admin.system, admin.users); global (org
+ * 'system') roles may not carry the permissions in GLOBAL_ROLE_FORBIDDEN_PERMISSIONS (built-in roles
+ * included). The same rules are the repository's backstop; this one answers with a 422 instead of a
+ * 500 and names the refused permissions by their labels.
  */
 async function roleRefusal(
   storage: StorageAdapter,
@@ -125,8 +127,10 @@ async function roleRefusal(
   if (isReservedGlobalRoleName(name, systemNames)) {
     return 'Organization roles cannot use the name of a global role';
   }
-  if (forbiddenOrgRolePermissions(permissions).length > 0) {
-    return 'Organization roles cannot carry the System settings permission';
+  const globalOnly = forbiddenOrgRolePermissions(permissions);
+  if (globalOnly.length > 0) {
+    const labels = globalOnly.map(permissionLabel).join(' and ');
+    return `Organization roles cannot carry the ${labels} permission${globalOnly.length > 1 ? 's' : ''}`;
   }
   return null;
 }
@@ -146,7 +150,7 @@ export async function roleRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
 ): Promise<void> {
-  const orgPermissionGroups = getPermissionGroups();
+  const orgPermissionGroups = getPermissionGroups({ forOrgRole: true });
   const globalPermissionGroups = getPermissionGroups({ forGlobalRole: true });
 
   // ── GET /admin/roles — tabbed view: Global Roles + Org Roles ──────

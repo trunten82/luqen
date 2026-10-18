@@ -256,9 +256,9 @@ export class SqliteRoleRepository implements RoleRepository {
       ).all(role_id) as Array<{ permission: string }>;
 
       for (const { permission } of perms) {
-        // admin.system comes from the global role only: a team (an org-scoped grant) never
-        // confers it, whichever role the team is bound to (an org role written by any path, or a
-        // system role such as 'admin' - teams.ts lets an org team bind a system role).
+        // The global-only ids (admin.system, admin.users) come from the global role only: a team
+        // (an org-scoped grant) never confers them, whichever role the team is bound to (an org role
+        // written by any path, or a global row such as the built-in 'admin').
         if (ORG_ROLE_FORBIDDEN_PERMISSIONS.has(permission)) continue;
         result.add(permission);
       }
@@ -272,8 +272,9 @@ export class SqliteRoleRepository implements RoleRepository {
   /**
    * Backstop for every write path (routes refuse first with a 422). A GLOBAL (org 'system') role,
    * built-in rows included, may not carry a permission in GLOBAL_ROLE_FORBIDDEN_PERMISSIONS. An ORG
-   * role may neither take a global role's name nor carry admin.system; those name and admin.system
-   * rules never applied to built-in rows and still do not.
+   * role may neither take a global role's name nor carry a global-only permission
+   * (ORG_ROLE_FORBIDDEN_PERMISSIONS); those name and global-only rules never applied to built-in
+   * rows and still do not.
    */
   private assertRoleInvariants(
     orgId: string,
@@ -293,8 +294,9 @@ export class SqliteRoleRepository implements RoleRepository {
     if (isReservedGlobalRoleName(name, systemNames)) {
       throw new Error('An organization role cannot use a global role name');
     }
-    if (forbiddenOrgRolePermissions(permissions).length > 0) {
-      throw new Error('An organization role cannot carry admin.system');
+    const globalOnly = forbiddenOrgRolePermissions(permissions);
+    if (globalOnly.length > 0) {
+      throw new Error(`An organization role cannot carry ${globalOnly.join(', ')}`);
     }
   }
 
