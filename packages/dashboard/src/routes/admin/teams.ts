@@ -76,6 +76,28 @@ function mayBindRole(request: FastifyRequest, role: { readonly orgId: string; re
   return bypassesOrgScope(request.user);
 }
 
+/**
+ * A team is created in, and moved to, only an organization its caller administers: a global
+ * administrator places teams in any organization; anyone else places them in their current
+ * organization only (the team forms offer them no other). A caller with no current organization
+ * places no team. Team membership counts as organization membership and the team's bound role
+ * applies where the team lives, so this keeps both inside the caller's organization.
+ */
+const TEAM_ORGANIZATION_MESSAGE = 'Teams are created in and moved to the organization you administer';
+
+function mayPlaceTeamIn(request: FastifyRequest, targetOrgId: string): boolean {
+  if (bypassesOrgScope(request.user)) return true;
+  const currentOrgId = request.user?.currentOrgId ?? '';
+  return currentOrgId !== '' && targetOrgId === currentOrgId;
+}
+
+function sendTeamOrganizationRefusal(request: FastifyRequest, reply: FastifyReply): FastifyReply {
+  if (request.headers['hx-request'] === 'true') {
+    return reply.code(403).type('text/html').send(toastHtml(TEAM_ORGANIZATION_MESSAGE, 'error'));
+  }
+  return reply.code(403).send({ error: TEAM_ORGANIZATION_MESSAGE });
+}
+
 function sendBindingRefusal(request: FastifyRequest, reply: FastifyReply): FastifyReply {
   if (request.headers['hx-request'] === 'true') {
     return reply.code(403).type('text/html').send(toastHtml(BUILT_IN_ROLE_BINDING_MESSAGE, 'error'));
@@ -217,6 +239,7 @@ export async function teamRoutes(
       // If an organization is selected, link the team to it; otherwise use current org scope
       const organizationId = (body.organizationId ?? '').trim();
       const orgId = organizationId !== '' ? organizationId : (request.user?.currentOrgId ?? 'system');
+      if (!mayPlaceTeamIn(request, orgId)) return sendTeamOrganizationRefusal(request, reply);
       const roleId = (body.roleId ?? '').trim();
 
       // Validate role_id if provided — must exist and belong to the same org
@@ -400,6 +423,7 @@ export async function teamRoutes(
 
       const newOrgId = (body.organizationId ?? '').trim();
       const orgId = newOrgId !== '' ? newOrgId : 'system';
+      if (!mayPlaceTeamIn(request, orgId)) return sendTeamOrganizationRefusal(request, reply);
 
       // Validate org exists if not 'system'
       if (orgId !== 'system') {
