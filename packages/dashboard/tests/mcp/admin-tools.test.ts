@@ -596,3 +596,81 @@ describe('dashboard_create_user reserved usernames', () => {
     expect(ok['username']).toBe('fabrikam-ops');
   });
 });
+
+// ---------------------------------------------------------------------------
+// HARD-13: the MCP user tools accept exactly what the dashboard accepts —
+// the dashboard's own validators and global role list, with its wording.
+// ---------------------------------------------------------------------------
+
+interface StoredUser { readonly id: string; readonly username: string; readonly role: string }
+
+/** A users store that remembers what was created and every role write. */
+function makeUserStore(seed: readonly StoredUser[] = []) {
+  const users = new Map<string, StoredUser>(seed.map((u) => [u.id, u]));
+  const roleWrites: Array<{ readonly id: string; readonly role: string }> = [];
+  const byName = (username: string) => [...users.values()].find((u) => u.username === username) ?? null;
+  const asRow = (u: StoredUser) => ({ ...u, active: true, createdAt: '2026-10-18T00:00:00.000Z', passwordHash: 'HASH' }) as unknown;
+  const repo = {
+    getUserById: async (id: string) => { const u = users.get(id); return u === undefined ? null : asRow(u); },
+    getUserByUsername: async (username: string) => { const u = byName(username); return u === null ? null : asRow(u); },
+    createUser: async (username: string, _pw: string, role: string) => {
+      const u = { id: `u${users.size + 1}`, username, role };
+      users.set(u.id, u);
+      return asRow(u);
+    },
+    updateUserRole: async (id: string, role: string) => {
+      roleWrites.push({ id, role });
+      const u = users.get(id);
+      if (u !== undefined) users.set(id, { ...u, role });
+    },
+    activateUser: async () => {},
+    deactivateUser: async () => {},
+  };
+  return { users, roleWrites, repo };
+}
+
+async function buildUserApp(store: ReturnType<typeof makeUserStore>): Promise<FastifyInstance> {
+  const app = Fastify({ logger: false });
+  const base = makeStubStorage(['admin.users']);
+  await registerMcpRoutes(app, {
+    verifyToken: makeFakeVerifier({ sub: 'tester', scopes: ['read', 'write', 'admin'], orgId: 'org-1', role: 'member' }),
+    storage: { ...base, users: { ...base.users, ...store.repo } as unknown as StorageAdapter['users'] },
+    scanService: makeStubScanService(),
+    serviceConnections: makeStubServiceConnections(),
+  });
+  await app.ready();
+  return app;
+}
+
+function toolError(parsed: Record<string, unknown>): { readonly isError: boolean; readonly error: unknown } {
+  const result = parsed['result'] as { isError?: boolean } | undefined;
+  return { isError: result?.isError === true, error: extractText(parsed)['error'] };
+}
+
+const STRONG_PASSWORD = 'Fabrikam-Audit-42!';
+const INVALID_ROLE_ERROR = 'Invalid role. Must be executive, viewer, user, developer, or admin.';
+
+describe('HARD-13 MCP user tools validate like the dashboard', () => {
+  let app: FastifyInstance | undefined;
+  afterEach(async () => { await app?.close(); app = undefined; });
+
+  it('HARD-13 create user refuses an unknown role', async () => {
+    const store = makeUserStore();
+    app = await buildUserApp(store);
+    const parsed = await callTool(app, 'dashboard_create_user', { username: 'fabrikam-auditor', password: STRONG_PASSWORD, role: 'member' });
+    expect(toolError(parsed)).toEqual({ isError: true, error: INVALID_ROLE_ERROR });
+    expect(store.users.size).toBe(0);
+  });
+
+  it('HARD-13 create user accepts a valid username and role', async () => {
+    const store = makeUserStore();
+    app = await buildUserApp(store);
+    const parsed = await callTool(app, 'dashboard_create_user', { username: 'fabrikam-auditor', password: STRONG_PASSWORD, role: 'user' });
+    expect(toolError(parsed).isError).toBe(false);
+    const body = extractText(parsed);
+    expect(body['username']).toBe('fabrikam-auditor');
+    expect(body['role']).toBe('user');
+    expect(body).not.toHaveProperty('passwordHash');
+    expect([...store.users.values()].map((u) => u.username)).toEqual(['fabrikam-auditor']);
+  });
+});

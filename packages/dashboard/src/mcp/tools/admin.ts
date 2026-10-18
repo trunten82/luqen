@@ -29,6 +29,7 @@
  */
 
 import { isReservedUsername, RESERVED_USERNAME_ERROR } from '../../validation.js';
+import { GLOBAL_ROLE_NAMES } from '../../permissions.js';
 import { z } from 'zod';
 import { getCurrentToolContext } from '@luqen/core/mcp';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -87,6 +88,9 @@ function resolveOrgId(): string {
   const ctx = getCurrentToolContext();
   return ctx?.orgId ?? 'system';
 }
+
+/** The dashboard's own refusal for a role outside GLOBAL_ROLE_NAMES (admin user routes). */
+const INVALID_ROLE_ERROR = 'Invalid role. Must be executive, viewer, user, developer, or admin.';
 
 function errorEnvelope(msg: string): {
   content: Array<{ type: 'text'; text: string }>;
@@ -274,7 +278,9 @@ export function registerAdminTools(
           .string()
           .min(8)
           .describe('Initial password — at least 8 characters'),
-        role: z.string().describe('Role (e.g. admin, member)'),
+        role: z
+          .string()
+          .describe(`Global role — one of: ${GLOBAL_ROLE_NAMES.join(', ')}`),
       }),
     },
     // orgId: ctx.orgId (org-scoped — caller's orgId captured for audit; the new user is created at the system level)
@@ -284,6 +290,7 @@ export function registerAdminTools(
       // WR-04: this tool validates usernames nowhere else; the reserved api-key prefix is refused
       // here as on every other user-create path.
       if (isReservedUsername(args.username)) return errorEnvelope(RESERVED_USERNAME_ERROR);
+      if (!GLOBAL_ROLE_NAMES.includes(args.role)) return errorEnvelope(INVALID_ROLE_ERROR);
       const user = await storage.users.createUser(
         args.username,
         args.password,
