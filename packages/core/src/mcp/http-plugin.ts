@@ -39,6 +39,8 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import type { FastifyInstance, FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { normalizeObjectSchema } from '@modelcontextprotocol/sdk/server/zod-compat.js';
+import { toJsonSchemaCompat } from '@modelcontextprotocol/sdk/server/zod-json-schema-compat.js';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -112,6 +114,15 @@ export function getCurrentToolContext(): ToolContext | undefined {
  */
 export function runInToolContext<T>(context: ToolContext, fn: () => T | Promise<T>): Promise<T> {
   return Promise.resolve(toolContextStore.run(context, fn));
+}
+
+const EMPTY_INPUT_SCHEMA = Object.freeze({ type: 'object', properties: {} });
+
+/** A registered tool's input schema as the JSON Schema tools/list publishes (SDK conversion). */
+function listedInputSchema(registered: unknown): Record<string, unknown> {
+  const objectSchema = normalizeObjectSchema(registered as Parameters<typeof normalizeObjectSchema>[0]);
+  if (objectSchema == null) return { ...EMPTY_INPUT_SCHEMA };
+  return toJsonSchemaCompat(objectSchema, { strictUnions: true, pipeStrategy: 'input' }) as Record<string, unknown>;
 }
 
 export async function createMcpHttpPlugin(
@@ -188,12 +199,10 @@ export async function createMcpHttpPlugin(
       .map(([name, def]) => ({
         name,
         description: def.description ?? '',
-        // The SDK's default handler normalises zod -> JSON schema; our
-        // override emits the raw input schema shape, which the 1.27.x
-        // client-side consumer tolerates. If wave-2 integration reveals
-        // stricter client expectations, call the SDK's `toJsonSchemaCompat`
-        // helper here (reachable via zod-compat).
-        inputSchema: def.inputSchema ?? { type: 'object' },
+        // Published as JSON Schema, converted exactly as the SDK's default
+        // tools/list handler converts it, so clients receive each
+        // parameter's type, required list and description.
+        inputSchema: listedInputSchema(def.inputSchema),
       }));
 
     return { tools };
