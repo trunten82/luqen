@@ -5,7 +5,7 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: Completed 91-12c-PLAN.md (PR2: admin.system and admin.users come from global roles only, built-in role bindings are made by global administrators, issues.dismiss comes from organization roles only; every new guard broken against its declared red set)
+stopped_at: Completed 91-12d-PLAN.md (PR2: teams are created in and moved to the organization the caller administers, MCP tools/call honours the token scope on every service, tools/list publishes JSON Schema, the CSRF inventory reads the named hook on every /api write route; every new guard broken against its declared red set)
 last_updated: "2026-10-15T20:45:31.955Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
@@ -14,7 +14,7 @@ progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 28
-  completed_plans: 19
+  completed_plans: 20
   percent: 33
 ---
 
@@ -220,7 +220,7 @@ measures a candidate model — that is explicitly next-milestone work.
 ## Session Continuity
 
 Last session: 2026-10-15T20:45:31.873Z
-Stopped at: Completed 91-12c-PLAN.md (PR2: admin.system and admin.users come from global roles only, built-in role bindings are made by global administrators, issues.dismiss comes from organization roles only; every new guard broken against its declared red set)
+Stopped at: Completed 91-12d-PLAN.md (PR2: teams are created in and moved to the organization the caller administers, MCP tools/call honours the token scope on every service, tools/list publishes JSON Schema, the CSRF inventory reads the named hook on every /api write route; every new guard broken against its declared red set)
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -276,6 +276,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 91 P12 | ~100min | 3 tasks | 0 files |
 | Phase 91 P12b | ~55min | 3 tasks | 9 files |
 | Phase 91 P12c | ~68min | 3 tasks | 7 files |
+| Phase 91 P12d | ~67min | 3 tasks | 8 files |
 
 ## Decisions
 
@@ -321,6 +322,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 91]: Phase 91 P12: PR2 passes every local gate (lint, build, both doc generators without drift, the full dashboard suite, the dismissal browser UAT at the base's counts) and every PR2 guard was broken one at a time against a set declared before the run; each reddened exactly its declared tests and the tree was restored after each
 - [Phase 91]: Phase 91 P12b: the MCP user tools give the admin role only when the caller's stored user row is an active global admin (refused with the dashboard's wording before any write), read the caller from the user store rather than the token or the call's permission set, and the update tool follows the dashboard user routes in order (canManageUser, global role, admin role for a global administrator, last active admin keeps the role and stays active) through one shared isLastActiveAdmin also used by GraphQL deactivateUser
 - [Phase 91]: Phase 91 P12c: admin.system and admin.users are granted by global roles only (organization role writes answer 422, the organization role form omits them, the repository drops them from team-bound and non-admin global roles, and the resolver drops them when the caller names a non-admin global role); only a global administrator binds a team to a built-in role row; a global role row grants issues.dismiss to nobody, filtered at resolution with no data migration
+- [Phase 91]: Phase 91 P12d: a team is created in, and moved to, only the organization its caller administers (a global administrator places teams anywhere; a caller with no current organization places none); the shared MCP plugin runs a tool through tools/call only when the token scope admits it, by the rule tools/list applies, for end-user and service tokens alike, and publishes each input schema as JSON Schema; the cookie CSRF preHandler is named and the /api write inventory reads it on every route's hook list, with no route adding an early lifecycle hook
 
 ### Blockers
 
