@@ -12,7 +12,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, HTTPMethods } from 'fastify';
 import {
   COOKIE_CSRF_EXEMPT_API_PATHS,
   createServer,
@@ -45,6 +45,56 @@ function apiWriteRoutes(): ReadonlyArray<{ readonly method: string; readonly pat
 }
 
 const isExempt = (path: string): boolean => COOKIE_CSRF_EXEMPT_API_PATHS.has(path) || isBearerOnlyPath(path);
+
+/** The name the server gives its cookie CSRF preHandler (src/server.ts). */
+const CSRF_HOOK = 'cookieCsrfPreHandler()';
+
+/** The lifecycle phases that run before preHandler, where a hook could act before the CSRF decision. */
+const EARLY_PHASES = ['onRequest', 'preParsing', 'preValidation'] as const;
+
+/**
+ * Route-level early hooks an /api write route may add, by function name, each with the reason it
+ * changes nothing before the CSRF decision. Empty: no /api write route adds one. An anonymous()
+ * hook can never be named here.
+ */
+const ALLOWED_EARLY_HOOKS: ReadonlyMap<string, string> = new Map();
+
+/**
+ * Per `METHOD path`, the hook lists Fastify reports for the route it registered
+ * (printRoutes with includeHooks: one line per route, then one `• (<phase>) [names]` line per phase).
+ * Child nodes print their path relative to the parent node, so full paths are rebuilt from the tree depth.
+ */
+function printedRouteHooks(methods: readonly string[]): Map<string, Map<string, readonly string[]>> {
+  const out = new Map<string, Map<string, readonly string[]>>();
+  for (const method of methods) {
+    const text = app.printRoutes({ method: method as HTTPMethods, includeHooks: true, commonPrefix: false });
+    const stack: string[] = [];
+    let current: Map<string, readonly string[]> | undefined;
+    for (const line of text.split('\n')) {
+      const hook = /• \((\w+)\) (\[.*\])\s*$/.exec(line);
+      if (hook !== null) {
+        current?.set(hook[1]!, JSON.parse(hook[2]!) as string[]);
+        continue;
+      }
+      const at = line.indexOf('── ');
+      if (at < 0) continue;
+      const depth = (at + 3) / 4;
+      const rest = line.slice(at + 3);
+      const node = /^(.*?) \(([A-Z, ]+)\)\s*$/.exec(rest);
+      const full = (depth > 1 ? stack[depth - 2] ?? '' : '') + (node !== null ? node[1]! : rest.trim());
+      stack.length = depth - 1;
+      stack.push(full);
+      current = undefined;
+      if (node !== null && node[2]!.split(',').map((m) => m.trim()).includes(method)) {
+        current = new Map();
+        out.set(`${method} ${full}`, current);
+      }
+    }
+  }
+  return out;
+}
+
+const isApiKey = (key: string): boolean => key.slice(key.indexOf(' ') + 1).startsWith('/api/');
 
 interface Session {
   readonly cookie: string;
@@ -188,6 +238,36 @@ describe('HARD-10 cookie sessions need the CSRF token on /api writes', () => {
     // The exemptions really are exempt for a cookie session, and nothing else under /api is.
     for (const p of COOKIE_CSRF_EXEMPT_API_PATHS) expect(requiresCookieCsrf('POST', p, false)).toBe(false);
     expect(requiresCookieCsrf('POST', '/api/v1/mcp', false)).toBe(false);
+  });
+
+  it('HARD-10 every api write route runs the csrf hook', () => {
+    const printed = printedRouteHooks([...WRITE_METHODS]);
+    const printedApiWrites = [...printed.keys()].filter(isApiKey);
+    // Walker control: the printed route table names exactly the /api write routes the server registered.
+    expect(new Set(printedApiWrites)).toEqual(new Set(apiWriteRoutes().map((r) => `${r.method} ${r.path}`)));
+    expect(printedApiWrites.length).toBeGreaterThanOrEqual(40);
+    const withoutHook = printedApiWrites.filter((key) => !(printed.get(key)!.get('preHandler') ?? []).includes(CSRF_HOOK));
+    expect(withoutHook, `api write routes whose preHandler list does not name ${CSRF_HOOK}:\n${withoutHook.join('\n')}`).toEqual([]);
+  });
+
+  it('HARD-10 api write routes add no early lifecycle hook of their own', () => {
+    // Reference: GET /health, registered on the root with no route options (src/routes/health.ts), so its
+    // early lists are exactly the server-wide hooks.
+    const reference = printedRouteHooks(['GET']).get('GET /health');
+    expect(reference?.get('onRequest')?.length ?? 0).toBeGreaterThan(0);
+    const differing: string[] = [];
+    let checked = 0;
+    for (const [key, hooks] of printedRouteHooks([...WRITE_METHODS])) {
+      if (!isApiKey(key)) continue;
+      checked += 1;
+      for (const phase of EARLY_PHASES) {
+        const own = (hooks.get(phase) ?? []).filter((name) => !ALLOWED_EARLY_HOOKS.has(name));
+        const expected = reference!.get(phase) ?? [];
+        if (JSON.stringify(own) !== JSON.stringify(expected)) differing.push(`${key} ${phase}: ${JSON.stringify(hooks.get(phase) ?? [])}`);
+      }
+    }
+    expect(checked).toBeGreaterThanOrEqual(40);
+    expect(differing, `api write routes whose early hooks differ from the server-wide ones:\n${differing.join('\n')}`).toEqual([]);
   });
 
   it('HARD-10 api key callers are not asked for a csrf token', async () => {
