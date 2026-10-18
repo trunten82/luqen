@@ -230,3 +230,26 @@ describe('global only permissions: resolution', () => {
     expect([...perms].sort()).toEqual([...ALL_PERMISSION_IDS].sort());
   });
 });
+
+// ── The stored global role ───────────────────────────────────────────────────────────────────
+
+describe('global only permissions: the stored global role', () => {
+  it('global only permissions: a non admin global role row carrying them confers neither', async () => {
+    // A built-in non-admin row written by any path (SQL) with both ids: a 'user' account holds
+    // neither, with or without an organization, while the row's other grants still arrive.
+    const store = await openStore();
+    for (const id of GLOBAL_ONLY) {
+      store.raw.prepare('INSERT INTO role_permissions (role_id, permission) VALUES (?, ?)').run('user', id);
+    }
+    const org = await store.storage.organizations.createOrg({ name: 'Fabrikam', slug: 'fabrikam' });
+    const member = await store.storage.users.createUser('fabrikam-member-p1', 'Pass-word-123!', 'user');
+
+    const global = await store.storage.roles.getUserPermissions(member.id);
+    const noOrg = await store.storage.roles.getEffectivePermissions(member.id);
+    const inOrg = await store.storage.roles.getEffectivePermissions(member.id, org.id);
+    for (const perms of [global, noOrg, inOrg]) {
+      expect(perms.has('reports.view')).toBe(true); // positive control: the row's other grants arrive
+      for (const id of GLOBAL_ONLY) expect(perms.has(id), id).toBe(false);
+    }
+  });
+});
