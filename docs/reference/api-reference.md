@@ -382,6 +382,35 @@ Responses:
 
 ---
 
+## Dashboard `/api` writes and the CSRF token
+
+Every state-changing dashboard request (`POST`, `PUT`, `PATCH`, `DELETE`) made with the session cookie must carry the session's CSRF token, under `/api` as everywhere else. Send it in the `X-CSRF-Token` header or as a `_csrf` form field; pages expose it in `<meta name="csrf-token" content="...">`, and the dashboard's own scripts send it on every request. Without a valid token the request is refused with `403` before the route runs; JSON callers receive an `error` naming the token (`Invalid csrf token`, or `Missing csrf secret` when the session was never issued one).
+
+- **API-key callers** (`Authorization: Bearer <key>` or `X-API-Key: <key>`) are not cookie-authenticated and never send a token, even when the client also holds a session cookie. The key must validate: an unknown key does not count, and the request is then judged by its cookie.
+- **`POST /api/v1/setup`** is exempt: it runs before any user exists and checks its own API key.
+- **`POST /api/v1/mcp`** is exempt: it accepts only an OAuth Bearer token and never reads the cookie.
+- `POST /graphql` keeps its own rule: a cookie-authenticated request must use `Content-Type: application/json` (or `application/graphql`).
+
+---
+
+## Issue dismissals
+
+Dismissals mark a finding (rule code plus selector) as not applicable on a site. They are org-scoped and audited.
+
+| Endpoint | Permissions | Notes |
+|----------|-------------|-------|
+| `POST /api/v1/scans/:scanId/dismissals` (mark) | `issues.dismiss` and `reports.view` | Body `{ code, selector, reason }`; `201` with the dismissal |
+| `GET /api/v1/scans/:scanId/dismissals/preview` (preview) | `issues.dismiss` and `reports.view` | Query `code`, `selector` |
+| `POST /api/v1/dismissals/:id/revoke` (revoke) | `issues.dismiss` and `reports.view` | Body `{ comment? }` |
+| `GET /api/v1/scans/:scanId/dismissals` (list) | `reports.view` | Returns the rows the report's Dismissed section shows |
+
+- Mark, preview and revoke need both permissions; holding only one answers `403`. They act only on scans of the caller's current organization (a global admin on any); any other scan answers `404`.
+- The list follows the report page: a caller who may open the report receives exactly the rows its Dismissed section shows. A caller who may open the report but is not in the scan's organization (an organization user viewing a `system` scan) receives those rows with actor ids set to `null` and API-key actors named `api-key`, as the page shows them; a scan of another organization answers `404`.
+- `issues.dismiss` can be held only through an organization role; global roles cannot carry it.
+- Mark and revoke made with the session cookie need the CSRF token (see above); API-key callers do not.
+
+---
+
 ## Dashboard Plugin API
 
 Base URL: `http://localhost:5000` (dashboard service). All plugin endpoints require the `admin.system` permission via session cookie.
@@ -757,6 +786,7 @@ curl -X DELETE -H "X-API-Key: $LUQEN_API_KEY" \
 |------|-------------|
 | 404 | Scan not found |
 | 403 | Forbidden — not admin and scan belongs to different org |
+| 403 | A session-cookie request without the CSRF token (see [Dashboard `/api` writes and the CSRF token](#dashboard-api-writes-and-the-csrf-token)) |
 
 ---
 
