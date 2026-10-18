@@ -1,7 +1,8 @@
 /**
- * Org scoping for actions on dashboard users. Shared by the REST admin routes
- * (routes/admin/dashboard-users.ts) and the GraphQL resolvers so both enforce
- * one predicate.
+ * Org scoping for actions on dashboard users, and the last-active-admin rule.
+ * Shared by the REST admin routes (routes/admin/dashboard-users.ts), the
+ * GraphQL resolvers and the MCP user tools so every surface enforces one
+ * predicate.
  */
 import { bypassesOrgScope } from '../permissions.js';
 import type { StorageAdapter } from '../db/index.js';
@@ -42,4 +43,15 @@ export async function canManageUser(
     inActorOrg = true;
   }
   return inActorOrg;
+}
+
+/**
+ * Is `userId` the last active global admin? True when no OTHER user is both
+ * active and role 'admin'. Demoting or deactivating that user is refused, so
+ * the installation always keeps an active administrator.
+ */
+export async function isLastActiveAdmin(users: StorageAdapter, userId: string): Promise<boolean> {
+  const userList = await users.users.listUsers();
+  const activeAdmins = userList.filter(u => u.active && u.role === 'admin' && u.id !== userId);
+  return activeAdmins.length === 0;
 }

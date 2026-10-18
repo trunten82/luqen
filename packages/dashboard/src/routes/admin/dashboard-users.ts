@@ -3,7 +3,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import type { StorageAdapter, DashboardUser } from '../../db/index.js';
 import { requirePermission } from '../../auth/middleware.js';
-import { canManageUser } from '../../services/user-scope.js';
+import { canManageUser, isLastActiveAdmin } from '../../services/user-scope.js';
 import { toastHtml } from './helpers.js';
 import { validateUsername, validatePassword } from '../../validation.js';
 import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
@@ -30,12 +30,6 @@ const UsernameQuery = Type.Object(
 );
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
-async function isLastActiveAdmin(users: StorageAdapter, userId: string): Promise<boolean> {
-  const userList = await users.users.listUsers();
-  const activeAdmins = userList.filter(u => u.active && u.role === 'admin' && u.id !== userId);
-  return activeAdmins.length === 0;
-}
 
 function roleBadgeClass(role: string): string {
   if (role === 'admin') return 'badge--error';
