@@ -204,9 +204,11 @@ export async function createMcpHttpPlugin(
   // Defense-in-depth last-line — even if the tools/list filter above drifts
   // (new tool added without ToolMetadata), a client guessing a tool name
   // cannot invoke a write operation without the required permission. The
-  // guard runs ONLY for authenticated end users (ctx.permissions.size > 0);
-  // S2S callers (empty perms) are governed by scope-filter only, preserving
-  // the Phase 30.1 invariant.
+  // permission guard runs ONLY for authenticated end users
+  // (ctx.permissions.size > 0). The scope guard after it runs for every
+  // caller: tools/call admits exactly the tools tools/list shows for the
+  // token's scopes (filterToolsByScope), for end-user tokens and S2S tokens
+  // (empty perms, scope-authoritative per Phase 30.1) alike.
   //
   // Implementation: capture the SDK's default CallToolRequestSchema handler
   // (installed by setToolRequestHandlers on first registerTool call) from
@@ -245,6 +247,26 @@ export async function createMcpHttpPlugin(
               error: 'Forbidden',
               message: `Tool "${toolName}" requires permission "${meta.requiredPermission}"`,
               requiredPermission: meta.requiredPermission,
+            }),
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    // The token scope binds tools/call as it binds tools/list: a tool with
+    // metadata runs only when filterToolsByScope admits it for the token's
+    // scopes, whatever the permission set. The scopes are what the user
+    // consented to for this client. A tool without metadata keeps the
+    // unannotated path (the metadata drift tests govern that list).
+    if (ctx != null && meta != null && !filterToolsByScope([meta], ctx.scopes).includes(toolName)) {
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify({
+              error: 'Forbidden',
+              message: `Tool "${toolName}" is not covered by the token scope`,
             }),
           },
         ],
