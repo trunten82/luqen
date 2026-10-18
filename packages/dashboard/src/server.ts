@@ -265,6 +265,33 @@ function isCsrfExempt(path: string): boolean {
   return false;
 }
 
+/**
+ * HARD-10: the /api write routes that never require the CSRF token, even for a cookie session.
+ * Only two kinds of route may appear here, and tests/integration/api-write-csrf-inventory.test.ts
+ * fails on anything else:
+ *   - public pre-auth writes (isPublicPath): /api/v1/setup creates the first admin and checks its
+ *     own API key in the handler;
+ *   - Bearer-only paths (isBearerOnlyPath, checked below): /api/v1/mcp never reads the cookie.
+ */
+const COOKIE_CSRF_EXEMPT_API_PATHS: ReadonlySet<string> = new Set(['/api/v1/setup']);
+
+/**
+ * HARD-10: does this request have to carry the CSRF token? One decision for HTML and /api paths.
+ *
+ * - Non-mutating methods: never.
+ * - Paths outside /api: unless isCsrfExempt names them (unchanged behaviour).
+ * - /api paths: always for a cookie session, so a new /api write route is protected by default.
+ *   A request whose API credential VALIDATES (`hasApiCredential`) is not cookie-authenticated
+ *   and is not asked; a bogus Bearer header does not count, because auth then falls through to
+ *   the cookie. The only other exemptions are COOKIE_CSRF_EXEMPT_API_PATHS and Bearer-only paths.
+ */
+export function requiresCookieCsrf(method: string, path: string, hasApiCredential: boolean): boolean {
+  if (!CSRF_METHODS.has(method)) return false;
+  if (!path.startsWith('/api/')) return !isCsrfExempt(path);
+  if (COOKIE_CSRF_EXEMPT_API_PATHS.has(path) || isBearerOnlyPath(path)) return false;
+  return !hasApiCredential;
+}
+
 export async function createServer(config: DashboardConfig): Promise<FastifyInstance> {
   // PBH-A: normalise programmatic callers (tests, scripts/snapshot-openapi.ts)
   // that pass a config object without `encryptionKey` — defaults it to
@@ -1092,7 +1119,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   server.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
     if (!CSRF_METHODS.has(request.method)) return;
     const path = request.url.split('?')[0];
-    if (isCsrfExempt(path) && !needsCookieCsrf(request, authService)) return;
+    if (!requiresCookieCsrf(request.method, path, authService.hasValidApiCredential(request))) return;
     await new Promise<void>((resolve, reject) => {
       server.csrfProtection(request, reply, (err?: Error) => {
         if (err) reject(err);
