@@ -5,6 +5,7 @@ import {
   ALL_PERMISSION_IDS,
   forbiddenGlobalRolePermissions,
   forbiddenOrgRolePermissions,
+  GLOBAL_ROLE_FORBIDDEN_PERMISSIONS,
   isReservedGlobalRoleName,
   ORG_ROLE_FORBIDDEN_PERMISSIONS,
 } from '../../../permissions.js';
@@ -207,7 +208,10 @@ export class SqliteRoleRepository implements RoleRepository {
     // The global-only ids (admin.system, admin.users) come from the global admin role only, so a
     // non-admin global role row confers neither, whichever path wrote it.
     const withoutGlobalOnly = role.permissions.filter((p) => !ORG_ROLE_FORBIDDEN_PERMISSIONS.has(p));
-    return new Set(withoutGlobalOnly);
+    // HARD-12: a global role is held across organizations, so it never grants a per-organization
+    // decision (GLOBAL_ROLE_FORBIDDEN_PERMISSIONS), including a row written before that rule.
+    const withoutPerOrg = withoutGlobalOnly.filter((p) => !GLOBAL_ROLE_FORBIDDEN_PERMISSIONS.has(p));
+    return new Set(withoutPerOrg);
   }
 
   async getEffectivePermissions(userId: string, orgId?: string): Promise<Set<string>> {
@@ -231,9 +235,10 @@ export class SqliteRoleRepository implements RoleRepository {
     //    and their role_ids. Scope = team's home org OR an active cross-org
     //    link in team_org_links (Phase 62.1 RBAC overlay).
     const teamRoles = this.db.prepare(`
-      SELECT DISTINCT t.role_id
+      SELECT DISTINCT t.role_id, r.org_id AS role_org_id
       FROM team_members tm
       JOIN teams t ON t.id = tm.team_id
+      LEFT JOIN roles r ON r.id = t.role_id
       WHERE tm.user_id = ?
         AND t.role_id IS NOT NULL
         AND (
@@ -243,7 +248,7 @@ export class SqliteRoleRepository implements RoleRepository {
             WHERE tol.team_id = t.id AND tol.org_id = ?
           )
         )
-    `).all(userId, orgId, orgId) as Array<{ role_id: string }>;
+    `).all(userId, orgId, orgId) as Array<{ role_id: string; role_org_id: string | null }>;
 
     if (teamRoles.length === 0) {
       return globalPerms;
@@ -253,7 +258,10 @@ export class SqliteRoleRepository implements RoleRepository {
     //    team roles (since we want max permissions across all teams).
     const result = new Set(globalPerms);
 
-    for (const { role_id } of teamRoles) {
+    for (const { role_id, role_org_id } of teamRoles) {
+      // HARD-12: a team bound to a global (org 'system') row never confers a per-organization
+      // decision from it; organization roles still do.
+      const fromGlobalRole = role_org_id === 'system';
       const perms = this.db.prepare(
         'SELECT permission FROM role_permissions WHERE role_id = ?',
       ).all(role_id) as Array<{ permission: string }>;
@@ -263,6 +271,7 @@ export class SqliteRoleRepository implements RoleRepository {
         // (an org-scoped grant) never confers them, whichever role the team is bound to (an org role
         // written by any path, or a global row such as the built-in 'admin').
         if (ORG_ROLE_FORBIDDEN_PERMISSIONS.has(permission)) continue;
+        if (fromGlobalRole && GLOBAL_ROLE_FORBIDDEN_PERMISSIONS.has(permission)) continue;
         result.add(permission);
       }
     }
