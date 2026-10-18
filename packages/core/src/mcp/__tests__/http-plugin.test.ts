@@ -532,3 +532,136 @@ describe('createMcpHttpPlugin — Phase 31.2 tools/call runtime guard (D-08)', (
     expect(text).toContain('"scanId":"stub"');
   });
 });
+
+// ---------------------------------------------------------------------------
+// The token scope binds tools/call the way it binds tools/list: a tool runs only
+// when filterToolsByScope admits it for the token's scopes, for end-user tokens
+// (permissions resolved) and service tokens (empty permission set) alike.
+// ---------------------------------------------------------------------------
+
+interface ScopeApp extends InstalledServer {
+  readonly calls: { list: number; scan: number };
+}
+
+async function buildScopeApp(faux: {
+  tokenPayload: unknown;
+  permissions: Set<string>;
+}): Promise<ScopeApp> {
+  const app = Fastify({ logger: false });
+  app.addHook('preHandler', async (request) => {
+    const r = request as unknown as Record<string, unknown>;
+    r['tokenPayload'] = faux.tokenPayload;
+    r['orgId'] = 'org-1';
+    r['authType'] = 'jwt';
+    r['permissions'] = faux.permissions;
+  });
+  const calls = { list: 0, scan: 0 };
+  const mcpServer = new McpServer({ name: 'test-scope', version: '0.0.1' });
+  mcpServer.registerTool(
+    'dashboard_list_reports',
+    { description: 'List reports (reports.view)', inputSchema: {} },
+    async () => {
+      calls.list += 1;
+      return { content: [{ type: 'text', text: JSON.stringify({ data: [] }) }] };
+    },
+  );
+  mcpServer.registerTool(
+    'dashboard_scan_site',
+    { description: 'Scan a site (scans.create)', inputSchema: { url: z.string().describe('Site URL to scan') } },
+    async () => {
+      calls.scan += 1;
+      return { content: [{ type: 'text', text: JSON.stringify({ scanId: 'stub' }) }] };
+    },
+  );
+  const plugin = await createMcpHttpPlugin({
+    mcpServer,
+    toolMetadata: TOOLS_31_2,
+    requiredScope: 'read',
+    path: '/api/v1/mcp',
+  });
+  await app.register(plugin);
+  await app.ready();
+  return { app, mcpServer, calls };
+}
+
+async function callOn(app: FastifyInstance, name: string, args: unknown): Promise<{ isError: boolean; text: string }> {
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/v1/mcp',
+    headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
+    payload: callToolPayload(name, args),
+  });
+  expect(response.statusCode).toBe(200);
+  const result = parseSseOrJson(response.body)['result'] as
+    | { isError?: boolean; content?: Array<{ text?: string }> }
+    | undefined;
+  return { isError: result?.isError === true, text: result?.content?.[0]?.text ?? '' };
+}
+
+describe('mcp scope: tools/call admits exactly what tools/list shows for the token scope', () => {
+  let installed: ScopeApp | undefined;
+  afterEachCleanup(() => installed?.app.close());
+
+  it('mcp scope: tools call refuses a write tier tool for a read scope end user token', async () => {
+    installed = await buildScopeApp({
+      tokenPayload: { sub: 'u-S1', scopes: ['read'], orgId: 'org-1' },
+      permissions: new Set(['scans.create', 'reports.view']),
+    });
+    const res = await callOn(installed.app, 'dashboard_scan_site', { url: 'https://example.com' });
+    expect(res.isError, res.text).toBe(true);
+    expect(res.text).toContain('Forbidden');
+    expect(res.text).toContain('dashboard_scan_site');
+    expect(installed.calls.scan).toBe(0);
+  });
+
+  it('mcp scope: tools call refuses a write tier tool for a read scope service token', async () => {
+    installed = await buildScopeApp({
+      tokenPayload: { sub: 'service-client', scopes: ['read'] },
+      permissions: new Set<string>(),
+    });
+    const res = await callOn(installed.app, 'dashboard_scan_site', { url: 'https://example.com' });
+    expect(res.isError, res.text).toBe(true);
+    expect(res.text).toContain('Forbidden');
+    expect(res.text).toContain('dashboard_scan_site');
+    expect(installed.calls.scan).toBe(0);
+  });
+
+  it('mcp scope: tools call runs a read tier tool for a read scope token', async () => {
+    installed = await buildScopeApp({
+      tokenPayload: { sub: 'u-S3', scopes: ['read'], orgId: 'org-1' },
+      permissions: new Set(['reports.view']),
+    });
+    const endUser = await callOn(installed.app, 'dashboard_list_reports', {});
+    await installed.app.close();
+    installed = await buildScopeApp({
+      tokenPayload: { sub: 'service-client', scopes: ['read'] },
+      permissions: new Set<string>(),
+    });
+    const service = await callOn(installed.app, 'dashboard_list_reports', {});
+    expect(endUser.isError, endUser.text).toBe(false);
+    expect(service.isError, service.text).toBe(false);
+    expect(installed.calls.list).toBe(1);
+  });
+
+  it('mcp tools list: each listed tool input schema is a json schema carrying its parameter descriptions', async () => {
+    installed = await buildScopeApp({
+      tokenPayload: { sub: 'service-client', scopes: ['write'] },
+      permissions: new Set<string>(),
+    });
+    const response = await installed.app.inject({
+      method: 'POST',
+      url: '/api/v1/mcp',
+      headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
+      payload: listToolsPayload(),
+    });
+    const tools = ((parseSseOrJson(response.body)['result'] as { tools?: Array<{ name: string; inputSchema: Record<string, unknown> }> })
+      ?.tools ?? []);
+    const scan = tools.find((t) => t.name === 'dashboard_scan_site');
+    const list = tools.find((t) => t.name === 'dashboard_list_reports');
+    expect(scan?.inputSchema['type']).toBe('object');
+    const properties = scan?.inputSchema['properties'] as Record<string, { type?: string; description?: string }> | undefined;
+    expect(properties?.['url']).toMatchObject({ type: 'string', description: 'Site URL to scan' });
+    expect(scan?.inputSchema['required']).toEqual(['url']);
+    expect(list?.inputSchema['type']).toBe('object');
+  });
+});
