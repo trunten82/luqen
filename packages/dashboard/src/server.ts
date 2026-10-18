@@ -1099,8 +1099,10 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── CSRF verification for state-changing requests ──────────────────────
   // Uses preHandler (not onRequest) so the body has been parsed by @fastify/formbody
-  // and req.body._csrf is available for token extraction.
-  server.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
+  // and req.body._csrf is available for token extraction. Registered on the root before
+  // the routes, so every route's preHandler list names it (the /api write inventory test
+  // reads those lists by this function name).
+  server.addHook('preHandler', async function cookieCsrfPreHandler(request: FastifyRequest, reply: FastifyReply) {
     if (!CSRF_METHODS.has(request.method)) return;
     const path = request.url.split('?')[0];
     if (!requiresCookieCsrf(request.method, path, authService.hasValidApiCredential(request))) return;
