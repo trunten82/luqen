@@ -253,3 +253,47 @@ describe('global only permissions: the stored global role', () => {
     }
   });
 });
+
+// ── HARD-12: issues.dismiss comes from organization roles only ──────────────────────────────
+
+describe('HARD-12 issues dismiss is conferred by organization roles only', () => {
+  it('HARD-12 a global role row carrying issues dismiss confers it on no user', async () => {
+    // A global role is held across organizations, so it never grants a per-organization decision,
+    // including a row written before that rule (SQL here, so no write refusal stops the seed).
+    const store = await openStore();
+    store.raw.prepare('INSERT INTO role_permissions (role_id, permission) VALUES (?, ?)').run('user', 'issues.dismiss');
+    const org = await store.storage.organizations.createOrg({ name: 'Fabrikam', slug: 'fabrikam' });
+    const schedulers = rawRole(store, 'schedulers', org.id, ['scans.schedule']);
+    const memberId = await teamMember(store, org.id, schedulers, 'd1');
+
+    const global = await store.storage.roles.getUserPermissions(memberId);
+    const noOrg = await store.storage.roles.getEffectivePermissions(memberId);
+    const inOrg = await store.storage.roles.getEffectivePermissions(memberId, org.id);
+    expect(global.has('reports.view')).toBe(true); // positive control: the global row's other grants arrive
+    expect(inOrg.has('scans.schedule')).toBe(true); // positive control: the team path is live
+    for (const [label, perms] of [['global', global], ['no org', noOrg], ['in org', inOrg]] as const) {
+      expect(perms.has('issues.dismiss'), label).toBe(false);
+    }
+  });
+
+  it('HARD-12 a team bound to a global role carrying issues dismiss confers it in no organization', async () => {
+    const store = await openStore();
+    const org = await store.storage.organizations.createOrg({ name: 'Fabrikam', slug: 'fabrikam' });
+    const legacy = rawRole(store, 'triage-legacy', 'system', ['scans.schedule', 'issues.dismiss']);
+    const memberId = await teamMember(store, org.id, legacy, 'd2');
+
+    const perms = await store.storage.roles.getEffectivePermissions(memberId, org.id);
+    expect(perms.has('scans.schedule')).toBe(true); // positive control: the team path is live
+    expect(perms.has('issues.dismiss')).toBe(false);
+  });
+
+  it('HARD-12 an org role carrying issues dismiss still confers it', async () => {
+    const store = await openStore();
+    const org = await store.storage.organizations.createOrg({ name: 'Fabrikam', slug: 'fabrikam' });
+    const triage = rawRole(store, 'triage', org.id, ['scans.schedule', 'issues.dismiss']);
+    const memberId = await teamMember(store, org.id, triage, 'd3');
+
+    const perms = await store.storage.roles.getEffectivePermissions(memberId, org.id);
+    expect(perms.has('issues.dismiss')).toBe(true);
+  });
+});
