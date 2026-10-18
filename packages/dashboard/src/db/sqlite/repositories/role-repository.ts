@@ -204,7 +204,10 @@ export class SqliteRoleRepository implements RoleRepository {
       return new Set(ALL_PERMISSION_IDS);
     }
 
-    return new Set(role.permissions);
+    // The global-only ids (admin.system, admin.users) come from the global admin role only, so a
+    // non-admin global role row confers neither, whichever path wrote it.
+    const withoutGlobalOnly = role.permissions.filter((p) => !ORG_ROLE_FORBIDDEN_PERMISSIONS.has(p));
+    return new Set(withoutGlobalOnly);
   }
 
   async getEffectivePermissions(userId: string, orgId?: string): Promise<Set<string>> {
