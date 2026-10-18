@@ -5,7 +5,7 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: Completed 91-12-PLAN.md (PR2: gates incl. the dismissal browser UAT, and every PR2 guard broken against its declared red set)
+stopped_at: Completed 91-12b-PLAN.md (PR2: the MCP user tools follow the dashboard role authority rules; real-server checks; every new guard broken against its declared red set)
 last_updated: "2026-10-15T20:45:31.955Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
@@ -13,8 +13,8 @@ state_head: f1fc7d790604cee103f34421c2dc345ae8ffa720
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 24
-  completed_plans: 17
+  total_plans: 28
+  completed_plans: 18
   percent: 33
 ---
 
@@ -220,7 +220,7 @@ measures a candidate model — that is explicitly next-milestone work.
 ## Session Continuity
 
 Last session: 2026-10-15T20:45:31.873Z
-Stopped at: Completed 91-12-PLAN.md (PR2: gates incl. the dismissal browser UAT, and every PR2 guard broken against its declared red set)
+Stopped at: Completed 91-12b-PLAN.md (PR2: the MCP user tools follow the dashboard role authority rules; real-server checks; every new guard broken against its declared red set)
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -274,6 +274,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 91 P10 | ~10min | 2 tasks | 3 files |
 | Phase 91 P11 | ~26min | 3 tasks | 8 files |
 | Phase 91 P12 | ~100min | 3 tasks | 0 files |
+| Phase 91 P12b | ~55min | 3 tasks | 9 files |
 
 ## Decisions
 
@@ -317,6 +318,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 91]: Phase 91 P10: the MCP user-create tool applies the dashboard create form's rules in its order (reserved prefix, username and password validators, global role, username not yet held) by importing the validators and role list; a held username gets the form's own wording 'This username is not available.'; the user-update tool refuses a non-global role before any write
 - [Phase 91]: Phase 91 P11: cookie-session CSRF is default-on for every state-changing /api request through one exported decision function the global hook uses; only a validating API key (Bearer or X-API-Key), the public pre-auth setup route and the Bearer-only MCP endpoint are exempt, the allowlist is pinned to public and Bearer-only paths, and an inventory over the real route table names any uncovered /api write
 - [Phase 91]: Phase 91 P12: PR2 passes every local gate (lint, build, both doc generators without drift, the full dashboard suite, the dismissal browser UAT at the base's counts) and every PR2 guard was broken one at a time against a set declared before the run; each reddened exactly its declared tests and the tree was restored after each
+- [Phase 91]: Phase 91 P12b: the MCP user tools give the admin role only when the caller's stored user row is an active global admin (refused with the dashboard's wording before any write), read the caller from the user store rather than the token or the call's permission set, and the update tool follows the dashboard user routes in order (canManageUser, global role, admin role for a global administrator, last active admin keeps the role and stays active) through one shared isLastActiveAdmin also used by GraphQL deactivateUser
 
 ### Blockers
 
