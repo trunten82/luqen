@@ -5,7 +5,7 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: Completed 91-09-PLAN.md (PR2: dismissal writes require reports.view; the list API matches the Dismissed section)
+stopped_at: Completed 91-10-PLAN.md (PR2: MCP user tools validate role names, usernames, passwords and duplicates like the dashboard)
 last_updated: "2026-10-15T20:45:31.955Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
@@ -14,7 +14,7 @@ progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 24
-  completed_plans: 14
+  completed_plans: 15
   percent: 33
 ---
 
@@ -220,7 +220,7 @@ measures a candidate model — that is explicitly next-milestone work.
 ## Session Continuity
 
 Last session: 2026-10-15T20:45:31.873Z
-Stopped at: Completed 91-09-PLAN.md (PR2: dismissal writes require reports.view; the list API matches the Dismissed section)
+Stopped at: Completed 91-10-PLAN.md (PR2: MCP user tools validate role names, usernames, passwords and duplicates like the dashboard)
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -271,6 +271,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 91 P07 | ~65min | 2 tasks | 0 files |
 | Phase 91 P08 | ~70min | 3 tasks | 6 files |
 | Phase 91 P09 | ~60min | 3 tasks | 11 files |
+| Phase 91 P10 | ~10min | 2 tasks | 3 files |
 
 ## Decisions
 
@@ -311,6 +312,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 91]: Phase 91 P08: the issues.dismiss permission is refused with 422 on any global role at create, update and method-override (built-in roles included), the global role form does not offer it, and the role repository refuses the same write as a backstop; org roles may still carry it
 - [Phase 91]: Phase 91 P09: mark, preview and revoke require report access as well as the dismiss permission (an array of two permission checks, since one call with two names is any-of), and the matrix lists both
 - [Phase 91]: Phase 91 P09: the dismissals list API follows the report page's read predicate so an org user on a system scan lists the rows the Dismissed section shows, and a viewer who may not touch the scan's org gets null actor ids and the generic api-key name; a scan of another org stays a 404
+- [Phase 91]: Phase 91 P10: the MCP user-create tool applies the dashboard create form's rules in its order (reserved prefix, username and password validators, global role, username not yet held) by importing the validators and role list; a held username gets the form's own wording 'This username is not available.'; the user-update tool refuses a non-global role before any write
 
 ### Blockers
 
