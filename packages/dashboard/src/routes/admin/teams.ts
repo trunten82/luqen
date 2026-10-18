@@ -63,6 +63,26 @@ function canMutateTeam(request: FastifyRequest, teamOrgId: string): boolean {
   return teamOrgId === userOrgId;
 }
 
+/**
+ * Built-in global role rows (org 'system', is_system) are bound to teams by global administrators.
+ * An organization administrator binds its organization's roles and global custom roles, which the
+ * team forms offer. Existing bindings are kept; the permissions they confer are filtered where they
+ * are resolved.
+ */
+const BUILT_IN_ROLE_BINDING_MESSAGE = 'Built-in roles are bound to teams by global administrators';
+
+function mayBindRole(request: FastifyRequest, role: { readonly orgId: string; readonly isSystem: boolean }): boolean {
+  if (role.orgId !== 'system' || !role.isSystem) return true;
+  return bypassesOrgScope(request.user);
+}
+
+function sendBindingRefusal(request: FastifyRequest, reply: FastifyReply): FastifyReply {
+  if (request.headers['hx-request'] === 'true') {
+    return reply.code(403).type('text/html').send(toastHtml(BUILT_IN_ROLE_BINDING_MESSAGE, 'error'));
+  }
+  return reply.code(403).send({ error: BUILT_IN_ROLE_BINDING_MESSAGE });
+}
+
 interface CreateTeamBody {
   name?: string;
   description?: string;
@@ -214,6 +234,7 @@ export async function teamRoutes(
             '<div class="toast toast--error" role="alert">Selected role does not belong to this organization</div>',
           );
         }
+        if (!mayBindRole(request, role)) return sendBindingRefusal(request, reply);
       }
 
       const team = await storage.teams.createTeam({
@@ -448,6 +469,7 @@ export async function teamRoutes(
           '<div class="toast toast--error" role="alert">Role does not belong to this team\'s organization</div>',
         );
       }
+      if (!mayBindRole(request, role)) return sendBindingRefusal(request, reply);
 
       await storage.teams.updateTeam(id, { roleId });
 
