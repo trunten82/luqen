@@ -146,6 +146,22 @@ describe('HARD-10 cookie sessions need the CSRF token on /api writes', () => {
     expect(await shareFlag(scanId)).toBe(true);
   }, 60_000);
 
+  // The prod read-back (tests/uat-live/uat-graphql-createscan.mjs) probes exactly this request on its own scan;
+  // its selftest fake models this answer, so the real server's answer is pinned here.
+  it('HARD-10 a cookie session without the token cannot delete a scan through the api', async () => {
+    const scanId = await seedScan();
+    const s = await ownerSession(scanId);
+    const refused = await app.inject({ method: 'DELETE', url: `/api/v1/scans/${scanId}`, cookies: { session: s.cookie } });
+    expect(refused.statusCode).toBe(403);
+    expect(refused.body).toMatch(/csrf/i);
+    expect(await seed.scans.getScan(scanId)).not.toBeNull();
+    const allowed = await app.inject({
+      method: 'DELETE', url: `/api/v1/scans/${scanId}`, cookies: { session: s.cookie }, headers: { 'x-csrf-token': s.csrf },
+    });
+    expect(allowed.statusCode).toBe(200);
+    expect(await seed.scans.getScan(scanId)).toBeNull();
+  }, 60_000);
+
   it('HARD-10 every cookie reachable api write route requires the csrf token', () => {
     const routes = apiWriteRoutes();
     const keys = new Set(routes.map((r) => `${r.method} ${r.path}`));

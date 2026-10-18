@@ -29,7 +29,7 @@ UAT which surfaced 11 production bugs the unit suites missed.
   an explicit port for a local rehearsal), `LUQEN_UAT_ORG_NAME` (default `Fabrikam UAT`),
   `LUQEN_UAT_SCAN_TARGET` (default `https://example.com`),
   `LUQEN_UAT_PRIVATE_PROBE` (`on`/`off`), `LUQEN_UAT_SCHEDULE_PROBE` (`on`/`off`),
-  and the timing knobs
+  `LUQEN_UAT_CSRF_PROBE` (`on`/`off`, default `on`), and the timing knobs
   `LUQEN_UAT_LEAVE_QUEUED_S`, `LUQEN_UAT_TERMINAL_S`, `LUQEN_UAT_POLL_MS`.
   Full mode logs in, finds the UAT org by name, switches to it and asserts it
   by name AND id (no GraphQL call is made before that), checks that a loopback
@@ -38,11 +38,16 @@ UAT which surfaced 11 production bugs the unit suites missed.
   creates no schedule (a schedule the server accepted is deleted again and
   read back as absent, and the run stops before creating a scan), creates one
   scan, watches it leave
-  `queued` and reach `completed`/`failed`, then deletes it in a finally block
-  and reads it back as null. `--preflight` stops after the org assertion and
-  never calls `/graphql`. `--selftest` drives the same code against an
-  in-process fake server in fifteen worlds and greps the output for sentinel
-  values. Output is check names, status words and elapsed seconds only.
+  `queued` and reach `completed`/`failed`, then checks that the session cookie
+  alone, without the CSRF token, cannot delete that same scan through
+  `DELETE /api/v1/scans/:id` (the answer must be `403` naming the token, and
+  the scan must still exist; `LUQEN_UAT_CSRF_PROBE=off` prints a SKIP line
+  instead), then deletes it in a finally block and reads it back as null (a
+  scan the server already deleted is not deleted twice, but must still read
+  back as null). `--preflight` stops after the org assertion, never calls
+  `/graphql` and sends no `/api` delete. `--selftest` drives the same code
+  against an in-process fake server in eighteen worlds and greps the output
+  for sentinel values. Output is check names, status words and elapsed seconds only.
   **Run full mode against production only after the fix is deployed and the
   Deploy run succeeded; never before** (operators should confirm no queued
   scans first). `--preflight` and `--selftest` are always safe; `--preflight`
