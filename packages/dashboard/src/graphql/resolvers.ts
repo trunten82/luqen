@@ -20,6 +20,7 @@ import {
   getScanInOrg, getScanForDelete, getScanForAssignment, getAssignmentInOrg, getTeamInOrg,
   getGuidelineInOrg, requireGuidelineInOrg, requireBrandChildInOrg, requireCanManageUser, listOrgsInScope,
 } from './org-scope.js';
+import { isLastActiveAdmin } from '../services/user-scope.js';
 
 // ---------------------------------------------------------------------------
 // Context typing
@@ -634,6 +635,10 @@ export const resolvers = {
       const user = await ctx.storage.users.getUserById(args.id);
       if (user === null) {
         throw new Error(`User not found: ${args.id}`);
+      }
+      // As POST /admin/dashboard-users/:id/deactivate: the installation keeps an active admin.
+      if (user.role === 'admin' && await isLastActiveAdmin(ctx.storage, args.id)) {
+        throw new Error('Cannot deactivate the last active admin user.');
       }
 
       await ctx.storage.users.deactivateUser(args.id);
