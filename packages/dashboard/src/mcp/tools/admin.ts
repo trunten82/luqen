@@ -35,6 +35,7 @@ import {
   validateUsername,
 } from '../../validation.js';
 import { GLOBAL_ROLE_NAMES } from '../../permissions.js';
+import { canManageUser, isLastActiveAdmin } from '../../services/user-scope.js';
 import { z } from 'zod';
 import { getCurrentToolContext } from '@luqen/core/mcp';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -100,6 +101,13 @@ const INVALID_ROLE_ERROR = 'Invalid role. Must be executive, viewer, user, devel
 const USERNAME_NOT_AVAILABLE_ERROR = 'This username is not available.';
 /** The dashboard's own wording: the admin role is given only at a global administrator's request. */
 const ADMIN_ROLE_NEEDS_GLOBAL_ADMIN_ERROR = 'Only global administrators can assign the admin role.';
+/** The dashboard's own wording when the target is not a user the caller may manage (canManageUser). */
+const MANAGE_USERS_IN_ORG_ERROR = 'You can only manage users in your organization.';
+/** The dashboard's own wordings for the last active admin: it keeps the admin role and stays active. */
+const LAST_ADMIN_ROLE_ERROR = 'Cannot change role of the last active admin user.';
+const LAST_ADMIN_DEACTIVATE_ERROR = 'Cannot deactivate the last active admin user.';
+/** Appended to the role parameter descriptions of both user tools. */
+const ADMIN_ROLE_NOTE = 'the admin role needs a global administrator';
 
 /**
  * The calling user's STORED row, or null when the call carries no user. The user tools decide who
@@ -313,7 +321,7 @@ export function registerAdminTools(
           ),
         role: z
           .string()
-          .describe(`Global role — one of: ${GLOBAL_ROLE_NAMES.join(', ')}`),
+          .describe(`Global role — one of: ${GLOBAL_ROLE_NAMES.join(', ')}; ${ADMIN_ROLE_NOTE}`),
       }),
     },
     // orgId: ctx.orgId (org-scoped — caller's orgId captured for audit; the new user is created at the system level)
@@ -351,14 +359,14 @@ export function registerAdminTools(
     'dashboard_update_user',
     {
       description:
-        "Update a dashboard user's role or active status. Password changes go through a dedicated reset flow (not exposed via MCP in Phase 30).",
+        "Update a dashboard user's role or active status. Reaches only users the caller may manage; the admin role needs a global administrator; the last active admin keeps the admin role and stays active. Password changes go through a dedicated reset flow (not exposed via MCP in Phase 30).",
       inputSchema: z.object({
         userId: z.string().describe('User ID'),
         role: z
           .string()
           .optional()
           .describe(
-            `New global role — one of: ${GLOBAL_ROLE_NAMES.join(', ')}; omit to leave unchanged`,
+            `New global role — one of: ${GLOBAL_ROLE_NAMES.join(', ')}; ${ADMIN_ROLE_NOTE}; omit to leave unchanged`,
           ),
         active: z
           .boolean()
@@ -366,16 +374,31 @@ export function registerAdminTools(
           .describe('true=activate, false=deactivate — omit to leave unchanged'),
       }),
     },
-    // orgId: ctx.orgId (org-scoped — caller identity captured for audit; target userId is not org-constrained at the repo layer)
+    // orgId: ctx.orgId (org-scoped — the target must be a user the caller may manage in ctx.orgId: canManageUser, as the dashboard's user routes)
     async (args) => {
-      const _orgId = resolveOrgId();
-      void _orgId;
-      // Refused before any write, so a bad role never leaves a half-applied update.
+      const orgId = resolveOrgId();
+      const caller = await loadCaller(storage);
+      // The dashboard's user routes rule for rule, in their order (role change, then deactivate),
+      // every refusal before any write: a user the caller may manage, a global role, the admin
+      // role only for a global administrator, and an installation that keeps an active admin.
+      // The caller is never an API key here, so the actor carries no orgScopedApiKey.
+      const actor = { role: isActiveGlobalAdmin(caller) ? 'admin' : undefined, currentOrgId: orgId };
+      if (!(await canManageUser(storage, actor, args.userId))) {
+        return errorEnvelope(MANAGE_USERS_IN_ORG_ERROR);
+      }
       if (args.role !== undefined && !GLOBAL_ROLE_NAMES.includes(args.role)) {
         return errorEnvelope(INVALID_ROLE_ERROR);
       }
-      if (args.role === 'admin' && !isActiveGlobalAdmin(await loadCaller(storage))) {
+      if (args.role === 'admin' && !isActiveGlobalAdmin(caller)) {
         return errorEnvelope(ADMIN_ROLE_NEEDS_GLOBAL_ADMIN_ERROR);
+      }
+      const target = await storage.users.getUserById(args.userId);
+      const targetIsAdmin = target !== null && target.role === 'admin';
+      if (targetIsAdmin && args.role !== undefined && args.role !== 'admin' && (await isLastActiveAdmin(storage, args.userId))) {
+        return errorEnvelope(LAST_ADMIN_ROLE_ERROR);
+      }
+      if (targetIsAdmin && args.active === false && (await isLastActiveAdmin(storage, args.userId))) {
+        return errorEnvelope(LAST_ADMIN_DEACTIVATE_ERROR);
       }
       if (args.role !== undefined) {
         await storage.users.updateUserRole(args.userId, args.role);

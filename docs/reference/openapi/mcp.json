@@ -369,7 +369,7 @@
                   },
                   "role": {
                     "type": "string",
-                    "description": "Global role — one of: viewer, user, developer, admin, executive"
+                    "description": "Global role — one of: viewer, user, developer, admin, executive; the admin role needs a global administrator"
                   }
                 },
                 "required": [
@@ -2353,7 +2353,7 @@
         "tags": [
           "mcp-tool"
         ],
-        "description": "Update a dashboard user's role or active status. Password changes go through a dedicated reset flow (not exposed via MCP in Phase 30).\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "description": "Update a dashboard user's role or active status. Reaches only users the caller may manage; the admin role needs a global administrator; the last active admin keeps the admin role and stays active. Password changes go through a dedicated reset flow (not exposed via MCP in Phase 30).\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
         "requestBody": {
           "required": true,
           "content": {
@@ -2366,7 +2366,7 @@
                     "description": "User ID"
                   },
                   "role": {
-                    "description": "New global role — one of: viewer, user, developer, admin, executive; omit to leave unchanged",
+                    "description": "New global role — one of: viewer, user, developer, admin, executive; the admin role needs a global administrator; omit to leave unchanged",
                     "type": "string"
                   },
                   "active": {
