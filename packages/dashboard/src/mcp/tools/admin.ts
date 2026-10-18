@@ -39,7 +39,7 @@ import { z } from 'zod';
 import { getCurrentToolContext } from '@luqen/core/mcp';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ToolMetadata } from '@luqen/core/mcp';
-import type { StorageAdapter } from '../../db/index.js';
+import type { DashboardUser, StorageAdapter } from '../../db/index.js';
 import type {
   ServiceConnection,
   ServiceConnectionsRepository,
@@ -98,6 +98,25 @@ function resolveOrgId(): string {
 const INVALID_ROLE_ERROR = 'Invalid role. Must be executive, viewer, user, developer, or admin.';
 /** The dashboard's own wording for a username already in use (the create form's availability check). */
 const USERNAME_NOT_AVAILABLE_ERROR = 'This username is not available.';
+/** The dashboard's own wording: the admin role is given only at a global administrator's request. */
+const ADMIN_ROLE_NEEDS_GLOBAL_ADMIN_ERROR = 'Only global administrators can assign the admin role.';
+
+/**
+ * The calling user's STORED row, or null when the call carries no user. The user tools decide who
+ * the caller is from this row (its role and active status), never from the token's claims or the
+ * permission set the call carries: the in-process agent path stamps its own permission set, and a
+ * token's claims are fixed when it is minted.
+ */
+async function loadCaller(storage: StorageAdapter): Promise<DashboardUser | null> {
+  const userId = getCurrentToolContext()?.userId;
+  if (userId === undefined || userId === '') return null;
+  return await storage.users.getUserById(userId);
+}
+
+/** A global administrator: a stored, active user whose global role is 'admin'. */
+function isActiveGlobalAdmin(caller: DashboardUser | null): boolean {
+  return caller !== null && caller.role === 'admin' && caller.active === true;
+}
 
 function errorEnvelope(msg: string): {
   content: Array<{ type: 'text'; text: string }>;
@@ -303,13 +322,17 @@ export function registerAdminTools(
       void _orgId;
       // The same rules, in the same order and with the same wording, as the dashboard's create
       // form: the reserved api-key prefix (WR-04), the username and password validators, a
-      // global role, and a username nobody holds yet.
+      // global role (the admin role only for a global administrator), and a username nobody
+      // holds yet.
       if (isReservedUsername(args.username)) return errorEnvelope(RESERVED_USERNAME_ERROR);
       const usernameCheck = validateUsername(args.username);
       if (!usernameCheck.valid) return errorEnvelope(usernameCheck.error ?? 'Invalid username.');
       const passwordCheck = validatePassword(args.password);
       if (!passwordCheck.valid) return errorEnvelope(passwordCheck.error ?? 'Invalid password.');
       if (!GLOBAL_ROLE_NAMES.includes(args.role)) return errorEnvelope(INVALID_ROLE_ERROR);
+      if (args.role === 'admin' && !isActiveGlobalAdmin(await loadCaller(storage))) {
+        return errorEnvelope(ADMIN_ROLE_NEEDS_GLOBAL_ADMIN_ERROR);
+      }
       if ((await storage.users.getUserByUsername(args.username)) !== null) {
         return errorEnvelope(USERNAME_NOT_AVAILABLE_ERROR);
       }
@@ -350,6 +373,9 @@ export function registerAdminTools(
       // Refused before any write, so a bad role never leaves a half-applied update.
       if (args.role !== undefined && !GLOBAL_ROLE_NAMES.includes(args.role)) {
         return errorEnvelope(INVALID_ROLE_ERROR);
+      }
+      if (args.role === 'admin' && !isActiveGlobalAdmin(await loadCaller(storage))) {
+        return errorEnvelope(ADMIN_ROLE_NEEDS_GLOBAL_ADMIN_ERROR);
       }
       if (args.role !== undefined) {
         await storage.users.updateUserRole(args.userId, args.role);
