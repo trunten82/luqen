@@ -14,6 +14,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startMcpOauthHarness, type HarnessSession, type McpOauthHarness } from '../helpers/mcp-oauth-harness.js';
 
+const USER_TOOLS = ['dashboard_list_users', 'dashboard_get_user', 'dashboard_create_user', 'dashboard_update_user'];
+
 const PASSWORD = 'Fabrikam-Owner-42!';
 
 let h: McpOauthHarness;
@@ -141,5 +143,71 @@ describe('HARD-13 the MCP user tools give the admin role only at a global admini
     trail.push(`list=${res.status}/${res.isError ? 'error' : 'ok'} ${res.text.slice(0, 120)}`);
 
     expect(res.isError, trail.join(' ')).toBe(false);
+  }, 60_000);
+});
+
+/** tools/list over /api/v1/mcp with the token: the names the caller is shown, or the reason none were read. */
+async function listToolNames(token: string): Promise<{ readonly status: number; readonly names: readonly string[] }> {
+  const res = await h.app.inject({
+    method: 'POST', url: '/api/v1/mcp',
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
+    payload: { jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} },
+  });
+  const text = res.body.trim();
+  const json = text.startsWith('{')
+    ? text
+    : (text.split('\n').map((l) => l.trim()).find((l) => l.startsWith('data:')) ?? 'data:{}').slice('data:'.length);
+  const tools = (JSON.parse(json) as { result?: { tools?: Array<{ name: string }> } }).result?.tools ?? [];
+  return { status: res.statusCode, names: tools.map((t) => t.name) };
+}
+
+/**
+ * Rows written before the global-only rule (seeded through the repository or SQL, not the routes)
+ * give the Owner neither admin.users nor admin.system: the token lists no user tool and a direct
+ * call is refused, while an ordinary tool stays listed.
+ */
+async function expectNoUserTools(owner: SeededOwner, trail: string[]): Promise<void> {
+  const login = await h.login(owner.username, PASSWORD);
+  trail.push(`login=${login.status}`);
+  const switched = await h.switchOrg(login.session, owner.orgId);
+  trail.push(`switch=${switched.status}`);
+  const token = await mint(switched.session, trail);
+  expect(token, trail.join(' ')).toBeDefined();
+  const listed = await listToolNames(token!);
+  const userTools = listed.names.filter((n) => USER_TOOLS.includes(n));
+  trail.push(`tools/list=${listed.status}/${listed.names.length} userTools=${userTools.length}`);
+  const res = await h.callTool(token!, 'dashboard_list_users', { orgScope: 'all' });
+  trail.push(`dashboard_list_users=${res.status}/${res.isError ? 'error' : 'ok'}`);
+  expect(listed.names, trail.join(' ')).toContain('dashboard_list_reports'); // positive control
+  expect(userTools, trail.join(' ')).toEqual([]);
+  expect(res.isError, trail.join(' ')).toBe(true);
+  expect(res.text, trail.join(' ')).toContain('Forbidden');
+  expect((await h.seed.users.getUserById(owner.ownerId))?.role, trail.join(' ')).toBe('user');
+}
+
+describe('global only permissions: existing organization grants on the real server', () => {
+  it('global only permissions: a token through an existing org role carrying admin users lists no user tool', async () => {
+    const owner = await seedOrgOwner('e1');
+    const roleId = `fabrikam-e1-legacy-${owner.orgId}`;
+    const raw = h.seed.getRawDatabase();
+    raw.prepare('INSERT INTO roles (id, name, description, is_system, org_id, created_at) VALUES (?, ?, ?, 0, ?, ?)')
+      .run(roleId, 'fabrikam-e1-legacy', '', owner.orgId, new Date().toISOString());
+    for (const p of ['admin.users', 'mcp.use', 'reports.view']) {
+      raw.prepare('INSERT INTO role_permissions (role_id, permission) VALUES (?, ?)').run(roleId, p);
+    }
+    const team = await h.seed.teams.createTeam({ name: 'fabrikam-e1-legacy-team', description: '', orgId: owner.orgId, roleId });
+    await h.seed.teams.addTeamMember(team.id, owner.ownerId);
+    await expectNoUserTools(owner, []);
+  }, 60_000);
+
+  it('global only permissions: a token through an existing built in admin role binding lists no user tool', async () => {
+    const owner = await seedOrgOwner('e2');
+    // The built-in admin row carries mcp.use on a fresh database (migration back-fill), so this one
+    // binding is enough for the Owner to authorize an MCP client in the org.
+    const adminRow = await h.seed.roles.getRole('admin');
+    expect(adminRow?.permissions).toContain('mcp.use');
+    const team = await h.seed.teams.createTeam({ name: 'fabrikam-e2-ops-team', description: '', orgId: owner.orgId, roleId: 'admin' });
+    await h.seed.teams.addTeamMember(team.id, owner.ownerId);
+    await expectNoUserTools(owner, []);
   }, 60_000);
 });
