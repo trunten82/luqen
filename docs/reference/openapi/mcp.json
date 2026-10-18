@@ -360,16 +360,16 @@
                   "username": {
                     "type": "string",
                     "minLength": 1,
-                    "description": "Username — unique"
+                    "description": "Username — unique; 3-64 characters of letters, numbers, dots, underscores and hyphens, starting with a letter or number"
                   },
                   "password": {
                     "type": "string",
                     "minLength": 8,
-                    "description": "Initial password — at least 8 characters"
+                    "description": "Initial password — at least 8 characters with an uppercase letter, a lowercase letter, a number and a special character"
                   },
                   "role": {
                     "type": "string",
-                    "description": "Role (e.g. admin, member)"
+                    "description": "Global role — one of: viewer, user, developer, admin, executive"
                   }
                 },
                 "required": [
@@ -2366,7 +2366,7 @@
                     "description": "User ID"
                   },
                   "role": {
-                    "description": "New role — omit to leave unchanged",
+                    "description": "New global role — one of: viewer, user, developer, admin, executive; omit to leave unchanged",
                     "type": "string"
                   },
                   "active": {

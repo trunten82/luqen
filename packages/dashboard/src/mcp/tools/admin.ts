@@ -28,7 +28,12 @@
  * without a permission (or with a typo'd permission id) breaks CI.
  */
 
-import { isReservedUsername, RESERVED_USERNAME_ERROR } from '../../validation.js';
+import {
+  isReservedUsername,
+  RESERVED_USERNAME_ERROR,
+  validatePassword,
+  validateUsername,
+} from '../../validation.js';
 import { GLOBAL_ROLE_NAMES } from '../../permissions.js';
 import { z } from 'zod';
 import { getCurrentToolContext } from '@luqen/core/mcp';
@@ -91,6 +96,8 @@ function resolveOrgId(): string {
 
 /** The dashboard's own refusal for a role outside GLOBAL_ROLE_NAMES (admin user routes). */
 const INVALID_ROLE_ERROR = 'Invalid role. Must be executive, viewer, user, developer, or admin.';
+/** The dashboard's own wording for a username already in use (the create form's availability check). */
+const USERNAME_NOT_AVAILABLE_ERROR = 'This username is not available.';
 
 function errorEnvelope(msg: string): {
   content: Array<{ type: 'text'; text: string }>;
@@ -273,11 +280,18 @@ export function registerAdminTools(
       description:
         'Create a dashboard user. Password is write-only; response never echoes it.',
       inputSchema: z.object({
-        username: z.string().min(1).describe('Username — unique'),
+        username: z
+          .string()
+          .min(1)
+          .describe(
+            'Username — unique; 3-64 characters of letters, numbers, dots, underscores and hyphens, starting with a letter or number',
+          ),
         password: z
           .string()
           .min(8)
-          .describe('Initial password — at least 8 characters'),
+          .describe(
+            'Initial password — at least 8 characters with an uppercase letter, a lowercase letter, a number and a special character',
+          ),
         role: z
           .string()
           .describe(`Global role — one of: ${GLOBAL_ROLE_NAMES.join(', ')}`),
@@ -287,10 +301,18 @@ export function registerAdminTools(
     async (args) => {
       const _orgId = resolveOrgId();
       void _orgId;
-      // WR-04: this tool validates usernames nowhere else; the reserved api-key prefix is refused
-      // here as on every other user-create path.
+      // The same rules, in the same order and with the same wording, as the dashboard's create
+      // form: the reserved api-key prefix (WR-04), the username and password validators, a
+      // global role, and a username nobody holds yet.
       if (isReservedUsername(args.username)) return errorEnvelope(RESERVED_USERNAME_ERROR);
+      const usernameCheck = validateUsername(args.username);
+      if (!usernameCheck.valid) return errorEnvelope(usernameCheck.error ?? 'Invalid username.');
+      const passwordCheck = validatePassword(args.password);
+      if (!passwordCheck.valid) return errorEnvelope(passwordCheck.error ?? 'Invalid password.');
       if (!GLOBAL_ROLE_NAMES.includes(args.role)) return errorEnvelope(INVALID_ROLE_ERROR);
+      if ((await storage.users.getUserByUsername(args.username)) !== null) {
+        return errorEnvelope(USERNAME_NOT_AVAILABLE_ERROR);
+      }
       const user = await storage.users.createUser(
         args.username,
         args.password,
@@ -312,7 +334,9 @@ export function registerAdminTools(
         role: z
           .string()
           .optional()
-          .describe('New role — omit to leave unchanged'),
+          .describe(
+            `New global role — one of: ${GLOBAL_ROLE_NAMES.join(', ')}; omit to leave unchanged`,
+          ),
         active: z
           .boolean()
           .optional()
@@ -323,6 +347,10 @@ export function registerAdminTools(
     async (args) => {
       const _orgId = resolveOrgId();
       void _orgId;
+      // Refused before any write, so a bad role never leaves a half-applied update.
+      if (args.role !== undefined && !GLOBAL_ROLE_NAMES.includes(args.role)) {
+        return errorEnvelope(INVALID_ROLE_ERROR);
+      }
       if (args.role !== undefined) {
         await storage.users.updateUserRole(args.userId, args.role);
       }

@@ -38,6 +38,7 @@ import type {
   ServiceConnectionsRepository,
 } from '../../src/db/service-connections-repository.js';
 import * as tester from '../../src/services/service-connection-tester.js';
+import { validatePassword, validateUsername } from '../../src/validation.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -608,6 +609,7 @@ interface StoredUser { readonly id: string; readonly username: string; readonly 
 function makeUserStore(seed: readonly StoredUser[] = []) {
   const users = new Map<string, StoredUser>(seed.map((u) => [u.id, u]));
   const roleWrites: Array<{ readonly id: string; readonly role: string }> = [];
+  const statusWrites: Array<{ readonly id: string; readonly active: boolean }> = [];
   const byName = (username: string) => [...users.values()].find((u) => u.username === username) ?? null;
   const asRow = (u: StoredUser) => ({ ...u, active: true, createdAt: '2026-10-18T00:00:00.000Z', passwordHash: 'HASH' }) as unknown;
   const repo = {
@@ -623,10 +625,10 @@ function makeUserStore(seed: readonly StoredUser[] = []) {
       const u = users.get(id);
       if (u !== undefined) users.set(id, { ...u, role });
     },
-    activateUser: async () => {},
-    deactivateUser: async () => {},
+    activateUser: async (id: string) => { statusWrites.push({ id, active: true }); },
+    deactivateUser: async (id: string) => { statusWrites.push({ id, active: false }); },
   };
-  return { users, roleWrites, repo };
+  return { users, roleWrites, statusWrites, repo };
 }
 
 async function buildUserApp(store: ReturnType<typeof makeUserStore>): Promise<FastifyInstance> {
@@ -649,6 +651,7 @@ function toolError(parsed: Record<string, unknown>): { readonly isError: boolean
 
 const STRONG_PASSWORD = 'Fabrikam-Audit-42!';
 const INVALID_ROLE_ERROR = 'Invalid role. Must be executive, viewer, user, developer, or admin.';
+const USERNAME_NOT_AVAILABLE_ERROR = 'This username is not available.';
 
 describe('HARD-13 MCP user tools validate like the dashboard', () => {
   let app: FastifyInstance | undefined;
@@ -672,5 +675,56 @@ describe('HARD-13 MCP user tools validate like the dashboard', () => {
     expect(body['role']).toBe('user');
     expect(body).not.toHaveProperty('passwordHash');
     expect([...store.users.values()].map((u) => u.username)).toEqual(['fabrikam-auditor']);
+  });
+
+  it('HARD-13 create user refuses an invalid username', async () => {
+    const store = makeUserStore();
+    app = await buildUserApp(store);
+    for (const username of ['.fabrikam', 'ab']) {
+      const expected = validateUsername(username);
+      expect(expected.valid, username).toBe(false);
+      const parsed = await callTool(app, 'dashboard_create_user', { username, password: STRONG_PASSWORD, role: 'user' });
+      expect(toolError(parsed), username).toEqual({ isError: true, error: expected.error });
+    }
+    expect(store.users.size).toBe(0);
+  });
+
+  it('HARD-13 create user refuses a password the dashboard would refuse', async () => {
+    const store = makeUserStore();
+    app = await buildUserApp(store);
+    const expected = validatePassword('longenough');
+    expect(expected.valid).toBe(false);
+    const parsed = await callTool(app, 'dashboard_create_user', { username: 'fabrikam-auditor', password: 'longenough', role: 'user' });
+    expect(toolError(parsed)).toEqual({ isError: true, error: expected.error });
+    expect(store.users.size).toBe(0);
+  });
+
+  it('HARD-13 create user refuses a duplicate username', async () => {
+    const store = makeUserStore();
+    app = await buildUserApp(store);
+    const first = await callTool(app, 'dashboard_create_user', { username: 'fabrikam-auditor', password: STRONG_PASSWORD, role: 'user' });
+    expect(toolError(first).isError).toBe(false);
+    const second = await callTool(app, 'dashboard_create_user', { username: 'fabrikam-auditor', password: STRONG_PASSWORD, role: 'viewer' });
+    expect(toolError(second)).toEqual({ isError: true, error: USERNAME_NOT_AVAILABLE_ERROR });
+    expect([...store.users.values()]).toEqual([{ id: 'u1', username: 'fabrikam-auditor', role: 'user' }]);
+  });
+
+  it('HARD-13 update user refuses an unknown role', async () => {
+    const store = makeUserStore([{ id: 'u1', username: 'fabrikam-auditor', role: 'viewer' }]);
+    app = await buildUserApp(store);
+    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'u1', role: 'member', active: false });
+    expect(toolError(parsed)).toEqual({ isError: true, error: INVALID_ROLE_ERROR });
+    expect(store.roleWrites).toEqual([]);
+    expect(store.statusWrites).toEqual([]);
+    expect(store.users.get('u1')?.role).toBe('viewer');
+  });
+
+  it('HARD-13 update user accepts a global role', async () => {
+    const store = makeUserStore([{ id: 'u1', username: 'fabrikam-auditor', role: 'viewer' }]);
+    app = await buildUserApp(store);
+    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'u1', role: 'developer' });
+    expect(toolError(parsed).isError).toBe(false);
+    expect(extractText(parsed)['role']).toBe('developer');
+    expect(store.roleWrites).toEqual([{ id: 'u1', role: 'developer' }]);
   });
 });
