@@ -13,8 +13,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
-import { createServer } from '../../src/server.js';
+import {
+  COOKIE_CSRF_EXEMPT_API_PATHS,
+  createServer,
+  isPublicPath,
+  requiresCookieCsrf,
+} from '../../src/server.js';
+import { isBearerOnlyPath } from '../../src/mcp/paths.js';
 import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
+import { generateApiKey } from '../../src/auth/api-key.js';
 
 const PASSWORD = 'Owner-Pass-123!';
 
@@ -22,6 +29,22 @@ let tmpRoot: string;
 let app: FastifyInstance;
 let seed: SqliteStorageAdapter;
 let orgId: string;
+let systemKey: string;
+
+const WRITE_METHODS: ReadonlySet<string> = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+/** Every distinct `METHOD path` write route under /api/ that createServer registered. */
+function apiWriteRoutes(): ReadonlyArray<{ readonly method: string; readonly path: string }> {
+  const collected = (app as unknown as { __collectedRoutes?: Array<{ method: string; path: string }> })
+    .__collectedRoutes ?? [];
+  const seen = new Map<string, { method: string; path: string }>();
+  for (const r of collected) {
+    if (WRITE_METHODS.has(r.method) && r.path.startsWith('/api/')) seen.set(`${r.method} ${r.path}`, r);
+  }
+  return [...seen.values()];
+}
+
+const isExempt = (path: string): boolean => COOKIE_CSRF_EXEMPT_API_PATHS.has(path) || isBearerOnlyPath(path);
 
 interface Session {
   readonly cookie: string;
@@ -88,6 +111,8 @@ beforeAll(async () => {
   const team = await seed.teams.createTeam({ name: 'owners', description: '', orgId, roleId: ownerRole!.id });
   await seed.teams.addTeamMember(team.id, owner.id);
   await seed.organizations.addMember(orgId, owner.id, 'owner');
+  systemKey = generateApiKey();
+  await seed.apiKeys.storeKey(systemKey, 'api-csrf-system-admin', 'system', 'admin');
 }, 120_000);
 
 afterAll(async () => {
@@ -119,5 +144,66 @@ describe('HARD-10 cookie sessions need the CSRF token on /api writes', () => {
     });
     expect(res.statusCode).toBe(200);
     expect(await shareFlag(scanId)).toBe(true);
+  }, 60_000);
+
+  it('HARD-10 every cookie reachable api write route requires the csrf token', () => {
+    const routes = apiWriteRoutes();
+    const keys = new Set(routes.map((r) => `${r.method} ${r.path}`));
+    // Walker control: the route table really was read (an empty walk would pass vacuously).
+    expect(keys.has('POST /api/v1/scans/:scanId/dismissals')).toBe(true);
+    expect(keys.has('POST /api/v1/reports/:id/public-share')).toBe(true);
+    expect(keys.has('DELETE /api/v1/scans/:id')).toBe(true);
+    expect(routes.length).toBeGreaterThanOrEqual(40);
+    const unprotected = routes
+      .filter((r) => !isExempt(r.path))
+      .filter((r) => !requiresCookieCsrf(r.method, r.path, false))
+      .map((r) => `${r.method} ${r.path}`);
+    expect(unprotected, `cookie-session writes that would not need the CSRF token:\n${unprotected.join('\n')}`).toEqual([]);
+  });
+
+  it('HARD-10 the allowlist names only public and bearer only routes', () => {
+    const notPublicOrBearer = [...COOKIE_CSRF_EXEMPT_API_PATHS].filter((p) => !isPublicPath(p) && !isBearerOnlyPath(p));
+    expect(notPublicOrBearer, `allowlisted paths that are neither public nor Bearer-only: ${notPublicOrBearer.join(', ')}`).toEqual([]);
+    // Every public pre-auth /api write is on the allowlist (so it is a named decision, not an accident).
+    const publicWrites = apiWriteRoutes().filter((r) => isPublicPath(r.path));
+    expect(publicWrites.length).toBeGreaterThan(0);
+    const unlisted = publicWrites.filter((r) => !COOKIE_CSRF_EXEMPT_API_PATHS.has(r.path)).map((r) => `${r.method} ${r.path}`);
+    expect(unlisted, `public /api writes missing from the allowlist: ${unlisted.join(', ')}`).toEqual([]);
+    // The exemptions really are exempt for a cookie session, and nothing else under /api is.
+    for (const p of COOKIE_CSRF_EXEMPT_API_PATHS) expect(requiresCookieCsrf('POST', p, false)).toBe(false);
+    expect(requiresCookieCsrf('POST', '/api/v1/mcp', false)).toBe(false);
+  });
+
+  it('HARD-10 api key callers are not asked for a csrf token', async () => {
+    // Authorization: Bearer <key> (CI, scripts) and X-API-Key (the WordPress plugin), no session, no token.
+    for (const headers of [{ authorization: `Bearer ${systemKey}` }, { 'x-api-key': systemKey }]) {
+      const scanId = await seedScan();
+      const res = await app.inject({
+        method: 'POST', url: `/api/v1/reports/${scanId}/public-share`, headers, payload: { enabled: true },
+      });
+      expect(res.statusCode, Object.keys(headers)[0]).toBe(200);
+      expect(await shareFlag(scanId)).toBe(true);
+    }
+    // A valid key decides even when the client also holds a session cookie.
+    const scanId = await seedScan();
+    const s = await ownerSession(scanId);
+    const res = await app.inject({
+      method: 'POST', url: `/api/v1/reports/${scanId}/public-share`, cookies: { session: s.cookie },
+      headers: { 'x-api-key': systemKey }, payload: { enabled: true },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(await shareFlag(scanId)).toBe(true);
+  }, 60_000);
+
+  it('HARD-10 a caller with neither a session nor a valid api key is still refused by authentication', async () => {
+    // A Bearer that is not an API key (for example an OAuth access token) does not authenticate a
+    // non-MCP /api route; that caller keeps getting 401, never a CSRF 403.
+    const scanId = await seedScan();
+    const res = await app.inject({
+      method: 'POST', url: `/api/v1/reports/${scanId}/public-share`,
+      headers: { authorization: 'Bearer not-an-api-key' }, payload: { enabled: true },
+    });
+    expect(res.statusCode).toBe(401);
+    expect(await shareFlag(scanId)).toBe(false);
   }, 60_000);
 });

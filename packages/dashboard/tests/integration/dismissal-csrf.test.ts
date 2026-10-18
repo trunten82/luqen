@@ -1,12 +1,13 @@
 /**
- * Quick 261013-dr7 (WR-02): the cookie-authenticated dismissal mutations (mark, revoke) verify the
- * CSRF token the report page's client already sends (X-CSRF-Token from <meta name="csrf-token">).
+ * Quick 261013-dr7 (WR-02), default-on since HARD-10: the cookie-authenticated dismissal mutations
+ * (mark, revoke) verify the CSRF token the report page's client already sends (X-CSRF-Token from
+ * <meta name="csrf-token">), as every cookie-session /api write does (server.ts requiresCookieCsrf;
+ * the whole route table is pinned in api-write-csrf-inventory.test.ts).
  *
- * /api/* is CSRF-exempt in server.ts and @fastify/formbody is global, so before this a same-site
- * page could submit a form-encoded mark/revoke that ran under a signed-in Owner's cookie. A request
- * whose API credential actually VALIDATES is not cookie-authenticated and is left alone; a bogus
- * Bearer header does not exempt a request, because auth then falls through to the cookie (the
- * /graphql rule, graphql/csrf-guard.ts).
+ * @fastify/formbody is global, so a form-encoded mark/revoke is parsed like a JSON one and must be
+ * refused without the token. A request whose API credential actually VALIDATES is not
+ * cookie-authenticated and is left alone; a bogus Bearer header does not exempt a request, because
+ * auth then falls through to the cookie (the /graphql rule, graphql/csrf-guard.ts).
  *
  * Boots the REAL createServer. A second SqliteStorageAdapter on the same file seeds and reads back.
  */

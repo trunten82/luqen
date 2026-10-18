@@ -230,22 +230,6 @@ export function isPublicPath(path: string): boolean {
   return false;
 }
 
-/**
- * Quick 261013-dr7 (WR-02): an exempt (/api/*) route that opts in with
- * `config.csrfForCookieSessions` still verifies the CSRF token when the request is
- * cookie-authenticated, i.e. it carries no API credential that VALIDATES. A bogus
- * Bearer header does not exempt it (auth then falls through to the cookie), the
- * rule graphql/csrf-guard.ts applies to /graphql.
- */
-function needsCookieCsrf(
-  request: FastifyRequest,
-  auth: { hasValidApiCredential(request: FastifyRequest): boolean },
-): boolean {
-  const config = request.routeOptions?.config as { csrfForCookieSessions?: boolean } | undefined;
-  if (config?.csrfForCookieSessions !== true) return false;
-  return !auth.hasValidApiCredential(request);
-}
-
 // HTTP methods that mutate state and require CSRF verification
 const CSRF_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -273,7 +257,7 @@ function isCsrfExempt(path: string): boolean {
  *     own API key in the handler;
  *   - Bearer-only paths (isBearerOnlyPath, checked below): /api/v1/mcp never reads the cookie.
  */
-const COOKIE_CSRF_EXEMPT_API_PATHS: ReadonlySet<string> = new Set(['/api/v1/setup']);
+export const COOKIE_CSRF_EXEMPT_API_PATHS: ReadonlySet<string> = new Set(['/api/v1/setup']);
 
 /**
  * HARD-10: does this request have to carry the CSRF token? One decision for HTML and /api paths.
