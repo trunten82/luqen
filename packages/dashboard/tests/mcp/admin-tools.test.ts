@@ -848,3 +848,98 @@ describe('HARD-13 MCP user tools follow the dashboard role authority rules', () 
     expect(store.users.get('u1')?.role).toBe('viewer');
   });
 });
+
+// ---------------------------------------------------------------------------
+// HARD-13: dashboard_update_user changes only users the caller may manage
+// (canManageUser, as the dashboard's user routes do), keeps the last active
+// admin, and the tool descriptions say the admin role needs a global
+// administrator.
+// ---------------------------------------------------------------------------
+
+const MANAGE_ERROR = 'You can only manage users in your organization.';
+const LAST_ADMIN_ROLE_ERROR = 'Cannot change role of the last active admin user.';
+const LAST_ADMIN_DEACTIVATE_ERROR = 'Cannot deactivate the last active admin user.';
+const NORTHWIND_USER: StoredUser = { id: 'u2', username: 'northwind-analyst', role: 'viewer' };
+const FABRIKAM_ADMIN: StoredUser = { id: 'u3', username: 'fabrikam-admin', role: 'admin', active: true };
+const ORG_TWO_TEAM: StoredTeam = { id: 't2', orgId: 'org-2', members: ['u2'] };
+
+describe('HARD-13 MCP user update follows the dashboard organization scope and last admin rules', () => {
+  let app: FastifyInstance | undefined;
+  afterEach(async () => { await app?.close(); app = undefined; });
+
+  it('HARD-13 update user changes only users the caller may manage', async () => {
+    const store = makeUserStore([ORG_TARGET, NORTHWIND_USER], { caller: ORG_CALLER, teams: [ORG_ONE_TEAM, ORG_TWO_TEAM] });
+    app = await buildUserApp(store);
+    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'u2', role: 'developer', active: false });
+    expect(toolError(parsed)).toEqual({ isError: true, error: MANAGE_ERROR });
+    expect(store.roleWrites).toEqual([]);
+    expect(store.statusWrites).toEqual([]);
+    expect(store.users.get('u2')?.role).toBe('viewer');
+  });
+
+  it('HARD-13 update user leaves a global admin unchanged for an org scoped caller', async () => {
+    const team: StoredTeam = { id: 't1', orgId: 'org-1', members: ['tester', 'u1', 'u3'] };
+    const store = makeUserStore([ORG_TARGET, FABRIKAM_ADMIN], { caller: ORG_CALLER, teams: [team] });
+    app = await buildUserApp(store);
+    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'u3', role: 'viewer', active: false });
+    expect(toolError(parsed)).toEqual({ isError: true, error: MANAGE_ERROR });
+    expect(store.roleWrites).toEqual([]);
+    expect(store.statusWrites).toEqual([]);
+    expect(store.users.get('u3')).toEqual(FABRIKAM_ADMIN);
+  });
+
+  it('HARD-13 update user changes a user of the caller organization', async () => {
+    const store = makeUserStore([ORG_TARGET], { caller: ORG_CALLER, teams: [ORG_ONE_TEAM] });
+    app = await buildUserApp(store);
+    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'u1', role: 'developer' });
+    expect(toolError(parsed).isError).toBe(false);
+    expect(store.users.get('u1')?.role).toBe('developer');
+  });
+
+  it('HARD-13 update user keeps the role of the last active admin', async () => {
+    const store = makeUserStore([], { caller: GLOBAL_ADMIN_CALLER });
+    app = await buildUserApp(store, ALL_PERMISSION_IDS);
+    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'tester', role: 'user' });
+    expect(toolError(parsed)).toEqual({ isError: true, error: LAST_ADMIN_ROLE_ERROR });
+    expect(store.roleWrites).toEqual([]);
+    expect(store.callers.get('tester')?.role).toBe('admin');
+  });
+
+  it('HARD-13 update user keeps the last active admin active', async () => {
+    const store = makeUserStore([], { caller: GLOBAL_ADMIN_CALLER });
+    app = await buildUserApp(store, ALL_PERMISSION_IDS);
+    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'tester', active: false });
+    expect(toolError(parsed)).toEqual({ isError: true, error: LAST_ADMIN_DEACTIVATE_ERROR });
+    expect(store.statusWrites).toEqual([]);
+    expect(store.callers.get('tester')?.active).toBe(true);
+  });
+
+  it('HARD-13 update user demotes an admin while another admin is active', async () => {
+    const store = makeUserStore([FABRIKAM_ADMIN], { caller: GLOBAL_ADMIN_CALLER });
+    app = await buildUserApp(store, ALL_PERMISSION_IDS);
+    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'u3', role: 'user' });
+    expect(toolError(parsed).isError).toBe(false);
+    expect(store.users.get('u3')?.role).toBe('user');
+  });
+
+  it('HARD-13 user tool descriptions name the global admin requirement for the admin role', async () => {
+    // The registered tool list as the MCP SDK publishes it (JSON Schema, property descriptions kept).
+    const server = new McpServer({ name: 'test', version: '0.0.0' }, { capabilities: { tools: {} } });
+    registerAdminTools(server, { storage: userStorage(makeUserStore(), []), serviceConnections: makeStubServiceConnections() });
+    const client = new Client({ name: 'test-client', version: '1.0.0' });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+    try {
+      const { tools } = await client.listTools();
+      for (const name of ['dashboard_create_user', 'dashboard_update_user']) {
+        const properties = tools.find((t) => t.name === name)?.inputSchema.properties as Record<string, { description?: string }> | undefined;
+        const roleDescription = properties?.['role']?.description ?? '';
+        expect(roleDescription, name).toMatch(/^(New )?Global role/i);
+        expect(roleDescription, name).toContain('global administrator');
+      }
+    } finally {
+      await client.close();
+    }
+  });
+});

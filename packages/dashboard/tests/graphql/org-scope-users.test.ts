@@ -151,3 +151,12 @@ describe('GraphQL user org scoping', () => {
     });
   });
 });
+
+describe('HARD-13 GraphQL deactivate follows the last active admin rule', () => {
+  it('HARD-13 graphql deactivate user keeps the last active admin active', async () => {
+    const storage = makeStorage();
+    await expect(resolvers.Mutation.deactivateUser({}, { id: GA_USER.id }, makeGlobalAdminCtx(storage, PERMS)))
+      .rejects.toThrow('Cannot deactivate the last active admin user.');
+    expect(storage.users.deactivateUser).not.toHaveBeenCalled();
+  });
+});
