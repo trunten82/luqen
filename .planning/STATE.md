@@ -5,16 +5,16 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: Completed 91-12d-PLAN.md (PR2: teams are created in and moved to the organization the caller administers, MCP tools/call honours the token scope on every service, tools/list publishes JSON Schema, the CSRF inventory reads the named hook on every /api write route; every new guard broken against its declared red set)
-last_updated: "2026-10-15T20:45:31.955Z"
+stopped_at: "Completed 91-12e-PLAN.md (PR2: docs for the role, team and MCP tool rules; every gate green on the final tree; layered CR-01 breaks and the 91-12 re-runs all matched their declared sets)"
+last_updated: "2026-10-18T21:14:53.417Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
-state_head: f1fc7d790604cee103f34421c2dc345ae8ffa720
+state_head: f307d2fa84ecf556cbffa315c08e937f279e7fb7
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 28
-  completed_plans: 20
+  completed_plans: 22
   percent: 33
 ---
 
@@ -128,7 +128,7 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 ## Current Position
 
 Phase: 91 (Dismissal and permission hardening) — EXECUTING
-Plan: 8 of 18
+Plan: 9 of 18
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 91 execution started
 
@@ -219,8 +219,8 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-15T20:45:31.873Z
-Stopped at: Completed 91-12d-PLAN.md (PR2: teams are created in and moved to the organization the caller administers, MCP tools/call honours the token scope on every service, tools/list publishes JSON Schema, the CSRF inventory reads the named hook on every /api write route; every new guard broken against its declared red set)
+Last session: 2026-10-18T21:14:53.355Z
+Stopped at: Completed 91-12e-PLAN.md (PR2: docs for the role, team and MCP tool rules; every gate green on the final tree; layered CR-01 breaks and the 91-12 re-runs all matched their declared sets)
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -277,6 +277,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 91 P12b | ~55min | 3 tasks | 9 files |
 | Phase 91 P12c | ~68min | 3 tasks | 7 files |
 | Phase 91 P12d | ~67min | 3 tasks | 8 files |
+| Phase 91 P12e | ~63min | 2 tasks | 2 files |
 
 ## Decisions
 
@@ -323,6 +324,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 91]: Phase 91 P12b: the MCP user tools give the admin role only when the caller's stored user row is an active global admin (refused with the dashboard's wording before any write), read the caller from the user store rather than the token or the call's permission set, and the update tool follows the dashboard user routes in order (canManageUser, global role, admin role for a global administrator, last active admin keeps the role and stays active) through one shared isLastActiveAdmin also used by GraphQL deactivateUser
 - [Phase 91]: Phase 91 P12c: admin.system and admin.users are granted by global roles only (organization role writes answer 422, the organization role form omits them, the repository drops them from team-bound and non-admin global roles, and the resolver drops them when the caller names a non-admin global role); only a global administrator binds a team to a built-in role row; a global role row grants issues.dismiss to nobody, filtered at resolution with no data migration
 - [Phase 91]: Phase 91 P12d: a team is created in, and moved to, only the organization its caller administers (a global administrator places teams anywhere; a caller with no current organization places none); the shared MCP plugin runs a tool through tools/call only when the token scope admits it, by the rule tools/list applies, for end-user and service tokens alike, and publishes each input schema as JSON Schema; the cookie CSRF preHandler is named and the /api write inventory reads it on every route's hook list, with no route adding an early lifecycle hook
+- [Phase 91]: Phase 91 P12e: PR2 docs state the role, team and MCP tool rules as behaviour only; every PR2 gate is green on the final tree at the expected counts; the CR-01 fix is layered (either MCP admin rule removed alone leaves the end-to-end tests green, all seven layers removed together redden them)
 
 ### Blockers
 
