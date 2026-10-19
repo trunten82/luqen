@@ -267,8 +267,8 @@ async function handleRefresh(
 
   // HARD-21: a live row of this client is checked against the MCP rule BEFORE rotate(), so a
   // refused refresh writes nothing and the chain stays usable once the user's access is restored.
-  // Every other case (no row, a rotated row, an expired row, another client's row) goes to rotate()
-  // unchanged, so reuse detection, expiry and the cross-client guard answer exactly as before.
+  // Every other case (no row, a rotated row, an expired row, another client's row) goes straight to
+  // rotate(), so reuse detection, expiry and the cross-client guard below decide it.
   const presented = await storage.oauthRefresh.findByTokenHash(presentedHash);
   if (
     presented !== null &&
