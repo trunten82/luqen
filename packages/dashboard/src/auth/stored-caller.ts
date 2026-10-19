@@ -52,7 +52,22 @@ export async function resolveStoredCaller(
   return { ok: true, role: user.role, permissions };
 }
 
-/** Why the MCP rule refuses the caller: the stored-caller refusals, then the permission refusals. */
+/** The permission an MCP credential needs in its organization ("Connect via MCP"). */
+export const MCP_USE = 'mcp.use';
+
+/**
+ * The MCP rule: every place an MCP credential is honoured (src/mcp/middleware.ts, on every request)
+ * or minted (src/routes/oauth/token.ts, the refresh grant and the authorization-code exchange) asks
+ * it for the credential's user and organization.
+ *
+ *   - the stored-caller refusals above ('unknown_user', 'inactive_user', 'not_member')
+ *   - no permission in the organization -> refused ('no_permission')
+ *   - a set without the MCP use permission -> refused ('no_mcp_use')
+ *   - otherwise -> the stored role and its permissions in the organization
+ *
+ * A global admin holds every permission, so holds the MCP use permission. The in-dashboard assistant
+ * does not ask this rule: its tools follow the stored user's permissions (storedPermissionsOrNone).
+ */
 export type McpCallerRefusal = StoredCallerRefusal | 'no_permission' | 'no_mcp_use';
 
 export type McpCaller =
@@ -67,6 +82,7 @@ export async function resolveMcpCaller(
   const caller = await resolveStoredCaller(storage, userId, orgId);
   if (!caller.ok) return caller;
   if (caller.permissions.size === 0) return { ok: false, refusal: 'no_permission' };
+  if (!caller.permissions.has(MCP_USE)) return { ok: false, refusal: 'no_mcp_use' };
   return caller;
 }
 

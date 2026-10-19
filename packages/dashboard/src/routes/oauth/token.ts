@@ -19,6 +19,15 @@
  * claim so the MCP middleware's verifier can reject tokens whose owning
  * client has been revoked.
  *
+ * HARD-21: both grants mint only for a user the MCP endpoint would serve right
+ * now. Before minting, each asks the MCP rule (src/auth/stored-caller.ts
+ * resolveMcpCaller) for the stored user and organization of the code or
+ * refresh row: a missing or deactivated user, a user outside the organization,
+ * or a user without the MCP use permission there gets 400 invalid_grant, the
+ * same body as every other refusal. The refresh grant asks before rotating, so
+ * a refused refresh writes nothing and the same refresh token works again once
+ * the user's access is restored (within the chain's 30-day limit).
+ *
  * Client authentication:
  *   token_endpoint_auth_method='none' (public)        — no secret; PKCE proof.
  *   token_endpoint_auth_method='client_secret_basic'  — HTTP Basic OR
@@ -36,6 +45,7 @@ import type { StorageAdapter } from '../../db/adapter.js';
 import type { OauthClient } from '../../db/interfaces/oauth-client-repository.js';
 import { verifyS256Challenge } from '../../auth/oauth-pkce.js';
 import type { DashboardSigner } from '../../auth/oauth-signer.js';
+import { resolveMcpCaller } from '../../auth/stored-caller.js';
 
 // POST /oauth/token request body (RFC 6749 §3.2 / §4.1.3 / §6).
 // Form-encoded inputs are unioned into one body schema; the handler branches
@@ -196,6 +206,10 @@ async function handleAuthCode(
   if (!verifyS256Challenge(body.code_verifier, row.codeChallenge)) {
     return reply.status(400).send({ error: 'invalid_grant' });
   }
+  // HARD-21: the code's user must be one the MCP endpoint would serve now (it may have changed
+  // since consent). Asked before the access token and the refresh chain are minted.
+  const caller = await resolveMcpCaller(storage, row.userId, row.orgId);
+  if (!caller.ok) return reply.status(400).send({ error: 'invalid_grant' });
 
   const scopes = splitSpace(row.scope);
   const resources = splitSpace(row.resource);
@@ -250,6 +264,21 @@ async function handleRefresh(
   const presentedHash = hashToken(body.refresh_token);
   const newRaw = randomBytes(32).toString('base64url');
   const newHash = hashToken(newRaw);
+
+  // HARD-21: a live row of this client is checked against the MCP rule BEFORE rotate(), so a
+  // refused refresh writes nothing and the chain stays usable once the user's access is restored.
+  // Every other case (no row, a rotated row, an expired row, another client's row) goes to rotate()
+  // unchanged, so reuse detection, expiry and the cross-client guard answer exactly as before.
+  const presented = await storage.oauthRefresh.findByTokenHash(presentedHash);
+  if (
+    presented !== null &&
+    !presented.rotated &&
+    presented.clientId === client.clientId &&
+    !(presented.absoluteExpiresAt < new Date().toISOString())
+  ) {
+    const caller = await resolveMcpCaller(storage, presented.userId, presented.orgId);
+    if (!caller.ok) return reply.status(400).send({ error: 'invalid_grant' });
+  }
 
   const startedAt = Date.now();
   const result = await storage.oauthRefresh.rotate(presentedHash, newHash);

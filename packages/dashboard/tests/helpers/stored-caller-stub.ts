@@ -54,6 +54,16 @@ export function withStoredCallerStorage<S extends { readonly users: object }>(st
   });
 }
 
+/**
+ * The permission set of a stub MCP caller: `perms` plus the MCP use permission ('mcp.use'), which every
+ * /api/v1/mcp request requires in the token's organization. An empty set stays empty (that caller holds
+ * no permission and is refused as such). Never mutates its argument.
+ */
+export function mcpCallerPermissions(perms: Iterable<string>): Set<string> {
+  const set = new Set(perms);
+  return set.size === 0 ? set : new Set([...set, 'mcp.use']);
+}
+
 export interface StoredCallerOrgsStub {
   getUserOrgs(userId: string): Promise<Organization[]>;
 }

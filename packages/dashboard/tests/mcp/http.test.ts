@@ -30,7 +30,7 @@ import type {
   ServiceConnection,
   ServiceConnectionsRepository,
 } from '../../src/db/service-connections-repository.js';
-import { storedCallerOrgs, storedCallerUsers } from '../helpers/stored-caller-stub.js';
+import { storedCallerOrgs, storedCallerUsers, mcpCallerPermissions } from '../helpers/stored-caller-stub.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -59,7 +59,7 @@ function makeStubStorage(perms: readonly string[] = [], storedRole = 'user'): St
     assignments: empty as StorageAdapter['assignments'],
     repos: empty as StorageAdapter['repos'],
     roles: {
-      getEffectivePermissions: async (): Promise<Set<string>> => new Set(perms),
+      getEffectivePermissions: async (): Promise<Set<string>> => mcpCallerPermissions(perms),
     } as unknown as StorageAdapter['roles'],
     teams: empty as StorageAdapter['teams'],
     email: empty as StorageAdapter['email'],

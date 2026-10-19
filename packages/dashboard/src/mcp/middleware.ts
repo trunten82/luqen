@@ -19,8 +19,12 @@
  *      resolveEffectivePermissions, so the Bearer context matches what a
  *      cookie-session user sees for the same (userId, orgId)
  *   5. Refuses a caller holding no permission in the token's organization
- *      (403 insufficient_scope), so every caller this endpoint serves carries a
- *      non-empty permission set
+ *      (403 insufficient_scope, error_description no_permission), so every
+ *      caller this endpoint serves carries a non-empty permission set, and a
+ *      caller whose permissions there do not include the MCP use permission
+ *      (403 insufficient_scope, error_description no_mcp_use). Steps 4 and 5 are
+ *      the MCP rule (resolveMcpCaller), the same rule the token endpoint asks
+ *      before it mints from a refresh token or an authorization code
  *   6. Decorates the request with tokenPayload / authType='jwt' / orgId / permissions
  *      in the shape @luqen/core/mcp's extractToolContext expects
  *
@@ -30,7 +34,7 @@
  */
 
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { resolveStoredCaller } from '../auth/stored-caller.js';
+import { resolveMcpCaller } from '../auth/stored-caller.js';
 
 // Local re-declaration — avoids cross-package import of compliance/auth/oauth.
 // Must remain structurally compatible with packages/compliance/src/auth/oauth.ts
@@ -124,10 +128,27 @@ export function createMcpAuthPreHandler(opts: McpAuthPreHandlerOptions) {
       }
     }
 
-    // HARD-19: every request is answered for the stored, active user of the token. A role claim
-    // in the token is not read; the stored row decides.
-    const caller = await resolveStoredCaller(opts.storage, payload.sub, payload.orgId);
+    // HARD-19 / HARD-21: every request is answered for the stored, active user of the token through
+    // the MCP rule (resolveMcpCaller). A role claim in the token is not read; the stored row decides.
+    const caller = await resolveMcpCaller(opts.storage, payload.sub, payload.orgId);
     if (!caller.ok) {
+      if (caller.refusal === 'no_permission') {
+        // No permission in the token's organization: every request served carries a non-empty set.
+        reply.header(
+          'WWW-Authenticate',
+          `${wwwAuthenticate}, error="insufficient_scope", error_description="no_permission"`,
+        );
+        await reply.status(403).send({ error: 'No permission in this organization', statusCode: 403 });
+        return;
+      }
+      if (caller.refusal === 'no_mcp_use') {
+        reply.header(
+          'WWW-Authenticate',
+          `${wwwAuthenticate}, error="insufficient_scope", error_description="no_mcp_use"`,
+        );
+        await reply.status(403).send({ error: 'MCP use permission required in this organization', statusCode: 403 });
+        return;
+      }
       reply.header(
         'WWW-Authenticate',
         `${wwwAuthenticate}, error="invalid_token", error_description="${caller.refusal}"`,
@@ -136,16 +157,6 @@ export function createMcpAuthPreHandler(opts: McpAuthPreHandlerOptions) {
       return;
     }
     const permissions = caller.permissions;
-    // A caller holding no permission in the token's organization is refused here, so every request
-    // this endpoint serves carries a non-empty permission set.
-    if (permissions.size === 0) {
-      reply.header(
-        'WWW-Authenticate',
-        `${wwwAuthenticate}, error="insufficient_scope", error_description="no_permission"`,
-      );
-      await reply.status(403).send({ error: 'No permission in this organization', statusCode: 403 });
-      return;
-    }
 
     (request as FastifyRequest & { tokenPayload: McpTokenPayload }).tokenPayload = payload;
     (request as FastifyRequest & { authType: string }).authType = 'jwt';
