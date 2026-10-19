@@ -243,10 +243,18 @@ describe('HARD-19 the mcp endpoint answers for the stored user of the token', ()
     const trail: string[] = [];
     const token = await mintFor(member, trail);
     expect(token, trail.join(' ')).toBeDefined();
+    // The org switch accepted the team membership, so the minted token names the team's organization.
+    expect(trail, trail.join(' ')).toContain('switch=302');
     const listed = await h.listTools(token!);
     trail.push(`list=${listed.status}/${listed.names.length}`);
+    // A token naming that organization directly, as the stored-caller rule reads it.
+    const signed = await h.signToken({ sub: member.userId, scopes: ['read', 'write'], orgId: member.orgId });
+    const listedSigned = await h.listTools(signed);
+    trail.push(`signed=${listedSigned.status}/${listedSigned.names.length}`);
 
     expect(listed.status, trail.join(' ')).toBe(200);
     expect(listed.names, trail.join(' ')).toContain('dashboard_list_reports');
+    expect(listedSigned.status, trail.join(' ')).toBe(200);
+    expect(listedSigned.names, trail.join(' ')).toContain('dashboard_list_reports');
   }, 60_000);
 });
