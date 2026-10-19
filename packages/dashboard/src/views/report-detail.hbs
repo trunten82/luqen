@@ -374,7 +374,9 @@
               {{#if ../../perm.issuesAssign}}
               {{{issueAssignStatus ../../assignedMap code selector message wcagCriterion}}}
               {{#unless (issueAssignStatus ../../assignedMap code selector message wcagCriterion)}}
+              {{#if ../../perm.reportsViewTechnical}}
               <button type="button" class="rpt-assign-btn" data-action="rptAssignIssue" data-code="{{code}}" data-selector="{{selector}}" data-message="{{message}}" data-severity="{{type}}" data-wcag-criterion="{{wcagCriterion}}" data-wcag-title="{{wcagTitle}}" title="Assign this issue">{{t "reportDetail.assign"}}</button>
+              {{/if}}
               {{/unless}}
               {{/if}}
               {{#if @root.dismissalControls}}
@@ -418,7 +420,9 @@
             {{#if ../../perm.issuesAssign}}
             {{{issueAssignStatus ../../assignedMap code selector message wcagCriterion}}}
             {{#unless (issueAssignStatus ../../assignedMap code selector message wcagCriterion)}}
+            {{#if ../../perm.reportsViewTechnical}}
             <button type="button" class="rpt-assign-btn" data-action="rptAssignIssue" data-code="{{code}}" data-selector="{{selector}}" data-message="{{message}}" data-severity="{{type}}" data-wcag-criterion="{{wcagCriterion}}" data-wcag-title="{{wcagTitle}}" title="Assign this issue">{{t "reportDetail.assign"}}</button>
+            {{/if}}
             {{/unless}}
             {{/if}}
             {{#if @root.dismissalControls}}

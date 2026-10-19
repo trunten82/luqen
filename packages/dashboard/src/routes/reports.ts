@@ -623,8 +623,12 @@ export async function reportRoutes(
       // global perm flag, because the gate also depends on the scan's org. The key is absent
       // unless the viewer holds the permission AND mayTouchDismissalOrg allows this scan's org
       // (the predicate the mark route enforces), so nothing renders that the API would refuse.
+      // HARD-02: the controls carry each finding's raw selector, so they also need
+      // reports.view_technical, the permission that shows selectors anywhere on this page.
       const dismissalControls =
-        hasPermission(request, 'issues.dismiss') && mayTouchDismissalOrg(request.user, scan.orgId)
+        hasPermission(request, 'issues.dismiss') &&
+        hasPermission(request, 'reports.view_technical') &&
+        mayTouchDismissalOrg(request.user, scan.orgId)
           ? { reasonMax: DISMISSAL_REASON_MAX_LENGTH, commentMax: DISMISSAL_COMMENT_MAX_LENGTH }
           : undefined;
 

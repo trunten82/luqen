@@ -245,7 +245,8 @@ describe('the Dismissed section — tracer', () => {
 
 
 // ── Task 3: the complete section ─────────────────────────────────────────────────────────────
-const CONTROLS = ['reports.view', 'issues.dismiss'] as const;
+// The dismissal controls (Dismiss, Revoke) need technical-details access too (HARD-02).
+const CONTROLS = ['reports.view', 'reports.view_technical', 'issues.dismiss'] as const;
 const MARKUP = '<img src=x onerror="window.__pwned=1">';
 
 interface RawMark {

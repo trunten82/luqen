@@ -103,6 +103,7 @@ function reportData(pageSelectors: readonly unknown[]): Record<string, unknown> 
 interface RenderOptions {
   readonly controls?: { reasonMax: number; commentMax: number } | null;
   readonly technical?: boolean;
+  readonly assign?: boolean;
   readonly selectors?: readonly unknown[];
   readonly locale?: string;
   readonly dismissals?: Record<string, unknown>;
@@ -148,7 +149,7 @@ function render(opts: RenderOptions = {}): string {
     scan: { id: 'scan-fabrikam-1', siteUrl: 'https://fabrikam.example', status: 'completed' },
     reportData: reportData(opts.selectors ?? [SEL_PAGE]),
     locale: opts.locale ?? 'en',
-    perm: { reportsViewTechnical: opts.technical ?? true },
+    perm: { reportsViewTechnical: opts.technical ?? true, issuesAssign: opts.assign ?? false },
     brandingGuidelineActive: false,
     llmEnabled: false,
     assignedMap: {},
@@ -217,6 +218,23 @@ describe('mark control — gating and sites', () => {
     // Positive control: the same findings ARE on the page, so the absence is the gate.
     expect(html).toContain(SEL_PAGE);
     expect(html).toContain('data-issue-group');
+  });
+});
+
+describe('per-issue assign button', () => {
+  const assignButtons = (html: string): string[] =>
+    [...html.matchAll(/<button[^>]*data-action="rptAssignIssue"[^>]*>/g)].map((m) => m[0]);
+
+  it('HARD-02 assign button needs technical details permission', () => {
+    // The per-issue Assign button carries the raw selector, so it needs technical-details access.
+    const plain = render({ technical: false, assign: true });
+    expect(assignButtons(plain)).toHaveLength(0);
+    // Control: with both permissions the template item and the page issue each have one.
+    const technical = render({ technical: true, assign: true });
+    const buttons = assignButtons(technical);
+    expect(buttons).toHaveLength(2);
+    expect(buttons.filter((b) => b.includes(`data-selector="${SEL_PAGE}"`))).toHaveLength(1);
+    expect(buttons.filter((b) => b.includes(`data-selector="${SEL_TEMPLATE}"`))).toHaveLength(1);
   });
 });
 
