@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
 import type {
+  DismissalKeySnapshot,
   IssueDismissal,
   IssueDismissalEvent,
   IssueDismissalRepository,
@@ -33,6 +34,8 @@ interface DismissalRow {
   revoked_by_id: string | null;
   revoked_at: string | null;
   revoke_comment: string | null;
+  /** Migration 092; JSON { label, keyCreatedAt } or NULL. */
+  created_by_key_snapshot?: string | null;
 }
 
 interface EventRow {
@@ -44,6 +47,32 @@ interface EventRow {
   actor_id: string | null;
   at: string;
   text: string | null;
+}
+
+/** The admin API-key form's label limit (routes/admin/api-keys.ts); a stored label never exceeds it. */
+const KEY_SNAPSHOT_LABEL_MAX = 100;
+
+/**
+ * Normalise a key snapshot: a non-empty trimmed label capped at the key-label limit and a parseable
+ * creation time, or null. Used on write and on read, so a hand-edited or truncated value can never
+ * reach the report page as anything but "no snapshot".
+ */
+function normaliseKeySnapshot(value: unknown): DismissalKeySnapshot | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+  const { label, keyCreatedAt } = value as { label?: unknown; keyCreatedAt?: unknown };
+  if (typeof label !== 'string' || typeof keyCreatedAt !== 'string') return null;
+  const trimmed = label.trim().slice(0, KEY_SNAPSHOT_LABEL_MAX);
+  if (trimmed === '' || Number.isNaN(Date.parse(keyCreatedAt))) return null;
+  return { label: trimmed, keyCreatedAt };
+}
+
+function parseKeySnapshot(raw: string | null | undefined): DismissalKeySnapshot | null {
+  if (typeof raw !== 'string' || raw === '') return null;
+  try {
+    return normaliseKeySnapshot(JSON.parse(raw));
+  } catch {
+    return null;
+  }
 }
 
 function rowToDismissal(row: DismissalRow): IssueDismissal {
@@ -63,6 +92,7 @@ function rowToDismissal(row: DismissalRow): IssueDismissal {
     revokedById: row.revoked_by_id,
     revokedAt: row.revoked_at,
     revokeComment: row.revoke_comment,
+    createdByKeySnapshot: parseKeySnapshot(row.created_by_key_snapshot),
   };
 }
 
@@ -102,12 +132,15 @@ export class SqliteIssueDismissalRepository implements IssueDismissalRepository 
 
         const id = randomUUID();
         const now = new Date().toISOString();
+        const snapshot = normaliseKeySnapshot(input.actorKeySnapshot ?? null);
 
         this.db.prepare(`
           INSERT INTO issue_dismissals
-            (id, org_id, site_url, site_key, code, selector, reason, status, created_by, created_by_id, created_at)
+            (id, org_id, site_url, site_key, code, selector, reason, status, created_by, created_by_id, created_at,
+             created_by_key_snapshot)
           VALUES
-            (@id, @orgId, @siteUrl, @siteKey, @code, @selector, @reason, 'active', @actor, @actorId, @now)
+            (@id, @orgId, @siteUrl, @siteKey, @code, @selector, @reason, 'active', @actor, @actorId, @now,
+             @keySnapshot)
         `).run({
           id,
           orgId: input.orgId,
@@ -119,6 +152,7 @@ export class SqliteIssueDismissalRepository implements IssueDismissalRepository 
           actor: input.actor,
           actorId: input.actorId ?? null,
           now,
+          keySnapshot: snapshot === null ? null : JSON.stringify(snapshot),
         });
 
         this.insertEvent({

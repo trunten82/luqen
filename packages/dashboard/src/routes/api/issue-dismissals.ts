@@ -18,7 +18,10 @@
  */
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { StorageAdapter } from '../../db/index.js';
-import type { IssueDismissalRepository } from '../../db/interfaces/issue-dismissal-repository.js';
+import type {
+  DismissalKeySnapshot,
+  IssueDismissalRepository,
+} from '../../db/interfaces/issue-dismissal-repository.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { mayTouchDismissalOrg, mayViewScanReport } from '../../services/issue-dismissals/scan-access.js';
 import { toSiteKey } from '../../services/issue-dismissals/site-key.js';
@@ -99,6 +102,34 @@ function actorOf(request: FastifyRequest): { actor: string; actorId?: string } {
   };
 }
 
+/**
+ * HARD-08 (D-91-10): the marking API key's label and creation time, kept with the dismissal so the
+ * Dismissed section can still name the key after it is deleted. Only for a real key id (not the
+ * legacy `api-key:session`) whose row belongs to the scan's own org — the same rule as the report
+ * page's live label map. A failed read logs the error NAME only and the mark goes ahead without one.
+ */
+async function markingKeySnapshot(
+  request: FastifyRequest,
+  storage: StorageAdapter,
+  scanOrgId: string,
+): Promise<DismissalKeySnapshot | null> {
+  const user = request.user;
+  const keyId = user?.id === 'api-key' ? user.apiKeyId : undefined;
+  if (keyId === undefined || keyId === '' || keyId === 'session') return null;
+  try {
+    const key = (await storage.apiKeys.listKeys(scanOrgId)).find(
+      (k) => k.id === keyId && k.orgId === scanOrgId,
+    );
+    return key === undefined ? null : { label: key.label, keyCreatedAt: key.createdAt };
+  } catch (err) {
+    request.log.warn(
+      { errorName: err instanceof Error ? err.name : 'UnknownError' },
+      'Dismissal mark: key label not readable',
+    );
+    return null;
+  }
+}
+
 export async function issueDismissalRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
@@ -164,6 +195,7 @@ export async function issueDismissalRoutes(
         return reply.code(422).send({ error: 'No finding with this rule code and selector in this scan' });
       }
 
+      const actorKeySnapshot = await markingKeySnapshot(request, storage, scan.orgId);
       const result = await dismissals.mark({
         orgId: scan.orgId,
         siteUrl: scan.siteUrl,
@@ -173,6 +205,7 @@ export async function issueDismissalRoutes(
         reason: input.value.reason,
         ...actorOf(request),
         ipAddress: request.ip,
+        actorKeySnapshot,
       });
       if (result.kind === 'conflict') {
         return reply.code(409).send({

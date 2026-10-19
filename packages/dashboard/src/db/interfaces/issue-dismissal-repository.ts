@@ -6,6 +6,15 @@
 
 export type IssueDismissalStatus = 'active' | 'revoked';
 
+/**
+ * The marking API key as it was when the finding was marked (HARD-08): its label and its creation
+ * time. Never the api_keys row id or the secret. Stored only for a key of the scan's own org.
+ */
+export interface DismissalKeySnapshot {
+  readonly label: string;
+  readonly keyCreatedAt: string;
+}
+
 export interface IssueDismissal {
   readonly id: string;
   readonly orgId: string;
@@ -24,6 +33,8 @@ export interface IssueDismissal {
   readonly revokedById: string | null;
   readonly revokedAt: string | null;
   readonly revokeComment: string | null;
+  /** HARD-08: the marking key's label and creation time; null when none was stored. */
+  readonly createdByKeySnapshot?: DismissalKeySnapshot | null;
 }
 
 export type IssueDismissalAction = 'mark' | 'revoke';
@@ -50,6 +61,8 @@ export interface MarkIssueDismissalInput {
   readonly actor: string;
   readonly actorId?: string;
   readonly ipAddress?: string;
+  /** HARD-08: set only for an API key of the scan's own org; anything else stores none. */
+  readonly actorKeySnapshot?: DismissalKeySnapshot | null;
 }
 
 export type MarkIssueDismissalResult =
