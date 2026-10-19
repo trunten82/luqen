@@ -33,6 +33,20 @@ function isAuthPlugin(instance: PluginInstance): instance is AuthPlugin {
 // AuthService
 // ---------------------------------------------------------------------------
 
+/** Why a signed-in session is refused (the session.ended audit row's details). */
+export type SessionRefusal = 'inactive_user' | 'unknown_user' | 'key_refused';
+
+interface SessionUserResult {
+  readonly id: string;
+  readonly username: string;
+  readonly role: string;
+  readonly apiKeyId?: string;
+}
+
+type SessionPrincipal =
+  | { readonly ok: true; readonly user: SessionUserResult }
+  | { readonly ok: false; readonly refusal: SessionRefusal };
+
 /** Parsed group-sync configuration from the auth plugin. */
 interface GroupSyncConfig {
   readonly groupMapping: Readonly<Record<string, string>>;
@@ -189,26 +203,17 @@ export class AuthService {
     if (session !== undefined && typeof session.get === 'function') {
       const userId = session.get('userId') as string | undefined;
       const username = session.get('username') as string | undefined;
-      const role = session.get('role') as string | undefined;
       const sessionBootId = session.get('bootId') as string | undefined;
-      // A /login API-key session stores the key's row id (never the secret) so its dismissals
-      // stay attributable; sessions opened before that carry none.
-      const sessionKeyId = session.get('apiKeyId');
 
       if (userId !== undefined && username !== undefined) {
         // Verify session belongs to this database instance
         if (sessionBootId === this.getBootId()) {
-          return {
-            authenticated: true,
-            user: {
-              id: userId,
-              username,
-              role: role ?? 'user',
-              ...(userId === 'api-key' && typeof sessionKeyId === 'string' && sessionKeyId !== ''
-                ? { apiKeyId: sessionKeyId }
-                : {}),
-            },
-          };
+          const principal = await this.sessionPrincipal(session, userId, username);
+          if (principal.ok) {
+            return { authenticated: true, user: principal.user };
+          }
+          await this.endSession(request, userId, username, principal.refusal);
+          return { authenticated: false };
         }
 
         // Stale session from a previous DB — clear it to prevent redirect loops.
@@ -222,6 +227,88 @@ export class AuthService {
 
     // 3. No valid credentials
     return { authenticated: false };
+  }
+
+  /**
+   * The principal a signed-in session answers for, read from storage on EVERY request. The values
+   * the session was given at sign-in are a claim; the stored rows decide:
+   *
+   *   1. user id 'api-key' (a /login API-key session) -> the session's values, for the key row
+   *      the session names
+   *   2. a stored dashboard user with the session's user id -> that row decides: an inactive
+   *      row is refused ('inactive_user'); otherwise the stored id, username and role answer.
+   *      The session's role and username are never read for authorization.
+   *   3. no stored user, signed in through an external identity service (authMethod 'oauth',
+   *      the compliance-service sign-in, or 'sso', an auth plugin) -> the values given at
+   *      sign-in, unchanged
+   *   4. anything else -> refused ('unknown_user')
+   *
+   * One stored-user read per request (a primary-key lookup) and no cache, so a deactivation,
+   * deletion or role change applies on the user's next request. A failed read is not caught:
+   * the request ends in an error and is never answered from the session's values.
+   */
+  private async sessionPrincipal(
+    session: { get(key: string): unknown },
+    userId: string,
+    username: string,
+  ): Promise<SessionPrincipal> {
+    if (userId === 'api-key') {
+      // The key's row id (never the secret), so dismissals made in this session name the key.
+      const sessionKeyId = session.get('apiKeyId');
+      return {
+        ok: true,
+        user: {
+          id: userId,
+          username,
+          role: (session.get('role') as string | undefined) ?? 'user',
+          ...(typeof sessionKeyId === 'string' && sessionKeyId !== '' ? { apiKeyId: sessionKeyId } : {}),
+        },
+      };
+    }
+
+    const stored = await this.storage.users.getUserById(userId);
+    if (stored !== null) {
+      if (!stored.active) return { ok: false, refusal: 'inactive_user' };
+      return { ok: true, user: { id: stored.id, username: stored.username, role: stored.role } };
+    }
+
+    const authMethod = session.get('authMethod');
+    if (authMethod === 'oauth' || authMethod === 'sso') {
+      return {
+        ok: true,
+        user: { id: userId, username, role: (session.get('role') as string | undefined) ?? 'user' },
+      };
+    }
+    return { ok: false, refusal: 'unknown_user' };
+  }
+
+  /**
+   * End a session its stored principal refuses: clear it (so the next request is
+   * an anonymous one and the sign-in page is reachable) and record one session.ended audit row
+   * carrying the reason code only. A failed audit write is logged; the session still ends.
+   */
+  private async endSession(
+    request: FastifyRequest,
+    userId: string,
+    username: string,
+    refusal: SessionRefusal,
+  ): Promise<void> {
+    const regenerable = request.session as { regenerate?: (keep?: string[]) => void } | undefined;
+    if (typeof regenerable?.regenerate === 'function') {
+      regenerable.regenerate();
+    }
+    try {
+      await this.storage.audit.log({
+        actor: username,
+        actorId: userId,
+        action: 'session.ended',
+        resourceType: 'session',
+        details: refusal,
+        ...(typeof request.ip === 'string' ? { ipAddress: request.ip } : {}),
+      });
+    } catch (err) {
+      request.log?.warn({ err, refusal }, 'session.ended audit row not written');
+    }
   }
 
   // -----------------------------------------------------------------------

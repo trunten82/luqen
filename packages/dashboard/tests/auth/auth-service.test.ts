@@ -371,9 +371,11 @@ describe('AuthService', () => {
       const db = storage.getRawDatabase();
       const pm = mockPluginManager([]);
       const service = new AuthService(db, pm, storage);
+      // The stored user decides the role; the session carries none.
+      const bob = await storage.users.createUser('bob', 'password123', 'user');
 
       const sessionData: Record<string, unknown> = {
-        userId: 'user-1',
+        userId: bob.id,
         username: 'bob',
         bootId: service.getBootId(),
       };
