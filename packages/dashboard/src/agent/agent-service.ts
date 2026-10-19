@@ -379,9 +379,10 @@ export class AgentService {
     const agentDisplayName = await this.resolveDisplayName(orgId);
 
     // Plan 33-02 (AGENT-04): context hints are collected once per runTurn so every
-    // iteration shares the same snapshot, read in the conversation's org. They are
-    // read with the permissions resolved for the turn (set at the top of the try
-    // below), which the first iteration reuses.
+    // iteration shares the same snapshot, read in the conversation's org with the
+    // stored caller's permissions resolved for the turn (at the top of the try
+    // below; the first iteration reuses that set). A caller with no permission
+    // there (refused by the stored-caller rule, or holding none) gets no hints.
     let contextHintsBlock = '';
 
     // Phase 36 ATOOL-02 — shared per-turn retry budget. Closure-scoped so the
@@ -399,11 +400,13 @@ export class AgentService {
 
     try {
       const turnPermissions = await this.resolvePermissions(userId, orgId);
-      try {
-        const hints = await collectContextHints(this.storage, { userId, orgId, readPermissions: turnPermissions });
-        contextHintsBlock = formatContextHints(hints);
-      } catch {
-        contextHintsBlock = '';
+      if (turnPermissions.size > 0) {
+        try {
+          const hints = await collectContextHints(this.storage, { userId, orgId, readPermissions: turnPermissions });
+          contextHintsBlock = formatContextHints(hints);
+        } catch {
+          contextHintsBlock = '';
+        }
       }
 
       for (let iter = 0; iter < MAX_TOOL_ITERATIONS; iter++) {
