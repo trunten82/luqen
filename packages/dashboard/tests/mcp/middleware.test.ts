@@ -6,6 +6,7 @@ import {
   type McpTokenVerifier,
 } from '../../src/mcp/middleware.js';
 import { ALL_PERMISSION_IDS } from '../../src/permissions.js';
+import { storedCallerUsers } from '../helpers/stored-caller-stub.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -49,8 +50,10 @@ function makeMockRequest(overrides: Record<string, unknown> = {}): FastifyReques
 function makeStubStorage(
   perms: readonly string[] = [],
   oauthClientRow: { readonly revokedAt: Date | string | null } | null = null,
+  users: { getUserById(id: string): Promise<unknown> } = storedCallerUsers('user'),
 ) {
   return {
+    users: users as ReturnType<typeof storedCallerUsers>,
     roles: {
       getEffectivePermissions: vi.fn(async (_userId: string, _orgId?: string): Promise<Set<string>> => {
         return new Set(perms);
@@ -243,5 +246,31 @@ describe('createMcpAuthPreHandler', () => {
     expect(r.permissions!.size).toBe(0);
     // Confirm resolveEffectivePermissions was invoked with the clientId sub:
     expect(storage.roles.getEffectivePermissions).toHaveBeenCalledWith('oauth-client-abc', 'org-1');
+  });
+  it('Test 8: a stored user with an empty permission set is refused with 403', async () => {
+    const payload: McpTokenPayload = {
+      sub: 'user-8',
+      scopes: ['read', 'write'],
+      orgId: 'org-8',
+    };
+    const verify: McpTokenVerifier = vi.fn(async () => payload);
+    const storage = makeStubStorage([], null, storedCallerUsers('user'));
+    const handler = createMcpAuthPreHandler({ verifyToken: verify, storage, resourceMetadataUrl: 'https://test/.well-known/oauth-protected-resource' });
+    const request = makeMockRequest({
+      headers: { authorization: 'Bearer no-permission-token' },
+    });
+    const { reply, getStatus, getBody } = makeMockReply();
+
+    await handler(request, reply);
+
+    expect(getStatus()).toBe(403);
+    expect(getBody()).toEqual({ error: 'No permission in this organization', statusCode: 403 });
+    expect(reply.header).toHaveBeenCalledWith(
+      'WWW-Authenticate',
+      'Bearer resource_metadata="https://test/.well-known/oauth-protected-resource", error="insufficient_scope", error_description="no_permission"',
+    );
+    const r = request as unknown as { permissions?: Set<string>; tokenPayload?: McpTokenPayload };
+    expect(r.permissions).toBeUndefined();
+    expect(r.tokenPayload).toBeUndefined();
   });
 });

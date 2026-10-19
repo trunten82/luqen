@@ -19,6 +19,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { createServer } from '../../src/server.js';
 import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
+import { createDashboardSigner } from '../../src/auth/oauth-signer.js';
 
 /** A browser's view of a password session: the session cookie and the page CSRF token. */
 export interface HarnessSession {
@@ -46,6 +47,23 @@ export interface McpCallResult {
   readonly text: string;
 }
 
+/** What tools/list over /api/v1/mcp answered: the names shown, the status and the WWW-Authenticate header. */
+export interface McpListResult {
+  readonly status: number;
+  readonly names: readonly string[];
+  readonly wwwAuthenticate: string;
+}
+
+/** Claims for a token signed with the server's own active signing key (audience = this server's MCP URL). */
+export interface SignedTokenClaims {
+  readonly sub: string;
+  readonly scopes: readonly string[];
+  readonly orgId: string;
+  readonly role?: string;
+  /** Defaults to the harness's registered OAuth client. */
+  readonly clientId?: string;
+}
+
 export interface McpOauthHarness {
   readonly app: FastifyInstance;
   readonly seed: SqliteStorageAdapter;
@@ -54,11 +72,18 @@ export interface McpOauthHarness {
   switchOrg(session: HarnessSession, orgId: string): Promise<StepResult>;
   postForm(session: HarnessSession, url: string, fields: Record<string, string | readonly string[]>): Promise<StepResult>;
   mintToken(session: HarnessSession, scopes: readonly string[]): Promise<TokenResult>;
+  /** Sign a token directly through the server's DashboardSigner (no OAuth flow). */
+  signToken(claims: SignedTokenClaims): Promise<string>;
+  /** The harness's registered OAuth client id (registered on first use). */
+  clientId(): Promise<string>;
   callTool(token: string, name: string, args: Record<string, unknown>): Promise<McpCallResult>;
+  listTools(token: string): Promise<McpListResult>;
   close(): Promise<void>;
 }
 
 const REDIRECT_URI = 'https://mcp-client.example/callback';
+/** createServer defaults encryptionKey to sessionSecret; the harness passes this sessionSecret. */
+const SESSION_SECRET = 'm'.repeat(32);
 
 const tokenOf = (html: string): string | undefined =>
   /name="csrf-token" content="([^"]+)"/.exec(html)?.[1] ?? /name="_csrf" value="([^"]+)"/.exec(html)?.[1];
@@ -128,7 +153,7 @@ export async function startMcpOauthHarness(tag: string): Promise<McpOauthHarness
   };
   try {
     app = (await createServer({
-      dbPath, reportsDir: join(tmpRoot, 'reports'), sessionSecret: 'm'.repeat(32),
+      dbPath, reportsDir: join(tmpRoot, 'reports'), sessionSecret: SESSION_SECRET,
       catalogueUrl: '', catalogueCacheTtl: 0, redisUrl: '', maxConcurrentScans: 1,
     } as never)) as FastifyInstance;
     await app.listen({ host: '127.0.0.1', port });
@@ -223,6 +248,33 @@ export async function startMcpOauthHarness(tag: string): Promise<McpOauthHarness
     return { steps, token: (token.json() as { access_token: string }).access_token };
   };
 
+  const harnessClientId = async (): Promise<string> => {
+    const id = await registerClient();
+    if (id === undefined) throw new Error('harness: /oauth/register did not answer 201');
+    return id;
+  };
+
+  const signToken = async (claims: SignedTokenClaims): Promise<string> => {
+    const signer = await createDashboardSigner(seed!, SESSION_SECRET);
+    return await signer.mintAccessToken({
+      sub: claims.sub, scopes: claims.scopes, orgId: claims.orgId, aud: [resource], expiresInSeconds: 600,
+      clientId: claims.clientId ?? (await harnessClientId()),
+      ...(claims.role !== undefined ? { role: claims.role } : {}),
+    });
+  };
+
+  const listTools = async (token: string): Promise<McpListResult> => {
+    const res = await server.inject({
+      method: 'POST', url: '/api/v1/mcp',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
+      payload: { jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} },
+    });
+    const parsed = res.statusCode === 200 ? parseRpc(res.body) : {};
+    const tools = (parsed['result'] as { tools?: Array<{ name: string }> } | undefined)?.tools ?? [];
+    const header = res.headers['www-authenticate'];
+    return { status: res.statusCode, names: tools.map((t) => t.name), wwwAuthenticate: typeof header === 'string' ? header : '' };
+  };
+
   const callTool = async (token: string, name: string, args: Record<string, unknown>): Promise<McpCallResult> => {
     const res = await server.inject({
       method: 'POST', url: '/api/v1/mcp',
@@ -239,5 +291,8 @@ export async function startMcpOauthHarness(tag: string): Promise<McpOauthHarness
     };
   };
 
-  return { app: server, seed: seed!, publicUrl, login, switchOrg, postForm, mintToken, callTool, close };
+  return {
+    app: server, seed: seed!, publicUrl, login, switchOrg, postForm, mintToken, signToken, clientId: harnessClientId,
+    callTool, listTools, close,
+  };
 }
