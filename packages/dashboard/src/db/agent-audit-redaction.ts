@@ -7,6 +7,7 @@
  * {@link REDACTED}, whatever that value is. Arguments without such a key are stored exactly as given.
  *
  * The repository applies this on write, so every writer is covered by the one place that stores a row.
+ * The conversation repository applies the same rule to every stored tool call (agent_messages).
  */
 
 /** Argument names whose values the agent audit never stores. */

@@ -143,6 +143,9 @@ export interface ConversationRepository {
    * Appends a message and bumps the parent conversation's `updated_at` +
    * `last_message_at` in a single transaction. When `role === 'user'`,
    * also maintains the rolling-window flag on older messages.
+   *
+   * `toolCallJson` is stored with secret-named argument values redacted, by
+   * the rule the agent audit uses (src/db/agent-audit-redaction.ts).
    */
   appendMessage(input: AppendMessageInput): Promise<Message>;
 

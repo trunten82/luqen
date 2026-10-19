@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
+import { redactArgumentsJson } from '../../agent-audit-redaction.js';
 import type {
   AppendMessageInput,
   Conversation,
@@ -220,7 +221,8 @@ export class SqliteConversationRepository implements ConversationRepository {
         conversationId: input.conversationId,
         role: input.role,
         content: input.content ?? null,
-        toolCallJson: input.toolCallJson ?? null,
+        // HARD-21: secret-named tool arguments are stored as [redacted], for every writer.
+        toolCallJson: input.toolCallJson !== undefined ? redactArgumentsJson(input.toolCallJson) : null,
         toolResultJson: input.toolResultJson ?? null,
         status,
         createdAt: now,
