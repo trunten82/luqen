@@ -71,7 +71,10 @@ export interface McpOauthHarness {
   login(username: string, password: string): Promise<StepResult>;
   switchOrg(session: HarnessSession, orgId: string): Promise<StepResult>;
   postForm(session: HarnessSession, url: string, fields: Record<string, string | readonly string[]>): Promise<StepResult>;
-  mintToken(session: HarnessSession, scopes: readonly string[]): Promise<TokenResult>;
+  /** Mint through the real OAuth flow; `clientId` picks a client from newClient() (default: the harness client). */
+  mintToken(session: HarnessSession, scopes: readonly string[], opts?: { readonly clientId?: string }): Promise<TokenResult>;
+  /** Register a further OAuth client through /oauth/register and return its id. */
+  newClient(name: string): Promise<string>;
   /** Sign a token directly through the server's DashboardSigner (no OAuth flow). */
   signToken(claims: SignedTokenClaims): Promise<string>;
   /** The harness's registered OAuth client id (registered on first use). */
@@ -194,23 +197,34 @@ export async function startMcpOauthHarness(tag: string): Promise<McpOauthHarness
   const switchOrg = async (session: HarnessSession, orgId: string): Promise<StepResult> =>
     await postForm(session, '/orgs/switch', { orgId });
 
-  const registerClient = async (): Promise<string | undefined> => {
-    if (clientId !== undefined) return clientId;
+  const register = async (name: string): Promise<string | undefined> => {
     const res = await server.inject({
       method: 'POST', url: '/oauth/register',
       payload: {
-        client_name: `harness-${tag}`, redirect_uris: [REDIRECT_URI],
+        client_name: name, redirect_uris: [REDIRECT_URI],
         grant_types: ['authorization_code', 'refresh_token'], token_endpoint_auth_method: 'none', scope: 'read write',
       },
     });
-    if (res.statusCode !== 201) return undefined;
-    clientId = (res.json() as { client_id: string }).client_id;
+    return res.statusCode === 201 ? (res.json() as { client_id: string }).client_id : undefined;
+  };
+
+  const registerClient = async (): Promise<string | undefined> => {
+    if (clientId !== undefined) return clientId;
+    clientId = await register(`harness-${tag}`);
     return clientId;
   };
 
-  const mintToken = async (session: HarnessSession, scopes: readonly string[]): Promise<TokenResult> => {
+  const newClient = async (name: string): Promise<string> => {
+    const id = await register(`harness-${tag}-${name}`);
+    if (id === undefined) throw new Error('harness: /oauth/register did not answer 201');
+    return id;
+  };
+
+  const mintToken = async (
+    session: HarnessSession, scopes: readonly string[], opts: { readonly clientId?: string } = {},
+  ): Promise<TokenResult> => {
     const steps: Array<{ step: string; status: number }> = [];
-    const id = await registerClient();
+    const id = opts.clientId ?? (await registerClient());
     steps.push({ step: 'register', status: id === undefined ? 0 : 201 });
     if (id === undefined) return { steps };
     const verifier = randomBytes(32).toString('base64url');
@@ -292,7 +306,7 @@ export async function startMcpOauthHarness(tag: string): Promise<McpOauthHarness
   };
 
   return {
-    app: server, seed: seed!, publicUrl, login, switchOrg, postForm, mintToken, signToken, clientId: harnessClientId,
+    app: server, seed: seed!, publicUrl, login, switchOrg, postForm, mintToken, newClient, signToken, clientId: harnessClientId,
     callTool, listTools, close,
   };
 }

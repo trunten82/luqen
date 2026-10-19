@@ -43,12 +43,12 @@ async function seedMember(tag: string): Promise<SeededMember> {
 }
 
 /** Login, switch to the member's org and mint a read/write token through the real OAuth flow. */
-async function mintFor(member: SeededMember, trail: string[]): Promise<string | undefined> {
+async function mintFor(member: SeededMember, trail: string[], clientId?: string): Promise<string | undefined> {
   const login = await h.login(member.username, PASSWORD);
   trail.push(`login=${login.status}`);
   const switched = await h.switchOrg(login.session, member.orgId);
   trail.push(`switch=${switched.status}`);
-  const minted = await h.mintToken(switched.session, ['read', 'write']);
+  const minted = await h.mintToken(switched.session, ['read', 'write'], clientId === undefined ? {} : { clientId });
   for (const s of minted.steps) trail.push(`${s.step}=${s.status}`);
   return minted.token;
 }
@@ -132,6 +132,27 @@ describe('HARD-19 the mcp endpoint answers for the stored user of the token', ()
     expect(listed.wwwAuthenticate, trail).toContain('error_description="unknown_user"');
     expect(listed.names, trail).toEqual([]);
     expect(call.status, trail).toBe(401);
+  }, 60_000);
+
+  it('HARD-19 a token issued to an oauth client that was revoked is refused', async () => {
+    const member = await seedMember('c4');
+    const clientId = await h.newClient('c4');
+    const trail: string[] = [];
+    const token = await mintFor(member, trail, clientId);
+    expect(token, trail.join(' ')).toBeDefined();
+    const before = await h.listTools(token!);
+    trail.push(`before=${before.status}/${before.names.length}`);
+    expect(before.status, trail.join(' ')).toBe(200); // positive control: the token works while its client is live
+
+    await h.seed.oauthClients.revoke(clientId);
+    const after = await h.listTools(token!);
+    const call = await h.callTool(token!, 'dashboard_list_reports', {});
+    trail.push(`after=${after.status}/${after.names.length} call=${call.status}`);
+
+    expect(after.status, trail.join(' ')).toBe(401);
+    expect(after.wwwAuthenticate, trail.join(' ')).toContain('error_description="client_revoked"');
+    expect(after.names, trail.join(' ')).toEqual([]);
+    expect(call.status, trail.join(' ')).toBe(401);
   }, 60_000);
 
   it('HARD-19 an api key presented as a bearer token is refused on the mcp endpoint', async () => {
