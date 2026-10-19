@@ -75,9 +75,10 @@ const hasButtonFor = (page, f) => page.evaluate((code, sel) => [...document.quer
  * a scan of the org the session is in (null for any other org), and returns that scan's own orgId; the
  * name is then taken from the admin's org memberships (`/orgs/current` userOrgs) by that id. A scan the
  * admin cannot read in its session org, or an org it is not a member of, leaves the name null and the
- * guard refuses. (`/orgs/current`'s currentOrgId is not used: it reads the raw session key, which a fresh
- * login has not set even though the request's org is already resolved.) Read-only: one GET and one
- * GraphQL query, no session change. Nothing here is printed.
+ * guard refuses. The scan's own orgId is used, not `/orgs/current`'s currentOrgId, because the rule is
+ * about the org the TARGET SCAN belongs to; a GraphQL read answers only in the session org, so whenever
+ * it answers, that orgId is also the org the request acts in. Read-only: one GET and one GraphQL query,
+ * no session change. Nothing here is printed.
  */
 async function observeTarget(page, scanId) {
   try {
