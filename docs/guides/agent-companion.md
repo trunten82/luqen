@@ -22,8 +22,8 @@ and `Tab` cycles through the controls.
 ### Asking a question
 
 Type into the message box and press **Send** (or `Ctrl+Enter`). The agent
-takes your turn together with a small slice of context (recent scans and
-your active brand guideline) and replies in the conversation transcript
+takes your turn together with a small slice of context (see
+[Context hints](#context-hints)) and replies in the conversation transcript
 above.
 
 While a response is streaming, the **Send** button switches to a **Stop**
@@ -138,9 +138,13 @@ The recognition language follows `navigator.language`, falling back to
 ### Context hints
 
 The agent sees a small, automatically generated context bundle on every
-turn: your most recent scans and the active brand guideline. You don't
-need to paste in URLs or report IDs — ask "what changed in my last scan?"
-and the agent already knows which scan you mean.
+turn, read with your permissions in the conversation's organisation: the
+organisation's name, its most recent scans when your role can view reports
+there (`reports.view`), and its brand guideline names when your role can
+view branding there (`branding.view`). A user who holds no permission in
+the organisation gets no context bundle. You don't need to paste in URLs or
+report IDs — ask "what changed in my last scan?" and the agent already
+knows which scan you mean.
 
 Context hints are visible in the transcript as a faint "context"
 indicator above your first turn — click it to expand the exact bundle
@@ -199,7 +203,8 @@ Every agent turn produces audit entries:
 - Each tool call, with arguments and outcome (`success`, `error`,
   `denied`, `timeout`). An argument named like a password, secret, token,
   API key, authorization value or credential is stored as `[redacted]`,
-  at any depth
+  at any depth, in the agent audit and in the conversation's stored
+  messages (including an action awaiting confirmation)
 - Token-budget compaction events
 - Soft-delete and share-link operations on conversations
 

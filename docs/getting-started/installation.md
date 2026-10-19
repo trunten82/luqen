@@ -227,7 +227,7 @@ break OAuth client credential flows.
 | `/admin/oauth-keys` | OAuth signing-key inventory with manual rotate | `admin.system` |
 | `/agent` | Agent companion side panel (text + speech) | signed-in users; its tools follow the user's role |
 | `/agent/share/<id>` | Read-only share-link permalinks | (public, token-gated) |
-| `/api/mcp` | Streamable HTTP MCP endpoint | `mcp.use` |
+| `/api/v1/mcp` | Streamable HTTP MCP endpoint | `mcp.use` |
 
 ---
 

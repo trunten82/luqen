@@ -65,7 +65,7 @@ Under the hood, Luqen uses the [pa11y](https://pa11y.org/) library directly and 
 
 ## Agent companion
 
-Luqen v3.0+ ships an in-dashboard conversational agent. Drawer-launched, text + speech input (Web Speech API where supported), SSE streaming, native-dialog confirmation for destructive tool calls, context hints (recent scans + active guidelines injected per turn), token-budget compaction at 85% of model max, persistent history with rolling 20-turn window, and an `/admin/audit` viewer with CSV export.
+Luqen v3.0+ ships an in-dashboard conversational agent. Drawer-launched, text + speech input (Web Speech API where supported), SSE streaming, native-dialog confirmation for destructive tool calls, context hints (the recent scans and active guidelines the user may view, injected per turn), token-budget compaction at 85% of model max, persistent history with rolling 20-turn window, and an `/admin/audit` viewer with CSV export.
 
 See [docs/guides/agent-companion.md](docs/guides/agent-companion.md) for the full surface (audience subsections for end users and admins).
 
