@@ -5,16 +5,16 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: Completed 91-13-PLAN.md (PR2 merged b3d7a2ae, deployed, read back on prod)
-last_updated: "2026-10-19T06:28:56.177Z"
+stopped_at: "Completed 91-14-PLAN.md (PR3: technical-details gate on dismissal and assign controls; Dismiss button mirrors the validator; refused previews)"
+last_updated: "2026-10-19T06:54:04.983Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
-state_head: b3d7a2aeb0b56b7744b9c2862548e1497d172ab7
+state_head: 9894dea979dc898d6a073f5587e9768fe4b70f1e
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 28
-  completed_plans: 23
+  completed_plans: 24
   percent: 33
 ---
 
@@ -128,7 +128,7 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 ## Current Position
 
 Phase: 91 (Dismissal and permission hardening) — EXECUTING
-Plan: 10 of 18
+Plan: 11 of 18
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 91 execution started
 
@@ -219,8 +219,8 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-19T06:28:56.113Z
-Stopped at: Completed 91-13-PLAN.md (PR2 merged b3d7a2ae, deployed, read back on prod)
+Last session: 2026-10-19T06:54:04.922Z
+Stopped at: Completed 91-14-PLAN.md (PR3: technical-details gate on dismissal and assign controls; Dismiss button mirrors the validator; refused previews)
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -279,6 +279,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 91 P12d | ~67min | 3 tasks | 8 files |
 | Phase 91 P12e | ~63min | 2 tasks | 2 files |
 | Phase 91 P13 | 35min | 2 tasks | 0 files |
+| Phase 91 P14 | 25min | 3 tasks | 11 files |
 
 ## Decisions
 
@@ -327,6 +328,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 91]: Phase 91 P12d: a team is created in, and moved to, only the organization its caller administers (a global administrator places teams anywhere; a caller with no current organization places none); the shared MCP plugin runs a tool through tools/call only when the token scope admits it, by the rule tools/list applies, for end-user and service tokens alike, and publishes each input schema as JSON Schema; the cookie CSRF preHandler is named and the /api write inventory reads it on every route's hook list, with no route adding an early lifecycle hook
 - [Phase 91]: Phase 91 P12e: PR2 docs state the role, team and MCP tool rules as behaviour only; every PR2 gate is green on the final tree at the expected counts; the CR-01 fix is layered (either MCP admin rule removed alone leaves the end-to-end tests green, all seven layers removed together redden them)
 - [Phase 91]: PR2 shipped as PR 10 (merge b3d7a2ae) after the pre-merge production gates; the permission read-back's single finding, the UAT admin persona's team membership in the UAT organization, was accepted by the owner as a known test fixture
+- [Phase 91]: Phase 91 P14: the report page offers the dismissal controls (Dismiss, Revoke and both dialogs) and the per-issue Assign buttons only to viewers with technical-details access; the disabled Dismiss button is decided by the mark validator for both the selector and the rule code, pinned by one shared case list; a preview answered with a 4xx other than 408/429 shows the refused hint
 
 ### Blockers
 
