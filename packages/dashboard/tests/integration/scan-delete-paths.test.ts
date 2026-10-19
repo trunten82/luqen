@@ -10,11 +10,15 @@
  * Organization names, user names and site hosts are placeholders (Fabrikam / Northwind, *.example).
  */
 import { randomUUID } from 'node:crypto';
+import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { generateApiKey } from '../../src/auth/api-key.js';
+import { DASHBOARD_TOOL_METADATA } from '../../src/mcp/metadata.js';
 import { startMcpOauthHarness, type HarnessSession, type McpOauthHarness } from '../helpers/mcp-oauth-harness.js';
+import { isCommentLine, readSources } from '../helpers/source-walk.js';
 
 const PASSWORD = 'Fabrikam-Delete-42!';
+const SRC = join(__dirname, '..', '..', 'src');
 const OWNER = 'fabrikam-delete-owner';
 const MEMBER = 'fabrikam-delete-member';
 const SOLO = 'solo-delete-user';
@@ -158,4 +162,78 @@ describe('HARD-18 scan delete paths', () => {
     expect(trail[1]).toMatch(/^graphql=\d+:Forbidden/);
     expect(trail[2]).toBe('page=403');
   }, 60_000);
+
+  it('HARD-18 the graphql delete lets the signed in user who started the scan delete it', async () => {
+    const id = await seedScan(fabrikamId, MEMBER);
+    const answer = await graphqlDelete({ session: MEMBER }, id);
+    expect(answer).toBe('200:deleted');
+    expect(await scanExists(id)).toBe(false);
+  }, 60_000);
+
+  it('HARD-18 the report page delete refuses an organization user on a scan shared with every organization', async () => {
+    const id = await seedScan('system', OWNER);
+    const status = await pageDelete({ session: OWNER }, id);
+    expect(status).toBe(403);
+    expect(await scanExists(id)).toBe(true);
+  }, 60_000);
+
+  it('HARD-18 every delete path gives the same answer for the same caller and scan', async () => {
+    // One row per (signed-in caller, scan). Each path gets its own freshly seeded scan with the same
+    // organization and starter, and its answer is read back from storage: deleted, or still there.
+    const rows: ReadonlyArray<{ readonly label: string; readonly caller: string; readonly org: () => string; readonly createdBy: string }> = [
+      { label: 'owner, own organization scan started by the member', caller: OWNER, org: () => fabrikamId, createdBy: MEMBER },
+      { label: 'member, scan the owner started', caller: MEMBER, org: () => fabrikamId, createdBy: OWNER },
+      { label: 'member, scan it started', caller: MEMBER, org: () => fabrikamId, createdBy: MEMBER },
+      { label: 'owner, scan shared with every organization', caller: OWNER, org: () => 'system', createdBy: OWNER },
+      { label: 'user outside every organization, scan shared with every organization', caller: SOLO, org: () => 'system', createdBy: OWNER },
+      { label: 'owner, scan of another organization', caller: OWNER, org: () => northwindId, createdBy: NORTHWIND_OWNER },
+      { label: 'global admin, scan of another organization', caller: GLOBAL_ADMIN, org: () => northwindId, createdBy: NORTHWIND_OWNER },
+    ];
+    const answers: string[] = [];
+    const disagreements: string[] = [];
+    for (const row of rows) {
+      const cred = { session: row.caller };
+      const outcome: Record<string, string> = {};
+      const rest = await seedScan(row.org(), row.createdBy);
+      const restStatus = await restDelete(cred, rest);
+      outcome['rest'] = (await scanExists(rest)) ? 'kept' : 'deleted';
+      const gql = await seedScan(row.org(), row.createdBy);
+      const gqlAnswer = await graphqlDelete(cred, gql);
+      outcome['graphql'] = (await scanExists(gql)) ? 'kept' : 'deleted';
+      const page = await seedScan(row.org(), row.createdBy);
+      const pageStatus = await pageDelete(cred, page);
+      outcome['page'] = (await scanExists(page)) ? 'kept' : 'deleted';
+      const line = `${row.label}: rest=${outcome['rest']}(${restStatus}) graphql=${outcome['graphql']}(${gqlAnswer}) page=${outcome['page']}(${pageStatus})`;
+      answers.push(line);
+      if (new Set(Object.values(outcome)).size !== 1) disagreements.push(line);
+    }
+    expect(disagreements, answers.join('\n')).toEqual([]);
+  }, 120_000);
+
+  it('HARD-18 every scan delete call site goes through the shared delete rule', () => {
+    // Any file under src/ (the repository layer under db/ aside) that deletes scan rows must also ask the
+    // shared rule, and the callers are exactly the three delete paths. A new caller fails here until it
+    // is listed AND asks the rule.
+    const code = (text: string): string => text.split('\n').filter((l) => !isCommentLine(l)).join('\n');
+    const callers: string[] = [];
+    const withoutRule: string[] = [];
+    for (const [rel, text] of readSources(SRC)) {
+      if (rel.startsWith('db/')) continue;
+      const src = code(text);
+      if (!src.includes('.deleteScan(') && !src.includes('.deleteOrgScans(')) continue;
+      callers.push(rel);
+      if (!src.includes('scanDeleteRefusal(')) withoutRule.push(rel);
+    }
+    expect(withoutRule).toEqual([]);
+    expect(callers.sort()).toEqual(['graphql/resolvers.ts', 'routes/api/data.ts', 'routes/reports.ts']);
+  });
+
+  it('HARD-18 no mcp tool deletes a scan', () => {
+    // tests/mcp/tool-metadata-drift.test.ts holds DASHBOARD_TOOL_METADATA equal to the registered tool set.
+    const deleting = DASHBOARD_TOOL_METADATA.map((t) => t.name)
+      .filter((n) => /(delete|remove|purge|destroy).*(scan|report)|(scan|report).*(delete|remove|purge|destroy)/i.test(n));
+    expect(deleting).toEqual([]);
+    const mcpCallers = [...readSources(join(SRC, 'mcp'))].filter(([, text]) => /\.delete(Scan|OrgScans)\(/.test(text)).map(([rel]) => rel);
+    expect(mcpCallers).toEqual([]);
+  });
 });
