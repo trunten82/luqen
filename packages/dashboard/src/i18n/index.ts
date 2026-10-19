@@ -31,15 +31,18 @@ export function loadTranslations(): void {
   }
 }
 
+/** A `{{name}}` placeholder; every placeholder in the six locale files contains this shape. */
+const PLACEHOLDER = /\{\{(\w+)\}\}/g;
+
 export function t(key: string, locale: Locale = 'en', params?: Record<string, string>): string {
   const dict = translations.get(locale) ?? translations.get('en')!;
-  let value = dict[key] ?? translations.get('en')![key] ?? key;
-  if (params) {
-    for (const [k, v] of Object.entries(params)) {
-      value = value.replace(`{{${k}}}`, v);
-    }
-  }
-  return value;
+  const value = dict[key] ?? translations.get('en')![key] ?? key;
+  if (params === undefined) return value;
+  // One pass with a function replacer: what the function returns is inserted literally ($&, $`, $' and
+  // the like are not interpreted), substituted text is never scanned again, and every occurrence of a
+  // placeholder is replaced. A placeholder without a value stays as written.
+  return value.replace(PLACEHOLDER, (match: string, name: string) =>
+    Object.hasOwn(params, name) ? params[name]! : match);
 }
 
 export function getLocaleData(locale: Locale): Record<string, string> {
