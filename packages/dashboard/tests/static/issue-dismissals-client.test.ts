@@ -308,14 +308,21 @@ describe('confirm gating', () => {
 
   it('HARD-01 preview treats a refused request as refused not as retryable', async () => {
     // A request the server refuses (an over-long query, an invalid rule code) fails the same way
-    // every time, so Try again would loop forever: it shows the refused state instead.
-    for (const code of [400, 413, 414, 431]) {
+    // every time, so Try again would loop forever: it shows the refused state instead, with the copy
+    // for its status (400: the refused request; any other such status: the generic refusal).
+    for (const [code, refusedAttr] of [
+      [400, 'data-preview-refused-invalid'],
+      [413, 'data-preview-refused-generic'],
+      [414, 'data-preview-refused-generic'],
+      [431, 'data-preview-refused-generic'],
+    ] as const) {
       const h = await make();
       open(h);
       h.pending[0].resolve(res(code, { error: SERVER_TEXT }));
       await flush();
       type(h, 'A real reason');
-      expect(status(h), String(code)).toBe(attr(h, 'data-preview-refused'));
+      expect(attr(h, refusedAttr), String(code)).not.toBe('');
+      expect(status(h), String(code)).toBe(attr(h, refusedAttr));
       expect(el(h, '[data-action="rptDismissRetryPreview"]').classList.contains('is-hidden'), String(code)).toBe(true);
       expect(confirmBtn(h).disabled, String(code)).toBe(true);
       expect(h.doc.body.textContent, String(code)).not.toContain(SERVER_TEXT);

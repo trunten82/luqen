@@ -1730,6 +1730,9 @@
       "dismissTitle": "Écarter comme faux positif",
       "dismissAria": "Écarter comme faux positif : règle {{code}}",
       "refusedTitle": "Ce constat n'a pas d'élément précis et ne peut pas être écarté.",
+      "refusedSelectorTooLong": "Le sélecteur d'élément de ce constat est trop long, il ne peut donc pas être écarté.",
+      "refusedCodeTooLong": "Le code de règle de ce constat est trop long, il ne peut donc pas être écarté.",
+      "refusedCodeMissing": "Ce constat n'a pas de code de règle et ne peut pas être écarté.",
       "revokeAria": "Révoquer l'écartement de la règle {{code}}"
     },
     "dialog": {
@@ -1753,6 +1756,10 @@
         "error": "Impossible de vérifier ce que cela couvre. Réessayez.",
         "retry": "Réessayer",
         "refused": "Ce constat n'a pas d'élément précis et ne peut pas être écarté.",
+        "refusedSelectorTooLong": "Le sélecteur d'élément de ce constat est trop long, il ne peut donc pas être écarté.",
+        "refusedInvalid": "Ce constat ne peut pas être écarté : la demande a été refusée.",
+        "reportUnavailable": "Le rapport de cette analyse n'est pas disponible, il n'y a donc rien à écarter.",
+        "refusedGeneric": "Ce constat ne peut pas être écarté.",
         "alreadyDismissed": "Cette règle est déjà écartée pour cet élément de ce site, il n'y a donc rien à écarter. Rechargez la page pour la voir dans Constats écartés.",
         "together": "Toutes les occurrences comptées ci-dessus sont écartées ensemble, y compris celles qui sont listées séparément dans ce rapport."
       },

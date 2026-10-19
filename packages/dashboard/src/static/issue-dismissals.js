@@ -74,6 +74,27 @@
     keepFieldInView(d);
   }
 
+  /* HARD-01: a refused preview names its reason. Status (or, for a refused 200, the server's
+     reason) -> data attribute holding the translated text; the server's English error text is
+     never shown. 408 and 429 are not here: they mean "not now" and stay retryable. */
+  var PREVIEW_REFUSED = {
+    400: 'data-preview-refused-invalid',
+    401: 'data-err-session',
+    403: 'data-err-forbidden',
+    404: 'data-err-not-found',
+    422: 'data-preview-report-unavailable'
+  };
+  var PREVIEW_REFUSED_REASON = {
+    'selector': 'data-preview-refused',
+    'selector-too-long': 'data-preview-refused-selector-too-long'
+  };
+
+  function previewRefusedAttr(status, reason) {
+    var map = status === 200 ? PREVIEW_REFUSED_REASON : PREVIEW_REFUSED;
+    var key = status === 200 ? reason : status;
+    return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : 'data-preview-refused-generic';
+  }
+
   function startPreview(d) {
     var seq = state.seq = state.seq + 1;
     state.previewOk = false;
@@ -88,12 +109,14 @@
     var url = '/api/v1/scans/' + encodeURIComponent(d.getAttribute('data-scan-id') || '') +
       '/dismissals/preview?code=' + encodeURIComponent(state.code) +
       '&selector=' + encodeURIComponent(state.selector);
+    var refusedStatus = 0;
     fetch(url, { credentials: 'include', headers: { 'Accept': 'application/json' } })
       .then(function (res) {
         /* HARD-01: a request the server refuses (4xx) is refused the same way every time, so it
            shows the refused state, not Try again. 408 and 429 mean "not now" and stay retryable,
            as do 5xx answers and network failures (the catch below). */
         if (res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429) {
+          refusedStatus = res.status;
           return { refused: true };
         }
         if (!res.ok) throw new Error('preview ' + res.status);
@@ -101,7 +124,7 @@
       })
       .then(function (data) {
         if (seq !== state.seq) return;
-        applyPreview(d, data);
+        applyPreview(d, data, refusedStatus);
       })
       .catch(function () {
         if (seq !== state.seq) return;
@@ -111,12 +134,16 @@
       });
   }
 
-  function applyPreview(d, data) {
+  /* refusedStatus: the 4xx status a refused request answered, or 0 for a 200 answer (whose own
+     `reason` then names the refusal). Never read from the response body. */
+  function applyPreview(d, data, refusedStatus) {
     var occ = data && typeof data.occurrences === 'number' ? data.occurrences : 0;
     var pages = data && typeof data.pages === 'number' ? data.pages : 0;
     setText(preview(d, 'occurrences'), String(occ));
     setText(preview(d, 'pages'), String(pages));
-    if (data && data.refused === true) { previewDone(d, 'data-preview-refused'); }
+    if (data && data.refused === true) {
+      previewDone(d, refusedStatus ? previewRefusedAttr(refusedStatus, null) : previewRefusedAttr(200, data.reason));
+    }
     else if (data && data.alreadyDismissed === true) { previewDone(d, 'data-preview-already'); }
     else if (occ < 1) { previewDone(d, 'data-preview-none'); }
     /* 89-11 (D-04, UD-05): more than one counted occurrence (twin page issues, a template item)

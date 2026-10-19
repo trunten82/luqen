@@ -94,13 +94,16 @@ export const RevokeBody = Type.Object(
 );
 
 /**
- * Phase 89 (D-04): the read-only coverage preview behind the mark dialog. `refused` (with
- * `reason: 'selector'`) answers a selector that matches the whole page (FP-04); the UI translates it.
+ * Phase 89 (D-04): the read-only coverage preview behind the mark dialog. `refused` answers a
+ * selector the mark route would refuse, with its `reason`: 'selector' for a selector that matches
+ * the whole page or names no element (FP-04), 'selector-too-long' for one over
+ * DISMISSAL_SELECTOR_MAX_LENGTH (HARD-01). The UI translates the reason. The selector therefore has
+ * no schema length cap here: the handler refuses an over-long one with its reason instead of a 400.
  */
 export const PreviewQuery = Type.Object(
   {
     code: Type.String({ maxLength: DISMISSAL_CODE_MAX_LENGTH }),
-    selector: Type.String({ maxLength: DISMISSAL_SELECTOR_MAX_LENGTH }),
+    selector: Type.String(),
   },
   { additionalProperties: false },
 );
@@ -109,7 +112,7 @@ export const PreviewResponse = Type.Object({
   occurrences: Type.Integer({ minimum: 0 }),
   pages: Type.Integer({ minimum: 0 }),
   refused: Type.Optional(Type.Boolean()),
-  reason: Type.Optional(Type.Literal('selector')),
+  reason: Type.Optional(Type.Union([Type.Literal('selector'), Type.Literal('selector-too-long')])),
   /** Present (true) only when this rule + element is ALREADY actively dismissed for the site. */
   alreadyDismissed: Type.Optional(Type.Boolean()),
 });

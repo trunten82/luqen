@@ -1739,6 +1739,9 @@
       "dismissTitle": "Escludi come falso positivo",
       "dismissAria": "Escludi come falso positivo: regola {{code}}",
       "refusedTitle": "Questo rilevamento non ha un elemento specifico e non può essere escluso.",
+      "refusedSelectorTooLong": "Il selettore dell'elemento di questo rilevamento è troppo lungo, quindi non può essere escluso.",
+      "refusedCodeTooLong": "Il codice della regola di questo rilevamento è troppo lungo, quindi non può essere escluso.",
+      "refusedCodeMissing": "Questo rilevamento non ha un codice di regola e non può essere escluso.",
       "revokeAria": "Revoca l'esclusione della regola {{code}}"
     },
     "dialog": {
@@ -1762,6 +1765,10 @@
         "error": "Impossibile verificare ciò che questo copre. Riprova.",
         "retry": "Riprova",
         "refused": "Questo rilevamento non ha un elemento specifico e non può essere escluso.",
+        "refusedSelectorTooLong": "Il selettore dell'elemento di questo rilevamento è troppo lungo, quindi non può essere escluso.",
+        "refusedInvalid": "Questo rilevamento non può essere escluso: la richiesta è stata rifiutata.",
+        "reportUnavailable": "Il report di questa scansione non è disponibile, quindi non c'è nulla da escludere.",
+        "refusedGeneric": "Questo rilevamento non può essere escluso.",
         "alreadyDismissed": "Questa regola è già esclusa per questo elemento di questo sito, quindi non c'è nulla da escludere. Ricarica la pagina per vederla in Rilevamenti esclusi.",
         "together": "Tutte le occorrenze conteggiate sopra vengono escluse insieme, comprese quelle elencate separatamente in questo report."
       },

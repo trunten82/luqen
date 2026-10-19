@@ -2225,6 +2225,9 @@
       "dismissTitle": "Dismiss as false positive",
       "dismissAria": "Dismiss as false positive: rule {{code}}",
       "refusedTitle": "This finding has no specific element and cannot be dismissed.",
+      "refusedSelectorTooLong": "This finding's element selector is too long to be dismissed.",
+      "refusedCodeTooLong": "This finding's rule code is too long to be dismissed.",
+      "refusedCodeMissing": "This finding has no rule code and cannot be dismissed.",
       "revokeAria": "Revoke dismissal of rule {{code}}"
     },
     "dialog": {
@@ -2248,6 +2251,10 @@
         "error": "Could not check what this covers. Try again.",
         "retry": "Try again",
         "refused": "This finding has no specific element and cannot be dismissed.",
+        "refusedSelectorTooLong": "This finding's element selector is too long to be dismissed.",
+        "refusedInvalid": "This finding cannot be dismissed: the request was refused.",
+        "reportUnavailable": "This scan's report is not available, so nothing can be dismissed.",
+        "refusedGeneric": "This finding cannot be dismissed.",
         "alreadyDismissed": "This rule on this exact element is already dismissed for this site, so there is nothing to dismiss. Reload the page to see it under Dismissed findings.",
         "together": "Every occurrence counted above is dismissed together, including any that are listed separately in this report."
       },

@@ -400,7 +400,7 @@ Dismissals mark a finding (rule code plus selector) as not applicable on a site.
 | Endpoint | Permissions | Notes |
 |----------|-------------|-------|
 | `POST /api/v1/scans/:scanId/dismissals` (mark) | `issues.dismiss` and `reports.view` | Body `{ code, selector, reason }`; `201` with the dismissal |
-| `GET /api/v1/scans/:scanId/dismissals/preview` (preview) | `issues.dismiss` and `reports.view` | Query `code`, `selector` |
+| `GET /api/v1/scans/:scanId/dismissals/preview` (preview) | `issues.dismiss` and `reports.view` | Query `code`, `selector`; a selector that cannot be dismissed answers `200` with `refused: true` and `reason` `selector` (whole page or no element) or `selector-too-long` (over 4000 characters) |
 | `POST /api/v1/dismissals/:id/revoke` (revoke) | `issues.dismiss` and `reports.view` | Body `{ comment? }` |
 | `GET /api/v1/scans/:scanId/dismissals` (list) | `reports.view` | Returns the rows the report's Dismissed section shows |
 

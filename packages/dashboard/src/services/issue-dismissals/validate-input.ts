@@ -72,28 +72,48 @@ export function validateDismissalReason(raw: unknown): ValidationResult<string> 
   return ok(reason);
 }
 
-export function validateDismissalCode(raw: unknown): ValidationResult<string> {
-  if (typeof raw !== 'string' || raw.trim() === '') return fail(CODE_REQUIRED);
-  if (raw.length > DISMISSAL_CODE_MAX_LENGTH) {
-    return fail(`The rule code must be at most ${DISMISSAL_CODE_MAX_LENGTH} characters`);
-  }
-  return ok(raw);
-}
-
-export function validateDismissalSelector(raw: unknown): ValidationResult<string> {
-  if (typeof raw !== 'string' || isWholePageSelector(raw)) return fail(SELECTOR_WHOLE_PAGE);
-  if (raw.length > DISMISSAL_SELECTOR_MAX_LENGTH) {
-    return fail(`The selector must be at most ${DISMISSAL_SELECTOR_MAX_LENGTH} characters`);
-  }
-  return ok(raw);
-}
-
 /** Why a finding cannot be dismissed, in the order the validators check it (rule code first). */
 export type DismissalRefusalReason = 'no-element' | 'selector-too-long' | 'code-missing' | 'code-too-long';
 
-/** Placeholder until the per-reason classification lands: every refusal answers 'no-element'. */
+/** The one classification of a rule code: the validator and the refusal reason both read it. */
+function codeRefusal(raw: unknown): 'code-missing' | 'code-too-long' | null {
+  if (typeof raw !== 'string' || raw.trim() === '') return 'code-missing';
+  if (raw.length > DISMISSAL_CODE_MAX_LENGTH) return 'code-too-long';
+  return null;
+}
+
+/** The one classification of a selector: the validator and the refusal reason both read it. */
+function selectorRefusal(raw: unknown): 'no-element' | 'selector-too-long' | null {
+  if (typeof raw !== 'string' || isWholePageSelector(raw)) return 'no-element';
+  if (raw.length > DISMISSAL_SELECTOR_MAX_LENGTH) return 'selector-too-long';
+  return null;
+}
+
+export function validateDismissalCode(raw: unknown): ValidationResult<string> {
+  const refusal = codeRefusal(raw);
+  if (refusal === 'code-missing') return fail(CODE_REQUIRED);
+  if (refusal === 'code-too-long') {
+    return fail(`The rule code must be at most ${DISMISSAL_CODE_MAX_LENGTH} characters`);
+  }
+  return ok(raw as string);
+}
+
+export function validateDismissalSelector(raw: unknown): ValidationResult<string> {
+  const refusal = selectorRefusal(raw);
+  if (refusal === 'no-element') return fail(SELECTOR_WHOLE_PAGE);
+  if (refusal === 'selector-too-long') {
+    return fail(`The selector must be at most ${DISMISSAL_SELECTOR_MAX_LENGTH} characters`);
+  }
+  return ok(raw as string);
+}
+
+/**
+ * Why the server refuses to dismiss this (selector, rule code) pair, or null when it accepts it.
+ * The same checks as validateDismissalCode and validateDismissalSelector, in the same order (the
+ * rule code first), so the report page's disabled Dismiss button and the API name the same reason.
+ */
 export function dismissalRefusalReason(selector: unknown, code: unknown): DismissalRefusalReason | null {
-  return validateDismissalCode(code).ok && validateDismissalSelector(selector).ok ? null : 'no-element';
+  return codeRefusal(code) ?? selectorRefusal(selector);
 }
 
 export function validateRevokeComment(raw: unknown): ValidationResult<string | null> {

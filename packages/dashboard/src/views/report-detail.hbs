@@ -381,8 +381,8 @@
               {{/if}}
               {{#if @root.dismissalControls}}
               {{#if (dismissalRefused selector code)}}
-              <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" aria-disabled="true" title="{{t 'issueDismissals.action.refusedTitle'}}" aria-describedby="dismiss-refused-ti-{{@../index}}-{{@index}}">{{t "issueDismissals.action.dismiss"}}</button>
-              <span class="sr-only" id="dismiss-refused-ti-{{@../index}}-{{@index}}">{{t "issueDismissals.action.refusedTitle"}}</span>
+              <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" aria-disabled="true" title="{{t (dismissalRefusedKey selector code)}}" aria-describedby="dismiss-refused-ti-{{@../index}}-{{@index}}">{{t "issueDismissals.action.dismiss"}}</button>
+              <span class="sr-only" id="dismiss-refused-ti-{{@../index}}-{{@index}}">{{t (dismissalRefusedKey selector code)}}</span>
               {{else}}
               <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" data-action="rptDismissIssue" data-code="{{code}}" data-selector="{{selector}}" data-message="{{message}}" data-criterion="{{../criterion}}" aria-label="{{t 'issueDismissals.action.dismissAria' code=code}}" title="{{t 'issueDismissals.action.dismissTitle'}}">{{t "issueDismissals.action.dismiss"}}</button>
               {{/if}}
@@ -427,8 +427,8 @@
             {{/if}}
             {{#if @root.dismissalControls}}
             {{#if (dismissalRefused selector code)}}
-            <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" aria-disabled="true" title="{{t 'issueDismissals.action.refusedTitle'}}" aria-describedby="dismiss-refused-pi-{{@../index}}-{{@index}}">{{t "issueDismissals.action.dismiss"}}</button>
-            <span class="sr-only" id="dismiss-refused-pi-{{@../index}}-{{@index}}">{{t "issueDismissals.action.refusedTitle"}}</span>
+            <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" aria-disabled="true" title="{{t (dismissalRefusedKey selector code)}}" aria-describedby="dismiss-refused-pi-{{@../index}}-{{@index}}">{{t "issueDismissals.action.dismiss"}}</button>
+            <span class="sr-only" id="dismiss-refused-pi-{{@../index}}-{{@index}}">{{t (dismissalRefusedKey selector code)}}</span>
             {{else}}
             <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" data-action="rptDismissIssue" data-code="{{code}}" data-selector="{{selector}}" data-message="{{message}}" data-criterion="{{../criterion}}" aria-label="{{t 'issueDismissals.action.dismissAria' code=code}}" title="{{t 'issueDismissals.action.dismissTitle'}}">{{t "issueDismissals.action.dismiss"}}</button>
             {{/if}}
@@ -568,8 +568,8 @@
             <span class="rpt-text--muted">({{affectedCount}} pages)</span>
             {{#if @root.dismissalControls}}
             {{#if (dismissalRefused selector code)}}
-            <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" aria-disabled="true" title="{{t 'issueDismissals.action.refusedTitle'}}" aria-describedby="dismiss-refused-tt-{{@../index}}-{{@index}}">{{t "issueDismissals.action.dismiss"}}</button>
-            <span class="sr-only" id="dismiss-refused-tt-{{@../index}}-{{@index}}">{{t "issueDismissals.action.refusedTitle"}}</span>
+            <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" aria-disabled="true" title="{{t (dismissalRefusedKey selector code)}}" aria-describedby="dismiss-refused-tt-{{@../index}}-{{@index}}">{{t "issueDismissals.action.dismiss"}}</button>
+            <span class="sr-only" id="dismiss-refused-tt-{{@../index}}-{{@index}}">{{t (dismissalRefusedKey selector code)}}</span>
             {{else}}
             <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" data-action="rptDismissIssue" data-code="{{code}}" data-selector="{{selector}}" data-message="{{message}}" aria-label="{{t 'issueDismissals.action.dismissAria' code=code}}" title="{{t 'issueDismissals.action.dismissTitle'}}">{{t "issueDismissals.action.dismiss"}}</button>
             {{/if}}

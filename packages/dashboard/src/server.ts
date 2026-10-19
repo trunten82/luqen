@@ -77,7 +77,7 @@ import { apiKeyRoutes } from './routes/admin/api-keys.js';
 import { organizationRoutes } from './routes/admin/organizations.js';
 import { VERSION } from './version.js';
 import { buildFixSuggestionHint } from './fix-suggestions.js';
-import { validateDismissalCode, validateDismissalSelector } from './services/issue-dismissals/validate-input.js';
+import { dismissalRefusalReason, type DismissalRefusalReason } from './services/issue-dismissals/validate-input.js';
 import { ALL_PERMISSION_IDS, resolveEffectivePermissions } from './permissions.js';
 import { roleRoutes } from './routes/admin/roles.js';
 import { teamRoutes } from './routes/admin/teams.js';
@@ -175,20 +175,33 @@ export function collectPartials(viewsDir: string): Record<string, string> {
 
 /**
  * Template predicate behind the disabled Dismiss button (Phase 89 D-05, UD-04; HARD-01). It is
- * the server validator itself, for BOTH inputs: a finding whose selector or rule code the mark
- * route would refuse (whole-page or non-string selector, either value over its length limit, a
- * missing rule code) renders the disabled button. Templates must pass both arguments, as
+ * the server validators' own classification (dismissalRefusalReason), for BOTH inputs: a finding
+ * whose selector or rule code the mark route would refuse (whole-page or non-string selector,
+ * either value over its length limit, a missing rule code) renders the disabled button. Templates must pass both arguments, as
  * `(dismissalRefused selector code)`: a missing second argument would be Handlebars' options
  * object, which is not a rule code, and would disable the button. Exported so the template tests
  * run the registered predicate itself rather than a copy.
  */
 export function dismissalRefused(selector: unknown, code: unknown): boolean {
-  return !validateDismissalSelector(selector).ok || !validateDismissalCode(code).ok;
+  return dismissalRefusalReason(selector, code) !== null;
 }
 
-/** Placeholder until the per-reason copy lands: the i18n key of a disabled Dismiss button's title. */
-export function dismissalRefusedKey(_selector: unknown, _code: unknown): string {
-  return 'issueDismissals.action.refusedTitle';
+/** The disabled Dismiss button's copy per refusal reason (HARD-01). */
+const DISMISSAL_REFUSED_KEYS: Readonly<Record<DismissalRefusalReason, string>> = {
+  'no-element': 'issueDismissals.action.refusedTitle',
+  'selector-too-long': 'issueDismissals.action.refusedSelectorTooLong',
+  'code-missing': 'issueDismissals.action.refusedCodeMissing',
+  'code-too-long': 'issueDismissals.action.refusedCodeTooLong',
+};
+
+/**
+ * Template helper: the i18n key of the sentence a disabled Dismiss button shows, for the reason
+ * the server refuses this finding (`{{t (dismissalRefusedKey selector code)}}`, both arguments, as
+ * for dismissalRefused). Only rendered inside `(dismissalRefused selector code)`; a pair the server
+ * accepts answers the whole-page key rather than an empty title.
+ */
+export function dismissalRefusedKey(selector: unknown, code: unknown): string {
+  return DISMISSAL_REFUSED_KEYS[dismissalRefusalReason(selector, code) ?? 'no-element'];
 }
 
 function wantsHtml(request: FastifyRequest): boolean {

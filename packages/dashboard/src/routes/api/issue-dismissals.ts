@@ -32,6 +32,7 @@ import {
   type RecomputeResult,
 } from '../../services/issue-dismissals/recompute-site-counts.js';
 import {
+  dismissalRefusalReason,
   validateDismissalCode,
   validateDismissalSelector,
   validateMarkInput,
@@ -306,11 +307,14 @@ export async function issueDismissalRoutes(
       const code = validateDismissalCode(request.query.code);
       if (!code.ok) return reply.code(400).send({ error: code.error });
 
-      // A whole-page selector can never be dismissed (FP-04): answer before loading the report,
-      // with a machine reason only; the UI translates it.
+      // A selector the mark route would refuse can never be dismissed (FP-04, HARD-01): answer
+      // before loading the report, with a machine reason only; the UI translates it. 'selector'
+      // is a whole-page or missing element, 'selector-too-long' one over the length limit.
       const selector = validateDismissalSelector(request.query.selector);
       if (!selector.ok) {
-        return reply.code(200).send({ occurrences: 0, pages: 0, refused: true, reason: 'selector' });
+        const refusal = dismissalRefusalReason(request.query.selector, code.value);
+        const reason = refusal === 'selector-too-long' ? 'selector-too-long' : 'selector';
+        return reply.code(200).send({ occurrences: 0, pages: 0, refused: true, reason });
       }
 
       if (scan.status !== 'completed') {

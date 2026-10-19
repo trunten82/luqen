@@ -182,7 +182,9 @@ describe('POST /api/v1/scans/:scanId/dismissals — input validation', () => {
     expect(maxOf(MarkBody.properties.selector)).toBe(DISMISSAL_SELECTOR_MAX_LENGTH);
     expect(maxOf(RevokeBody.properties.comment)).toBe(DISMISSAL_COMMENT_MAX_LENGTH);
     expect(maxOf(PreviewQuery.properties.code)).toBe(DISMISSAL_CODE_MAX_LENGTH);
-    expect(maxOf(PreviewQuery.properties.selector)).toBe(DISMISSAL_SELECTOR_MAX_LENGTH);
+    // HARD-01: the preview selector has no schema cap; the handler answers an over-long one as refused
+    // with its own reason (tests/routes/issue-dismissals-preview-reason.test.ts), not with a 400.
+    expect(maxOf(PreviewQuery.properties.selector)).toBeUndefined();
     expect([DISMISSAL_REASON_MAX_LENGTH, DISMISSAL_COMMENT_MAX_LENGTH]).toEqual([1000, 1000]);
   });
 

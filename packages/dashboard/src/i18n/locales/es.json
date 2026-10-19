@@ -1730,6 +1730,9 @@
       "dismissTitle": "Descartar como falso positivo",
       "dismissAria": "Descartar como falso positivo: regla {{code}}",
       "refusedTitle": "Este hallazgo no tiene un elemento concreto y no se puede descartar.",
+      "refusedSelectorTooLong": "El selector de elemento de este hallazgo es demasiado largo, así que no se puede descartar.",
+      "refusedCodeTooLong": "El código de regla de este hallazgo es demasiado largo, así que no se puede descartar.",
+      "refusedCodeMissing": "Este hallazgo no tiene código de regla y no se puede descartar.",
       "revokeAria": "Revocar el descarte de la regla {{code}}"
     },
     "dialog": {
@@ -1753,6 +1756,10 @@
         "error": "No se pudo comprobar qué cubre esto. Inténtalo de nuevo.",
         "retry": "Intentar de nuevo",
         "refused": "Este hallazgo no tiene un elemento concreto y no se puede descartar.",
+        "refusedSelectorTooLong": "El selector de elemento de este hallazgo es demasiado largo, así que no se puede descartar.",
+        "refusedInvalid": "Este hallazgo no se puede descartar: la solicitud fue rechazada.",
+        "reportUnavailable": "El informe de este escaneo no está disponible, así que no hay nada que descartar.",
+        "refusedGeneric": "Este hallazgo no se puede descartar.",
         "alreadyDismissed": "Esta regla ya está descartada para este elemento de este sitio, así que no hay nada que descartar. Recarga la página para verla en Hallazgos descartados.",
         "together": "Todas las apariciones contadas arriba se descartan juntas, incluidas las que aparecen por separado en este informe."
       },
