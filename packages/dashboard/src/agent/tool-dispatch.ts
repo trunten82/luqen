@@ -40,6 +40,8 @@ export interface ToolManifestEntry {
   readonly name: string;
   readonly inputSchema: z.ZodTypeAny;
   readonly handler: ToolHandler;
+  /** The permission id a caller must hold to run this tool (from the tool's metadata). */
+  readonly requiredPermission?: string;
 }
 
 export interface ToolDispatchContext {
@@ -52,6 +54,8 @@ export interface ToolDispatchContext {
    * user's identity without re-minting.
    */
   readonly authToken: string;
+  /** The permission ids of the stored caller, resolved once for this dispatch. */
+  readonly permissions: ReadonlySet<string>;
   /**
    * Phase 62.4 — user-selected agent group (team) id. Set on the
    * conversation/cookie via the drawer's group switcher. Fleet tools
@@ -70,6 +74,7 @@ export interface ToolCallInput {
 
 export type ToolDispatchResult =
   | { readonly error: 'unknown_tool' }
+  | { readonly error: 'denied' }
   | { readonly error: 'invalid_args'; readonly issues: readonly z.core.$ZodIssue[] }
   | { readonly error: 'timeout' }
   | { readonly error: 'internal'; readonly message: string }
@@ -134,7 +139,7 @@ export class ToolDispatcher {
    */
   async dispatchAll(
     calls: readonly ToolCallInput[],
-    ctx: Omit<ToolDispatchContext, 'authToken'>,
+    ctx: Omit<ToolDispatchContext, 'authToken' | 'permissions'>,
   ): Promise<readonly ToolDispatchResult[]> {
     if (calls.length === 0) return [];
     return Promise.all(calls.map((c) => this.dispatch(c, ctx)));
@@ -142,7 +147,7 @@ export class ToolDispatcher {
 
   async dispatch(
     call: ToolCallInput,
-    ctx: Omit<ToolDispatchContext, 'authToken'>,
+    ctx: Omit<ToolDispatchContext, 'authToken' | 'permissions'>,
   ): Promise<ToolDispatchResult> {
     // 1. Manifest lookup — refuse unknown names (model hallucinated a tool).
     const tool = this.tools.find((t) => t.name === call.name);
@@ -175,6 +180,7 @@ export class ToolDispatcher {
       ...(ctx.signal !== undefined ? { signal: ctx.signal } : {}),
       ...(ctx.groupId !== undefined ? { groupId: ctx.groupId } : {}),
       authToken,
+      permissions: new Set<string>(),
     };
 
     // 4. Invoke handler with a race-based timeout. Never throws to caller —

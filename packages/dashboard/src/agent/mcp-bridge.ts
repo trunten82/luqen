@@ -98,6 +98,7 @@ export function bridgeMcpToolsForAgent(
     manifest.push({
       name: meta.name,
       inputSchema: zodSchema,
+      ...(meta.requiredPermission !== undefined ? { requiredPermission: meta.requiredPermission } : {}),
       handler: async (args, ctx) => {
         // Re-enter the MCP ALS context so handlers that call
         // `getCurrentToolContext()` see the dispatching user's identity.
