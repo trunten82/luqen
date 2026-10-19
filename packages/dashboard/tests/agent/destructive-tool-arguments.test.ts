@@ -1,0 +1,107 @@
+/**
+ * HARD-21: a paused (destructive) assistant action is stored with secret-named argument values
+ * redacted, and its confirmation dispatches the arguments as stored. These tests pin what makes
+ * that safe, over each destructive tool's REGISTERED input schema (walked at every depth as JSON
+ * Schema):
+ *
+ *   - no destructive tool declares an argument whose name matches SECRET_ARGUMENT_KEY
+ *   - the destructive tool arguments whose names the caller chooses (a record) are listed, so adding
+ *     one is a reviewed decision: their secret-named entries are stored redacted like any other
+ *
+ * Each test carries a positive control showing the walk can find what it looks for.
+ */
+import { describe, it, expect } from 'vitest';
+import { z } from 'zod';
+import { createDashboardMcpServer } from '../../src/mcp/server.js';
+import { DASHBOARD_TOOL_METADATA } from '../../src/mcp/metadata.js';
+import { SECRET_ARGUMENT_KEY } from '../../src/db/agent-audit-redaction.js';
+
+type Json = unknown;
+
+async function registeredSchemas(): Promise<Record<string, Json>> {
+  const { server } = await createDashboardMcpServer({
+    storage: {} as never,
+    scanService: {} as never,
+    serviceConnections: {} as never,
+  });
+  const tools = (server as unknown as { _registeredTools: Record<string, { inputSchema?: z.ZodTypeAny }> })._registeredTools;
+  const out: Record<string, Json> = {};
+  for (const [name, tool] of Object.entries(tools)) {
+    if (tool.inputSchema !== undefined) {
+      out[name] = z.toJSONSchema(tool.inputSchema, { unrepresentable: 'any', io: 'input' });
+    }
+  }
+  return out;
+}
+
+/** Every declared argument path (`a`, `a.b`, ...) of a JSON Schema, at any depth. */
+function declaredArguments(schema: Json): string[] {
+  const out: string[] = [];
+  const visit = (node: Json, at: string): void => {
+    if (Array.isArray(node)) {
+      for (const n of node) visit(n, at);
+      return;
+    }
+    if (node === null || typeof node !== 'object') return;
+    for (const [key, child] of Object.entries(node)) {
+      if (key === 'properties' && child !== null && typeof child === 'object' && !Array.isArray(child)) {
+        for (const [name, sub] of Object.entries(child)) {
+          out.push(`${at}${name}`);
+          visit(sub, `${at}${name}.`);
+        }
+      } else {
+        visit(child, at);
+      }
+    }
+  };
+  visit(schema, '');
+  return out;
+}
+
+/** The argument paths whose entry names the caller chooses (a record or open object), at any depth. */
+function callerNamedArguments(schema: Json): string[] {
+  const out: string[] = [];
+  const visit = (node: Json, at: string): void => {
+    if (Array.isArray(node)) {
+      for (const n of node) visit(n, at);
+      return;
+    }
+    if (node === null || typeof node !== 'object') return;
+    const rec = node as Record<string, Json>;
+    const open = ('additionalProperties' in rec && rec['additionalProperties'] !== false) || 'propertyNames' in rec;
+    if (open) out.push(at === '' ? '(root)' : at.slice(0, -1));
+    for (const [key, child] of Object.entries(rec)) {
+      if (key === 'properties' && child !== null && typeof child === 'object' && !Array.isArray(child)) {
+        for (const [name, sub] of Object.entries(child)) visit(sub, `${at}${name}.`);
+      } else {
+        visit(child, at);
+      }
+    }
+  };
+  visit(schema, '');
+  return out;
+}
+
+const DESTRUCTIVE = DASHBOARD_TOOL_METADATA.filter((t) => t.destructive === true).map((t) => t.name);
+
+describe('HARD-21 destructive assistant tools and secret named arguments', () => {
+  it('HARD-21 no destructive tool declares a secret named argument', async () => {
+    const schemas = await registeredSchemas();
+    expect(DESTRUCTIVE.length).toBeGreaterThan(0);
+    for (const name of DESTRUCTIVE) {
+      const declared = declaredArguments(schemas[name]);
+      expect(declared.length, `${name} has a registered input schema`).toBeGreaterThan(0);
+      expect(declared.filter((path) => SECRET_ARGUMENT_KEY.test(path.split('.').pop() ?? '')), name).toEqual([]);
+    }
+    // Positive control: the same walk finds the password argument of dashboard_create_user.
+    const control = declaredArguments(schemas['dashboard_create_user']);
+    expect(control.filter((path) => SECRET_ARGUMENT_KEY.test(path.split('.').pop() ?? ''))).toEqual(['password']);
+  });
+
+  it('HARD-21 destructive tool arguments with caller chosen names are listed', async () => {
+    const schemas = await registeredSchemas();
+    const listed = DESTRUCTIVE.flatMap((name) => callerNamedArguments(schemas[name]).map((path) => `${name}.${path}`)).sort();
+    // The scan's custom request headers are named by the caller.
+    expect(listed).toEqual(['dashboard_scan_site.headers']);
+  });
+});
