@@ -205,12 +205,11 @@ export async function resolveEffectivePermissions(
   // D-07: dark ids are filtered where permissions are RESOLVED, not only where
   // a role form is parsed, so a role row written by any other path stays dark.
   const resolved = withoutDarkPermissions(await roleRepository.getEffectivePermissions(userId, orgId), opts.darkPermissions);
-  // The global-only ids come from the global admin role only. When the caller names the user's
-  // stored global role and it is not 'admin', the result never carries them, whichever role row or
-  // storage adapter produced it. Any other value (a token without a role claim reaches here as
-  // 'member') says nothing about the stored role, so the repository's answer, which reads the stored
-  // row and drops the global-only ids from team-derived grants, stands.
-  return GLOBAL_ROLE_NAMES.includes(userRole) ? withoutGlobalOnlyPermissions(resolved) : resolved;
+  // The global-only ids (admin.system, admin.users) come from the stored global 'admin' role only:
+  // for every other role value the result never carries them, whichever role row or storage adapter
+  // produced it. Every caller passes the role it holds (the session's, the API key's, or the stored
+  // user's on the MCP endpoint and in the agent), so a global admin always arrives here as 'admin'.
+  return withoutGlobalOnlyPermissions(resolved);
 }
 
 /** A new Set of `ids` without ORG_ROLE_FORBIDDEN_PERMISSIONS (the global-only ids). Never mutates its argument. */

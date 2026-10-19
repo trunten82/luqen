@@ -216,12 +216,15 @@ describe('global only permissions: resolution', () => {
     for (const id of GLOBAL_ONLY) expect(perms.has(id), id).toBe(false);
   });
 
-  it('global only permissions: the resolver keeps the repository answer when the caller role names no global role', async () => {
-    // A token without a role claim reaches the resolver as 'member'; the repository reads the stored
-    // row, and for a stored global admin it answers every permission. That answer stands.
+  it('global only permissions: the resolver removes them for every caller role except admin', async () => {
+    // Whatever the repository answers, the global-only ids come from the global 'admin' role only:
+    // any other role value (a global role, an API key role, a legacy or unknown name) never carries them.
     const stub = { getEffectivePermissions: async (): Promise<Set<string>> => new Set(ALL_PERMISSION_IDS) };
-    const perms = await resolveEffectivePermissions(stub, 'admin-1', 'member', 'org-1');
-    for (const id of GLOBAL_ONLY) expect(perms.has(id), id).toBe(true);
+    for (const role of ['user', 'viewer', 'developer', 'executive', 'editor', 'member', 'read-only', 'scan-only', 'fabrikam-custom']) {
+      const perms = await resolveEffectivePermissions(stub, 'member-1', role, 'org-1');
+      expect(perms.has('reports.view'), role).toBe(true); // positive control: the repository answer arrives
+      for (const id of GLOBAL_ONLY) expect(perms.has(id), `${role} ${id}`).toBe(false);
+    }
   });
 
   it('global only permissions: a global admin still resolves every permission', async () => {
