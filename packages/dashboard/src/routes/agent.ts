@@ -679,6 +679,13 @@ export async function registerAgentRoutes(
           orgId,
           ...(agentGroupId !== '' ? { groupId: agentGroupId } : {}),
         });
+        // The dispatcher resolves the confirming user's permissions now: a user who may no
+        // longer use the tool gets 403, nothing runs, and the action stays pending (it can
+        // still be declined).
+        if (isDeniedResult(result)) {
+          await storage.conversations.updateMessageStatus(messageId, 'pending_confirmation');
+          return reply.code(403).send({ error: 'denied' });
+        }
         // Persist the dispatched tool result as a NEW tool row so the loop
         // can resume on the next SSE turn. Truncation mirrors AgentService.
         await storage.conversations.appendMessage({
@@ -1609,6 +1616,11 @@ async function loadConversationAnyOrg(
     isDeleted: row.is_deleted === 1,
     deletedAt: row.deleted_at,
   };
+}
+
+/** The dispatcher's refusal of a tool the user may not use. */
+function isDeniedResult(result: unknown): boolean {
+  return typeof result === 'object' && result !== null && (result as { error?: unknown }).error === 'denied';
 }
 
 async function findPendingMessage(

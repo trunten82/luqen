@@ -87,7 +87,9 @@ describe('HARD-19 the assistant acts with the permissions of its stored user', (
     const rows = chain.toolRows(turn.conversationId);
     expect(rows.map((r) => [r.name, resultError(r.result)])).toEqual([['dashboard_list_reports', DENIED]]);
     expect(chain.auditRows(turn.conversationId).map((a) => a.outcome)).toEqual(['denied']);
-    expect(listScans).not.toHaveBeenCalled();
+    // The tool's listing always passes an offset; the turn's context-hint read (recent scans of the
+    // conversation's org, limit 5) passes none and is not a tool run.
+    expect(listScans.mock.calls.filter(([filters]) => filters !== undefined && 'offset' in filters)).toEqual([]);
   });
 
   it('HARD-19 the assistant runs an offered tool for the stored user', async () => {

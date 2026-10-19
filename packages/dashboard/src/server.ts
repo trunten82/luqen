@@ -1421,8 +1421,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     resolveScopes: async (userId, orgId) => {
       // HARD-19: per dispatch, from the stored-caller rule (src/auth/stored-caller.ts): the
       // stored, active user's role decides, so a global admin (stored role 'admin') resolves
-      // every permission; a missing or deactivated user resolves none, so the dispatcher's
-      // token carries no scope.
+      // every permission; a missing or deactivated user resolves none. The dispatcher refuses
+      // a tool whose required permission is outside this set, and hands this set to the tool
+      // handler as the caller's permissions.
       return [...(await storedPermissionsOrNone(storage, userId, orgId))];
     },
   });
@@ -1449,7 +1450,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
       // single source of truth for per-user permissions. See D-07 / Pitfall 6.
       // HARD-19: the stored-caller rule decides — a global admin (stored role
       // 'admin') resolves every permission; a missing or deactivated user
-      // resolves none, so the manifest offers no tool.
+      // resolves none, so the manifest offers no tool. AgentService runs only
+      // the tools offered in that iteration.
       return storedPermissionsOrNone(storage, userId, orgId);
     },
     config: { agentDisplayNameDefault: 'Luqen Assistant' },

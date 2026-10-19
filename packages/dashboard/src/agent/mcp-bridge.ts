@@ -9,7 +9,13 @@
  *   - extracts the registered tools via the SDK-internal `_registeredTools` map,
  *   - exposes a toolCatalog for the LLM (name → description + inputSchema),
  *   - wraps each MCP handler in a ToolHandler that re-enters the ALS context
- *     so the handler's `getCurrentToolContext()` sees the dispatching user.
+ *     so the handler's `getCurrentToolContext()` sees the dispatching user:
+ *     the conversation's organization and the permission set the
+ *     ToolDispatcher resolved for the stored user on this call, so a handler
+ *     that branches on a permission decides exactly as it does for that user
+ *     over the MCP endpoint,
+ *   - copies each tool's required permission onto its manifest entry, which
+ *     the ToolDispatcher checks before the handler runs.
  */
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { z } from 'zod';
@@ -101,21 +107,14 @@ export function bridgeMcpToolsForAgent(
       ...(meta.requiredPermission !== undefined ? { requiredPermission: meta.requiredPermission } : {}),
       handler: async (args, ctx) => {
         // Re-enter the MCP ALS context so handlers that call
-        // `getCurrentToolContext()` see the dispatching user's identity.
-        //
-        // Global admins (ctx.orgId starts with `__admin__:`) are not bound
-        // to a specific org — tools must run cross-org. Substitute the
-        // synthetic namespace with an empty orgId and stamp admin.system
-        // in permissions so the dashboard's admin-scoped handlers pick the
-        // cross-org branch.
-        const isGlobalAdmin = ctx.orgId.startsWith('__admin__:');
+        // `getCurrentToolContext()` see the dispatching user: the
+        // conversation's organization and the stored user's permission set
+        // resolved by the dispatcher for this call.
         const toolContext: ToolContext = {
           userId: ctx.userId,
-          orgId: isGlobalAdmin ? '' : ctx.orgId,
+          orgId: ctx.orgId,
           scopes: ['read', 'write', 'admin'],
-          permissions: isGlobalAdmin
-            ? new Set<string>(['admin.system', 'admin.users', 'admin.org', 'scans.create', 'reports.view', 'branding.view'])
-            : new Set<string>(),
+          permissions: new Set<string>(ctx.permissions),
           authType: 'jwt',
           // Phase 62.4 — forward the user-selected group filter so fleet
           // tools can default their group_id arg when the LLM omits it.
