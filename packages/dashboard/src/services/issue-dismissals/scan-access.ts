@@ -1,9 +1,10 @@
 /**
  * The ONE scan-access predicate of the issue-dismissal feature (Phase 87 D-10, Phase 89 D-04).
  *
- * Mark, revoke, list and preview all gate on this function, and the report page reuses it
- * for the Dismissed section and the mark controls. A second copy is how a second path
- * ends up allowing what the first refuses.
+ * Mark, revoke and preview (the write side) gate on `mayTouchDismissalOrg`, and the report page
+ * reuses it for the mark controls and for the key labels in the Dismissed section. The READ side
+ * (the report page's Dismissed section and the list API) gates on `mayViewScanReport`. A second
+ * copy of either is how a second path ends up allowing what the first refuses.
  *
  * It differs from the shared guard (`!bypassesOrgScope && orgId !== scan.orgId && scan.orgId
  * !== 'system'`) in ONE deliberate way: org users get no 'system'-org exception. A dismissal

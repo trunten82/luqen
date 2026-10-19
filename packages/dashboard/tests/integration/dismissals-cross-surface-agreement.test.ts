@@ -43,6 +43,7 @@ import {
   FIXED_CREATED_AT,
   RAW_COUNTS,
   openSurfaceStore,
+  seedSurfaceDismissal,
   seedSurfaceOrgs,
   seedSurfaceScan,
   surfaceReport,
@@ -593,5 +594,40 @@ describe('cross-surface agreement: tenants and stored shapes', { timeout: 30_000
     expect(stored['summary']).toBeUndefined(); // the shape under test
     // normalizeReportData has no summary to trust, so it falls back to the scan row's columns (D-07 gap 1).
     expect(await renderedCounts(world, world.summarylessId!)).toEqual(AFTER_PARTIAL);
+  });
+});
+
+// ── The list API and the Dismissed section (HARD-11) ─────────────────────────
+describe('cross-surface agreement: the dismissals list API and the Dismissed section', { timeout: 30_000 }, () => {
+  it('HARD-11 list returns the same rows as the dismissed section for an org user on a system scan', async () => {
+    const world = await buildWorld();
+    const storage = world.store.storage;
+    const systemScan = await seedSurfaceScan(storage, { orgId: 'system', location: 'db', id: 'scan-system-0011' });
+    const kept = await seedSurfaceDismissal(storage, { orgId: 'system', match: DISMISS_PARTIAL });
+    const gone = await seedSurfaceDismissal(storage, { orgId: 'system', match: DISMISS_WHOLE });
+    await storage.issueDismissals!.revoke({ id: gone.id, orgId: 'system', actor: 'fabrikam-admin', comment: null });
+
+    // The page, as the same org user: the section lists active and revoked rows.
+    const pageServer = await serverFor(world, (s) => reportRoutes(s, storage, () => null));
+    const view = await viewData<{ dismissals?: { active: Array<{ id: string }>; revoked: Array<{ id: string }> } }>(
+      pageServer,
+      `/reports/${systemScan}`,
+    );
+    const pageIds = [...(view.dismissals?.active ?? []), ...(view.dismissals?.revoked ?? [])].map((r) => r.id).sort();
+    expect(pageIds).toEqual([kept.id, gone.id].sort()); // the section is not empty: the comparison below means something
+
+    // The API, same identity, same scan.
+    const apiServer = await buildRouteServer(storage, {
+      user: { id: 'user-fabrikam', username: 'fabrikam-user', role: 'user', currentOrgId: world.orgs.fabrikamOrgId },
+      permissions: ['reports.view'],
+    });
+    try {
+      const res = await apiServer.inject({ method: 'GET', url: `/api/v1/scans/${systemScan}/dismissals` });
+      expect(res.statusCode).toBe(200);
+      const apiIds = (res.json().dismissals as Array<{ id: string }>).map((r) => r.id).sort();
+      expect(apiIds).toEqual(pageIds);
+    } finally {
+      await apiServer.close();
+    }
   });
 });

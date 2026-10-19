@@ -42,7 +42,7 @@ afterEach(async () => {
   await store.cleanup();
 });
 
-const DISMISS = ['issues.dismiss'];
+const DISMISS = ['issues.dismiss', 'reports.view'];
 
 async function as(user: HarnessUser, permissions: readonly string[] = DISMISS) {
   server = await buildRouteServer(store.storage, { user, permissions });
@@ -112,6 +112,25 @@ describe('POST /api/v1/scans/:scanId/dismissals — permission and access', () =
     const res = await mark(srv, scanB, good);
     expect(res.statusCode).toBe(404);
     expect(await store.storage.issueDismissals!.listForSite(orgB, 'https://example.test/dev/en-us')).toHaveLength(0);
+  });
+});
+
+describe('POST /api/v1/scans/:scanId/dismissals — report access is required as well (HARD-03)', () => {
+  it('HARD-03 mark returns 403 for a role holding only issues dismiss', async () => {
+    const org = await seedOrg(store.storage, 'org_a');
+    const scan = await seedScan(store.storage, { orgId: org });
+    const srv = await as({ role: 'user', currentOrgId: org }, ['issues.dismiss']);
+    const res = await mark(srv, scan, good);
+    expect(res.statusCode).toBe(403);
+    expect(await store.storage.issueDismissals!.listForSite(org, 'https://example.test/dev/en-us')).toHaveLength(0);
+  });
+
+  it('HARD-03 mark succeeds for a role holding issues dismiss and reports view', async () => {
+    const org = await seedOrg(store.storage, 'org_a');
+    const scan = await seedScan(store.storage, { orgId: org });
+    const srv = await as({ role: 'user', currentOrgId: org }, ['issues.dismiss', 'reports.view']);
+    const res = await mark(srv, scan, good);
+    expect(res.statusCode).toBe(201);
   });
 });
 

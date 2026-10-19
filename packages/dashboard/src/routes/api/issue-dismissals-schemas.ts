@@ -125,12 +125,11 @@ export type PreviewResponsePayload = Static<typeof PreviewResponse>;
 export const RATE_LIMIT = { rateLimit: { max: 60, timeWindow: '1 minute' } } as const;
 
 /**
- * Quick 261013-dr7 (WR-02): route config for the MUTATING dismissal routes (mark, revoke). /api/* is
- * CSRF-exempt in server.ts; this flag makes the CSRF hook verify the token anyway when the request
- * is cookie-authenticated (no API credential that validates). The report page's client already
- * sends X-CSRF-Token.
+ * Route config for the MUTATING dismissal routes (mark, revoke): the shared rate limit. The CSRF
+ * token is required for cookie sessions by the global hook in server.ts (requiresCookieCsrf), as on
+ * every /api write; the report page's client sends X-CSRF-Token.
  */
-export const MUTATION_CONFIG = { ...RATE_LIMIT, csrfForCookieSessions: true } as const;
+export const MUTATION_CONFIG = { ...RATE_LIMIT } as const;
 
 export function dismissalToJson(d: IssueDismissal): Static<typeof DismissalSchema> {
   return {

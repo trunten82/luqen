@@ -5,10 +5,9 @@
  * admin, plus the role form (D-13).
  *
  * Phase 89 Plan 09 (FP-18) lifted the dark set. The owner decided at D-15 (Q3 = A) that custom
- * ORG roles may carry it, so each pin now asserts the granted state; each was watched red against
- * the dark source first. The global-role case is pinned as MEASURED, not as decided: D-15 did not
- * cover global (system-org) custom roles, and the D-17 read-back flags any such row as
- * granted-to-system-role (89-09 finding).
+ * ORG roles may carry it, so each org pin asserts the granted state; each was watched red against
+ * the dark source first. Global (system-org) roles may not carry it: the HARD-12 tests below pin the
+ * refusal on create, PATCH and POST method-override, and the role form for a global role.
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import Fastify, { FastifyInstance, FastifyReply } from 'fastify';
@@ -130,7 +129,7 @@ describe('roles: issues.dismiss after the grant', () => {
     expect(await storedPermissions(ctx, 'auditors', ctx.orgId)).toEqual(['issues.dismiss', 'reports.view']);
   });
 
-  it('global admin can put issues.dismiss on a GLOBAL role (measured; not decided at D-15; the D-17 read-back flags it)', async () => {
+  it('HARD-12 creating a global role with issues dismiss is refused', async () => {
     const ctx = await createCtx('global-admin');
     const res = await ctx.server.inject({
       method: 'POST',
@@ -138,8 +137,72 @@ describe('roles: issues.dismiss after the grant', () => {
       headers: FORM,
       payload: `name=globalauditors&scope=global&${perms('issues.dismiss', 'reports.view')}`,
     });
+    expect(res.statusCode).toBe(422);
+    expect(await ctx.storage.roles.getRoleByNameAndOrg('globalauditors', 'system')).toBeNull();
+  });
+
+  it('HARD-12 patching the built in user role to add issues dismiss is refused', async () => {
+    const ctx = await createCtx('global-admin');
+    const userRole = await ctx.storage.roles.getRoleByNameAndOrg('user', 'system');
+    expect(userRole, 'the built in user role must exist').not.toBeNull();
+    const before = [...(userRole?.permissions ?? [])].sort();
+    const res = await ctx.server.inject({
+      method: 'PATCH',
+      url: `/admin/roles/${userRole!.id}`,
+      headers: FORM,
+      payload: perms(...before, 'issues.dismiss'),
+    });
+    expect(res.statusCode).toBe(422);
+    expect(await storedPermissions(ctx, 'user', 'system')).toEqual(before);
+  });
+
+  it('HARD-12 the method override update of a global role is refused', async () => {
+    const ctx = await createCtx('global-admin');
+    const role = await ctx.storage.roles.createRole({ name: 'globalauditors', description: '', permissions: ['trends.view'], orgId: 'system' });
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: `/admin/roles/${role.id}`,
+      headers: FORM,
+      payload: `_method=PATCH&${perms('issues.dismiss', 'reports.view')}`,
+    });
+    expect(res.statusCode).toBe(422);
+    expect(await storedPermissions(ctx, 'globalauditors', 'system')).toEqual(['trends.view']);
+  });
+
+  it('HARD-12 an org role may still carry issues dismiss', async () => {
+    const ctx = await createCtx('owner');
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/roles',
+      headers: FORM,
+      payload: `name=orgauditors&scope=org&${perms('issues.dismiss', 'reports.view')}`,
+    });
     expect(res.statusCode).toBe(302);
-    expect(await storedPermissions(ctx, 'globalauditors', 'system')).toEqual(['issues.dismiss', 'reports.view']);
+    expect(await storedPermissions(ctx, 'orgauditors', ctx.orgId)).toEqual(['issues.dismiss', 'reports.view']);
+  });
+
+  it('HARD-12 the role form for a global role does not offer issues dismiss', async () => {
+    const ctx = await createCtx('global-admin');
+    const idsOf = (res: { json: () => unknown }): string[] => {
+      const body = res.json() as { data: { permissionGroups: Array<{ permissions: Array<{ id: string }> }> } };
+      return body.data.permissionGroups.flatMap((g) => g.permissions.map((p) => p.id));
+    };
+    const created = await ctx.server.inject({ method: 'GET', url: '/admin/roles/new?scope=global' });
+    expect(created.statusCode).toBe(200);
+    const createdIds = idsOf(created);
+    expect(createdIds).toContain('issues.fix');
+    expect(createdIds).not.toContain('issues.dismiss');
+
+    const userRole = await ctx.storage.roles.getRoleByNameAndOrg('user', 'system');
+    const edit = await ctx.server.inject({ method: 'GET', url: `/admin/roles/${userRole!.id}/edit` });
+    expect(edit.statusCode).toBe(200);
+    const editIds = idsOf(edit);
+    expect(editIds).toContain('issues.fix');
+    expect(editIds).not.toContain('issues.dismiss');
+
+    const orgForm = await createCtx('owner');
+    const orgRes = await orgForm.server.inject({ method: 'GET', url: '/admin/roles/new' });
+    expect(idsOf(orgRes)).toContain('issues.dismiss');
   });
 
   it('role form lists issues.dismiss after the grant', async () => {

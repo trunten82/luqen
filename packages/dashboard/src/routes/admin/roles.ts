@@ -8,6 +8,8 @@ import {
   isRoleGrantablePermission,
   isReservedGlobalRoleName,
   forbiddenOrgRolePermissions,
+  forbiddenGlobalRolePermissions,
+  permissionLabel,
   ALL_PERMISSION_IDS,
   DEFAULT_ORG_ROLES,
 } from '../../permissions.js';
@@ -102,23 +104,33 @@ function parsePermissions(rawPerms: string | string[] | undefined): string[] {
 }
 
 /**
- * CR-01 (quick 261013-dr7): why an ORG role with this name and these permissions may not be
- * written, or null when it may. Global (org 'system') roles are not restricted here. The same
- * rule is the repository's backstop; this one answers with a 422 instead of a 500.
+ * CR-01 (quick 261013-dr7) and HARD-12: why a role with this name and these permissions may not be
+ * written into this org, or null when it may. Org roles may not take a global role name nor carry a
+ * global-only permission (ORG_ROLE_FORBIDDEN_PERMISSIONS: admin.system, admin.users); global (org
+ * 'system') roles may not carry the permissions in GLOBAL_ROLE_FORBIDDEN_PERMISSIONS (built-in roles
+ * included). The same rules are the repository's backstop; this one answers with a 422 instead of a
+ * 500 and names the refused permissions by their labels.
  */
-async function orgRoleRefusal(
+async function roleRefusal(
   storage: StorageAdapter,
   orgId: string,
   name: string,
   permissions: readonly string[],
 ): Promise<string | null> {
-  if (orgId === 'system') return null;
+  if (orgId === 'system') {
+    if (forbiddenGlobalRolePermissions(permissions).length > 0) {
+      return 'Global roles cannot carry the Mark findings as false positives permission';
+    }
+    return null;
+  }
   const systemNames = (await storage.roles.listGlobalRoles()).map((r) => r.name);
   if (isReservedGlobalRoleName(name, systemNames)) {
     return 'Organization roles cannot use the name of a global role';
   }
-  if (forbiddenOrgRolePermissions(permissions).length > 0) {
-    return 'Organization roles cannot carry the System settings permission';
+  const globalOnly = forbiddenOrgRolePermissions(permissions);
+  if (globalOnly.length > 0) {
+    const labels = globalOnly.map(permissionLabel).join(' and ');
+    return `Organization roles cannot carry the ${labels} permission${globalOnly.length > 1 ? 's' : ''}`;
   }
   return null;
 }
@@ -138,7 +150,8 @@ export async function roleRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
 ): Promise<void> {
-  const permissionGroups = getPermissionGroups();
+  const orgPermissionGroups = getPermissionGroups({ forOrgRole: true });
+  const globalPermissionGroups = getPermissionGroups({ forGlobalRole: true });
 
   // ── GET /admin/roles — tabbed view: Global Roles + Org Roles ──────
 
@@ -370,7 +383,7 @@ export async function roleRoutes(
         isNew: true,
         isSystem: false,
         scope,
-        permissionGroups,
+        permissionGroups: scope === 'global' ? globalPermissionGroups : orgPermissionGroups,
         selectedPermissions: {},
       });
     },
@@ -426,7 +439,7 @@ export async function roleRoutes(
       // Parse permissions
       const permissions = parsePermissions(body.permissions);
 
-      const refusal = await orgRoleRefusal(storage, targetOrgId, name, permissions);
+      const refusal = await roleRefusal(storage, targetOrgId, name, permissions);
       if (refusal !== null) return sendRefusal(request, reply, refusal);
 
       // Check for duplicates within the same org scope
@@ -492,7 +505,7 @@ export async function roleRoutes(
         isNew: false,
         isSystem: role.isSystem,
         scope,
-        permissionGroups,
+        permissionGroups: scope === 'global' ? globalPermissionGroups : orgPermissionGroups,
         selectedPermissions,
       });
     },
@@ -545,7 +558,7 @@ export async function roleRoutes(
         }
       }
 
-      const updateRefusal = await orgRoleRefusal(storage, role.orgId, updateData.name ?? role.name, permissions);
+      const updateRefusal = await roleRefusal(storage, role.orgId, updateData.name ?? role.name, permissions);
       if (updateRefusal !== null) return sendRefusal(request, reply, updateRefusal);
 
       await storage.roles.updateRole(id, updateData);
@@ -607,7 +620,7 @@ export async function roleRoutes(
         }
       }
 
-      const updateRefusal = await orgRoleRefusal(storage, role.orgId, updateData.name ?? role.name, permissions);
+      const updateRefusal = await roleRefusal(storage, role.orgId, updateData.name ?? role.name, permissions);
       if (updateRefusal !== null) return sendRefusal(request, reply, updateRefusal);
 
       await storage.roles.updateRole(id, updateData);

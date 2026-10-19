@@ -230,22 +230,6 @@ export function isPublicPath(path: string): boolean {
   return false;
 }
 
-/**
- * Quick 261013-dr7 (WR-02): an exempt (/api/*) route that opts in with
- * `config.csrfForCookieSessions` still verifies the CSRF token when the request is
- * cookie-authenticated, i.e. it carries no API credential that VALIDATES. A bogus
- * Bearer header does not exempt it (auth then falls through to the cookie), the
- * rule graphql/csrf-guard.ts applies to /graphql.
- */
-function needsCookieCsrf(
-  request: FastifyRequest,
-  auth: { hasValidApiCredential(request: FastifyRequest): boolean },
-): boolean {
-  const config = request.routeOptions?.config as { csrfForCookieSessions?: boolean } | undefined;
-  if (config?.csrfForCookieSessions !== true) return false;
-  return !auth.hasValidApiCredential(request);
-}
-
 // HTTP methods that mutate state and require CSRF verification
 const CSRF_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -263,6 +247,33 @@ function isCsrfExempt(path: string): boolean {
   if (path === '/oauth/token') return true;
   if (path === '/oauth/register') return true;
   return false;
+}
+
+/**
+ * HARD-10: the /api write routes that never require the CSRF token, even for a cookie session.
+ * Only two kinds of route may appear here, and tests/integration/api-write-csrf-inventory.test.ts
+ * fails on anything else:
+ *   - public pre-auth writes (isPublicPath): /api/v1/setup creates the first admin and checks its
+ *     own API key in the handler;
+ *   - Bearer-only paths (isBearerOnlyPath, checked below): /api/v1/mcp never reads the cookie.
+ */
+export const COOKIE_CSRF_EXEMPT_API_PATHS: ReadonlySet<string> = new Set(['/api/v1/setup']);
+
+/**
+ * HARD-10: does this request have to carry the CSRF token? One decision for HTML and /api paths.
+ *
+ * - Non-mutating methods: never.
+ * - Paths outside /api: unless isCsrfExempt names them (unchanged behaviour).
+ * - /api paths: always for a cookie session, so a new /api write route is protected by default.
+ *   A request whose API credential VALIDATES (`hasApiCredential`) is not cookie-authenticated
+ *   and is not asked; a bogus Bearer header does not count, because auth then falls through to
+ *   the cookie. The only other exemptions are COOKIE_CSRF_EXEMPT_API_PATHS and Bearer-only paths.
+ */
+export function requiresCookieCsrf(method: string, path: string, hasApiCredential: boolean): boolean {
+  if (!CSRF_METHODS.has(method)) return false;
+  if (!path.startsWith('/api/')) return !isCsrfExempt(path);
+  if (COOKIE_CSRF_EXEMPT_API_PATHS.has(path) || isBearerOnlyPath(path)) return false;
+  return !hasApiCredential;
 }
 
 export async function createServer(config: DashboardConfig): Promise<FastifyInstance> {
@@ -1088,11 +1099,13 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── CSRF verification for state-changing requests ──────────────────────
   // Uses preHandler (not onRequest) so the body has been parsed by @fastify/formbody
-  // and req.body._csrf is available for token extraction.
-  server.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
+  // and req.body._csrf is available for token extraction. Registered on the root before
+  // the routes, so every route's preHandler list names it (the /api write inventory test
+  // reads those lists by this function name).
+  server.addHook('preHandler', async function cookieCsrfPreHandler(request: FastifyRequest, reply: FastifyReply) {
     if (!CSRF_METHODS.has(request.method)) return;
     const path = request.url.split('?')[0];
-    if (isCsrfExempt(path) && !needsCookieCsrf(request, authService)) return;
+    if (!requiresCookieCsrf(request.method, path, authService.hasValidApiCredential(request))) return;
     await new Promise<void>((resolve, reject) => {
       server.csrfProtection(request, reply, (err?: Error) => {
         if (err) reject(err);

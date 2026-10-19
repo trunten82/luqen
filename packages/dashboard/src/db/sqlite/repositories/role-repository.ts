@@ -3,7 +3,9 @@ import type { RoleRepository } from '../../interfaces/role-repository.js';
 import type { Role } from '../../types.js';
 import {
   ALL_PERMISSION_IDS,
+  forbiddenGlobalRolePermissions,
   forbiddenOrgRolePermissions,
+  GLOBAL_ROLE_FORBIDDEN_PERMISSIONS,
   isReservedGlobalRoleName,
   ORG_ROLE_FORBIDDEN_PERMISSIONS,
 } from '../../../permissions.js';
@@ -92,7 +94,7 @@ export class SqliteRoleRepository implements RoleRepository {
     readonly permissions: readonly string[];
     readonly orgId: string;
   }): Promise<Role> {
-    this.assertOrgRoleInvariants(data.orgId, data.name, data.permissions);
+    this.assertRoleInvariants(data.orgId, data.name, data.permissions, false);
     const id = `role-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const now = new Date().toISOString();
 
@@ -135,9 +137,7 @@ export class SqliteRoleRepository implements RoleRepository {
     if (role === null) {
       throw new Error(`Role not found: ${id}`);
     }
-    if (!role.isSystem) {
-      this.assertOrgRoleInvariants(role.orgId, data.name ?? role.name, data.permissions ?? []);
-    }
+    this.assertRoleInvariants(role.orgId, data.name ?? role.name, data.permissions ?? [], role.isSystem);
 
     this.db.transaction(() => {
       const setClauses: string[] = [];
@@ -205,7 +205,13 @@ export class SqliteRoleRepository implements RoleRepository {
       return new Set(ALL_PERMISSION_IDS);
     }
 
-    return new Set(role.permissions);
+    // The global-only ids (admin.system, admin.users) come from the global admin role only, so a
+    // non-admin global role row confers neither, whichever path wrote it.
+    const withoutGlobalOnly = role.permissions.filter((p) => !ORG_ROLE_FORBIDDEN_PERMISSIONS.has(p));
+    // HARD-12: a global role is held across organizations, so it never grants a per-organization
+    // decision (GLOBAL_ROLE_FORBIDDEN_PERMISSIONS), including a row written before that rule.
+    const withoutPerOrg = withoutGlobalOnly.filter((p) => !GLOBAL_ROLE_FORBIDDEN_PERMISSIONS.has(p));
+    return new Set(withoutPerOrg);
   }
 
   async getEffectivePermissions(userId: string, orgId?: string): Promise<Set<string>> {
@@ -229,9 +235,10 @@ export class SqliteRoleRepository implements RoleRepository {
     //    and their role_ids. Scope = team's home org OR an active cross-org
     //    link in team_org_links (Phase 62.1 RBAC overlay).
     const teamRoles = this.db.prepare(`
-      SELECT DISTINCT t.role_id
+      SELECT DISTINCT t.role_id, r.org_id AS role_org_id
       FROM team_members tm
       JOIN teams t ON t.id = tm.team_id
+      LEFT JOIN roles r ON r.id = t.role_id
       WHERE tm.user_id = ?
         AND t.role_id IS NOT NULL
         AND (
@@ -241,7 +248,7 @@ export class SqliteRoleRepository implements RoleRepository {
             WHERE tol.team_id = t.id AND tol.org_id = ?
           )
         )
-    `).all(userId, orgId, orgId) as Array<{ role_id: string }>;
+    `).all(userId, orgId, orgId) as Array<{ role_id: string; role_org_id: string | null }>;
 
     if (teamRoles.length === 0) {
       return globalPerms;
@@ -251,16 +258,20 @@ export class SqliteRoleRepository implements RoleRepository {
     //    team roles (since we want max permissions across all teams).
     const result = new Set(globalPerms);
 
-    for (const { role_id } of teamRoles) {
+    for (const { role_id, role_org_id } of teamRoles) {
+      // HARD-12: a team bound to a global (org 'system') row never confers a per-organization
+      // decision from it; organization roles still do.
+      const fromGlobalRole = role_org_id === 'system';
       const perms = this.db.prepare(
         'SELECT permission FROM role_permissions WHERE role_id = ?',
       ).all(role_id) as Array<{ permission: string }>;
 
       for (const { permission } of perms) {
-        // admin.system comes from the global role only: a team (an org-scoped grant) never
-        // confers it, whichever role the team is bound to (an org role written by any path, or a
-        // system role such as 'admin' - teams.ts lets an org team bind a system role).
+        // The global-only ids (admin.system, admin.users) come from the global role only: a team
+        // (an org-scoped grant) never confers them, whichever role the team is bound to (an org role
+        // written by any path, or a global row such as the built-in 'admin').
         if (ORG_ROLE_FORBIDDEN_PERMISSIONS.has(permission)) continue;
+        if (fromGlobalRole && GLOBAL_ROLE_FORBIDDEN_PERMISSIONS.has(permission)) continue;
         result.add(permission);
       }
     }
@@ -271,18 +282,33 @@ export class SqliteRoleRepository implements RoleRepository {
   // ── Private helpers ──────────────────────────────────────────────────
 
   /**
-   * Backstop for every write path (routes refuse first with a 422): an ORG role may neither take a
-   * global role's name nor carry admin.system. Global (org 'system') roles are unrestricted here.
+   * Backstop for every write path (routes refuse first with a 422). A GLOBAL (org 'system') role,
+   * built-in rows included, may not carry a permission in GLOBAL_ROLE_FORBIDDEN_PERMISSIONS. An ORG
+   * role may neither take a global role's name nor carry a global-only permission
+   * (ORG_ROLE_FORBIDDEN_PERMISSIONS); those name and global-only rules never applied to built-in
+   * rows and still do not.
    */
-  private assertOrgRoleInvariants(orgId: string, name: string, permissions: readonly string[]): void {
-    if (orgId === 'system') return;
+  private assertRoleInvariants(
+    orgId: string,
+    name: string,
+    permissions: readonly string[],
+    isSystem: boolean,
+  ): void {
+    if (orgId === 'system') {
+      if (forbiddenGlobalRolePermissions(permissions).length > 0) {
+        throw new Error('A global role cannot carry issues.dismiss');
+      }
+      return;
+    }
+    if (isSystem) return;
     const systemNames = (this.db.prepare("SELECT name FROM roles WHERE org_id = 'system'").all() as Array<{ name: string }>)
       .map((r) => r.name);
     if (isReservedGlobalRoleName(name, systemNames)) {
       throw new Error('An organization role cannot use a global role name');
     }
-    if (forbiddenOrgRolePermissions(permissions).length > 0) {
-      throw new Error('An organization role cannot carry admin.system');
+    const globalOnly = forbiddenOrgRolePermissions(permissions);
+    if (globalOnly.length > 0) {
+      throw new Error(`An organization role cannot carry ${globalOnly.join(', ')}`);
     }
   }
 

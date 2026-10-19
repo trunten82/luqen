@@ -23,12 +23,17 @@
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { runInToolContext, type ToolContext } from '@luqen/core/mcp';
 import { readFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { registerMcpRoutes } from '../../src/routes/api/mcp.js';
 import { createDashboardMcpServer } from '../../src/mcp/server.js';
-import { ADMIN_TOOL_NAMES, DASHBOARD_ADMIN_TOOL_METADATA } from '../../src/mcp/tools/admin.js';
+import { ADMIN_TOOL_NAMES, DASHBOARD_ADMIN_TOOL_METADATA, registerAdminTools } from '../../src/mcp/tools/admin.js';
+import { ALL_PERMISSION_IDS } from '../../src/permissions.js';
 import { DATA_TOOL_NAMES } from '../../src/mcp/tools/data.js';
 import type { McpTokenPayload, McpTokenVerifier } from '../../src/mcp/middleware.js';
 import type { StorageAdapter } from '../../src/db/index.js';
@@ -38,6 +43,7 @@ import type {
   ServiceConnectionsRepository,
 } from '../../src/db/service-connections-repository.js';
 import * as tester from '../../src/services/service-connection-tester.js';
+import { validatePassword, validateUsername } from '../../src/validation.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -594,5 +600,346 @@ describe('dashboard_create_user reserved usernames', () => {
     }
     const ok = extractText(await callTool(app, 'dashboard_create_user', { username: 'fabrikam-ops', password: 'Pass-word-123!', role: 'user' }));
     expect(ok['username']).toBe('fabrikam-ops');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// HARD-13: the MCP user tools accept exactly what the dashboard accepts —
+// the dashboard's own validators and global role list, with its wording.
+// ---------------------------------------------------------------------------
+
+interface StoredUser { readonly id: string; readonly username: string; readonly role: string; readonly active?: boolean }
+interface StoredTeam { readonly id: string; readonly orgId: string; readonly members: readonly string[] }
+
+/**
+ * The calling user (token sub 'tester'). The user tools read the caller's STORED row, so the store
+ * holds it: by default an active global admin, kept apart from the target users the tests assert on.
+ */
+const GLOBAL_ADMIN_CALLER: StoredUser = { id: 'tester', username: 'fabrikam-tester', role: 'admin', active: true };
+
+/** A users store that remembers what was created and every role and status write; teams are read-only. */
+function makeUserStore(
+  seed: readonly StoredUser[] = [],
+  opts: { readonly caller?: StoredUser; readonly teams?: readonly StoredTeam[] } = {},
+) {
+  const users = new Map<string, StoredUser>(seed.map((u) => [u.id, u]));
+  const callers = new Map<string, StoredUser>([[(opts.caller ?? GLOBAL_ADMIN_CALLER).id, opts.caller ?? GLOBAL_ADMIN_CALLER]]);
+  const teams = opts.teams ?? [];
+  const roleWrites: Array<{ readonly id: string; readonly role: string }> = [];
+  const statusWrites: Array<{ readonly id: string; readonly active: boolean }> = [];
+  const holderOf = (id: string) => (users.has(id) ? users : callers.has(id) ? callers : undefined);
+  const find = (id: string) => users.get(id) ?? callers.get(id);
+  const write = (id: string, change: Partial<StoredUser>) => {
+    const holder = holderOf(id);
+    const u = holder?.get(id);
+    if (holder !== undefined && u !== undefined) holder.set(id, { ...u, ...change });
+  };
+  const byName = (username: string) => [...users.values(), ...callers.values()].find((u) => u.username === username) ?? null;
+  const asRow = (u: StoredUser) => ({ ...u, active: u.active ?? true, createdAt: '2026-10-18T00:00:00.000Z', passwordHash: 'HASH' }) as unknown;
+  const repo = {
+    getUserById: async (id: string) => { const u = find(id); return u === undefined ? null : asRow(u); },
+    getUserByUsername: async (username: string) => { const u = byName(username); return u === null ? null : asRow(u); },
+    listUsers: async () => [...users.values(), ...callers.values()].map(asRow),
+    createUser: async (username: string, _pw: string, role: string) => {
+      const u = { id: `u${users.size + 1}`, username, role };
+      users.set(u.id, u);
+      return asRow(u);
+    },
+    updateUserRole: async (id: string, role: string) => {
+      roleWrites.push({ id, role });
+      write(id, { role });
+    },
+    activateUser: async (id: string) => { statusWrites.push({ id, active: true }); write(id, { active: true }); },
+    deactivateUser: async (id: string) => { statusWrites.push({ id, active: false }); write(id, { active: false }); },
+  };
+  const teamRepo = {
+    listTeamMembershipsForUser: async (userId: string) =>
+      teams.filter((t) => t.members.includes(userId)).map((t) => ({ teamId: t.id, role: 'member' })),
+    getTeam: async (id: string) => {
+      const t = teams.find((x) => x.id === id);
+      return t === undefined ? null : { id: t.id, name: t.id, description: '', orgId: t.orgId, roleId: null, createdAt: '2026-10-18T00:00:00.000Z' };
+    },
+  };
+  return { users, callers, roleWrites, statusWrites, repo, teamRepo };
+}
+
+type UserStore = ReturnType<typeof makeUserStore>;
+
+function userStorage(store: UserStore, permissions: readonly string[]): StorageAdapter {
+  const base = makeStubStorage(permissions);
+  return {
+    ...base,
+    users: { ...base.users, ...store.repo } as unknown as StorageAdapter['users'],
+    teams: store.teamRepo as unknown as StorageAdapter['teams'],
+  };
+}
+
+async function buildUserApp(store: UserStore, permissions: readonly string[] = ['admin.users']): Promise<FastifyInstance> {
+  const app = Fastify({ logger: false });
+  await registerMcpRoutes(app, {
+    verifyToken: makeFakeVerifier({ sub: 'tester', scopes: ['read', 'write', 'admin'], orgId: 'org-1', role: 'member' }),
+    storage: userStorage(store, permissions),
+    scanService: makeStubScanService(),
+    serviceConnections: makeStubServiceConnections(),
+  });
+  await app.ready();
+  return app;
+}
+
+function toolError(parsed: Record<string, unknown>): { readonly isError: boolean; readonly error: unknown } {
+  const result = parsed['result'] as { isError?: boolean } | undefined;
+  return { isError: result?.isError === true, error: extractText(parsed)['error'] };
+}
+
+const STRONG_PASSWORD = 'Fabrikam-Audit-42!';
+const INVALID_ROLE_ERROR = 'Invalid role. Must be executive, viewer, user, developer, or admin.';
+const USERNAME_NOT_AVAILABLE_ERROR = 'This username is not available.';
+
+describe('HARD-13 MCP user tools validate like the dashboard', () => {
+  let app: FastifyInstance | undefined;
+  afterEach(async () => { await app?.close(); app = undefined; });
+
+  it('HARD-13 create user refuses an unknown role', async () => {
+    const store = makeUserStore();
+    app = await buildUserApp(store);
+    const parsed = await callTool(app, 'dashboard_create_user', { username: 'fabrikam-auditor', password: STRONG_PASSWORD, role: 'member' });
+    expect(toolError(parsed)).toEqual({ isError: true, error: INVALID_ROLE_ERROR });
+    expect(store.users.size).toBe(0);
+  });
+
+  it('HARD-13 create user accepts a valid username and role', async () => {
+    const store = makeUserStore();
+    app = await buildUserApp(store);
+    const parsed = await callTool(app, 'dashboard_create_user', { username: 'fabrikam-auditor', password: STRONG_PASSWORD, role: 'user' });
+    expect(toolError(parsed).isError).toBe(false);
+    const body = extractText(parsed);
+    expect(body['username']).toBe('fabrikam-auditor');
+    expect(body['role']).toBe('user');
+    expect(body).not.toHaveProperty('passwordHash');
+    expect([...store.users.values()].map((u) => u.username)).toEqual(['fabrikam-auditor']);
+  });
+
+  it('HARD-13 create user refuses an invalid username', async () => {
+    const store = makeUserStore();
+    app = await buildUserApp(store);
+    for (const username of ['.fabrikam', 'ab']) {
+      const expected = validateUsername(username);
+      expect(expected.valid, username).toBe(false);
+      const parsed = await callTool(app, 'dashboard_create_user', { username, password: STRONG_PASSWORD, role: 'user' });
+      expect(toolError(parsed), username).toEqual({ isError: true, error: expected.error });
+    }
+    expect(store.users.size).toBe(0);
+  });
+
+  it('HARD-13 create user refuses a password the dashboard would refuse', async () => {
+    const store = makeUserStore();
+    app = await buildUserApp(store);
+    const expected = validatePassword('longenough');
+    expect(expected.valid).toBe(false);
+    const parsed = await callTool(app, 'dashboard_create_user', { username: 'fabrikam-auditor', password: 'longenough', role: 'user' });
+    expect(toolError(parsed)).toEqual({ isError: true, error: expected.error });
+    expect(store.users.size).toBe(0);
+  });
+
+  it('HARD-13 create user refuses a duplicate username', async () => {
+    const store = makeUserStore();
+    app = await buildUserApp(store);
+    const first = await callTool(app, 'dashboard_create_user', { username: 'fabrikam-auditor', password: STRONG_PASSWORD, role: 'user' });
+    expect(toolError(first).isError).toBe(false);
+    const second = await callTool(app, 'dashboard_create_user', { username: 'fabrikam-auditor', password: STRONG_PASSWORD, role: 'viewer' });
+    expect(toolError(second)).toEqual({ isError: true, error: USERNAME_NOT_AVAILABLE_ERROR });
+    expect([...store.users.values()]).toEqual([{ id: 'u1', username: 'fabrikam-auditor', role: 'user' }]);
+  });
+
+  it('HARD-13 update user refuses an unknown role', async () => {
+    const store = makeUserStore([{ id: 'u1', username: 'fabrikam-auditor', role: 'viewer' }]);
+    app = await buildUserApp(store);
+    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'u1', role: 'member', active: false });
+    expect(toolError(parsed)).toEqual({ isError: true, error: INVALID_ROLE_ERROR });
+    expect(store.roleWrites).toEqual([]);
+    expect(store.statusWrites).toEqual([]);
+    expect(store.users.get('u1')?.role).toBe('viewer');
+  });
+
+  it('HARD-13 update user accepts a global role', async () => {
+    const store = makeUserStore([{ id: 'u1', username: 'fabrikam-auditor', role: 'viewer' }]);
+    app = await buildUserApp(store);
+    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'u1', role: 'developer' });
+    expect(toolError(parsed).isError).toBe(false);
+    expect(extractText(parsed)['role']).toBe('developer');
+    expect(store.roleWrites).toEqual([{ id: 'u1', role: 'developer' }]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// HARD-13: the MCP user tools follow the dashboard's role authority rules. The
+// permission set is forced through the stub role repository (as buildUserApp
+// does), so what is observed is the HANDLER's own rule, which reads the
+// caller's stored user row.
+// ---------------------------------------------------------------------------
+
+const ADMIN_ROLE_ERROR = 'Only global administrators can assign the admin role.';
+const ORG_CALLER: StoredUser = { id: 'tester', username: 'fabrikam-owner', role: 'user', active: true };
+const ORG_TARGET: StoredUser = { id: 'u1', username: 'fabrikam-analyst', role: 'viewer' };
+const ORG_ONE_TEAM: StoredTeam = { id: 't1', orgId: 'org-1', members: ['tester', 'u1'] };
+
+/** Calls a tool in process, the way the agent bridge dispatches: no tools/call gate, the given context. */
+async function callInProcess(store: UserStore, context: ToolContext, name: string, args: Record<string, unknown>) {
+  const server = new McpServer({ name: 'test', version: '0.0.0' }, { capabilities: { tools: {} } });
+  registerAdminTools(server, { storage: userStorage(store, []), serviceConnections: makeStubServiceConnections() });
+  const client = new Client({ name: 'test-client', version: '1.0.0' });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  await server.connect(serverTransport);
+  await client.connect(clientTransport);
+  try {
+    const result = await runInToolContext(context, () => client.callTool({ name, arguments: args }));
+    const text = (result.content as Array<{ text: string }>)[0]?.text ?? '{}';
+    return { isError: result.isError === true, error: (JSON.parse(text) as Record<string, unknown>)['error'] };
+  } finally {
+    await client.close();
+  }
+}
+
+describe('HARD-13 MCP user tools follow the dashboard role authority rules', () => {
+  let app: FastifyInstance | undefined;
+  afterEach(async () => { await app?.close(); app = undefined; });
+
+  it('HARD-13 update user assigns the admin role only for a global admin caller', async () => {
+    const store = makeUserStore([ORG_TARGET], { caller: ORG_CALLER, teams: [ORG_ONE_TEAM] });
+    app = await buildUserApp(store);
+    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'u1', role: 'admin', active: false });
+    expect(toolError(parsed)).toEqual({ isError: true, error: ADMIN_ROLE_ERROR });
+    expect(store.roleWrites).toEqual([]);
+    expect(store.statusWrites).toEqual([]);
+    expect(store.users.get('u1')?.role).toBe('viewer');
+  });
+
+  it('HARD-13 create user assigns the admin role only for a global admin caller', async () => {
+    const store = makeUserStore([], { caller: ORG_CALLER, teams: [ORG_ONE_TEAM] });
+    app = await buildUserApp(store);
+    const parsed = await callTool(app, 'dashboard_create_user', { username: 'fabrikam-ops-lead', password: STRONG_PASSWORD, role: 'admin' });
+    expect(toolError(parsed)).toEqual({ isError: true, error: ADMIN_ROLE_ERROR });
+    expect(store.users.size).toBe(0);
+  });
+
+  it('HARD-13 admin role assignment reads the caller role from the user store', async () => {
+    const store = makeUserStore([ORG_TARGET], { caller: ORG_CALLER, teams: [ORG_ONE_TEAM] });
+    app = await buildUserApp(store, ALL_PERMISSION_IDS);
+    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'u1', role: 'admin' });
+    expect(toolError(parsed)).toEqual({ isError: true, error: ADMIN_ROLE_ERROR });
+    expect(store.roleWrites).toEqual([]);
+  });
+
+  it('HARD-13 update user by a global admin assigns the admin role', async () => {
+    const store = makeUserStore([ORG_TARGET], { caller: GLOBAL_ADMIN_CALLER, teams: [ORG_ONE_TEAM] });
+    app = await buildUserApp(store, ALL_PERMISSION_IDS);
+    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'u1', role: 'admin' });
+    expect(toolError(parsed).isError).toBe(false);
+    expect(store.roleWrites).toEqual([{ id: 'u1', role: 'admin' }]);
+    expect(store.users.get('u1')?.role).toBe('admin');
+  });
+
+  it('HARD-13 admin role assignment holds for an in process caller with an empty permission set', async () => {
+    const store = makeUserStore([ORG_TARGET], { caller: ORG_CALLER, teams: [ORG_ONE_TEAM] });
+    const context: ToolContext = { userId: 'tester', orgId: 'org-1', scopes: ['read', 'write', 'admin'], permissions: new Set<string>(), authType: 'jwt' };
+    const result = await callInProcess(store, context, 'dashboard_update_user', { userId: 'u1', role: 'admin' });
+    expect(result).toEqual({ isError: true, error: ADMIN_ROLE_ERROR });
+    expect(store.roleWrites).toEqual([]);
+    expect(store.users.get('u1')?.role).toBe('viewer');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// HARD-13: dashboard_update_user changes only users the caller may manage
+// (canManageUser, as the dashboard's user routes do), keeps the last active
+// admin, and the tool descriptions say the admin role needs a global
+// administrator.
+// ---------------------------------------------------------------------------
+
+const MANAGE_ERROR = 'You can only manage users in your organization.';
+const LAST_ADMIN_ROLE_ERROR = 'Cannot change role of the last active admin user.';
+const LAST_ADMIN_DEACTIVATE_ERROR = 'Cannot deactivate the last active admin user.';
+const NORTHWIND_USER: StoredUser = { id: 'u2', username: 'northwind-analyst', role: 'viewer' };
+const FABRIKAM_ADMIN: StoredUser = { id: 'u3', username: 'fabrikam-admin', role: 'admin', active: true };
+const ORG_TWO_TEAM: StoredTeam = { id: 't2', orgId: 'org-2', members: ['u2'] };
+
+describe('HARD-13 MCP user update follows the dashboard organization scope and last admin rules', () => {
+  let app: FastifyInstance | undefined;
+  afterEach(async () => { await app?.close(); app = undefined; });
+
+  it('HARD-13 update user changes only users the caller may manage', async () => {
+    const store = makeUserStore([ORG_TARGET, NORTHWIND_USER], { caller: ORG_CALLER, teams: [ORG_ONE_TEAM, ORG_TWO_TEAM] });
+    app = await buildUserApp(store);
+    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'u2', role: 'developer', active: false });
+    expect(toolError(parsed)).toEqual({ isError: true, error: MANAGE_ERROR });
+    expect(store.roleWrites).toEqual([]);
+    expect(store.statusWrites).toEqual([]);
+    expect(store.users.get('u2')?.role).toBe('viewer');
+  });
+
+  it('HARD-13 update user leaves a global admin unchanged for an org scoped caller', async () => {
+    const team: StoredTeam = { id: 't1', orgId: 'org-1', members: ['tester', 'u1', 'u3'] };
+    const store = makeUserStore([ORG_TARGET, FABRIKAM_ADMIN], { caller: ORG_CALLER, teams: [team] });
+    app = await buildUserApp(store);
+    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'u3', role: 'viewer', active: false });
+    expect(toolError(parsed)).toEqual({ isError: true, error: MANAGE_ERROR });
+    expect(store.roleWrites).toEqual([]);
+    expect(store.statusWrites).toEqual([]);
+    expect(store.users.get('u3')).toEqual(FABRIKAM_ADMIN);
+  });
+
+  it('HARD-13 update user changes a user of the caller organization', async () => {
+    const store = makeUserStore([ORG_TARGET], { caller: ORG_CALLER, teams: [ORG_ONE_TEAM] });
+    app = await buildUserApp(store);
+    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'u1', role: 'developer' });
+    expect(toolError(parsed).isError).toBe(false);
+    expect(store.users.get('u1')?.role).toBe('developer');
+  });
+
+  it('HARD-13 update user keeps the role of the last active admin', async () => {
+    const store = makeUserStore([], { caller: GLOBAL_ADMIN_CALLER });
+    app = await buildUserApp(store, ALL_PERMISSION_IDS);
+    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'tester', role: 'user' });
+    expect(toolError(parsed)).toEqual({ isError: true, error: LAST_ADMIN_ROLE_ERROR });
+    expect(store.roleWrites).toEqual([]);
+    expect(store.callers.get('tester')?.role).toBe('admin');
+  });
+
+  it('HARD-13 update user keeps the last active admin active', async () => {
+    const store = makeUserStore([], { caller: GLOBAL_ADMIN_CALLER });
+    app = await buildUserApp(store, ALL_PERMISSION_IDS);
+    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'tester', active: false });
+    expect(toolError(parsed)).toEqual({ isError: true, error: LAST_ADMIN_DEACTIVATE_ERROR });
+    expect(store.statusWrites).toEqual([]);
+    expect(store.callers.get('tester')?.active).toBe(true);
+  });
+
+  it('HARD-13 update user demotes an admin while another admin is active', async () => {
+    const store = makeUserStore([FABRIKAM_ADMIN], { caller: GLOBAL_ADMIN_CALLER });
+    app = await buildUserApp(store, ALL_PERMISSION_IDS);
+    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'u3', role: 'user' });
+    expect(toolError(parsed).isError).toBe(false);
+    expect(store.users.get('u3')?.role).toBe('user');
+  });
+
+  it('HARD-13 user tool descriptions name the global admin requirement for the admin role', async () => {
+    // The registered tool list as the MCP SDK publishes it (JSON Schema, property descriptions kept).
+    const server = new McpServer({ name: 'test', version: '0.0.0' }, { capabilities: { tools: {} } });
+    registerAdminTools(server, { storage: userStorage(makeUserStore(), []), serviceConnections: makeStubServiceConnections() });
+    const client = new Client({ name: 'test-client', version: '1.0.0' });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+    try {
+      const { tools } = await client.listTools();
+      for (const name of ['dashboard_create_user', 'dashboard_update_user']) {
+        const properties = tools.find((t) => t.name === name)?.inputSchema.properties as Record<string, { description?: string }> | undefined;
+        const roleDescription = properties?.['role']?.description ?? '';
+        expect(roleDescription, name).toMatch(/^(New )?Global role/i);
+        expect(roleDescription, name).toContain('global administrator');
+      }
+    } finally {
+      await client.close();
+    }
   });
 });

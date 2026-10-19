@@ -40,7 +40,7 @@ afterEach(async () => {
   await store.cleanup();
 });
 
-const DISMISS = ['issues.dismiss'];
+const DISMISS = ['issues.dismiss', 'reports.view'];
 const SITE_KEY = 'https://example.test/dev/en-us';
 
 async function as(user: HarnessUser, permissions: readonly string[] = DISMISS) {
@@ -129,6 +129,15 @@ describe('GET .../dismissals/preview — permission and access', () => {
     const scan = await seedScan(store.storage, { orgId: org });
     const srv = await as({ role: 'user', currentOrgId: org }, ['reports.view']);
     expect((await preview(srv, scan)).statusCode).toBe(403);
+  });
+
+  it('HARD-03 preview returns 403 for a role holding only issues dismiss', async () => {
+    const org = await seedOrg(store.storage, 'org_a');
+    const scan = await seedScan(store.storage, { orgId: org });
+    const srv = await as({ role: 'user', currentOrgId: org }, ['issues.dismiss']);
+    const res = await preview(srv, scan);
+    expect(res.statusCode).toBe(403);
+    expect(res.json()).not.toHaveProperty('occurrences');
   });
 
   it('a global admin previews on any org scan', async () => {

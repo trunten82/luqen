@@ -65,16 +65,21 @@ export const ALL_PERMISSION_IDS: readonly string[] = ALL_PERMISSIONS.map((p) => 
  * existing orgs' Owner and Admin roles, custom org roles may carry it (D-15
  * Q3 = A), and org-scoped admin API keys hold it through the ORG_OWNER cap
  * (D-15 Q4 = accept). The mechanism stays for the next dark permission: add its
- * id here and pin the four paths above again, because with an empty set the
- * filters below have nothing to filter and no test can watch them work.
+ * id here. With the set empty the filters below have nothing to filter, so each
+ * of them takes an injectable dark set (defaulting to this one) and
+ * tests/permissions/dark-permissions.test.ts pins every path through an
+ * injected id.
  */
 export const DARK_PERMISSIONS: ReadonlySet<PermissionId> = new Set<PermissionId>();
 
 /** A new Set of `ids` without any dark permission. Never mutates its argument. */
-export function withoutDarkPermissions(ids: Iterable<string>): Set<string> {
+export function withoutDarkPermissions(
+  ids: Iterable<string>,
+  dark: ReadonlySet<string> = DARK_PERMISSIONS,
+): Set<string> {
   const out = new Set<string>();
   for (const id of ids) {
-    if (!(DARK_PERMISSIONS as ReadonlySet<string>).has(id)) out.add(id);
+    if (!dark.has(id)) out.add(id);
   }
   return out;
 }
@@ -98,29 +103,59 @@ export function isReservedGlobalRoleName(name: string, systemRoleNames: Iterable
 }
 
 /**
- * Permissions no ORG-scoped source may carry or confer: admin.system is the cross-org bypass, so it
- * comes from the global role only (refused on org-role writes, stripped from team-derived grants).
+ * Global-only permissions: no ORG-scoped source may carry or confer them. admin.system (system
+ * settings, across every organization) and admin.users (the platform's user accounts) are held
+ * through a user's GLOBAL role only. Organization role writes refuse them, the organization role
+ * form does not offer them, the repository's team-role loop drops them from team-derived grants, and
+ * resolveEffectivePermissions removes them from every non-admin result, so a row written by any path
+ * confers neither. users.* stays grantable to organization roles (migration 031).
  */
-export const ORG_ROLE_FORBIDDEN_PERMISSIONS: ReadonlySet<string> = new Set(['admin.system']);
+export const ORG_ROLE_FORBIDDEN_PERMISSIONS: ReadonlySet<string> = new Set(['admin.system', 'admin.users']);
 
-/** The forbidden ids present in `ids` (empty when the set is allowed on an org role). */
+/** The forbidden ids present in `ids`, in catalogue order (empty when the set is allowed on an org role). */
 export function forbiddenOrgRolePermissions(ids: Iterable<string>): string[] {
-  return [...new Set(ids)].filter((id) => ORG_ROLE_FORBIDDEN_PERMISSIONS.has(id));
+  const present = new Set(ids);
+  return ALL_PERMISSION_IDS.filter((id) => ORG_ROLE_FORBIDDEN_PERMISSIONS.has(id) && present.has(id));
+}
+
+/** The catalogue label of a permission id (the id itself when it is not in the catalogue). */
+export function permissionLabel(id: string): string {
+  return ALL_PERMISSIONS.find((p) => p.id === id)?.label ?? id;
+}
+
+/**
+ * Permissions no GLOBAL (org 'system') role may carry. issues.dismiss is a per-org decision: a
+ * global role is held by users of every org, so it reaches orgs that never chose to grant it.
+ * Org roles may carry it (the org Owner and Admin sets do).
+ */
+export const GLOBAL_ROLE_FORBIDDEN_PERMISSIONS: ReadonlySet<string> = new Set(['issues.dismiss']);
+
+/** The forbidden ids present in `ids` (empty when the set is allowed on a global role). */
+export function forbiddenGlobalRolePermissions(ids: Iterable<string>): string[] {
+  return [...new Set(ids)].filter((id) => GLOBAL_ROLE_FORBIDDEN_PERMISSIONS.has(id));
 }
 
 /** May a role row carry this permission id? In the catalogue and not dark. */
-export function isRoleGrantablePermission(id: string): boolean {
-  return ALL_PERMISSION_IDS.includes(id) && !(DARK_PERMISSIONS as ReadonlySet<string>).has(id);
+export function isRoleGrantablePermission(id: string, dark: ReadonlySet<string> = DARK_PERMISSIONS): boolean {
+  return ALL_PERMISSION_IDS.includes(id) && !dark.has(id);
 }
 
-/** Permission groups for the management UI (dark ids are not listed). */
-export function getPermissionGroups(): Array<{
+/**
+ * Permission groups for the management UI (dark ids are not listed; `forGlobalRole` also hides the
+ * ids a global role may not carry, `forOrgRole` the ids an organization role may not carry).
+ */
+export function getPermissionGroups(
+  opts: { readonly dark?: ReadonlySet<string>; readonly forGlobalRole?: boolean; readonly forOrgRole?: boolean } = {},
+): Array<{
   readonly group: string;
   readonly permissions: ReadonlyArray<{ readonly id: string; readonly label: string }>;
 }> {
+  const dark: ReadonlySet<string> = opts.dark ?? DARK_PERMISSIONS;
   const groupMap = new Map<string, Array<{ id: string; label: string }>>();
   for (const p of ALL_PERMISSIONS) {
-    if ((DARK_PERMISSIONS as ReadonlySet<string>).has(p.id)) continue;
+    if (dark.has(p.id)) continue;
+    if (opts.forGlobalRole === true && GLOBAL_ROLE_FORBIDDEN_PERMISSIONS.has(p.id)) continue;
+    if (opts.forOrgRole === true && ORG_ROLE_FORBIDDEN_PERMISSIONS.has(p.id)) continue;
     const existing = groupMap.get(p.group);
     if (existing !== undefined) {
       existing.push({ id: p.id, label: p.label });
@@ -154,13 +189,13 @@ export async function resolveEffectivePermissions(
   userId: string,
   userRole: string,
   orgId?: string,
-  opts: { readonly orgScopedApiKey?: boolean } = {},
+  opts: { readonly orgScopedApiKey?: boolean; readonly darkPermissions?: ReadonlySet<string> } = {},
 ): Promise<Set<string>> {
   // ORG-KEY-CONTAINMENT-1: an org-scoped key with role 'admin' administers ITS
   // org, so it holds at most what an org Owner holds — never the global
   // permissions (admin.system, ...).
   if (userRole === 'admin' && opts.orgScopedApiKey === true) {
-    return withoutDarkPermissions(ORG_OWNER_PERMISSIONS);
+    return withoutDarkPermissions(ORG_OWNER_PERMISSIONS, opts.darkPermissions);
   }
   // Admin users get all permissions regardless of org context
   if (userRole === 'admin') {
@@ -169,7 +204,22 @@ export async function resolveEffectivePermissions(
 
   // D-07: dark ids are filtered where permissions are RESOLVED, not only where
   // a role form is parsed, so a role row written by any other path stays dark.
-  return withoutDarkPermissions(await roleRepository.getEffectivePermissions(userId, orgId));
+  const resolved = withoutDarkPermissions(await roleRepository.getEffectivePermissions(userId, orgId), opts.darkPermissions);
+  // The global-only ids come from the global admin role only. When the caller names the user's
+  // stored global role and it is not 'admin', the result never carries them, whichever role row or
+  // storage adapter produced it. Any other value (a token without a role claim reaches here as
+  // 'member') says nothing about the stored role, so the repository's answer, which reads the stored
+  // row and drops the global-only ids from team-derived grants, stands.
+  return GLOBAL_ROLE_NAMES.includes(userRole) ? withoutGlobalOnlyPermissions(resolved) : resolved;
+}
+
+/** A new Set of `ids` without ORG_ROLE_FORBIDDEN_PERMISSIONS (the global-only ids). Never mutates its argument. */
+function withoutGlobalOnlyPermissions(ids: ReadonlySet<string>): Set<string> {
+  const out = new Set<string>();
+  for (const id of ids) {
+    if (!ORG_ROLE_FORBIDDEN_PERMISSIONS.has(id)) out.add(id);
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------

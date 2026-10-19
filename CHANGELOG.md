@@ -19,6 +19,43 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Scans started from the scan form, GraphQL `createScan`, report retry and the
   MCP tools `dashboard_scan_site` and `dashboard_scan_page` share one scan-start
   limit of 30 starts per 10 minutes per user.
+- Every state-changing `/api` request made with the session cookie must carry
+  the CSRF token (`X-CSRF-Token` header or `_csrf` field), as other dashboard
+  forms already do; requests authenticated by an API key send none.
+  `POST /api/v1/setup` and the Bearer-only `POST /api/v1/mcp` are the named
+  exemptions, and a test over the full route table keeps new `/api` routes
+  covered.
+- Marking, previewing and revoking an issue dismissal require `reports.view` as
+  well as `issues.dismiss`.
+- The dismissals list API returns the same rows as the report's Dismissed
+  section, including for organization users viewing a `system` scan, with actor
+  ids withheld where the page withholds them.
+- `issues.dismiss` can be granted only through organization roles; global roles
+  refuse it when created or edited, and a global role never grants it.
+- The MCP tools `dashboard_create_user` and `dashboard_update_user` apply the
+  dashboard's rules: global role names only, the username and password rules of
+  the user form, and no duplicate usernames.
+- The MCP tools `dashboard_create_user` and `dashboard_update_user` assign the
+  `admin` role only when the caller is a global administrator.
+  `dashboard_update_user` changes only users the caller may manage (users of
+  the caller's organization; any user for a global administrator), and keeps
+  the last active administrator's role and active status. The GraphQL
+  `deactivateUser` mutation also keeps the last active administrator active.
+- `admin.system` and `admin.users` come from the global `admin` role only:
+  organization roles refuse them when created or edited, and neither a team's
+  role nor another global role grants them.
+- Teams are bound to built-in roles by global administrators. Organization
+  administrators bind their organization's roles and global custom roles.
+- Teams are created in, and moved to, the organization the caller administers;
+  global administrators place teams in any organization.
+- Each service's MCP endpoint runs a tool only when the calling token's scope
+  covers it, matching what `tools/list` shows for that token. Clients authorized through
+  the dashboard's OAuth flow receive the `read` and `write` scopes, so tools
+  that require the `admin` scope (organization creation and service
+  connections) are not offered to them.
+- MCP `tools/list` publishes each tool's input schema as JSON Schema, including
+  the parameter descriptions.
+- Tests: each dark-permission filter is covered by its own test.
 
 ### Added
 

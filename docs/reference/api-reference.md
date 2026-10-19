@@ -382,6 +382,50 @@ Responses:
 
 ---
 
+## Dashboard `/api` writes and the CSRF token
+
+Every state-changing dashboard request (`POST`, `PUT`, `PATCH`, `DELETE`) made with the session cookie must carry the session's CSRF token, under `/api` as everywhere else. Send it in the `X-CSRF-Token` header or as a `_csrf` form field; pages expose it in `<meta name="csrf-token" content="...">`, and the dashboard's own scripts send it on every request. Without a valid token the request is refused with `403` before the route runs; JSON callers receive an `error` naming the token (`Invalid csrf token`, or `Missing csrf secret` when the session was never issued one).
+
+- **API-key callers** (`Authorization: Bearer <key>` or `X-API-Key: <key>`) are not cookie-authenticated and never send a token, even when the client also holds a session cookie. The key must validate: an unknown key does not count, and the request is then judged by its cookie.
+- **`POST /api/v1/setup`** is exempt: it runs before any user exists and checks its own API key.
+- **`POST /api/v1/mcp`** is exempt: it accepts only an OAuth Bearer token and never reads the cookie.
+- `POST /graphql` keeps its own rule: a cookie-authenticated request must use `Content-Type: application/json` (or `application/graphql`).
+
+---
+
+## Issue dismissals
+
+Dismissals mark a finding (rule code plus selector) as not applicable on a site. They are org-scoped and audited.
+
+| Endpoint | Permissions | Notes |
+|----------|-------------|-------|
+| `POST /api/v1/scans/:scanId/dismissals` (mark) | `issues.dismiss` and `reports.view` | Body `{ code, selector, reason }`; `201` with the dismissal |
+| `GET /api/v1/scans/:scanId/dismissals/preview` (preview) | `issues.dismiss` and `reports.view` | Query `code`, `selector` |
+| `POST /api/v1/dismissals/:id/revoke` (revoke) | `issues.dismiss` and `reports.view` | Body `{ comment? }` |
+| `GET /api/v1/scans/:scanId/dismissals` (list) | `reports.view` | Returns the rows the report's Dismissed section shows |
+
+- Mark, preview and revoke need both permissions; holding only one answers `403`. They act only on scans of the caller's current organization (a global admin on any); any other scan answers `404`.
+- The list follows the report page: a caller who may open the report receives exactly the rows its Dismissed section shows. A caller who may open the report but is not in the scan's organization (an organization user viewing a `system` scan) receives those rows with actor ids set to `null` and API-key actors named `api-key`, as the page shows them; a scan of another organization answers `404`.
+- The name `api-key` is also the actor carried by dismissal rows recorded before per-key actors (`api-key:<key row id>`) were introduced. In both cases it means "an API key" and names no particular key.
+- `issues.dismiss` can be held only through an organization role; global roles cannot carry it, and a global role never grants it.
+- Mark and revoke made with the session cookie need the CSRF token (see above); API-key callers do not.
+
+---
+
+## Dashboard roles, teams and the MCP user tools
+
+- **Global-only permissions.** `admin.system` and `admin.users` come from the global `admin` role only. Creating or editing an organization role that carries either answers `422` naming the refused permission, and neither a team's role nor another global role grants them.
+- **Team role bindings.** Binding a team to a built-in role (`POST /admin/teams`, `POST /admin/teams/:id/role`) needs a global administrator; anyone else receives `403` `Built-in roles are bound to teams by global administrators`. Organization administrators bind their organization's roles and global custom roles.
+- **Team organization.** `POST /admin/teams` and `POST /admin/teams/:id/org` place a team only in the organization the caller administers (their current organization); global administrators place teams in any organization. Any other target answers `403` `Teams are created in and moved to the organization you administer`, and nothing is written.
+- **MCP user tools.** `dashboard_create_user` and `dashboard_update_user` follow the dashboard's user rules:
+  - the `admin` role is assigned only when the caller's stored account is an active global administrator; otherwise the tool answers `Only global administrators can assign the admin role.` and writes nothing;
+  - `dashboard_update_user` changes only users the caller may manage (users of the caller's organization; any user for a global administrator), answering `You can only manage users in your organization.` otherwise;
+  - the last active administrator keeps the `admin` role and stays active (`Cannot change role of the last active admin user.`, `Cannot deactivate the last active admin user.`). The GraphQL `deactivateUser` mutation applies the same last-administrator rule.
+- **MCP token scope.** `POST /api/v1/mcp` (on every service) runs a tool only when the token's scope covers it, matching what `tools/list` shows for that token; any other call answers a `Forbidden` error saying the tool is not covered by the token scope. Clients authorized through the dashboard's OAuth flow receive the `read` and `write` scopes, so tools that require the `admin` scope (organization creation and service connections) are not offered to them.
+- **MCP tool schemas.** `tools/list` publishes each tool's input schema as JSON Schema, including the parameter descriptions.
+
+---
+
 ## Dashboard Plugin API
 
 Base URL: `http://localhost:5000` (dashboard service). All plugin endpoints require the `admin.system` permission via session cookie.
@@ -757,6 +801,7 @@ curl -X DELETE -H "X-API-Key: $LUQEN_API_KEY" \
 |------|-------------|
 | 404 | Scan not found |
 | 403 | Forbidden — not admin and scan belongs to different org |
+| 403 | A session-cookie request without the CSRF token (see [Dashboard `/api` writes and the CSRF token](#dashboard-api-writes-and-the-csrf-token)) |
 
 ---
 

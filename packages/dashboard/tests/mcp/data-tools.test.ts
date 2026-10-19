@@ -480,7 +480,8 @@ describe('Phase 30 data tools — handler behaviour via tools/call', () => {
   it('dashboard_scan_site — returns {scanId, status: "queued", url} on success', async () => {
     const verifier = makeFakeVerifier({
       sub: 'user-x',
-      scopes: ['read'],
+      // scans.create is a write-tier tool, so the client's token carries the write scope.
+      scopes: ['read', 'write'],
       orgId: 'org-1',
       role: 'member',
     });

@@ -12,6 +12,7 @@
 //   LUQEN_UAT_SCAN_TARGET         default 'https://example.com'
 //   LUQEN_UAT_PRIVATE_PROBE       'on' (default) | 'off'
 //   LUQEN_UAT_SCHEDULE_PROBE      'on' (default) | 'off'  (the schedule-create start-validation check; full mode only)
+//   LUQEN_UAT_CSRF_PROBE          'on' (default) | 'off'  (the cookie-session API delete check on this run's own scan; full mode only)
 //   LUQEN_UAT_LEAVE_QUEUED_S (120), LUQEN_UAT_TERMINAL_S (600), LUQEN_UAT_POLL_MS (5000)
 //
 // Hard rules, pinned by --selftest:
@@ -20,7 +21,9 @@
 //   - output carries check names, status words and elapsed seconds only: never a URL, username, password,
 //     org name or id, scan id, or server error text (a sentinel grep runs over every selftest world's output);
 //   - every scan this run created is deleted in a finally block and read back as null;
-//   - a schedule the server accepted for the loopback probe is deleted and read back as absent (--preflight never posts one).
+//   - a schedule the server accepted for the loopback probe is deleted and read back as absent (--preflight never posts one);
+//   - the CSRF probe sends one token-less DELETE through /api, only for this run's own scan once it is completed or
+//     failed; if the server accepted it, the scan is already gone and cleanup still reads it back as null.
 import { pathToFileURL } from 'node:url';
 
 export const REQUIRED_VARS = ['LUQEN_UAT_BASE_URL', 'LUQEN_UAT_ADMIN_USER', 'LUQEN_UAT_ADMIN_PASS'];
@@ -28,6 +31,7 @@ export const PRIVATE_TARGET_ERROR = 'Scanning internal or private addresses is n
 const LOOPBACK_TARGET = 'http://127.0.0.1/';
 const SCHEDULE_CHECK = 'a loopback target is refused for a new schedule';
 const SCHEDULE_CLEANUP = 'cleanup removed the probe schedule';
+const CSRF_CHECK = 'a cookie session without the csrf token cannot delete through the api';
 const KNOWN_STATUS = ['queued', 'running', 'completed', 'failed'];
 
 /** Names (never values) of the required variables that are absent or empty. */
@@ -64,6 +68,7 @@ function readConfig(env) {
     target: env.LUQEN_UAT_SCAN_TARGET?.trim() || 'https://example.com',
     probe: (env.LUQEN_UAT_PRIVATE_PROBE ?? 'on').trim().toLowerCase() !== 'off',
     scheduleProbe: (env.LUQEN_UAT_SCHEDULE_PROBE ?? 'on').trim().toLowerCase() !== 'off',
+    csrfProbe: (env.LUQEN_UAT_CSRF_PROBE ?? 'on').trim().toLowerCase() !== 'off',
     leaveS: positive(env.LUQEN_UAT_LEAVE_QUEUED_S, 120),
     terminalS: positive(env.LUQEN_UAT_TERMINAL_S, 600),
     pollMs: positive(env.LUQEN_UAT_POLL_MS, 5000),
@@ -266,6 +271,21 @@ export async function run({ env, mode, transport, sleep, now, log }) {
       }
     });
     if (terminal === 'failed') log('WARN the scan ended failed - inspect it on the server by hand (details withheld)');
+    if (terminal === null) return;
+
+    // A cookie session that sends no CSRF token must be refused on an /api write. The target is this run's
+    // own scan; the refusal must name the token (a 403 for another reason proves nothing) and the scan must
+    // still exist afterwards. The response body is read, never printed.
+    if (!cfg.csrfProbe) {
+      log(`SKIP ${CSRF_CHECK} (disabled by LUQEN_UAT_CSRF_PROBE)`);
+      return;
+    }
+    await check(CSRF_CHECK, async () => {
+      const res = await transport({ method: 'DELETE', path: `/api/v1/scans/${encodeURIComponent(scanId)}` });
+      const refused = res.status === 403 && /csrf/i.test(res.text);
+      const still = await gql(Q_SCAN, { id: scanId });
+      return refused && typeof still.data?.scan?.status === 'string';
+    });
   };
 
   const sweepSchedules = async () => {
@@ -289,9 +309,14 @@ export async function run({ env, mode, transport, sleep, now, log }) {
         let clean = true;
         for (const id of cleanupIds) {
           try {
-            const del = await gql(Q_DELETE, { id });
+            // A scan the server already deleted (an accepted CSRF probe) needs no delete; it must still read back null.
+            const before = await gql(Q_SCAN, { id });
+            if (before.data?.scan !== null) {
+              const del = await gql(Q_DELETE, { id });
+              if (del.data?.deleteScan !== true) clean = false;
+            }
             const gone = await gql(Q_SCAN, { id });
-            if (del.data?.deleteScan !== true || gone.data?.scan !== null) clean = false;
+            if (gone.data?.scan !== null) clean = false;
           } catch { clean = false; }
         }
         return clean;
@@ -361,7 +386,7 @@ function makeFake(world) {
   const allOrgs = [uat, other, dup];
   const userOrgs = world === 'wrong-org' ? [other] : [uat, other];
   const schedules = new Map();
-  const rec = { gqlCalls: 0, calls: 0, creates: [], deleted: [], schedulePosts: 0, scheduleDeletes: [], get scheduleStored() { return schedules.size; } };
+  const rec = { gqlCalls: 0, calls: 0, creates: [], deleted: [], apiDeletes: 0, apiDeleted: [], schedulePosts: 0, scheduleDeletes: [], get scheduleStored() { return schedules.size; } };
   const state = { loggedIn: false, currentOrgId: world === 'switch-ignored' ? dup.id : '' };
   const scans = new Map();
   const reply = (status, text = '', location = '') => ({ status, text, location });
@@ -437,6 +462,17 @@ function makeFake(world) {
       if (schedules.delete(id)) rec.scheduleDeletes.push(id);
       return reply(200, '<div class="toast">Schedule deleted</div>');
     }
+    if (req.method === 'DELETE' && req.path.startsWith('/api/v1/scans/')) {
+      // The real server: a cookie session without the token -> 403 naming the csrf token; with it -> a real delete.
+      // api-delete-accepted: the server deletes without a token. api-delete-refused-other: 403 for another reason.
+      rec.apiDeletes += 1;
+      if (world === 'api-delete-refused-other') return reply(403, '{"error":"Forbidden"}');
+      if (req.csrf !== 'csrf-page' && world !== 'api-delete-accepted') return reply(403, '{"error":"Invalid csrf token"}');
+      const id = decodeURIComponent(req.path.slice('/api/v1/scans/'.length));
+      if (!scans.delete(id)) return reply(404, '{"error":"Scan not found"}');
+      rec.apiDeleted.push(id);
+      return reply(200, '{"success":true}');
+    }
     if (req.method === 'POST' && req.path === '/logout') { state.loggedIn = false; return reply(302, '', '/login'); }
     return reply(404, 'not found');
   };
@@ -456,6 +492,7 @@ const ALL_PASS_FULL = [
   'PASS graphql createScan returned a queued scan',
   'PASS the scan left queued within 3 s',
   'PASS the scan reached completed or failed within 6 s',
+  `PASS ${CSRF_CHECK}`,
   'PASS cleanup left no UAT scan behind',
 ];
 
@@ -475,6 +512,47 @@ const WORLDS = [
       if (rec.schedulePosts !== 1) un.push(`${rec.schedulePosts} schedule POST(s) instead of exactly 1`);
       if (rec.scheduleStored !== 0) un.push('a schedule is still stored');
       if (startsWith(lines, `PASS ${SCHEDULE_CLEANUP}`)) un.push('a schedule cleanup ran although nothing was stored');
+      if (rec.apiDeletes !== 1) un.push(`${rec.apiDeletes} API delete(s) instead of exactly 1`);
+      if (rec.apiDeleted.length !== 0) un.push('the token-less API delete removed a scan');
+      return un;
+    },
+  },
+  {
+    name: 'api-delete-accepted',
+    expect: ({ code, lines, rec }) => {
+      const un = [];
+      if (code !== 1) un.push(`exit ${code} instead of 1`);
+      if (!hasLine(lines, `FAIL ${CSRF_CHECK} (details withheld)`)) un.push('the csrf check did not fail');
+      if (rec.apiDeletes !== 1) un.push(`${rec.apiDeletes} API delete(s) instead of exactly 1`);
+      if (rec.apiDeleted.join() !== SENT.scanId) un.push('the accepted API delete did not remove exactly the run\'s own scan');
+      if (!hasLine(lines, 'PASS cleanup left no UAT scan behind')) un.push('cleanup did not pass its null read-back');
+      if (rec.deleted.length !== 0) un.push('cleanup called deleteScan for a scan that was already gone');
+      return un;
+    },
+  },
+  {
+    name: 'api-delete-refused-other',
+    expect: ({ code, lines, rec }) => {
+      const un = [];
+      if (code !== 1) un.push(`exit ${code} instead of 1`);
+      if (!hasLine(lines, `FAIL ${CSRF_CHECK} (details withheld)`)) un.push('a 403 that does not name the csrf token passed the csrf check');
+      if (rec.apiDeleted.length !== 0) un.push('the fake removed a scan');
+      if (rec.deleted.join() !== SENT.scanId) un.push('cleanup did not delete the run\'s own scan');
+      if (!hasLine(lines, 'PASS cleanup left no UAT scan behind')) un.push('cleanup did not pass');
+      return un;
+    },
+  },
+  {
+    name: 'csrf-probe-off',
+    fake: 'completes',
+    env: { LUQEN_UAT_CSRF_PROBE: 'off' },
+    expect: ({ code, lines, rec }) => {
+      const un = [];
+      if (code !== 0) un.push(`exit ${code} instead of 0`);
+      if (!hasLine(lines, `SKIP ${CSRF_CHECK} (disabled by LUQEN_UAT_CSRF_PROBE)`)) un.push('no SKIP line for the disabled csrf check');
+      if (rec.apiDeletes !== 0) un.push(`${rec.apiDeletes} API delete(s) with the probe disabled`);
+      for (const l of ALL_PASS_FULL) if (l !== `PASS ${CSRF_CHECK}` && !hasLine(lines, l)) un.push(`missing line: ${l}`);
+      if (startsWith(lines, 'FAIL')) un.push('a FAIL line was printed');
       return un;
     },
   },
@@ -527,6 +605,7 @@ const WORLDS = [
       if (!hasLine(lines, 'FAIL the scan left queued within 3 s (details withheld)')) un.push('the left-queued check did not fail');
       if (startsWith(lines, 'PASS the scan left queued')) un.push('the left-queued check passed');
       if (rec.deleted.join() !== SENT.scanId) un.push('deleteScan was not called for the stuck scan');
+      if (rec.apiDeletes !== 0) un.push('the csrf probe ran on a scan that never reached a terminal state');
       if (!hasLine(lines, 'PASS cleanup left no UAT scan behind')) un.push('cleanup did not pass');
       return un;
     },
@@ -602,6 +681,7 @@ const WORLDS = [
       if (code !== 0) un.push(`exit ${code} instead of 0`);
       if (rec.gqlCalls !== 0) un.push(`${rec.gqlCalls} GraphQL call(s) in preflight mode`);
       if (rec.schedulePosts !== 0) un.push(`${rec.schedulePosts} schedule POST(s) in preflight mode`);
+      if (rec.apiDeletes !== 0) un.push(`${rec.apiDeletes} API delete(s) in preflight mode`);
       for (const l of ALL_PASS_FULL.slice(0, 4)) if (!hasLine(lines, l)) un.push(`missing line: ${l}`);
       if (lines.length !== 4) un.push(`${lines.length} output lines instead of 4`);
       return un;

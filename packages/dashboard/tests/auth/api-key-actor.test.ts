@@ -280,7 +280,7 @@ describe('dismissal actor of an identity without a key id', () => {
   ) {
     const org = await seedOrg(store.storage, 'org_a');
     const scan = await seedScan(store.storage, { orgId: org });
-    server = await buildRouteServer(store.storage, { user: userFor(org), permissions: ['issues.dismiss'] });
+    server = await buildRouteServer(store.storage, { user: userFor(org), permissions: ['issues.dismiss', 'reports.view'] });
     const res = await server.inject({ method: 'POST', url: `/api/v1/scans/${scan}/dismissals`, payload: MARK_BODY });
     expect(res.statusCode).toBe(201);
     return res.json() as { created_by: string; created_by_id: string | null; id: string };

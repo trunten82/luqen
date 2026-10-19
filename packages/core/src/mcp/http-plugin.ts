@@ -39,6 +39,8 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import type { FastifyInstance, FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { normalizeObjectSchema } from '@modelcontextprotocol/sdk/server/zod-compat.js';
+import { toJsonSchemaCompat } from '@modelcontextprotocol/sdk/server/zod-json-schema-compat.js';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -112,6 +114,15 @@ export function getCurrentToolContext(): ToolContext | undefined {
  */
 export function runInToolContext<T>(context: ToolContext, fn: () => T | Promise<T>): Promise<T> {
   return Promise.resolve(toolContextStore.run(context, fn));
+}
+
+const EMPTY_INPUT_SCHEMA = Object.freeze({ type: 'object', properties: {} });
+
+/** A registered tool's input schema as the JSON Schema tools/list publishes (SDK conversion). */
+function listedInputSchema(registered: unknown): Record<string, unknown> {
+  const objectSchema = normalizeObjectSchema(registered as Parameters<typeof normalizeObjectSchema>[0]);
+  if (objectSchema == null) return { ...EMPTY_INPUT_SCHEMA };
+  return toJsonSchemaCompat(objectSchema, { strictUnions: true, pipeStrategy: 'input' }) as Record<string, unknown>;
 }
 
 export async function createMcpHttpPlugin(
@@ -188,12 +199,10 @@ export async function createMcpHttpPlugin(
       .map(([name, def]) => ({
         name,
         description: def.description ?? '',
-        // The SDK's default handler normalises zod -> JSON schema; our
-        // override emits the raw input schema shape, which the 1.27.x
-        // client-side consumer tolerates. If wave-2 integration reveals
-        // stricter client expectations, call the SDK's `toJsonSchemaCompat`
-        // helper here (reachable via zod-compat).
-        inputSchema: def.inputSchema ?? { type: 'object' },
+        // Published as JSON Schema, converted exactly as the SDK's default
+        // tools/list handler converts it, so clients receive each
+        // parameter's type, required list and description.
+        inputSchema: listedInputSchema(def.inputSchema),
       }));
 
     return { tools };
@@ -204,9 +213,11 @@ export async function createMcpHttpPlugin(
   // Defense-in-depth last-line — even if the tools/list filter above drifts
   // (new tool added without ToolMetadata), a client guessing a tool name
   // cannot invoke a write operation without the required permission. The
-  // guard runs ONLY for authenticated end users (ctx.permissions.size > 0);
-  // S2S callers (empty perms) are governed by scope-filter only, preserving
-  // the Phase 30.1 invariant.
+  // permission guard runs ONLY for authenticated end users
+  // (ctx.permissions.size > 0). The scope guard after it runs for every
+  // caller: tools/call admits exactly the tools tools/list shows for the
+  // token's scopes (filterToolsByScope), for end-user tokens and S2S tokens
+  // (empty perms, scope-authoritative per Phase 30.1) alike.
   //
   // Implementation: capture the SDK's default CallToolRequestSchema handler
   // (installed by setToolRequestHandlers on first registerTool call) from
@@ -245,6 +256,26 @@ export async function createMcpHttpPlugin(
               error: 'Forbidden',
               message: `Tool "${toolName}" requires permission "${meta.requiredPermission}"`,
               requiredPermission: meta.requiredPermission,
+            }),
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    // The token scope binds tools/call as it binds tools/list: a tool with
+    // metadata runs only when filterToolsByScope admits it for the token's
+    // scopes, whatever the permission set. The scopes are what the user
+    // consented to for this client. A tool without metadata keeps the
+    // unannotated path (the metadata drift tests govern that list).
+    if (ctx != null && meta != null && !filterToolsByScope([meta], ctx.scopes).includes(toolName)) {
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify({
+              error: 'Forbidden',
+              message: `Tool "${toolName}" is not covered by the token scope`,
             }),
           },
         ],
