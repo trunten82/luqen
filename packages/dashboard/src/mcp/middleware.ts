@@ -10,12 +10,17 @@
  * This preHandler:
  *   1. Reads Authorization: Bearer ... (reply 401 if missing/wrong scheme)
  *   2. Calls the injected verifyToken (RS256 jose.jwtVerify) — reply 401 on failure
- *   3. Decorates the request with tokenPayload / authType='jwt' / orgId / permissions
+ *   3. Refuses a token whose OAuth client was revoked (401 client_revoked)
+ *   4. Answers for the STORED user of the token on every request
+ *      (src/auth/stored-caller.ts): no stored user or a deactivated one -> 401
+ *      invalid_token; permissions resolve from the stored global role through
+ *      resolveEffectivePermissions, so the Bearer context matches what a
+ *      cookie-session user sees for the same (userId, orgId)
+ *   5. Refuses a caller holding no permission in the token's organization
+ *      (403 insufficient_scope), so every caller this endpoint serves carries a
+ *      non-empty permission set
+ *   6. Decorates the request with tokenPayload / authType='jwt' / orgId / permissions
  *      in the shape @luqen/core/mcp's extractToolContext expects
- *
- * RBAC is resolved here via resolveEffectivePermissions (the dashboard's
- * authoritative permission resolver) so the scoped Bearer context matches
- * what cookie-session users see for the same (userId, orgId).
  *
  * The preHandler does NOT read the cookie session decorator or any user
  * object set by the cookie-session auth guard — the MCP endpoint is
@@ -23,15 +28,16 @@
  */
 
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { resolveEffectivePermissions } from '../permissions.js';
+import { resolveStoredCaller } from '../auth/stored-caller.js';
 
 // Local re-declaration — avoids cross-package import of compliance/auth/oauth.
 // Must remain structurally compatible with packages/compliance/src/auth/oauth.ts
-// TokenPayload (extended with optional `role` for RBAC admin shortcut).
+// TokenPayload. `role` stays for type compatibility only: authorization reads the stored role.
 export interface McpTokenPayload {
   readonly sub: string;
   readonly scopes: readonly string[];
   readonly orgId?: string;
+  /** Not used for authorization: permissions resolve from the stored user's role. */
   readonly role?: string;
   readonly iat?: number;
   readonly exp?: number;
@@ -48,6 +54,10 @@ export type McpTokenVerifier = (token: string) => Promise<McpTokenPayload>;
 export interface McpAuthPreHandlerOptions {
   readonly verifyToken: McpTokenVerifier;
   readonly storage: {
+    /** The stored user of the token, read on every request (role and active state). */
+    readonly users: {
+      getUserById(id: string): Promise<{ readonly role: string; readonly active: boolean } | null>;
+    };
     readonly roles: {
       getEffectivePermissions(userId: string, orgId?: string): Promise<Set<string>>;
     };
@@ -108,13 +118,28 @@ export function createMcpAuthPreHandler(opts: McpAuthPreHandlerOptions) {
       }
     }
 
-    const userRole = payload.role ?? 'member';
-    const permissions = await resolveEffectivePermissions(
-      opts.storage.roles,
-      payload.sub,
-      userRole,
-      payload.orgId,
-    );
+    // HARD-19: every request is answered for the stored, active user of the token. A role claim
+    // in the token is not read; the stored row decides.
+    const caller = await resolveStoredCaller(opts.storage, payload.sub, payload.orgId);
+    if (!caller.ok) {
+      reply.header(
+        'WWW-Authenticate',
+        `${wwwAuthenticate}, error="invalid_token", error_description="${caller.refusal}"`,
+      );
+      await reply.status(401).send({ error: 'Invalid or expired token', statusCode: 401 });
+      return;
+    }
+    const permissions = caller.permissions;
+    // A caller holding no permission in the token's organization is refused here, so every request
+    // this endpoint serves carries a non-empty permission set.
+    if (permissions.size === 0) {
+      reply.header(
+        'WWW-Authenticate',
+        `${wwwAuthenticate}, error="insufficient_scope", error_description="no_permission"`,
+      );
+      await reply.status(403).send({ error: 'No permission in this organization', statusCode: 403 });
+      return;
+    }
 
     (request as FastifyRequest & { tokenPayload: McpTokenPayload }).tokenPayload = payload;
     (request as FastifyRequest & { authType: string }).authType = 'jwt';

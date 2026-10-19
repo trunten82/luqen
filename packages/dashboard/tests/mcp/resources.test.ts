@@ -28,6 +28,9 @@
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { createMcpHttpPlugin, runInToolContext, type McpHttpPluginOptions, type ToolContext } from '@luqen/core/mcp';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { registerMcpRoutes } from '../../src/routes/api/mcp.js';
 import { createDashboardMcpServer } from '../../src/mcp/server.js';
@@ -35,6 +38,7 @@ import { DASHBOARD_RESOURCE_METADATA } from '../../src/mcp/resources.js';
 import type { McpTokenPayload, McpTokenVerifier } from '../../src/mcp/middleware.js';
 import type { StorageAdapter } from '../../src/db/index.js';
 import type { ScanService } from '../../src/services/scan-service.js';
+import { storedCallerUsers } from '../helpers/stored-caller-stub.js';
 
 // ---------------------------------------------------------------------------
 // Stub scaffolding (self-contained — no cross-imports from other test files)
@@ -75,7 +79,7 @@ function makeStubStorage(o: StubOverrides = {}): StorageAdapter {
       getLatestForScan: o.getLatestForScan ?? (async () => null),
       getHistoryForSite: o.getHistoryForSite ?? (async () => []),
     } as unknown as StorageAdapter['brandScores'],
-    users: empty as StorageAdapter['users'],
+    users: storedCallerUsers('user') as unknown as StorageAdapter['users'],
     organizations: empty as StorageAdapter['organizations'],
     roles: {
       getEffectivePermissions: o.getEffectivePermissions ?? (async () => perms),
@@ -293,20 +297,15 @@ describe('Phase 30 resources — resources/list RBAC filtering', () => {
   });
 
   it('no perms but read scope — scope-fallback shows both families (read scope allows view-tier resources)', async () => {
-    // Documenting actual behavior of the @luqen/core/mcp 30-01 override:
-    // when ctx.permissions is empty, the override falls back to
-    // filterResourcesByScope (see http-plugin.ts ~line 215). A caller with
-    // 'read' scope satisfies the scope hierarchy for all view-tier permissions
-    // (reports.view, branding.view both fall through hasRead == true), so
-    // both scheme families remain visible. This is intentional — service-to-service
-    // callers (OAuth client credentials with no per-user RBAC perms) need a
-    // way to enumerate read-tier resources. The 30-04-PLAN.md draft asserted
-    // resources.length === 0 here, which would only be true if both perms AND
-    // scopes were empty — but the route's coarse scope gate (requiredScope: 'read')
-    // rejects scope-less callers with 403 before reaching this handler. The
-    // assertion below reflects the system's actual behavior end-to-end.
-    app = await buildAppWithResources({
-      permissions: [],
+    // Core's resources/list override: when the tool context carries an EMPTY
+    // permission set it falls back to filterResourcesByScope (http-plugin.ts),
+    // and a 'read' scope satisfies the scope hierarchy for every view-tier
+    // permission (reports.view, branding.view), so both scheme families stay
+    // visible. The HTTP endpoint serves only callers holding a permission in
+    // the token's organization (an empty set is refused 403 there), so an
+    // empty set reaches this override only through an in-process tool
+    // context, which is how this test calls it.
+    const storage = makeStubStorage({
       listScans: async () =>
         [
           {
@@ -327,15 +326,21 @@ describe('Phase 30 resources — resources/list RBAC filtering', () => {
         ] as never,
       getLatestForScan: async () => ({ kind: 'score', composite: 80 }) as never,
     });
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/v1/mcp',
-      headers: POST_HEADERS,
-      payload: rpc('resources/list'),
-    });
-    const result = parseSseOrJson(response.body)['result'] as {
-      resources: Array<{ uri: string }>;
-    };
+    const { server } = await createDashboardMcpServer({ storage, scanService: makeStubScanService(), serviceConnections: {} as never });
+    await createMcpHttpPlugin({
+      mcpServer: server, toolMetadata: [], resourceMetadata: DASHBOARD_RESOURCE_METADATA, requiredScope: 'read',
+    } as unknown as McpHttpPluginOptions);
+    const client = new Client({ name: 'test-client', version: '1.0.0' });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+    const context: ToolContext = { userId: 'user-x', orgId: 'org-1', scopes: ['read'], permissions: new Set<string>(), authType: 'jwt' };
+    let result: { resources: Array<{ uri: string }> };
+    try {
+      result = (await runInToolContext(context, () => client.listResources())) as { resources: Array<{ uri: string }> };
+    } finally {
+      await client.close();
+    }
     expect(result.resources.length).toBe(2);
     expect(result.resources.some((r) => r.uri.startsWith('scan://'))).toBe(true);
     expect(result.resources.some((r) => r.uri.startsWith('brand://'))).toBe(true);

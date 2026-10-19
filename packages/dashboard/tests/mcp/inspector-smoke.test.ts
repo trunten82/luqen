@@ -29,6 +29,7 @@ import type {
   ServiceConnection,
   ServiceConnectionsRepository,
 } from '../../src/db/service-connections-repository.js';
+import { withStoredCaller } from '../helpers/stored-caller-stub.js';
 
 // ---------------------------------------------------------------------------
 // Test stubs — copied from http.test.ts / data-tools.test.ts patterns
@@ -46,11 +47,11 @@ function makeStubStorage(perms: readonly string[]): StorageAdapter {
       getByIdForOrg: async () => null,
       listAll: async () => [],
     } as unknown as StorageAdapter['scans'],
-    users: {
+    users: withStoredCaller({
       listForOrg: async () => [],
       getByIdForOrg: async () => null,
       listAll: async () => [],
-    } as unknown as StorageAdapter['users'],
+    }, 'test-user', 'admin') as unknown as StorageAdapter['users'],
     organizations: {
       list: async () => [],
       getById: async () => null,

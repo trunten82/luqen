@@ -50,6 +50,7 @@ import {
 } from '../../helpers/dismissal-surface-fixture.js';
 import type { Literals } from '../golden-io.js';
 import { capturedProposerCalls, resetProposerCapture } from './proposer-capture.js';
+import { withStoredCallerStorage } from '../../helpers/stored-caller-stub.js';
 
 
 // ── Scan ids / dates used by drivers that need more than the main scan ───────
@@ -224,7 +225,7 @@ export async function openMcp(ctx: SurfaceContext): Promise<McpHarness> {
       if (token === 'valid-jwt') return payload;
       throw new Error('Invalid token');
     },
-    storage: ctx.storage,
+    storage: withStoredCallerStorage(ctx.storage, payload.sub, 'admin'),
     scanService,
     serviceConnections: {} as never,
     resourceMetadataUrl: 'https://dashboard.fabrikam.example/.well-known/oauth-protected-resource',

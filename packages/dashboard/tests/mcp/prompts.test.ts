@@ -33,6 +33,7 @@ import { DASHBOARD_PROMPT_NAMES } from '../../src/mcp/prompts.js';
 import type { McpTokenPayload, McpTokenVerifier } from '../../src/mcp/middleware.js';
 import type { StorageAdapter } from '../../src/db/index.js';
 import type { ScanService } from '../../src/services/scan-service.js';
+import { storedCallerUsers } from '../helpers/stored-caller-stub.js';
 
 // ---------------------------------------------------------------------------
 // Stubs (inlined — matches 30-02 data-tools.test.ts scaffolding)
@@ -67,7 +68,7 @@ function makeStubStorage(o: StubOverrides = {}): StorageAdapter {
       getLatestForScan: async () => null,
       getHistoryForSite: async () => [],
     } as unknown as StorageAdapter['brandScores'],
-    users: empty as StorageAdapter['users'],
+    users: storedCallerUsers('user') as unknown as StorageAdapter['users'],
     organizations: empty as StorageAdapter['organizations'],
     roles: {
       getEffectivePermissions: o.getEffectivePermissions ?? (async () => perms),
@@ -106,6 +107,10 @@ function makeFakeVerifier(payload: McpTokenPayload, acceptedToken = 'valid-jwt')
   };
 }
 
+/**
+ * The MCP endpoint serves a caller holding at least one permission in the token's organization.
+ * Prompts are not permission-gated, so the tests pass one unrelated permission.
+ */
 async function buildApp(opts: {
   readonly permissions?: readonly string[];
 }): Promise<FastifyInstance> {
@@ -177,7 +182,7 @@ describe('Phase 30 prompts — prompts/list', () => {
   });
 
   it('returns exactly 3 prompts: scan, report, fix', async () => {
-    app = await buildApp({ permissions: [] });
+    app = await buildApp({ permissions: ['reports.view'] });
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/mcp',
@@ -193,7 +198,7 @@ describe('Phase 30 prompts — prompts/list', () => {
   });
 
   it('/scan exposes siteUrl (required) and standard (optional) wire arguments', async () => {
-    app = await buildApp({ permissions: [] });
+    app = await buildApp({ permissions: ['reports.view'] });
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/mcp',
@@ -219,7 +224,7 @@ describe('Phase 30 prompts — prompts/list', () => {
   });
 
   it('/report exposes scanId (required)', async () => {
-    app = await buildApp({ permissions: [] });
+    app = await buildApp({ permissions: ['reports.view'] });
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/mcp',
@@ -235,7 +240,7 @@ describe('Phase 30 prompts — prompts/list', () => {
   });
 
   it('/fix exposes issueId (required) and scanId (optional)', async () => {
-    app = await buildApp({ permissions: [] });
+    app = await buildApp({ permissions: ['reports.view'] });
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/mcp',
@@ -267,7 +272,7 @@ describe('Phase 30 prompts — prompts/get interpolation', () => {
   });
 
   it('/scan with siteUrl + standard interpolates both into the user message', async () => {
-    app = await buildApp({ permissions: [] });
+    app = await buildApp({ permissions: ['reports.view'] });
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/mcp',
@@ -289,7 +294,7 @@ describe('Phase 30 prompts — prompts/get interpolation', () => {
   });
 
   it('/scan without standard defaults to WCAG2AA (D-14 default)', async () => {
-    app = await buildApp({ permissions: [] });
+    app = await buildApp({ permissions: ['reports.view'] });
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/mcp',
@@ -308,7 +313,7 @@ describe('Phase 30 prompts — prompts/get interpolation', () => {
   });
 
   it('/report interpolates scanId', async () => {
-    app = await buildApp({ permissions: [] });
+    app = await buildApp({ permissions: ['reports.view'] });
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/mcp',
@@ -326,7 +331,7 @@ describe('Phase 30 prompts — prompts/get interpolation', () => {
   });
 
   it('/fix with only issueId omits the scan suffix', async () => {
-    app = await buildApp({ permissions: [] });
+    app = await buildApp({ permissions: ['reports.view'] });
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/mcp',
@@ -345,7 +350,7 @@ describe('Phase 30 prompts — prompts/get interpolation', () => {
   });
 
   it('/fix with issueId + scanId appends the scan suffix', async () => {
-    app = await buildApp({ permissions: [] });
+    app = await buildApp({ permissions: ['reports.view'] });
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/mcp',
@@ -363,7 +368,7 @@ describe('Phase 30 prompts — prompts/get interpolation', () => {
   });
 
   it('all prompt messages use role=user only (SDK 1.27.1 + D-15)', async () => {
-    app = await buildApp({ permissions: [] });
+    app = await buildApp({ permissions: ['reports.view'] });
     const cases: Array<{ name: string; args: Record<string, unknown> }> = [
       { name: 'scan', args: { siteUrl: 'https://x.com' } },
       { name: 'report', args: { scanId: 'r1' } },

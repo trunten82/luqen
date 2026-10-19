@@ -1,6 +1,13 @@
 /**
  * The stored-caller rule: a bearer token names a user; every request is answered for that user's
  * STORED row, read on the request.
+ *
+ *   - no stored row               -> refused ('unknown_user')
+ *   - stored row not active       -> refused ('inactive_user')
+ *   - otherwise                   -> the stored global role, and the permissions
+ *                                    resolveEffectivePermissions gives that role in `orgId`
+ *
+ * A role claim carried by a token is never read here: the stored role decides.
  */
 import { resolveEffectivePermissions } from '../permissions.js';
 
@@ -26,7 +33,9 @@ export async function resolveStoredCaller(
   userId: string,
   orgId?: string,
 ): Promise<StoredCaller> {
-  // Placeholder body; the rule lands with the endpoint change.
-  const permissions = await resolveEffectivePermissions(storage.roles, userId, 'member', orgId);
-  return { ok: true, role: 'member', permissions };
+  const user = await storage.users.getUserById(userId);
+  if (user === null) return { ok: false, refusal: 'unknown_user' };
+  if (user.active !== true) return { ok: false, refusal: 'inactive_user' };
+  const permissions = await resolveEffectivePermissions(storage.roles, userId, user.role, orgId);
+  return { ok: true, role: user.role, permissions };
 }

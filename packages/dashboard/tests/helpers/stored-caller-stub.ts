@@ -22,3 +22,34 @@ export function storedCallerUsers(role: string = 'user'): StoredCallerUsersStub 
     }),
   };
 }
+
+/**
+ * `users` whose getUserById answers an active stored user with `role` for `subject`; every other id
+ * goes to `users` itself (unchanged). Works for a plain stub object and for a repository instance.
+ */
+export function withStoredCaller<U extends object>(users: U, subject: string, role: string = 'user'): U {
+  const stub = storedCallerUsers(role);
+  return new Proxy(users, {
+    get(target, prop) {
+      if (prop === 'getUserById') {
+        const own = Reflect.get(target, prop, target) as ((id: string) => Promise<unknown>) | undefined;
+        return async (id: string): Promise<unknown> =>
+          id === subject ? await stub.getUserById(id) : own === undefined ? null : await own.call(target, id);
+      }
+      const value = Reflect.get(target, prop, target) as unknown;
+      return typeof value === 'function' ? (value as (...a: unknown[]) => unknown).bind(target) : value;
+    },
+  });
+}
+
+/** `storage` with its `users` wrapped by withStoredCaller; nothing is written to the store. */
+export function withStoredCallerStorage<S extends { readonly users: object }>(storage: S, subject: string, role: string = 'user'): S {
+  const users = withStoredCaller(storage.users, subject, role);
+  return new Proxy(storage, {
+    get(target, prop) {
+      if (prop === 'users') return users;
+      const value = Reflect.get(target, prop, target) as unknown;
+      return typeof value === 'function' ? (value as (...a: unknown[]) => unknown).bind(target) : value;
+    },
+  });
+}

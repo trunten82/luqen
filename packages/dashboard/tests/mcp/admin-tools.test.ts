@@ -26,7 +26,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { runInToolContext, type ToolContext } from '@luqen/core/mcp';
+import { createMcpHttpPlugin, runInToolContext, type McpHttpPluginOptions, type ToolContext } from '@luqen/core/mcp';
 import { readFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -34,6 +34,7 @@ import { registerMcpRoutes } from '../../src/routes/api/mcp.js';
 import { createDashboardMcpServer } from '../../src/mcp/server.js';
 import { ADMIN_TOOL_NAMES, DASHBOARD_ADMIN_TOOL_METADATA, registerAdminTools } from '../../src/mcp/tools/admin.js';
 import { ALL_PERMISSION_IDS } from '../../src/permissions.js';
+import { DASHBOARD_TOOL_METADATA } from '../../src/mcp/metadata.js';
 import { DATA_TOOL_NAMES } from '../../src/mcp/tools/data.js';
 import type { McpTokenPayload, McpTokenVerifier } from '../../src/mcp/middleware.js';
 import type { StorageAdapter } from '../../src/db/index.js';
@@ -44,6 +45,7 @@ import type {
 } from '../../src/db/service-connections-repository.js';
 import * as tester from '../../src/services/service-connection-tester.js';
 import { validatePassword, validateUsername } from '../../src/validation.js';
+import { withStoredCaller } from '../helpers/stored-caller-stub.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -52,13 +54,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // admin-tool tests do not couple to the data-tool helpers)
 // ---------------------------------------------------------------------------
 
-function makeStubStorage(perms: readonly string[] = []): StorageAdapter {
+function makeStubStorage(perms: readonly string[] = [], callerRole = 'user'): StorageAdapter {
   const empty = {} as unknown;
   const permSet = new Set(perms);
   return {
     scans: empty as StorageAdapter['scans'],
     brandScores: empty as StorageAdapter['brandScores'],
-    users: {
+    users: withStoredCaller({
       listUsers: async () => [
         {
           id: 'u1',
@@ -107,7 +109,7 @@ function makeStubStorage(perms: readonly string[] = []): StorageAdapter {
       updatePassword: async () => {},
       deleteUser: async () => true,
       countUsers: async () => 1,
-    } as unknown as StorageAdapter['users'],
+    }, 'tester', callerRole) as unknown as StorageAdapter['users'],
     organizations: {
       listOrgs: async () => [
         { id: 'org-1', name: 'Acme', slug: 'acme', createdAt: '2026-04-17T00:00:00.000Z' },
@@ -193,6 +195,8 @@ function makeFakeVerifier(payload: McpTokenPayload): McpTokenVerifier {
 async function buildApp(o: {
   readonly permissions?: readonly string[];
   readonly serviceConnections?: ServiceConnectionsRepository;
+  /** The stored global role of the token subject 'tester' (the MCP endpoint answers for the stored user). */
+  readonly callerRole?: string;
 } = {}): Promise<FastifyInstance> {
   const app = Fastify({ logger: false });
   await registerMcpRoutes(app, {
@@ -204,12 +208,39 @@ async function buildApp(o: {
       orgId: 'org-1',
       role: 'member',
     }),
-    storage: makeStubStorage(o.permissions ?? []),
+    storage: makeStubStorage(o.permissions ?? [], o.callerRole ?? 'user'),
     scanService: makeStubScanService(),
     serviceConnections: o.serviceConnections ?? makeStubServiceConnections(),
   });
   await app.ready();
   return app;
+}
+
+/**
+ * tools/list in process for a caller holding exactly `permissions`: the dashboard McpServer with
+ * core's tools/list handler installed (createMcpHttpPlugin), called through an in-memory client inside
+ * runInToolContext. The HTTP endpoint answers for the stored user of the token, and only the stored
+ * global admin role holds admin.system / admin.users, so a set holding one of them WITHOUT every other
+ * permission exists only for an in-process context.
+ */
+async function listInProcess(permissions: readonly string[]): Promise<string[]> {
+  const { server } = await createDashboardMcpServer({
+    storage: makeStubStorage(permissions),
+    scanService: makeStubScanService(),
+    serviceConnections: makeStubServiceConnections(),
+  });
+  await createMcpHttpPlugin({ mcpServer: server, toolMetadata: DASHBOARD_TOOL_METADATA, requiredScope: 'read' } as unknown as McpHttpPluginOptions);
+  const client = new Client({ name: 'test-client', version: '1.0.0' });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  await server.connect(serverTransport);
+  await client.connect(clientTransport);
+  const context: ToolContext = { userId: 'tester', orgId: 'org-1', scopes: ['read', 'write', 'admin'], permissions: new Set(permissions), authType: 'jwt' };
+  try {
+    const { tools } = await runInToolContext(context, () => client.listTools());
+    return tools.map((t) => t.name);
+  } finally {
+    await client.close();
+  }
 }
 
 function rpc(method: string, params: unknown = {}, id = 1): unknown {
@@ -265,6 +296,7 @@ describe('Phase 30 admin tools — tools/list count + permission filtering', () 
 
   it('admin.system + admin.users + admin.org + scans.create + reports.view + branding.view → all 24 tools visible', async () => {
     app = await buildApp({
+      callerRole: 'admin',
       permissions: [
         'admin.system',
         'admin.users',
@@ -294,20 +326,7 @@ describe('Phase 30 admin tools — tools/list count + permission filtering', () 
   });
 
   it('admin.users only → 4 user tools visible (0 data, 0 system tools)', async () => {
-    app = await buildApp({ permissions: ['admin.users'] });
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/v1/mcp',
-      headers: {
-        authorization: 'Bearer valid-jwt',
-        'content-type': 'application/json',
-        accept: 'application/json, text/event-stream',
-      },
-      payload: rpc('tools/list'),
-    });
-    const names = (
-      (parseSseOrJson(response.body)['result'] as { tools: Array<{ name: string }> }).tools
-    ).map((t) => t.name);
+    const names = await listInProcess(['admin.users']);
     expect(names).toEqual(
       expect.arrayContaining([
         'dashboard_list_users',
@@ -326,20 +345,7 @@ describe('Phase 30 admin tools — tools/list count + permission filtering', () 
     // update_org) gate on admin.org as the lower-tier filter; the handler
     // branches on perms.has('admin.system') for cross-org scope. This test
     // therefore grants both permissions to mirror the production state.
-    app = await buildApp({ permissions: ['admin.system', 'admin.org'] });
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/v1/mcp',
-      headers: {
-        authorization: 'Bearer valid-jwt',
-        'content-type': 'application/json',
-        accept: 'application/json, text/event-stream',
-      },
-      payload: rpc('tools/list'),
-    });
-    const names = (
-      (parseSseOrJson(response.body)['result'] as { tools: Array<{ name: string }> }).tools
-    ).map((t) => t.name);
+    const names = await listInProcess(['admin.system', 'admin.org']);
     // Phase 62.4: dashboard_queue_bulk_fix (admin.org) is the only fleet tool
     // visible here; the other 3 fleet tools gate on reports.view.
     expect(names.length).toBe(10);
@@ -471,6 +477,7 @@ describe('Phase 30 admin tools — service-connection secret redaction (D-06)', 
   it('dashboard_list_service_connections redacts clientSecret', async () => {
     app = await buildApp({
       permissions: ['admin.system'],
+      callerRole: 'admin',
       serviceConnections: makeStubServiceConnections({ list: async () => [STUB_CONN] }),
     });
     const parsed = await callTool(app, 'dashboard_list_service_connections', {});
@@ -486,6 +493,7 @@ describe('Phase 30 admin tools — service-connection secret redaction (D-06)', 
   it('dashboard_get_service_connection redacts clientSecret', async () => {
     app = await buildApp({
       permissions: ['admin.system'],
+      callerRole: 'admin',
       serviceConnections: makeStubServiceConnections({ get: async () => STUB_CONN }),
     });
     const parsed = await callTool(app, 'dashboard_get_service_connection', {
@@ -514,6 +522,7 @@ describe('Phase 30 admin tools — service-connection secret redaction (D-06)', 
     );
     app = await buildApp({
       permissions: ['admin.system'],
+      callerRole: 'admin',
       serviceConnections: makeStubServiceConnections({ upsert: upsertSpy }),
     });
     const parsed = await callTool(app, 'dashboard_create_service_connection', {
@@ -545,6 +554,7 @@ describe('Phase 30 admin tools — service-connection secret redaction (D-06)', 
     );
     app = await buildApp({
       permissions: ['admin.system'],
+      callerRole: 'admin',
       serviceConnections: makeStubServiceConnections({
         get: async () => STUB_CONN,
         upsert: upsertSpy,
@@ -567,6 +577,7 @@ describe('Phase 30 admin tools — service-connection secret redaction (D-06)', 
       );
     app = await buildApp({
       permissions: ['admin.system'],
+      callerRole: 'admin',
       serviceConnections: makeStubServiceConnections({ get: async () => STUB_CONN }),
     });
     const parsed = await callTool(app, 'dashboard_test_service_connection', {
@@ -590,7 +601,7 @@ describe('dashboard_create_user reserved usernames', () => {
   afterEach(async () => { await app?.close(); app = undefined; });
 
   it('refuses a username starting with api-key and creates nothing; a normal name is created', async () => {
-    app = await buildApp({ permissions: ['admin.users'] });
+    app = await buildApp({ permissions: ['admin.users'], callerRole: 'admin' });
     for (const username of ['api-key', 'api-key:0123456789abcdef', 'API-Key-ops']) {
       const parsed = await callTool(app, 'dashboard_create_user', { username, password: 'Pass-word-123!', role: 'user' });
       const result = parsed['result'] as { isError?: boolean; content?: Array<{ text?: string }> };
@@ -800,15 +811,23 @@ async function callInProcess(store: UserStore, context: ToolContext, name: strin
   }
 }
 
+/**
+ * The context of an org-scoped caller (stored role 'user') holding `permissions`. Over HTTP the endpoint
+ * answers for the stored user, whose non-admin role never holds admin.users, so these handler rules for
+ * such a caller are exercised in process, where a tool context carries any set.
+ */
+function orgCallerContext(permissions: readonly string[] = ['admin.users']): ToolContext {
+  return { userId: 'tester', orgId: 'org-1', scopes: ['read', 'write', 'admin'], permissions: new Set(permissions), authType: 'jwt' };
+}
+
 describe('HARD-13 MCP user tools follow the dashboard role authority rules', () => {
   let app: FastifyInstance | undefined;
   afterEach(async () => { await app?.close(); app = undefined; });
 
   it('HARD-13 update user assigns the admin role only for a global admin caller', async () => {
     const store = makeUserStore([ORG_TARGET], { caller: ORG_CALLER, teams: [ORG_ONE_TEAM] });
-    app = await buildUserApp(store);
-    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'u1', role: 'admin', active: false });
-    expect(toolError(parsed)).toEqual({ isError: true, error: ADMIN_ROLE_ERROR });
+    const result = await callInProcess(store, orgCallerContext(), 'dashboard_update_user', { userId: 'u1', role: 'admin', active: false });
+    expect(result).toEqual({ isError: true, error: ADMIN_ROLE_ERROR });
     expect(store.roleWrites).toEqual([]);
     expect(store.statusWrites).toEqual([]);
     expect(store.users.get('u1')?.role).toBe('viewer');
@@ -816,17 +835,15 @@ describe('HARD-13 MCP user tools follow the dashboard role authority rules', () 
 
   it('HARD-13 create user assigns the admin role only for a global admin caller', async () => {
     const store = makeUserStore([], { caller: ORG_CALLER, teams: [ORG_ONE_TEAM] });
-    app = await buildUserApp(store);
-    const parsed = await callTool(app, 'dashboard_create_user', { username: 'fabrikam-ops-lead', password: STRONG_PASSWORD, role: 'admin' });
-    expect(toolError(parsed)).toEqual({ isError: true, error: ADMIN_ROLE_ERROR });
+    const result = await callInProcess(store, orgCallerContext(), 'dashboard_create_user', { username: 'fabrikam-ops-lead', password: STRONG_PASSWORD, role: 'admin' });
+    expect(result).toEqual({ isError: true, error: ADMIN_ROLE_ERROR });
     expect(store.users.size).toBe(0);
   });
 
   it('HARD-13 admin role assignment reads the caller role from the user store', async () => {
     const store = makeUserStore([ORG_TARGET], { caller: ORG_CALLER, teams: [ORG_ONE_TEAM] });
-    app = await buildUserApp(store, ALL_PERMISSION_IDS);
-    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'u1', role: 'admin' });
-    expect(toolError(parsed)).toEqual({ isError: true, error: ADMIN_ROLE_ERROR });
+    const result = await callInProcess(store, orgCallerContext(ALL_PERMISSION_IDS), 'dashboard_update_user', { userId: 'u1', role: 'admin' });
+    expect(result).toEqual({ isError: true, error: ADMIN_ROLE_ERROR });
     expect(store.roleWrites).toEqual([]);
   });
 
@@ -869,9 +886,8 @@ describe('HARD-13 MCP user update follows the dashboard organization scope and l
 
   it('HARD-13 update user changes only users the caller may manage', async () => {
     const store = makeUserStore([ORG_TARGET, NORTHWIND_USER], { caller: ORG_CALLER, teams: [ORG_ONE_TEAM, ORG_TWO_TEAM] });
-    app = await buildUserApp(store);
-    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'u2', role: 'developer', active: false });
-    expect(toolError(parsed)).toEqual({ isError: true, error: MANAGE_ERROR });
+    const result = await callInProcess(store, orgCallerContext(), 'dashboard_update_user', { userId: 'u2', role: 'developer', active: false });
+    expect(result).toEqual({ isError: true, error: MANAGE_ERROR });
     expect(store.roleWrites).toEqual([]);
     expect(store.statusWrites).toEqual([]);
     expect(store.users.get('u2')?.role).toBe('viewer');
@@ -880,9 +896,8 @@ describe('HARD-13 MCP user update follows the dashboard organization scope and l
   it('HARD-13 update user leaves a global admin unchanged for an org scoped caller', async () => {
     const team: StoredTeam = { id: 't1', orgId: 'org-1', members: ['tester', 'u1', 'u3'] };
     const store = makeUserStore([ORG_TARGET, FABRIKAM_ADMIN], { caller: ORG_CALLER, teams: [team] });
-    app = await buildUserApp(store);
-    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'u3', role: 'viewer', active: false });
-    expect(toolError(parsed)).toEqual({ isError: true, error: MANAGE_ERROR });
+    const result = await callInProcess(store, orgCallerContext(), 'dashboard_update_user', { userId: 'u3', role: 'viewer', active: false });
+    expect(result).toEqual({ isError: true, error: MANAGE_ERROR });
     expect(store.roleWrites).toEqual([]);
     expect(store.statusWrites).toEqual([]);
     expect(store.users.get('u3')).toEqual(FABRIKAM_ADMIN);
@@ -890,9 +905,8 @@ describe('HARD-13 MCP user update follows the dashboard organization scope and l
 
   it('HARD-13 update user changes a user of the caller organization', async () => {
     const store = makeUserStore([ORG_TARGET], { caller: ORG_CALLER, teams: [ORG_ONE_TEAM] });
-    app = await buildUserApp(store);
-    const parsed = await callTool(app, 'dashboard_update_user', { userId: 'u1', role: 'developer' });
-    expect(toolError(parsed).isError).toBe(false);
+    const result = await callInProcess(store, orgCallerContext(), 'dashboard_update_user', { userId: 'u1', role: 'developer' });
+    expect(result.isError).toBe(false);
     expect(store.users.get('u1')?.role).toBe('developer');
   });
 

@@ -43,6 +43,7 @@ import type {
   ServiceConnection,
   ServiceConnectionsRepository,
 } from '../../src/db/service-connections-repository.js';
+import { storedCallerUsers } from '../helpers/stored-caller-stub.js';
 
 // Hermetic DNS for the start-URL check: every host resolves to a public documentation address.
 vi.mock('../../src/services/host-resolver.js', () => ({
@@ -91,7 +92,7 @@ function makeStubStorage(o: StubOverrides = {}): StorageAdapter {
       getLatestForScan: o.getLatestForScan ?? (async () => null),
       getHistoryForSite: o.getHistoryForSite ?? (async () => []),
     } as unknown as StorageAdapter['brandScores'],
-    users: empty as StorageAdapter['users'],
+    users: storedCallerUsers('user') as unknown as StorageAdapter['users'],
     organizations: empty as StorageAdapter['organizations'],
     roles: {
       getEffectivePermissions: o.getEffectivePermissions ?? (async () => perms),

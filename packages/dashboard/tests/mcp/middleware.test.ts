@@ -158,7 +158,7 @@ describe('createMcpAuthPreHandler', () => {
       role: 'member',
     };
     const verify: McpTokenVerifier = vi.fn(async () => payload);
-    const storage = makeStubStorage([]);
+    const storage = makeStubStorage(['reports.view']);
     const handler = createMcpAuthPreHandler({ verifyToken: verify, storage, resourceMetadataUrl: 'https://test/.well-known/oauth-protected-resource' });
     // Simulate a request that ALSO has a cookie session in place (user already logged in).
     // The middleware MUST ignore session and use Bearer only (PITFALLS.md #9).
@@ -180,17 +180,16 @@ describe('createMcpAuthPreHandler', () => {
     expect(r.tokenPayload).toEqual(payload);
   });
 
-  it('Test 6: payload.role === "admin" returns full ALL_PERMISSION_IDS set', async () => {
+  it('Test 6: a stored global admin resolves the full ALL_PERMISSION_IDS set whatever the token claims', async () => {
     const payload: McpTokenPayload = {
       sub: 'admin-user',
-      scopes: ['admin'],
+      scopes: ['read', 'write'],
       orgId: 'org-x',
-      role: 'admin',
+      role: 'viewer', // the claim names another role; the STORED role decides
     };
     const verify: McpTokenVerifier = vi.fn(async () => payload);
-    // Stub roles repo returns an empty set — the admin shortcut in
-    // resolveEffectivePermissions should bypass this and return ALL permissions.
-    const storage = makeStubStorage([]);
+    // The roles repository answers nothing: only the stored global role 'admin' yields every permission.
+    const storage = makeStubStorage([], null, storedCallerUsers('admin'));
     const handler = createMcpAuthPreHandler({ verifyToken: verify, storage, resourceMetadataUrl: 'https://test/.well-known/oauth-protected-resource' });
     const request = makeMockRequest({
       headers: { authorization: 'Bearer admin-token' },
@@ -206,47 +205,37 @@ describe('createMcpAuthPreHandler', () => {
     for (const id of ALL_PERMISSION_IDS) {
       expect(r.permissions!.has(id)).toBe(true);
     }
-    // Admin shortcut bypasses the roles repository entirely.
+    // The stored admin role resolves every permission without the roles repository.
     expect(storage.roles.getEffectivePermissions).not.toHaveBeenCalled();
   });
 
-  it('Test 7: OAuth unknown-sub (client-credentials) token yields permissions.size === 0 — scope-filter path engages downstream', async () => {
-    // Simulates an OAuth2 client-credentials token where `sub` is a clientId, NOT a dashboard_users row.
-    // Post-Phase-30.1 contract: getEffectivePermissions returns an empty set; the caller's
-    // tool-list access is then determined entirely by scope claims in @luqen/core's filterToolsByScope
-    // (http-plugin.ts:137-141 — ctx.permissions.size === 0 branch).
+  it('Test 7: a token whose subject is not a stored user is refused with 401', async () => {
     const payload: McpTokenPayload = {
       sub: 'oauth-client-abc',
       scopes: ['read'],
       orgId: 'org-1',
-      role: 'member', // always 'member' for client-credentials per middleware.ts:71 default
     };
     const verify: McpTokenVerifier = vi.fn(async () => payload);
-    const storage = makeStubStorage([]); // empty perms — matches post-fix role-repository behaviour
+    const storage = makeStubStorage(['reports.view'], null, { getUserById: vi.fn(async () => null) });
     const handler = createMcpAuthPreHandler({ verifyToken: verify, storage, resourceMetadataUrl: 'https://test/.well-known/oauth-protected-resource' });
     const request = makeMockRequest({
       headers: { authorization: 'Bearer oauth-read-token' },
     });
-    const { reply } = makeMockReply();
+    const { reply, getStatus, getBody } = makeMockReply();
 
     await handler(request, reply);
 
-    expect(reply.status).not.toHaveBeenCalled();
-    const r = request as unknown as {
-      tokenPayload?: McpTokenPayload;
-      authType?: string;
-      orgId?: string;
-      permissions?: Set<string>;
-    };
-    expect(r.tokenPayload).toEqual(payload);
-    expect(r.tokenPayload?.scopes).toEqual(['read']);
-    expect(r.authType).toBe('jwt');
-    expect(r.orgId).toBe('org-1');
-    expect(r.permissions).toBeInstanceOf(Set);
-    expect(r.permissions!.size).toBe(0);
-    // Confirm resolveEffectivePermissions was invoked with the clientId sub:
-    expect(storage.roles.getEffectivePermissions).toHaveBeenCalledWith('oauth-client-abc', 'org-1');
+    expect(getStatus()).toBe(401);
+    expect(getBody()).toEqual({ error: 'Invalid or expired token', statusCode: 401 });
+    expect(reply.header).toHaveBeenCalledWith(
+      'WWW-Authenticate',
+      'Bearer resource_metadata="https://test/.well-known/oauth-protected-resource", error="invalid_token", error_description="unknown_user"',
+    );
+    const r = request as unknown as { permissions?: Set<string>; tokenPayload?: McpTokenPayload };
+    expect(r.permissions).toBeUndefined();
+    expect(r.tokenPayload).toBeUndefined();
   });
+
   it('Test 8: a stored user with an empty permission set is refused with 403', async () => {
     const payload: McpTokenPayload = {
       sub: 'user-8',
