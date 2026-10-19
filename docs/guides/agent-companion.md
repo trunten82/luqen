@@ -160,11 +160,17 @@ organisation: tools are offered and run only when the user's role holds
 the tool's permission, re-checked at every step, so removing a permission
 removes the tools that need it from the agent's next step.
 
+The agent acts for the signed-in dashboard user account. A person who signs
+in through the compliance service needs a dashboard user account (managed
+at `/admin/dashboard-users`) and signs in with it to use the agent.
+
 ### RBAC permissions
 
 The agent's tool catalogue is the set of tools whose required permission
 the user holds in the active org, resolved from the user's stored roles at
-every step (a deactivated user is offered none). A tool that is not in the
+every step (a deactivated user, or a user who no longer belongs to the
+organisation, is offered none; global administrators are served in every
+organisation). A tool that is not in the
 catalogue does not run, even if the model names it, and the tool that runs
 receives the user's permissions, so a global administrator's agent works
 across organisations where an organisation user's works in its own. See the

@@ -14,7 +14,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   and permissions follow the user's current roles, a role claim in a token is
   not read, and tokens of deactivated or removed users and of revoked OAuth
   clients are refused on their next use. A user holding no permission in the
-  token's organization is refused with `403 insufficient_scope`.
+  token's organization is refused with `403 insufficient_scope`. Tokens of a
+  user who no longer belongs to the token's organization are refused on their
+  next use (`401 invalid_token`, `not_member`), and the assistant offers no
+  tool in such an organization; global administrators are served in every
+  organization.
 - The dashboard assistant offers and runs only the tools the stored user may
   use in the conversation's organization, and hands each tool that user's
   permissions. A tool call outside that set is refused and recorded in the
