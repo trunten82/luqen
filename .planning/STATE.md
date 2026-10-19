@@ -5,16 +5,16 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: "Completed 91-15-PLAN.md (PR3: API-key dismissals keep the key's label and creation time, migration 092; dismissal dates in the viewer's locale)"
-last_updated: "2026-10-19T07:23:46.578Z"
+stopped_at: "Completed 91-16-PLAN.md (PR3: the remote dismissal UAT requires the dedicated UAT org and site; i18n placeholder values render literally)"
+last_updated: "2026-10-19T07:49:01.301Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
-state_head: 11a509830b94da392653ad542c5e3326324ea683
+state_head: f618f4e917ecab5f1e055bbdf2eb00da8030bb99
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 28
-  completed_plans: 25
+  completed_plans: 26
   percent: 33
 ---
 
@@ -128,7 +128,7 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 ## Current Position
 
 Phase: 91 (Dismissal and permission hardening) — EXECUTING
-Plan: 12 of 18
+Plan: 13 of 18
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 91 execution started
 
@@ -219,8 +219,8 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-19T07:23:46.515Z
-Stopped at: Completed 91-15-PLAN.md (PR3: API-key dismissals keep the key's label and creation time, migration 092; dismissal dates in the viewer's locale)
+Last session: 2026-10-19T07:49:01.237Z
+Stopped at: Completed 91-16-PLAN.md (PR3: the remote dismissal UAT requires the dedicated UAT org and site; i18n placeholder values render literally)
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -281,6 +281,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 91 P13 | 35min | 2 tasks | 0 files |
 | Phase 91 P14 | 25min | 3 tasks | 11 files |
 | Phase 91 P15 | 27min | 3 tasks | 14 files |
+| Phase 91 P16 | 23min | 3 tasks | 8 files |
 
 ## Decisions
 
@@ -331,6 +332,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 91]: PR2 shipped as PR 10 (merge b3d7a2ae) after the pre-merge production gates; the permission read-back's single finding, the UAT admin persona's team membership in the UAT organization, was accepted by the owner as a known test fixture
 - [Phase 91]: Phase 91 P14: the report page offers the dismissal controls (Dismiss, Revoke and both dialogs) and the per-issue Assign buttons only to viewers with technical-details access; the disabled Dismiss button is decided by the mark validator for both the selector and the rule code, pinned by one shared case list; a preview answered with a 4xx other than 408/429 shows the refused hint
 - [Phase 91]: Phase 91 P15: a dismissal marked by an API key of the scan's own organization keeps that key's label and creation time in one nullable column (migration 092); the Dismissed section names a marking key from that record first and a revoking key from live key rows, each with the key's creation time as a tag, only for viewers who may touch the scan's organization; dismissal dates read in the viewer's session language
+- [Phase 91]: Phase 91 P16: the remote dismissal UAT writes only into the declared UAT organization and site: two required variables with no defaults are checked after the admin login and before any persona login or write, a mismatch exits 2 naming variables only, and --check-target-only reads the rule back without writing; translated strings insert placeholder values literally, in one pass, replacing every occurrence
 
 ### Blockers
 
