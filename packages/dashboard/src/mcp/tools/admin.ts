@@ -207,7 +207,7 @@ export function registerAdminTools(
         "List dashboard users. The top-level `role` field is the user's GLOBAL/system role (e.g. admin, user, viewer). Each user also carries `orgs: [{id, name, orgRole}, ...]` — `orgRole` is the user's role WITHIN that specific org (typically 'admin' for org owners) and is the authoritative answer for 'what role does X have in org Y'. Empty orgs[] means no org membership (common for global admins).\n\n" +
         "USAGE PATTERNS:\n" +
         "- 'Users in MY org' (caller-scoped, default): omit orgScope. Returns members of the caller's own org. Global admins (no caller org) get an error directing them to use orgScope='all'.\n" +
-        "- 'Users in a SPECIFIC org by name or ID' (e.g. Concorsando): pass orgScope='all' AND filter the results client-side by user.orgs[].name or user.orgs[].id. When reporting the user's role in that org, use user.orgs[].orgRole (NOT the top-level user.role). Do NOT pass an orgId in orgScope — the only legal values are 'caller-org' and 'all'.\n" +
+        "- 'Users in a SPECIFIC org by name or ID' (e.g. Fabrikam): pass orgScope='all' AND filter the results client-side by user.orgs[].name or user.orgs[].id. When reporting the user's role in that org, use user.orgs[].orgRole (NOT the top-level user.role). Do NOT pass an orgId in orgScope — the only legal values are 'caller-org' and 'all'.\n" +
         "- 'All users in the system': pass orgScope='all'.\n\n" +
         "The response always echoes the resolved scope ('caller-org:<orgId>' or 'all'). When scope='all', meta.notice reminds you to derive org membership from user.orgs[]. Password hashes are never returned.",
       inputSchema: z.object({

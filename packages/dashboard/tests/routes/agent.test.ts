@@ -593,7 +593,7 @@ import {
 
 describe('Phase 38 — resolveAgentOrgId', () => {
   const orgs = [
-    { id: 'org-c', name: 'Concorsando' },
+    { id: 'org-c', name: 'Contoso' },
     { id: 'org-a', name: 'Alessandro Lanna' },
     { id: 'org-b', name: 'Bravo' },
   ];
@@ -691,7 +691,7 @@ describe('Phase 38 — drawer org-switcher render via buildDrawerOrgContext', ()
   it('admin caller with activeOrgId → orgOptions sorted, correct option selected, partial renders form', async () => {
     const storage = makeStorageStub({
       orgs: [
-        { id: 'org-c', name: 'Concorsando' },
+        { id: 'org-c', name: 'Contoso' },
         { id: 'org-a', name: 'Alessandro Lanna' },
         { id: 'org-b', name: 'Bravo' },
       ],
@@ -717,7 +717,7 @@ describe('Phase 38 — drawer org-switcher render via buildDrawerOrgContext', ()
   it('admin caller without activeOrgId → resolves to alphabetical default', async () => {
     const storage = makeStorageStub({
       orgs: [
-        { id: 'org-c', name: 'Concorsando' },
+        { id: 'org-c', name: 'Contoso' },
         { id: 'org-a', name: 'Alessandro Lanna' },
       ],
       user: { id: 'u1', activeOrgId: null },
