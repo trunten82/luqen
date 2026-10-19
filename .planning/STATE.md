@@ -5,16 +5,16 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: Completed 91-17-PLAN.md
-last_updated: "2026-10-19T09:59:33.015Z"
+stopped_at: Completed 91-17b-PLAN.md (PR3 gap: one scan delete rule on the API, GraphQL and the report page)
+last_updated: "2026-10-19T11:32:07.000Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
-state_head: c16264aefebd154ee68faf75b6818388c1903d3b
+state_head: dc9760bfdf44b7d4203167389c4f4bac357ff8d8
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 28
-  completed_plans: 27
+  total_plans: 31
+  completed_plans: 28
   percent: 33
 ---
 
@@ -219,8 +219,8 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-19T09:59:32.931Z
-Stopped at: Completed 91-17-PLAN.md
+Last session: 2026-10-19T11:32:07.000Z
+Stopped at: Completed 91-17b-PLAN.md (PR3 gap: one scan delete rule on the API, GraphQL and the report page)
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -283,6 +283,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 91 P15 | 27min | 3 tasks | 14 files |
 | Phase 91 P16 | 23min | 3 tasks | 8 files |
 | Phase 91 P17 | 126min | 3 tasks | 10 files |
+| Phase 91 P17b | ~57min | 3 tasks | 15 files |
 
 ## Decisions
 
@@ -336,6 +337,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 91]: Phase 91 P16: the remote dismissal UAT writes only into the declared UAT organization and site: two required variables with no defaults are checked after the admin login and before any persona login or write, a mismatch exits 2 naming variables only, and --check-target-only reads the rule back without writing; translated strings insert placeholder values literally, in one pass, replacing every occurrence
 - [Phase 91]: 91-17: a named API key's label and creation tag render as one element in each Dismissed-section actor cell (phone card layout keeps the sentence whole)
 - [Phase 91]: 91-17: the dismissal browser UAT seeds API-key dismissals through the real mark API, so the stored key label and time are the route's own
+- [Phase 91]: Phase 91 P17b: deleting a scan follows one rule (services/scan-delete-access.ts) on the API, GraphQL and the report page: reports.delete or being the signed-in user who started the scan (never an API key), for scans of the caller's current organization ('system' scans for global administrators and callers outside every organization); a cross-path agreement test and a source inventory keep every delete path on the rule; the RBAC matrix lists reports.delete for both HTTP delete routes
 
 ### Blockers
 
