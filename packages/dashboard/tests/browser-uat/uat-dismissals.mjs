@@ -104,19 +104,22 @@ async function runSelftest(browser) {
   const world = await bootLocal();
   const env = envFromWorld(world);
   const guard = installOutputGuard(Object.entries(env).filter(([k]) => k !== 'LUQEN_UAT_BASE_URL').map(([, v]) => v));
+  let outcome;
   try {
-    await runRemote({ browser, env, expect: args.expect, leaveActive: args.leaveActive });
+    outcome = await runRemote({ browser, env, expect: args.expect, leaveActive: args.leaveActive });
   } finally {
     setWithholdDetail(false);
     killAll();
   }
   check('remote-selftest', 'no credential value appeared in the run output', guard.leaked === false);
+  return outcome;
 }
 
 async function runRemoteMode(browser) {
   const guard = installOutputGuard(REMOTE_VARS.map((k) => process.env[k]));
-  await runRemote({ browser, env: process.env, expect: args.expect, leaveActive: args.leaveActive });
+  const outcome = await runRemote({ browser, env: process.env, expect: args.expect, leaveActive: args.leaveActive });
   check('remote', 'no credential value appeared in the run output', guard.leaked === false);
+  return outcome;
 }
 
 async function main() {
@@ -129,17 +132,22 @@ async function main() {
   }
   const browser = await launch();
   try {
+    let outcome = 'done';
     if (args.mode === 'local') await runLocal(browser);
-    else if (args.mode === 'remote-selftest') await runSelftest(browser);
-    else await runRemoteMode(browser);
+    else if (args.mode === 'remote-selftest') outcome = await runSelftest(browser);
+    else outcome = await runRemoteMode(browser);
     if (failureCount() > 0) throw new Error(`UAT RED: ${failureCount()} of ${checkCount()} checks failed`);
+    // The target was not the dedicated UAT org and site: nothing was written; the REFUSED line names
+    // the variables. Exit 2, never GREEN.
+    if (outcome === 'refused') return 2;
     console.log(`UAT GREEN: ${checkCount()} checks`);
+    return 0;
   } finally {
     await browser.close();
   }
 }
 
-main().then(() => { killAll(); setTimeout(() => process.exit(0), 500); })
+main().then((code) => { killAll(); setTimeout(() => process.exit(code), 500); })
   .catch((err) => {
     // Remote mode withholds the message: a driver error can quote a URL.
     console.error('[uat] ERROR', args.mode === 'remote' ? '(message withheld in remote mode)' : err.message);

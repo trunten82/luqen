@@ -155,7 +155,7 @@ export async function bootLocal({ keepShots = true, apiKeyActors = false } = {})
   }
   const keyActors = apiKeyActors ? await seedApiKeyActors(storage, orgId, toSiteKey) : null;
   await storage.disconnect();
-  return { base: LOCAL_BASE, scanId, bigScanId, orgId, personas: PERSONAS, ...(keyActors ? { keyActors } : {}) };
+  return { base: LOCAL_BASE, scanId, bigScanId, orgId, orgName: org.name, siteUrl: SITE, personas: PERSONAS, ...(keyActors ? { keyActors } : {}) };
 }
 
 /** The env object the remote code path reads, built in-process from a booted local world. */
@@ -168,5 +168,8 @@ export function envFromWorld(world) {
     LUQEN_UAT_OWNER_USER: p.owner.user, LUQEN_UAT_OWNER_PASS: p.owner.pass,
     LUQEN_UAT_MEMBER_USER: p.member.user, LUQEN_UAT_MEMBER_PASS: p.member.pass,
     LUQEN_UAT_VIEWER_USER: p.viewer.user, LUQEN_UAT_VIEWER_PASS: p.viewer.pass,
+    // The seeded world IS the dedicated target: its org name and the scan's site host.
+    LUQEN_UAT_EXPECT_ORG: world.orgName,
+    LUQEN_UAT_EXPECT_SITE_HOST: new URL(world.siteUrl).hostname,
   };
 }
