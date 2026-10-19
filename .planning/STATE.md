@@ -5,16 +5,16 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: Completed 91-17d-PLAN.md (PR3 gap: refusal copy per reason, read-back UAT exemption, prompt titles, current org; final PR3 gates)
-last_updated: "2026-10-19T13:53:48.000Z"
+stopped_at: Completed 91-17e-PLAN.md (PR3 review fix: the assistant runs only its stored user's tools, with that user's permissions; confirm and decline belong to the conversation's user)
+last_updated: "2026-10-19T15:27:34.000Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
-state_head: 9057875bf2b937727593c1b2bbe573a307da7f16
+state_head: 0ce8e5c60e69ae89292c9b7a8c3a84eda45f9728
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 31
-  completed_plans: 30
+  total_plans: 33
+  completed_plans: 31
   percent: 33
 ---
 
@@ -219,8 +219,8 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-19T13:53:48.000Z
-Stopped at: Completed 91-17d-PLAN.md (PR3 gap: refusal copy per reason, read-back UAT exemption, prompt titles, current org; final PR3 gates)
+Last session: 2026-10-19T15:27:34.000Z
+Stopped at: Completed 91-17e-PLAN.md (PR3 review fix: the assistant runs only its stored user's tools, with that user's permissions; confirm and decline belong to the conversation's user)
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -286,6 +286,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 91 P17b | ~57min | 3 tasks | 15 files |
 | Phase 91 P17c | ~48min | 3 tasks | 26 files |
 | Phase 91 P17d | ~89min | 3 tasks | 35 files |
+| Phase 91 P17e | ~42min | 3 tasks | 21 files |
 
 ## Decisions
 
@@ -342,6 +343,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 91]: Phase 91 P17b: deleting a scan follows one rule (services/scan-delete-access.ts) on the API, GraphQL and the report page: reports.delete or being the signed-in user who started the scan (never an API key), for scans of the caller's current organization ('system' scans for global administrators and callers outside every organization); a cross-path agreement test and a source inventory keep every delete path on the rule; the RBAC matrix lists reports.delete for both HTTP delete routes
 - [Phase 91]: Phase 91 P17c: every MCP request is answered for the stored, active user of the token (src/auth/stored-caller.ts): a removed or deactivated user's token is refused 401 invalid_token, a user with no permission in the token organization is refused 403 insufficient_scope, a role claim is not read, and the verifier keeps client_id so a revoked client's token is refused 401 client_revoked; the agent resolves its tools through the same rule; admin.system and admin.users come from the global admin role on every path
 - [Phase 91]: Phase 91 P17d: a disabled Dismiss button and a refused preview name the reason the server refuses the finding (no specific element, element selector too long, rule code missing, rule code too long) from one classification shared with the mark validators, in all six locales; the preview answers an over-long selector as refused with reason selector-too-long; the read-back script exempts only the dedicated UAT admin persona in the UAT org (--exempt-uat-admin-team true with LUQEN_UAT_ADMIN_USER and LUQEN_UAT_EXPECT_ORG) and reports it on an INFO line; the LLM prompt titles use double-brace placeholders; GET /orgs/current reports the organization the request acts in
+- [Phase 91]: Phase 91 P17e: the dashboard assistant runs only the tools offered to the model in that iteration, and its in-process dispatcher resolves the stored user's permissions once per call, refuses a tool whose permission that user does not hold before it runs, and hands that set to the handler in the conversation's organization; confirming or declining a paused action is limited to the conversation's user, a confirmation checks again that the user may still run the tool (403 otherwise, the action stays pending), and every confirm attempt that reaches that check is recorded in the agent audit
 
 ### Blockers
 
