@@ -90,6 +90,12 @@
       '&selector=' + encodeURIComponent(state.selector);
     fetch(url, { credentials: 'include', headers: { 'Accept': 'application/json' } })
       .then(function (res) {
+        /* HARD-01: a request the server refuses (4xx) is refused the same way every time, so it
+           shows the refused state, not Try again. 408 and 429 mean "not now" and stay retryable,
+           as do 5xx answers and network failures (the catch below). */
+        if (res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429) {
+          return { refused: true };
+        }
         if (!res.ok) throw new Error('preview ' + res.status);
         return res.json();
       })

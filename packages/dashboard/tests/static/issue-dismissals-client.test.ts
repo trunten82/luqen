@@ -306,6 +306,47 @@ describe('confirm gating', () => {
     expect(el(h, '[data-action="rptDismissRetryPreview"]').classList.contains('is-hidden')).toBe(false);
   });
 
+  it('HARD-01 preview treats a refused request as refused not as retryable', async () => {
+    // A request the server refuses (an over-long query, an invalid rule code) fails the same way
+    // every time, so Try again would loop forever: it shows the refused state instead.
+    for (const code of [400, 413, 414, 431]) {
+      const h = await make();
+      open(h);
+      h.pending[0].resolve(res(code, { error: SERVER_TEXT }));
+      await flush();
+      type(h, 'A real reason');
+      expect(status(h), String(code)).toBe(attr(h, 'data-preview-refused'));
+      expect(el(h, '[data-action="rptDismissRetryPreview"]').classList.contains('is-hidden'), String(code)).toBe(true);
+      expect(confirmBtn(h).disabled, String(code)).toBe(true);
+      expect(h.doc.body.textContent, String(code)).not.toContain(SERVER_TEXT);
+    }
+  });
+
+  it('HARD-01 preview still offers retry after a server error', async () => {
+    for (const outcome of [500, 503, 'network'] as const) {
+      const h = await make();
+      open(h);
+      if (outcome === 'network') h.pending[0].reject(new Error('offline'));
+      else h.pending[0].resolve(res(outcome, {}));
+      await flush();
+      expect(status(h), String(outcome)).toBe(attr(h, 'data-preview-error'));
+      expect(el(h, '[data-action="rptDismissRetryPreview"]').classList.contains('is-hidden'), String(outcome)).toBe(false);
+      expect(confirmBtn(h).disabled, String(outcome)).toBe(true);
+    }
+  });
+
+  it('HARD-01 preview still offers retry when the server asks to wait', async () => {
+    // 408 and 429 say "not now", not "never": Try again is the right offer.
+    for (const code of [408, 429]) {
+      const h = await make();
+      open(h);
+      h.pending[0].resolve(res(code, {}));
+      await flush();
+      expect(status(h), String(code)).toBe(attr(h, 'data-preview-error'));
+      expect(el(h, '[data-action="rptDismissRetryPreview"]').classList.contains('is-hidden'), String(code)).toBe(false);
+    }
+  });
+
   it.each([
     ['a refused selector', { occurrences: 0, pages: 0, refused: true, reason: 'selector' }, 'data-preview-refused'],
     ['zero matches', { occurrences: 0, pages: 0 }, 'data-preview-none'],
