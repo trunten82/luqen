@@ -4,10 +4,8 @@
  * Covers the 13 admin tools registered by
  * packages/dashboard/src/mcp/tools/admin.ts:
  *
- *   1. tools/list count + permission filtering
- *      - admin.system + admin.users + data perms → 19 visible
- *      - admin.users only → 4 user tools
- *      - admin.system only → 9 admin.system tools
+ *   1. tools/list count: admin.system + admin.users + admin.org + scans.create
+ *      + reports.view + branding.view → all 24 tools visible
  *   2. D-17 runtime guard — NO admin tool inputSchema contains an
  *      `orgId` key (`targetOrgId` is allowed by design — not the same key)
  *   3. Classification coverage — 13 org-scoped comments, 0 global,
