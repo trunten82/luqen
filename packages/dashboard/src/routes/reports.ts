@@ -198,6 +198,14 @@ interface ReportsQuery {
 
 const PAGE_SIZE = 20;
 
+/** The viewer's UI language from the secure session (validated by resolveLocale), else 'en'. */
+function sessionLocale(request: FastifyRequest): string {
+  const session = request.session as { get?(key: string): unknown } | undefined;
+  return resolveLocale(
+    typeof session?.get === 'function' ? (session.get('locale') as string | undefined) : undefined,
+  );
+}
+
 /**
  * 89-11 (D-15 Q1, D-12): the label and creation time of each API key the Dismissed section may
  * NAME (HARD-08 adds the creation time as the tag that tells same-label keys apart). Only the
@@ -659,7 +667,8 @@ export async function reportRoutes(
           // live rows are not even read for a viewer who may not see them.
           const showKeyNames = mayTouchDismissalOrg(request.user, scan.orgId);
           const keys = showKeyNames ? await scanOrgKeys(storage, scan, rows, request.log) : new Map();
-          dismissals = buildDismissalsView(rows, { keys, showKeyNames });
+          // HARD-05: the section's dates read in the viewer's session UI language.
+          dismissals = buildDismissalsView(rows, { keys, showKeyNames, locale: sessionLocale(request) });
         } catch (err) {
           // Scan id and error NAME only: driver messages can quote their input.
           request.log.warn(
@@ -810,10 +819,7 @@ export async function reportRoutes(
       }
 
       // Locale: secure-session UI language (validated) → 'en'.
-      const session = request.session as { get?(key: string): unknown } | undefined;
-      const locale = resolveLocale(
-        typeof session?.get === 'function' ? (session.get('locale') as string | undefined) : undefined,
-      );
+      const locale = sessionLocale(request);
 
       // Secure-share management surface: only users who can export may create
       // share links; expose the existing ACTIVE links for the panel.

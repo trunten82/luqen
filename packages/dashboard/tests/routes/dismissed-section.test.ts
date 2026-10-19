@@ -103,6 +103,10 @@ async function page(
         currentOrgId: viewer.currentOrgId,
       } as never;
       (request as unknown as { permissions: Set<string> }).permissions = new Set(viewer.permissions);
+      // The real secure session carries the UI language under 'locale' (HARD-05 reads it).
+      (request as unknown as { session: { get(key: string): unknown } }).session = {
+        get: (key: string) => (key === 'locale' ? viewer.locale : undefined),
+      };
     });
     await reportRoutes(s, ctx.storage, () => null);
   });
@@ -407,11 +411,14 @@ async function storeKeyIn(label: string, orgId?: string): Promise<string> {
   return ctx.storage.apiKeys.storeKey(`placeholder-${label.replace(/\W/g, '')}-${Math.random()}`, label, orgId);
 }
 
-/** HARD-08: the creation-time tag a named key carries, " (Created <the key row's creation time>)". */
+/**
+ * HARD-08: the creation-time tag a named key carries, " (Created <the key row's creation time>)",
+ * with the word and the time in the viewer's locale (HARD-05).
+ */
 async function keyTag(keyId: string, orgId: string, locale: Locale = 'en'): Promise<string> {
   const key = (await ctx.storage.apiKeys.listKeys(orgId)).find((k) => k.id === keyId);
   if (key === undefined) throw new Error('keyTag: key not found');
-  return ` (${t('admin.apiKeys.created', locale)} ${new Date(key.createdAt).toLocaleString()})`;
+  return ` (${t('admin.apiKeys.created', locale)} ${new Date(key.createdAt).toLocaleString(locale)})`;
 }
 
 function actorCells(doc: Document, locale: Locale = 'en'): Map<string, { by: string; byTitle: string | null; revokedBy?: string; revokedTitle?: string | null }> {
@@ -634,6 +641,24 @@ describe('HARD-08 key snapshot on the report page', () => {
     const { doc, html } = await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId));
     expect(actorCells(doc).get(CODE_CONTRAST)!.by).toBe('API key');
     expect(html).not.toContain('Fabrikam CI');
+  });
+});
+
+describe('HARD-05 dismissal dates follow the session locale', () => {
+  it('HARD-05 report page passes the session locale to the dismissed section', async () => {
+    const live = await markRaw();
+    const gone = await markRaw({ code: CODE_ALT, selector: SEL_ALT });
+    const revoked = await revokeRaw(gone.id);
+    const { data } = await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId, { locale: 'de' }));
+    const view = data['dismissals'] as {
+      active: Array<{ createdAtDisplay: string }>;
+      revoked: Array<{ createdAtDisplay: string; revokedAtDisplay: string }>;
+    };
+    const de = (iso: string) => new Date(iso).toLocaleString('de');
+    expect(de(live.createdAt)).not.toBe(new Date(live.createdAt).toLocaleString('en'));
+    expect(view.active[0]!.createdAtDisplay).toBe(de(live.createdAt));
+    expect(view.revoked[0]!.createdAtDisplay).toBe(de(gone.createdAt));
+    expect(view.revoked[0]!.revokedAtDisplay).toBe(de(revoked.revokedAt!));
   });
 });
 

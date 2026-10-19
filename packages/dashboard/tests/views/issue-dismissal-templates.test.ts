@@ -18,6 +18,10 @@ import {
   DISMISSAL_SELECTOR_MAX_LENGTH,
 } from '../../src/services/issue-dismissals/validate-input.js';
 import { DISMISSAL_REFUSAL_CASES } from '../fixtures/dismissal-refusal-cases.js';
+import { buildDismissalsView } from '../../src/services/issue-dismissals/dismissals-view.js';
+import type { IssueDismissal } from '../../src/db/interfaces/issue-dismissal-repository.js';
+
+process.env['TZ'] ??= 'UTC';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const VIEWS_DIR = join(HERE, '..', '..', 'src', 'views');
@@ -606,5 +610,28 @@ describe('Revoke button', () => {
       const m = /<button[^>]*data-action="rptRevokeIssue"[^>]*>([^<]*)<\/button>/.exec(html)!;
       expect(m[1]!.trim(), locale).toBe(word);
     }
+  });
+});
+
+describe('HARD-08 the key tag in the Dismissed section', () => {
+  it('HARD-08 the dismissed section renders the key label with its creation time', () => {
+    const keyCreatedAt = '2026-03-01T10:00:00.000Z';
+    const stored: IssueDismissal = {
+      id: 'd-key-1', orgId: 'org-fabrikam', siteUrl: 'https://fabrikam.example', siteKey: 'https://fabrikam.example',
+      code: CODE, selector: SEL_PAGE, reason: 'Decorative', status: 'active',
+      createdBy: 'api-key:k-fabrikam-ci', createdById: 'api-key:k-fabrikam-ci', createdAt: '2026-10-01T08:00:00.000Z',
+      revokedBy: null, revokedById: null, revokedAt: null, revokeComment: null,
+      createdByKeySnapshot: { label: 'CI deploy', keyCreatedAt },
+    };
+    const dismissals = buildDismissalsView([stored], { showKeyNames: true });
+    const html = render({ dismissals: dismissals as unknown as Record<string, unknown> });
+    const start = html.indexOf('id="rpt-dismissed"');
+    expect(start).toBeGreaterThan(-1); // positive control: the section rendered
+    const section = html.slice(start, html.indexOf('</details>', start));
+    const text = section.replace(/<[^>]+>/g, '');
+    expect(text).toContain(`API key: CI deploy (Created ${new Date(keyCreatedAt).toLocaleString()})`);
+    expect(section).toContain(`<time datetime="${keyCreatedAt}">`);
+    expect(section).not.toContain('api-key:');
+    expect(section).not.toContain('k-fabrikam-ci');
   });
 });

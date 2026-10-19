@@ -108,3 +108,29 @@ describe('API-key names in the Dismissed section (HARD-08)', () => {
     expect(shown.revoked[0]!.revokedByKeyCreatedDisplay).not.toBe('');
   });
 });
+
+describe('dismissal dates in the viewer locale (HARD-05)', () => {
+  const MARKED = '2026-03-01T10:00:00.000Z';
+  const REVOKED = '2026-05-17T16:30:00.000Z';
+
+  it('HARD-05 dismissed date renders in the requested locale', () => {
+    const view = buildDismissalsView([row({ createdAt: MARKED })], { locale: 'de' })!;
+    const de = new Date(MARKED).toLocaleString('de');
+    expect(de).not.toBe(new Date(MARKED).toLocaleString('en')); // the instrument can tell them apart
+    expect(view.active[0]!.createdAtDisplay).toBe(de);
+  });
+
+  it('HARD-05 revoked date renders in the requested locale', () => {
+    const rows = [
+      row({
+        createdAt: MARKED, status: 'revoked', revokedBy: 'bob', revokedById: 'u-2', revokedAt: REVOKED,
+        revokeComment: null,
+      }),
+    ];
+    const view = buildDismissalsView(rows, { locale: 'it' })!;
+    const it_ = new Date(REVOKED).toLocaleString('it');
+    expect(it_).not.toBe(new Date(REVOKED).toLocaleString('en'));
+    expect(view.revoked[0]!.revokedAtDisplay).toBe(it_);
+    expect(view.revoked[0]!.createdAtDisplay).toBe(new Date(MARKED).toLocaleString('it'));
+  });
+});
