@@ -6,7 +6,7 @@ import type { AuthPlugin, AuthResult, PluginInstance } from '../plugins/types.js
 import type { StorageAdapter } from '../db/index.js';
 import { setEncryptionSalt } from '../plugins/crypto.js';
 
-import { validateApiKey } from './api-key.js';
+import { apiKeyOpensDashboardSession, validateApiKey } from './api-key.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -233,8 +233,10 @@ export class AuthService {
    * The principal a signed-in session answers for, read from storage on EVERY request. The values
    * the session was given at sign-in are a claim; the stored rows decide:
    *
-   *   1. user id 'api-key' (a /login API-key session) -> the session's values, for the key row
-   *      the session names
+   *   1. user id 'api-key' (a /login API-key session) -> the key row the session names must
+   *      still pass the dashboard-session predicate the sign-in applied (active, unexpired,
+   *      organization 'system', role admin), read without writing; a session naming no key, or a
+   *      key that fails it, is refused ('key_refused')
    *   2. a stored dashboard user with the session's user id -> that row decides: an inactive
    *      row is refused ('inactive_user'); otherwise the stored id, username and role answer.
    *      The session's role and username are never read for authorization.
@@ -243,7 +245,7 @@ export class AuthService {
    *      sign-in, unchanged
    *   4. anything else -> refused ('unknown_user')
    *
-   * One stored-user read per request (a primary-key lookup) and no cache, so a deactivation,
+   * One stored read per request (a primary-key lookup of the user or of the key) and no cache, so a deactivation,
    * deletion or role change applies on the user's next request. A failed read is not caught:
    * the request ends in an error and is never answered from the session's values.
    */
@@ -253,15 +255,20 @@ export class AuthService {
     username: string,
   ): Promise<SessionPrincipal> {
     if (userId === 'api-key') {
-      // The key's row id (never the secret), so dismissals made in this session name the key.
+      // The key's row id (never the secret): the key this session answers for, and the key its
+      // dismissals name.
       const sessionKeyId = session.get('apiKeyId');
+      if (typeof sessionKeyId !== 'string' || sessionKeyId === '' || !apiKeyOpensDashboardSession(this.db, sessionKeyId)) {
+        return { ok: false, refusal: 'key_refused' };
+      }
       return {
         ok: true,
         user: {
           id: userId,
           username,
-          role: (session.get('role') as string | undefined) ?? 'user',
-          ...(typeof sessionKeyId === 'string' && sessionKeyId !== '' ? { apiKeyId: sessionKeyId } : {}),
+          // The predicate admits only role-admin keys of the 'system' organization.
+          role: 'admin',
+          apiKeyId: sessionKeyId,
         },
       };
     }

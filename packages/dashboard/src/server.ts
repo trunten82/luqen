@@ -894,7 +894,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     if (isBearerOnlyPath(request.url.split('?')[0])) return;
     if (request.user === undefined) return;
 
-    const session = request.session as { get(key: string): unknown } | undefined;
+    const session = request.session as { get(key: string): unknown; set?(key: string, value: unknown): void } | undefined;
 
     // 1. Determine org context
     // API key users can override org via X-Org-Id header (admin keys only)
@@ -908,6 +908,15 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
       const userOrgs = await storage.organizations.getUserOrgs(request.user.id);
 
       let currentOrgId = session.get('currentOrgId') as string | undefined;
+      // The session's organization must be one of the user's organizations on every request
+      // (getUserOrgs, the predicate both org-switch routes use). Otherwise the stored choice is
+      // cleared and the request acts where a fresh sign-in would: the first organization, or none.
+      if (currentOrgId !== undefined && currentOrgId !== '' && !userOrgs.some((org) => org.id === currentOrgId)) {
+        if (session.get('userId') === request.user.id && typeof session.set === 'function') {
+          session.set('currentOrgId', '');
+        }
+        currentOrgId = undefined;
+      }
       if ((currentOrgId === undefined || currentOrgId === '') && userOrgs.length > 0) {
         currentOrgId = userOrgs[0].id;
       }
