@@ -204,7 +204,9 @@ Every agent turn produces audit entries:
   `denied`, `timeout`). An argument named like a password, secret, token,
   API key, authorization value or credential is stored as `[redacted]`,
   at any depth, in the agent audit and in the conversation's stored
-  messages (including an action awaiting confirmation)
+  messages. An action awaiting your confirmation keeps its arguments as
+  given, so it runs exactly as shown; once it is confirmed or declined its
+  stored arguments are redacted too
 - Token-budget compaction events
 - Soft-delete and share-link operations on conversations
 

@@ -48,7 +48,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   API key, authorization value or credential as `[redacted]`, at any depth,
   for every tool call the assistant runs, refuses or confirms.
 - The assistant's conversation messages store those tool arguments as
-  `[redacted]` too, including an action awaiting confirmation.
+  `[redacted]` too. An action awaiting confirmation keeps its arguments as
+  given until it is confirmed or declined, then they are stored redacted; a
+  confirmation that is refused leaves the action awaiting confirmation.
 - The assistant's context hints are read with the user's permissions in the
   conversation's organization: recent scans need `reports.view`, brand
   guideline names need `branding.view`, and a user holding no permission there
