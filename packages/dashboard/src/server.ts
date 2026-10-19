@@ -131,6 +131,7 @@ import { isBearerOnlyPath } from './mcp/paths.js';
 import { registerOauthRoutes } from './routes/oauth/index.js';
 import { ensureInitialSigningKey } from './auth/oauth-key-bootstrap.js';
 import { createDashboardSigner } from './auth/oauth-signer.js';
+import { storedPermissionsOrNone } from './auth/stored-caller.js';
 // Phase 32 Plan 04: AgentService + /agent/* routes.
 import { AgentService } from './agent/agent-service.js';
 import { ToolDispatcher } from './agent/tool-dispatch.js';
@@ -1399,20 +1400,11 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     signer: dashboardSigner,
     dashboardMcpAudience,
     resolveScopes: async (userId, orgId) => {
-      // Look up the user's real role per-dispatch so the admin all-permissions
-      // bypass in resolveEffectivePermissions fires for global admins. Hardcoding
-      // 'viewer' here would silently strip scan/admin tools from the dispatcher's
-      // mintAgentToken scopes — manifesting downstream as the LLM hallucinating
-      // tool results because no real tool was callable.
-      const dbUser = await storage.users.getUserById(userId);
-      const userRole = dbUser?.role ?? 'viewer';
-      const perms = await resolveEffectivePermissions(
-        storage.roles,
-        userId,
-        userRole,
-        orgId,
-      );
-      return [...perms];
+      // HARD-19: per dispatch, from the stored-caller rule (src/auth/stored-caller.ts): the
+      // stored, active user's role decides, so a global admin (stored role 'admin') resolves
+      // every permission; a missing or deactivated user resolves none, so the dispatcher's
+      // token carries no scope.
+      return [...(await storedPermissionsOrNone(storage, userId, orgId))];
     },
   });
   const agentService = new AgentService({
@@ -1436,12 +1428,10 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     resolvePermissions: async (userId, orgId) => {
       // Called at the HEAD of every AgentService.runTurn iteration — the
       // single source of truth for per-user permissions. See D-07 / Pitfall 6.
-      // Look up the real role so the admin bypass in resolveEffectivePermissions
-      // fires for global admins (otherwise buildManifest filters scan/admin
-      // tools out of the LLM manifest and the model hallucinates results).
-      const dbUser = await storage.users.getUserById(userId);
-      const userRole = dbUser?.role ?? 'viewer';
-      return resolveEffectivePermissions(storage.roles, userId, userRole, orgId);
+      // HARD-19: the stored-caller rule decides — a global admin (stored role
+      // 'admin') resolves every permission; a missing or deactivated user
+      // resolves none, so the manifest offers no tool.
+      return storedPermissionsOrNone(storage, userId, orgId);
     },
     config: { agentDisplayNameDefault: 'Luqen Assistant' },
   });

@@ -49,7 +49,6 @@ export async function storedPermissionsOrNone(
   userId: string,
   orgId?: string,
 ): Promise<Set<string>> {
-  // Placeholder body; the rule lands with the agent wiring change.
-  const user = await storage.users.getUserById(userId);
-  return resolveEffectivePermissions(storage.roles, userId, user?.role ?? 'viewer', orgId);
+  const caller = await resolveStoredCaller(storage, userId, orgId);
+  return caller.ok ? caller.permissions : new Set<string>();
 }
