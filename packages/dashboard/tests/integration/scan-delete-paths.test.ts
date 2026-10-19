@@ -10,6 +10,8 @@
  * Organization names, user names and site hosts are placeholders (Fabrikam / Northwind, *.example).
  */
 import { randomUUID } from 'node:crypto';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { generateApiKey } from '../../src/auth/api-key.js';
@@ -31,6 +33,8 @@ let northwindId: string;
 let orgAdminKey: string;
 let readOnlyKey: string;
 const sessions = new Map<string, HarnessSession>();
+/** Stored report files of seeded scans live here (removed in afterAll). */
+let reportDir: string;
 
 /** A caller: a password session (by user name) or an API key. */
 type Credential = { readonly session: string } | { readonly key: string };
@@ -55,6 +59,15 @@ async function seedScan(orgId: string, createdBy: string): Promise<string> {
 }
 
 const scanExists = async (id: string): Promise<boolean> => (await h.seed.scans.getScan(id)) !== null;
+
+/** A scan whose stored report file exists on disk; returns the scan id and the file path. */
+async function seedScanWithReportFile(orgId: string, createdBy: string): Promise<{ id: string; file: string }> {
+  const id = await seedScan(orgId, createdBy);
+  const file = join(reportDir, `${id}.json`);
+  writeFileSync(file, '{"pages":[]}');
+  await h.seed.scans.updateScan(id, { jsonReportPath: file });
+  return { id, file };
+}
 
 /** A browser's session after sign-in: the cookie and the page token of an authenticated page. */
 async function sessionOf(username: string): Promise<HarnessSession> {
@@ -105,6 +118,7 @@ async function pageDelete(cred: Credential, id: string): Promise<number> {
 }
 
 beforeAll(async () => {
+  reportDir = mkdtempSync(join(tmpdir(), 'luqen-scan-delete-files-'));
   h = await startMcpOauthHarness('scan-delete');
   fabrikamId = (await h.seed.organizations.createOrg({ name: 'Fabrikam Delete', slug: 'fabrikam-delete' })).id;
   northwindId = (await h.seed.organizations.createOrg({ name: 'Northwind Delete', slug: 'northwind-delete' })).id;
@@ -121,6 +135,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (h !== undefined) await h.close();
+  if (reportDir !== undefined) rmSync(reportDir, { recursive: true, force: true });
 });
 
 describe('HARD-18 scan delete paths', () => {
@@ -211,16 +226,17 @@ describe('HARD-18 scan delete paths', () => {
   }, 120_000);
 
   it('HARD-18 every scan delete call site goes through the shared delete rule', () => {
-    // Any file under src/ (the repository layer under db/ aside) that deletes scan rows must also ask the
-    // shared rule, and the callers are exactly the three delete paths. A new caller fails here until it
-    // is listed AND asks the rule.
+    // Any file under src/ (the repository layer under db/ aside) that deletes scan rows, directly or
+    // through the shared delete function, must also ask the shared rule, and the callers are exactly the
+    // three delete paths. A new caller fails here until it is listed AND asks the rule. The shared
+    // delete function's own module is the one place that removes the row (pinned line by line below).
     const code = (text: string): string => text.split('\n').filter((l) => !isCommentLine(l)).join('\n');
     const callers: string[] = [];
     const withoutRule: string[] = [];
     for (const [rel, text] of readSources(SRC)) {
-      if (rel.startsWith('db/')) continue;
+      if (rel.startsWith('db/') || rel === 'services/scan-delete-access.ts') continue;
       const src = code(text);
-      if (!src.includes('.deleteScan(') && !src.includes('.deleteOrgScans(')) continue;
+      if (!src.includes('.deleteScan(') && !src.includes('.deleteOrgScans(') && !src.includes('deleteScanAndFiles(')) continue;
       callers.push(rel);
       if (!src.includes('scanDeleteRefusal(')) withoutRule.push(rel);
     }
@@ -235,5 +251,39 @@ describe('HARD-18 scan delete paths', () => {
     expect(deleting).toEqual([]);
     const mcpCallers = [...readSources(join(SRC, 'mcp'))].filter(([, text]) => /\.delete(Scan|OrgScans)\(/.test(text)).map(([rel]) => rel);
     expect(mcpCallers).toEqual([]);
+  });
+
+  it('HARD-18 the graphql delete removes the report file of the scan', async () => {
+    const { id, file } = await seedScanWithReportFile(fabrikamId, MEMBER);
+    expect(existsSync(file)).toBe(true);
+    const answer = await graphqlDelete({ session: MEMBER }, id);
+    expect(answer).toBe('200:deleted');
+    expect(await scanExists(id)).toBe(false);
+    expect(existsSync(file), 'report file after the graphql delete').toBe(false);
+  }, 60_000);
+
+  it('HARD-18 the api and report page deletes remove the report file of the scan', async () => {
+    const rest = await seedScanWithReportFile(fabrikamId, MEMBER);
+    expect(await restDelete({ session: MEMBER }, rest.id)).toBe(200);
+    const page = await seedScanWithReportFile(fabrikamId, MEMBER);
+    await pageDelete({ session: MEMBER }, page.id);
+    expect([await scanExists(rest.id), await scanExists(page.id)]).toEqual([false, false]);
+    expect([existsSync(rest.file), existsSync(page.file)]).toEqual([false, false]);
+  }, 60_000);
+
+  it('HARD-18 only the shared delete function removes a scan row', () => {
+    const hits: string[] = [];
+    for (const [rel, text] of readSources(SRC)) {
+      text.split('\n').forEach((line, i) => {
+        if (!isCommentLine(line) && line.includes('.deleteScan(')) hits.push(`${rel}:${i + 1}`);
+      });
+    }
+    expect(hits.map((hit) => hit.split(':')[0])).toEqual(['services/scan-delete-access.ts']);
+    // ...and that line sits inside deleteScanAndFiles.
+    const source = readFileSync(join(SRC, 'services', 'scan-delete-access.ts'), 'utf8');
+    const start = source.indexOf('export async function deleteScanAndFiles(');
+    expect(start).toBeGreaterThan(-1);
+    const body = source.slice(start, source.indexOf('\n}\n', start));
+    expect(body).toContain('.deleteScan(');
   });
 });

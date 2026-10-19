@@ -6,7 +6,32 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { CODE, openStore, buildRouteServer, seedOrg, seedScan, type Store } from '../helpers/issue-dismissal-route-harness.js';
+import * as validateInput from '../../src/services/issue-dismissals/validate-input.js';
 import { DISMISSAL_SELECTOR_MAX_LENGTH } from '../../src/services/issue-dismissals/validate-input.js';
+
+// The selector classifiers, wrapped so a test can count how often the route asks them (behaviour unchanged).
+vi.mock('../../src/services/issue-dismissals/validate-input.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/services/issue-dismissals/validate-input.js')>();
+  return {
+    ...actual,
+    isWholePageSelector: vi.fn(actual.isWholePageSelector),
+    validateDismissalSelector: vi.fn(actual.validateDismissalSelector),
+    dismissalRefusalReason: vi.fn(actual.dismissalRefusalReason),
+  };
+});
+
+/** Calls of the exported selector classifiers since the last reset. */
+function classifications(): number {
+  return [validateInput.isWholePageSelector, validateInput.validateDismissalSelector, validateInput.dismissalRefusalReason]
+    .map((fn) => vi.mocked(fn).mock.calls.length)
+    .reduce((a, b) => a + b, 0);
+}
+
+function resetClassifications(): void {
+  for (const fn of [validateInput.isWholePageSelector, validateInput.validateDismissalSelector, validateInput.dismissalRefusalReason]) {
+    vi.mocked(fn).mockClear();
+  }
+}
 
 let store: Store;
 let server: FastifyInstance | undefined;
@@ -51,5 +76,50 @@ describe('preview refusal reason', () => {
     expect(atLimit.json().refused).toBeUndefined();
     // Only the control loaded the report: a refused selector is answered before it.
     expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('HARD-01 the preview answers 400 for a selector over the request bound', async () => {
+    const org = await seedOrg(store.storage, 'org_a');
+    const scan = await seedScan(store.storage, { orgId: org });
+    const spy = vi.spyOn(store.storage.scans, 'getReport');
+    server = await buildRouteServer(store.storage, {
+      user: { role: 'user', currentOrgId: org },
+      permissions: ['issues.dismiss', 'reports.view'],
+    });
+    const ask = (selector: string) =>
+      server!.inject({ method: 'GET', url: `/api/v1/scans/${scan}/dismissals/preview`, query: { code: CODE, selector } });
+
+    const overBound = `#${'a'.repeat(16384)}`;
+    expect(overBound).toHaveLength(16385);
+    expect((await ask(overBound)).statusCode).toBe(400);
+    // Control: at the bound the selector is answered as refused for its length.
+    const atBound = await ask(overBound.slice(0, 16384));
+    expect(atBound.statusCode).toBe(200);
+    expect(atBound.json()).toEqual({ occurrences: 0, pages: 0, refused: true, reason: 'selector-too-long' });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('HARD-01 the preview classifies a selector once', async () => {
+    const org = await seedOrg(store.storage, 'org_a');
+    const scan = await seedScan(store.storage, { orgId: org });
+    server = await buildRouteServer(store.storage, {
+      user: { role: 'user', currentOrgId: org },
+      permissions: ['issues.dismiss', 'reports.view'],
+    });
+    const ask = (selector: string) =>
+      server!.inject({ method: 'GET', url: `/api/v1/scans/${scan}/dismissals/preview`, query: { code: CODE, selector } });
+
+    const counts: Record<string, number> = {};
+    for (const [label, selector] of [
+      ['whole page', 'html'],
+      ['over the limit', `#${'a'.repeat(DISMISSAL_SELECTOR_MAX_LENGTH)}`],
+      ['accepted', '#hero > p'],
+    ] as const) {
+      resetClassifications();
+      const res = await ask(selector);
+      expect(res.statusCode, label).toBe(200);
+      counts[label] = classifications();
+    }
+    expect(counts).toEqual({ 'whole page': 1, 'over the limit': 1, accepted: 1 });
   });
 });

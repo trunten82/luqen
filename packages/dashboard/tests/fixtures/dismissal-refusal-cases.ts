@@ -57,6 +57,7 @@ export const DISMISSAL_REFUSAL_CASES: readonly DismissalRefusalCase[] = [
   { why: 'an object as selector', selector: {}, code: CODE, refused: true, reason: 'no-element' },
   { why: 'a selector at the length limit', selector: selectorOfLength(SELECTOR_LIMIT), code: CODE, refused: false, reason: null },
   { why: 'a selector one over the length limit', selector: selectorOfLength(SELECTOR_LIMIT + 1), code: CODE, refused: true, reason: 'selector-too-long' },
+  { why: 'a whole-page selector over the length limit', selector: `${'#x, '.repeat(1000)}body`, code: CODE, refused: true, reason: 'selector-too-long' },
   { why: 'a multibyte selector at the length limit', selector: selectorOfLength(SELECTOR_LIMIT, 'é'), code: CODE, refused: false, reason: null },
   { why: 'a multibyte selector one over the length limit', selector: selectorOfLength(SELECTOR_LIMIT + 1, 'é'), code: CODE, refused: true, reason: 'selector-too-long' },
   { why: 'astral characters counted in code units, at the limit', selector: `#${'\u{1F600}'.repeat(1999)}a`, code: CODE, refused: false, reason: null },

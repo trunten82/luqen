@@ -48,6 +48,13 @@ describe('HARD-18 scan delete rule', () => {
     expect(scanDeleteRefusal(MEMBER, { orgId: FABRIKAM })).toBe('permission');
   });
 
+  it('HARD-18 delete rule never treats an api key sign in session as the user who started the scan', () => {
+    // A /login API-key session signs in under the user name 'admin', and the scans it starts record
+    // 'admin' as their starter: the session is still never the user who started them.
+    const apiKeySession = caller({ id: 'api-key', username: 'admin', role: 'admin' }, []);
+    expect(scanDeleteRefusal(apiKeySession, { orgId: 'system', createdBy: 'admin' })).toBe('permission');
+  });
+
   it('HARD-18 delete rule never treats an api key as the user who started the scan', () => {
     expect(scanDeleteRefusal(READ_ONLY_KEY, { orgId: 'system', createdBy: 'api-key' })).toBe('permission');
     expect(scanDeleteRefusal(ORG_READ_ONLY_KEY, { orgId: FABRIKAM, createdBy: 'api-key' })).toBe('permission');

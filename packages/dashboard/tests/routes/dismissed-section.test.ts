@@ -462,6 +462,23 @@ describe('actor label', () => {
     expect(text).not.toContain('issueDismissals');
   });
 
+  it('HARD-08 the Dismissed section names no api key of another organization when the key list answers for every organization', async () => {
+    const keyId = await storeKeyIn('Northwind CI', ctx.orgs.northwindOrgId);
+    const otherKey = (await ctx.storage.apiKeys.listKeys(ctx.orgs.northwindOrgId)).find((k) => k.id === keyId);
+    expect(otherKey).toBeDefined();
+    await markRaw({ actor: `api-key:${keyId}` });
+    // A key list that answers for every organization: it returns the other organization's key row.
+    const spy = vi.spyOn(ctx.storage.apiKeys, 'listKeys').mockResolvedValue([otherKey!]);
+    try {
+      const { doc, html } = await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId));
+      expect(spy).toHaveBeenCalledTimes(1); // positive control: the key list was read
+      expect(actorCells(doc).get(CODE_CONTRAST)!.by).toBe('API key');
+      expect(html).not.toContain('Northwind CI');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it('a system key, another org key, a deleted key, api-key:session and the legacy bare api-key show the generic API key label', async () => {
     const systemKey = await storeKeyIn('Northwind Ops'); // org 'system'
     const otherOrgKey = await storeKeyIn('Northwind CI', ctx.orgs.northwindOrgId);

@@ -7,7 +7,7 @@
  * Real SQLite through openStore; the route runs behind a preHandler that sets the identity the
  * real auth guard builds for an API key (id 'api-key' plus apiKeyId).
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { issueDismissalRoutes } from '../../src/routes/api/issue-dismissals.js';
 import {
@@ -125,6 +125,28 @@ describe('HARD-08 dismissal key snapshot — written at mark time', () => {
     expect(stored).not.toBeNull();
     expect(stored?.createdBy).toBe(`api-key:${keyId}`);
     expect(stored?.createdByKeySnapshot ?? null).toBeNull();
+  });
+
+  it('HARD-08 the snapshot keeps the organization rule when the key list answers for every organization', async () => {
+    const org = await seedOrg(store.storage, 'fabrikam');
+    const other = await seedOrg(store.storage, 'northwind');
+    const scanId = await seedScan(store.storage, { orgId: org });
+    const keyId = await store.storage.apiKeys.storeKey('lq-test-secret-value-0004', 'Northwind CI', other, 'admin');
+    const otherKey = (await store.storage.apiKeys.listKeys(other)).find((k) => k.id === keyId);
+    expect(otherKey).toBeDefined();
+    // A key list that answers for every organization: it returns the other organization's key row.
+    const spy = vi.spyOn(store.storage.apiKeys, 'listKeys').mockResolvedValue([otherKey!]);
+    try {
+      const srv = await asKey({ apiKeyId: keyId, role: 'admin' });
+      const res = await mark(srv, scanId);
+      expect(res.statusCode).toBe(201);
+      expect(spy).toHaveBeenCalled(); // positive control: the key list was read
+      const stored = await store.storage.issueDismissals!.getById((res.json() as { id: string }).id);
+      expect(stored).not.toBeNull();
+      expect(stored?.createdByKeySnapshot ?? null).toBeNull();
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it('HARD-08 a session user mark stores no snapshot', async () => {

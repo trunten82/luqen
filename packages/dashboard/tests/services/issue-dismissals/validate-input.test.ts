@@ -219,3 +219,81 @@ describe('validateMarkInput', () => {
     expect(result).toEqual({ ok: false, error: 'A reason is required to mark a finding as a false positive' });
   });
 });
+
+// HARD-01: a selector is classified by its length before its shape, and the whole-page check runs in
+// time linear in the selector's length.
+describe('HARD-01 selector classification cost', () => {
+  const RULE = 'WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail';
+
+  /** The pattern-based whole-page check (two global blanking patterns), kept as the oracle. */
+  function patternWholePage(selector: string): boolean {
+    const rootElements = new Set(['html', 'body', ':root']);
+    const wholePageXpath = /^\/\/?(html(\[1\])?(\/body(\[1\])?)?|body(\[1\])?)$/;
+    const combinator = /\s*[>+~]\s*|\s+/;
+    const compoundBase = /^(\*|:root|[a-z][a-z0-9-]*)/;
+    const targetsRoot = (part: string): boolean => {
+      const compounds = part.trim().split(combinator).filter((c) => c !== '');
+      if (compounds.length === 0) return false;
+      if (compounds.length === 1 && compounds[0] === '*') return true;
+      const base = compoundBase.exec(compounds[compounds.length - 1]);
+      return base !== null && rootElements.has(base[1]);
+    };
+    const normalised = selector.trim().toLowerCase();
+    if (normalised === '') return true;
+    if (wholePageXpath.test(normalised.replace(/\s+/g, ''))) return true;
+    const structural = normalised.replace(/\[[^\]]*\]/g, '[]').replace(/\([^)]*\)/g, '()');
+    return structural.split(',').some(targetsRoot);
+  }
+
+  it('HARD-01 the length of a selector is checked before its shape', () => {
+    // A selector list with a whole-page member, longer than the limit.
+    const longWholePage = `${'#x, '.repeat(1000)}body`;
+    expect(longWholePage.length).toBeGreaterThan(DISMISSAL_SELECTOR_MAX_LENGTH);
+    expect(isWholePageSelector(longWholePage)).toBe(true);
+    expect(dismissalRefusalReason(longWholePage, RULE)).toBe('selector-too-long');
+    expect(validateDismissalSelector(longWholePage)).toEqual({
+      ok: false,
+      error: `The selector must be at most ${DISMISSAL_SELECTOR_MAX_LENGTH} characters`,
+    });
+  });
+
+  it('HARD-01 refusing an over long selector takes bounded time', () => {
+    const selector = '('.repeat(16384);
+    const start = performance.now();
+    for (let i = 0; i < 20; i += 1) expect(dismissalRefusalReason(selector, RULE)).toBe('selector-too-long');
+    const elapsed = performance.now() - start;
+    expect(elapsed, `20 refusals took ${elapsed.toFixed(1)} ms`).toBeLessThan(50);
+  });
+
+  it('HARD-01 the whole page check answers as the pattern based check for generated selectors', () => {
+    const alphabet = ['[', ']', '(', ')', ',', '>', '+', '~', ' ', 'html', 'body', ':root', 'a', 'b', 'x', '*', '.', '#', '/', '"', '='];
+    let seed = 0x2545f491;
+    const next = (bound: number): number => {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      return seed % bound;
+    };
+    const mismatches: string[] = [];
+    const verdicts = new Set<boolean>();
+    for (let n = 0; n < 3000; n += 1) {
+      let selector = '';
+      const target = 1 + next(40);
+      while (selector.length < target) selector += alphabet[next(alphabet.length)];
+      selector = selector.slice(0, 40);
+      const expected = patternWholePage(selector);
+      verdicts.add(expected);
+      if (isWholePageSelector(selector) !== expected) mismatches.push(JSON.stringify(selector));
+    }
+    expect(mismatches).toEqual([]);
+    // Both answers occur, so the comparison can catch a drift in either direction.
+    expect([...verdicts].sort()).toEqual([false, true]);
+  });
+
+  it('HARD-01 the whole page check of a selector at the length limit takes bounded time', () => {
+    const selector = '(['.repeat(DISMISSAL_SELECTOR_MAX_LENGTH / 2);
+    expect(selector).toHaveLength(DISMISSAL_SELECTOR_MAX_LENGTH);
+    const start = performance.now();
+    for (let i = 0; i < 20; i += 1) expect(isWholePageSelector(selector)).toBe(false);
+    const elapsed = performance.now() - start;
+    expect(elapsed, `20 checks took ${elapsed.toFixed(1)} ms`).toBeLessThan(60);
+  });
+});
