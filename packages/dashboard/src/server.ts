@@ -827,10 +827,12 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   handlebars.registerHelper('dismissalRefused', dismissalRefused);
   handlebars.registerHelper('dismissalRefusedKey', dismissalRefusedKey);
 
-  // 4th arg is the issue's flagged-HTML snippet; handlebars appends its options
-  // object as the trailing argument, which buildFixSuggestionHint ignores.
-  handlebars.registerHelper('fixSuggestion', (criterion: string, message: string, scanId: string, context?: unknown) => {
-    return new handlebars.SafeString(buildFixSuggestionHint(criterion, message, scanId, context));
+  // 4th arg is the issue's flagged-HTML snippet, 5th the viewer's reports.view_technical flag
+  // (`@root.perm.reportsViewTechnical`): the snippet goes into the hint's request only when that flag
+  // is exactly true. Handlebars appends its options object as the trailing argument; a call without
+  // the flag passes that object, which is not `true`, so the snippet is left out.
+  handlebars.registerHelper('fixSuggestion', (criterion: string, message: string, scanId: string, context?: unknown, viewTechnical?: unknown) => {
+    return new handlebars.SafeString(buildFixSuggestionHint(criterion, message, scanId, context, viewTechnical));
   });
 
   // Auto-discover Handlebars partials. Drop a .hbs into views/partials/ or

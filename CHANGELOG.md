@@ -80,6 +80,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - The report page offers Dismiss, Revoke and the per-issue Assign buttons only
   to viewers who may see technical details (`reports.view_technical`), because
   these controls carry the finding's element selector.
+- The report page's fix hint carries the flagged element's markup only for
+  viewers holding `reports.view_technical`.
 - The report page disables Dismiss for every finding the server would refuse
   to dismiss, including a selector or rule code over its length limit, and the
   disabled button says why (no specific element, element selector too long,
