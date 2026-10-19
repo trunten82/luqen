@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Handlebars from 'handlebars';
+import { JSDOM } from 'jsdom';
 import { collectPartials, dismissalRefused } from '../../src/server.js';
 import { loadTranslations, t, type Locale } from '../../src/i18n/index.js';
 import {
@@ -633,5 +634,36 @@ describe('HARD-08 the key tag in the Dismissed section', () => {
     expect(section).toContain(`<time datetime="${keyCreatedAt}">`);
     expect(section).not.toContain('api-key:');
     expect(section).not.toContain('k-fabrikam-ci');
+  });
+
+  it('HARD-08 a named key label and its creation tag form one element in the actor cell', () => {
+    // On a phone each cell is a flex row (label, then value): every text run and element directly in
+    // the cell becomes its own flex item, so the sentence must sit in ONE element or it is split into
+    // columns ("API key: CI deploy (Created" | "<date>" | ")").
+    const keyCreatedAt = '2026-03-01T10:00:00.000Z';
+    const base: IssueDismissal = {
+      id: 'd-key-1', orgId: 'org-fabrikam', siteUrl: 'https://fabrikam.example', siteKey: 'https://fabrikam.example',
+      code: CODE, selector: SEL_PAGE, reason: 'Decorative', status: 'active',
+      createdBy: 'api-key:k-fabrikam-ci', createdById: 'api-key:k-fabrikam-ci', createdAt: '2026-10-01T08:00:00.000Z',
+      revokedBy: null, revokedById: null, revokedAt: null, revokeComment: null,
+      createdByKeySnapshot: { label: 'CI deploy', keyCreatedAt },
+    };
+    const revoked: IssueDismissal = {
+      ...base, id: 'd-key-2', status: 'revoked', revokedBy: 'api-key:k-live', revokedById: 'api-key:k-live',
+      revokedAt: '2026-10-02T08:00:00.000Z',
+    };
+    const dismissals = buildDismissalsView([base, revoked], {
+      showKeyNames: true, keys: new Map([['k-live', { label: 'Ops key', createdAt: keyCreatedAt }]]),
+    });
+    const doc = new JSDOM(render({ dismissals: dismissals as unknown as Record<string, unknown> }), { url: 'https://fabrikam.example/' }).window.document;
+    const cells = [...doc.querySelectorAll('#rpt-dismissed td')].filter((td) => (td.textContent ?? '').includes('API key:'));
+    expect(cells).toHaveLength(3); // positive control: active marker, revoked marker, revoker
+    for (const td of cells) {
+      const items = [...td.childNodes].filter((n) => n.nodeType === 1 || (n.textContent ?? '').trim() !== '');
+      expect(items, td.outerHTML).toHaveLength(1);
+      expect(items[0]!.nodeType, td.outerHTML).toBe(1);
+      expect((items[0] as Element).querySelector('time')).not.toBeNull();
+      expect((items[0]!.textContent ?? '').trim()).toMatch(/^API key: (CI deploy|Ops key) \(Created .+\)$/);
+    }
   });
 });
