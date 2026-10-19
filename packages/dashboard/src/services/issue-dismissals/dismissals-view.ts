@@ -10,9 +10,15 @@
  *     (quick 261013-dr7, WR-04: decided from the server-set actor ID - `api-key[:<id>]` for a key,
  *     a uuid for a user - never from the display string, which for a user is a chosen username)
  *     template shows the translated "API key" label. 89-11 (D-15 Q1 reverses the UD-16 title
- *     clause): the stored identifier is never rendered; when the caller's key-label map (built
- *     from the SCAN org's own key rows only) knows the id, the row carries that label so the
- *     template can say "API key: <label>". The template never inspects the actor string itself.
+ *     clause): the stored identifier is never rendered. HARD-08 (D-91-10): a MARKING key is named
+ *     from the snapshot stored with the dismissal (its label and its creation time), so the name
+ *     survives the key's deletion, and falls back to the caller's live key map; a REVOKING key is
+ *     named from the live key map only (built from the SCAN org's own key rows). Each name carries
+ *     the key's creation time as a tag ("API key: <label> (Created <time>)"), which tells two keys
+ *     with the same label apart. Names and tags appear only when the caller passes showKeyNames
+ *     (the viewer may touch the scan's org); otherwise every key reads as the generic label. The
+ *     legacy `api-key:session` and bare `api-key` actors name no key. The template never inspects
+ *     the actor string itself.
  *
  * Dates are pre-formatted with toLocaleString() exactly like the page's own createdAtDisplay
  * (the UI-SPEC says "user's locale"; no page implements that, so the server locale is used for
@@ -26,10 +32,23 @@ import type { IssueDismissal } from '../../db/interfaces/issue-dismissal-reposit
 const API_KEY_ACTOR = 'api-key';
 const API_KEY_PREFIX = `${API_KEY_ACTOR}:`;
 
-/** Key row id -> key label. Callers build it from ONE org's key rows (the scan's). */
-export type ApiKeyLabels = ReadonlyMap<string, string>;
+/** One key row as the view needs it: label and creation time. Never the id's secret or hash. */
+export interface ApiKeyInfo {
+  readonly label: string;
+  readonly createdAt: string;
+}
 
-const NO_LABELS: ApiKeyLabels = new Map();
+/** Key row id -> label and creation time. Callers build it from ONE org's key rows (the scan's). */
+export type ScanOrgKeys = ReadonlyMap<string, ApiKeyInfo>;
+
+export interface DismissalsViewOptions {
+  /** The scan org's live key rows (revokers, and markers written before the snapshot existed). */
+  readonly keys?: ScanOrgKeys;
+  /** May this viewer read key names? The route passes mayTouchDismissalOrg. Default: no. */
+  readonly showKeyNames?: boolean;
+}
+
+const NO_KEYS: ScanOrgKeys = new Map();
 
 export interface DismissalViewRow {
   readonly id: string;
@@ -38,13 +57,18 @@ export interface DismissalViewRow {
   readonly reason: string;
   readonly actor: string;
   readonly actorIsApiKey: boolean;
-  /** The key's label when the actor is an API key known to the label map; '' otherwise. */
+  /** The marking key's label (snapshot first, then the live key map); '' when not named. */
   readonly actorKeyName: string;
+  /** The marking key's creation time (ISO, for <time datetime>) and its display text; '' when not named. */
+  readonly actorKeyCreatedIso: string;
+  readonly actorKeyCreatedDisplay: string;
   readonly createdAtIso: string;
   readonly createdAtDisplay: string;
   readonly revokedBy: string;
   readonly revokedByIsApiKey: boolean;
   readonly revokedByKeyName: string;
+  readonly revokedByKeyCreatedIso: string;
+  readonly revokedByKeyCreatedDisplay: string;
   readonly revokedAtIso: string;
   readonly revokedAtDisplay: string;
   readonly revokeComment: string;
@@ -79,19 +103,54 @@ export function hasApiKeyActor(rows: readonly IssueDismissal[]): boolean {
   );
 }
 
-/** The label of key actor `api-key:<id>` (by its id) when the map knows it; '' for anything else. */
-function keyNameOf(actor: string, actorId: string | null, labels: ApiKeyLabels): string {
+/**
+ * The key row id of a key actor `api-key:<id>`; null for a user, the bare legacy `api-key` and the
+ * legacy `api-key:session` (a session opened before the key id was stored names no key).
+ */
+function keyIdOf(actor: string, actorId: string | null): string | null {
   const id = actorId ?? actor;
-  if (!id.startsWith(API_KEY_PREFIX)) return '';
-  return labels.get(id.slice(API_KEY_PREFIX.length)) ?? '';
+  if (!id.startsWith(API_KEY_PREFIX)) return null;
+  const keyId = id.slice(API_KEY_PREFIX.length);
+  return keyId === '' || keyId === 'session' ? null : keyId;
 }
 
 function display(iso: string | null): string {
   return iso === null ? '' : new Date(iso).toLocaleString();
 }
 
-function toViewRow(row: IssueDismissal, labels: ApiKeyLabels): DismissalViewRow {
+interface Ctx {
+  readonly keys: ScanOrgKeys;
+  readonly showKeyNames: boolean;
+}
+
+const UNNAMED = { name: '', createdIso: '', createdDisplay: '' } as const;
+
+function named(key: ApiKeyInfo | null | undefined): { name: string; createdIso: string; createdDisplay: string } {
+  if (key === null || key === undefined) return UNNAMED;
+  return { name: key.label, createdIso: key.createdAt, createdDisplay: display(key.createdAt) };
+}
+
+/** The marking key: the stored snapshot first (it outlives the key), then the live key map. */
+function markerKey(row: IssueDismissal, ctx: Ctx): ApiKeyInfo | null {
+  if (!ctx.showKeyNames) return null;
+  const keyId = keyIdOf(row.createdBy, row.createdById);
+  if (keyId === null) return null;
+  const snapshot = row.createdByKeySnapshot ?? null;
+  if (snapshot !== null) return { label: snapshot.label, createdAt: snapshot.keyCreatedAt };
+  return ctx.keys.get(keyId) ?? null;
+}
+
+/** The revoking key: the live key map only (a revoke stores no snapshot). */
+function revokerKey(row: IssueDismissal, ctx: Ctx): ApiKeyInfo | null {
+  if (!ctx.showKeyNames || row.revokedBy === null) return null;
+  const keyId = keyIdOf(row.revokedBy, row.revokedById);
+  return keyId === null ? null : ctx.keys.get(keyId) ?? null;
+}
+
+function toViewRow(row: IssueDismissal, ctx: Ctx): DismissalViewRow {
   const revokedBy = row.revokedBy ?? '';
+  const marker = named(markerKey(row, ctx));
+  const revoker = named(revokerKey(row, ctx));
   return {
     id: row.id,
     code: row.code,
@@ -99,12 +158,16 @@ function toViewRow(row: IssueDismissal, labels: ApiKeyLabels): DismissalViewRow 
     reason: row.reason,
     actor: row.createdBy,
     actorIsApiKey: isApiKeyActor(row.createdBy, row.createdById),
-    actorKeyName: keyNameOf(row.createdBy, row.createdById, labels),
+    actorKeyName: marker.name,
+    actorKeyCreatedIso: marker.createdIso,
+    actorKeyCreatedDisplay: marker.createdDisplay,
     createdAtIso: row.createdAt,
     createdAtDisplay: display(row.createdAt),
     revokedBy,
     revokedByIsApiKey: revokedBy !== '' && isApiKeyActor(revokedBy, row.revokedById),
-    revokedByKeyName: revokedBy === '' ? '' : keyNameOf(revokedBy, row.revokedById, labels),
+    revokedByKeyName: revoker.name,
+    revokedByKeyCreatedIso: revoker.createdIso,
+    revokedByKeyCreatedDisplay: revoker.createdDisplay,
     revokedAtIso: row.revokedAt ?? '',
     revokedAtDisplay: display(row.revokedAt),
     revokeComment: row.revokeComment ?? '',
@@ -114,10 +177,11 @@ function toViewRow(row: IssueDismissal, labels: ApiKeyLabels): DismissalViewRow 
 /** Undefined when the site has no dismissal row at all (UD-06). */
 export function buildDismissalsView(
   rows: readonly IssueDismissal[],
-  keyLabels: ApiKeyLabels = NO_LABELS,
+  options: DismissalsViewOptions = {},
 ): DismissalsView | undefined {
   if (rows.length === 0) return undefined;
-  const active = rows.filter((r) => r.status === 'active').map((r) => toViewRow(r, keyLabels));
-  const revoked = rows.filter((r) => r.status === 'revoked').map((r) => toViewRow(r, keyLabels));
+  const ctx: Ctx = { keys: options.keys ?? NO_KEYS, showKeyNames: options.showKeyNames === true };
+  const active = rows.filter((r) => r.status === 'active').map((r) => toViewRow(r, ctx));
+  const revoked = rows.filter((r) => r.status === 'revoked').map((r) => toViewRow(r, ctx));
   return { activeCount: active.length, revokedCount: revoked.length, active, revoked };
 }

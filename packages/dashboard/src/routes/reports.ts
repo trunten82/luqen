@@ -5,7 +5,7 @@ import { toSiteKey } from '../services/issue-dismissals/site-key.js';
 import {
   buildDismissalsView,
   hasApiKeyActor,
-  type ApiKeyLabels,
+  type ScanOrgKeys,
   type DismissalsView,
 } from '../services/issue-dismissals/dismissals-view.js';
 import type { IssueDismissal } from '../db/interfaces/issue-dismissal-repository.js';
@@ -199,21 +199,26 @@ interface ReportsQuery {
 const PAGE_SIZE = 20;
 
 /**
- * 89-11 (D-15 Q1, D-12): the label of each API key the Dismissed section may NAME. Only the
+ * 89-11 (D-15 Q1, D-12): the label and creation time of each API key the Dismissed section may
+ * NAME (HARD-08 adds the creation time as the tag that tells same-label keys apart). Only the
  * SCAN org's own key rows are read, so a system key or another org's key is never named on
  * this org's report (it falls back to the generic "API key"). Read once, and only when a row
  * carries an API-key actor; a failed read degrades to generic labels, never drops the section.
  */
-async function scanOrgKeyLabels(
+async function scanOrgKeys(
   storage: StorageAdapter,
   scan: { readonly id: string; readonly orgId: string },
   rows: readonly IssueDismissal[],
   log: FastifyBaseLogger,
-): Promise<ApiKeyLabels> {
+): Promise<ScanOrgKeys> {
   if (!hasApiKeyActor(rows)) return new Map();
   try {
     const keys = await storage.apiKeys.listKeys(scan.orgId);
-    return new Map(keys.filter((k) => k.orgId === scan.orgId).map((k) => [k.id, k.label] as const));
+    return new Map(
+      keys
+        .filter((k) => k.orgId === scan.orgId)
+        .map((k) => [k.id, { label: k.label, createdAt: k.createdAt }] as const),
+    );
   } catch (err) {
     // Scan id and error NAME only: driver messages can quote their input.
     log.warn(
@@ -648,12 +653,13 @@ export async function reportRoutes(
       if (mayViewScanReport(request.user, scan.orgId) && storage.issueDismissals !== undefined) {
         try {
           const rows = await storage.issueDismissals.listForSite(scan.orgId, toSiteKey(scan.siteUrl));
-          // Key LABELS only for viewers who may touch the scan's org: report access alone (an org
-          // user on a 'system' scan) shows the generic "API key", never another tenant's key names.
-          const keyLabels = mayTouchDismissalOrg(request.user, scan.orgId)
-            ? await scanOrgKeyLabels(storage, scan, rows, request.log)
-            : new Map<string, string>();
-          dismissals = buildDismissalsView(rows, keyLabels);
+          // Key NAMES (stored snapshot or live label, with the creation-time tag) only for viewers who
+          // may touch the scan's org: report access alone (an org user on a 'system' scan) shows the
+          // generic "API key", never another tenant's key names. showKeyNames is the switch; the
+          // live rows are not even read for a viewer who may not see them.
+          const showKeyNames = mayTouchDismissalOrg(request.user, scan.orgId);
+          const keys = showKeyNames ? await scanOrgKeys(storage, scan, rows, request.log) : new Map();
+          dismissals = buildDismissalsView(rows, { keys, showKeyNames });
         } catch (err) {
           // Scan id and error NAME only: driver messages can quote their input.
           request.log.warn(

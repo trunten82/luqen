@@ -148,7 +148,9 @@ export const gapScenarios = {
     await openDismissedSection(page);
     const by = await dismissedByTexts(page);
     check(S, 'positive control: both API-key dismissals are listed', Boolean(by[keyActors.fabrikamCode] && by[keyActors.systemCode]), JSON.stringify(by));
-    check(S, 'the org-key dismissal reads API key: Fabrikam CI', by[keyActors.fabrikamCode].text === 'API key: Fabrikam CI', JSON.stringify(by[keyActors.fabrikamCode]));
+    // HARD-08: a named key carries its creation time as a tag, "API key: <label> (Created <time>)".
+    check(S, 'the org-key dismissal reads API key: Fabrikam CI with its creation-time tag',
+      /^API key: Fabrikam CI \(Created \S.*\)$/.test(by[keyActors.fabrikamCode].text), JSON.stringify(by[keyActors.fabrikamCode]));
     check(S, 'the system-key dismissal reads API key', by[keyActors.systemCode].text === 'API key', JSON.stringify(by[keyActors.systemCode]));
     const html = await page.$eval('#rpt-dismissed', (d) => d.outerHTML);
     check(S, 'the section HTML contains no api-key: identifier and no key id',
