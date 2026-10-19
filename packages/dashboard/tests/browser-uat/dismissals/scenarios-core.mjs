@@ -6,6 +6,7 @@
 import {
   check, login, WAIT, newPersonaPage, openReport, showTab, pageFetch, jsonOf, shot, dismissButton,
   expandGroupOf, openMarkDialog, confirmMark, openDismissedSection, issueListText, sleep, contrastOf, log, scrollToInstant,
+  localeString,
 } from './lib.mjs';
 import { HERO, NAV, PROMO, WHOLE, LONG, REASON } from './fixture.mjs';
 
@@ -331,6 +332,11 @@ export const coreScenarios = {
     await expandGroupOf(page, refused);
     const attrs = await page.evaluate((b) => ({ title: b.getAttribute('title') || '', describedby: b.getAttribute('aria-describedby') || '', described: document.getElementById(b.getAttribute('aria-describedby') || '__none__') !== null, action: b.getAttribute('data-action') }), refused);
     check(S, 'it has a translated title and a description element, and no action', attrs.title.length > 10 && attrs.described && attrs.action === null, JSON.stringify(attrs));
+    // HARD-01: the copy names WHY: a whole-page finding has no specific element.
+    const noElement = localeString('en', 'issueDismissals.action.refusedTitle');
+    const wholeCopy = await page.evaluate((b) => ({ title: b.getAttribute('title') || '', sr: (document.getElementById(b.getAttribute('aria-describedby') || '__none__') || { textContent: '' }).textContent.trim() }), refused);
+    check(S, 'whole-page selector: the disabled Dismiss names the no-element reason (title and description)',
+      typeof noElement === 'string' && wholeCopy.title === noElement && wholeCopy.sr === noElement, JSON.stringify(wholeCopy).slice(0, 200));
     await refused.click();
     await sleep(600);
     const opened = await page.evaluate(() => document.querySelector('dialog[open]') !== null);
@@ -347,6 +353,7 @@ export const coreScenarios = {
           disabled: b.getAttribute('aria-disabled') === 'true', action: b.getAttribute('data-action'),
           selector: b.getAttribute('data-selector'), title: b.getAttribute('title') || '',
           described: document.getElementById(b.getAttribute('aria-describedby') || '__none__') !== null,
+          sr: (document.getElementById(b.getAttribute('aria-describedby') || '__none__') || { textContent: '' }).textContent.trim(),
         });
         const issues = [...document.querySelectorAll('#panel-issues .rpt-dismiss-btn')];
         return {
@@ -362,6 +369,12 @@ export const coreScenarios = {
         sites.pageIssue.filter((b) => b.disabled).length === 1 && sites.pageIssue.filter((b) => b.disabled).every(refusedOk), JSON.stringify(sites.pageIssue));
       check(S, 'over-long selector: the Templates-tab item shows a disabled Dismiss with its description and no action',
         sites.templatesTab.length === 1 && sites.templatesTab.every(refusedOk), JSON.stringify(sites.templatesTab));
+      // HARD-01: every disabled button names the selector-too-long reason, not the no-element one.
+      const tooLong = localeString('en', 'issueDismissals.action.refusedSelectorTooLong');
+      const disabledAll = [...sites.templateItem, ...sites.pageIssue, ...sites.templatesTab].filter((b) => b.disabled);
+      check(S, 'over-long selector: every disabled Dismiss names the selector-too-long reason (title and description) at all three sites',
+        typeof tooLong === 'string' && tooLong !== noElement && disabledAll.length === 3 && disabledAll.every((b) => b.title === tooLong && b.sr === tooLong),
+        JSON.stringify(disabledAll.map((b) => b.title)).slice(0, 240));
       check(S, 'positive control: the valid finding on the same report keeps an enabled Dismiss',
         sites.pageIssue.filter((b) => !b.disabled).length === 1 && sites.pageIssue.some((b) => !b.disabled && b.selector === PROMO.selector && b.action === 'rptDismissIssue'),
         JSON.stringify(sites.pageIssue));

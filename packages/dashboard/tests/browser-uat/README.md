@@ -113,11 +113,14 @@ from a direct mark, preview and revoke request, and `/admin/roles/new` offers no
 `tracer`, `permissions` (its world adds a custom-role reviewer holding `issues.dismiss`, `issues.assign`
 and `reports.view` but not `reports.view_technical`: no Dismiss, no Assign and no seeded selector in the
 page source), `dialog`, `refused` (the whole-page selector, and a second scan whose findings have a
-4001-character selector: a disabled Dismiss at the template item, the page issue and the Templates tab),
+4001-character selector: a disabled Dismiss at the template item, the page issue and the Templates tab,
+each naming its reason: no specific element, or a selector too long),
 `mark`, `surfaces`, `revoke`, `conflict`, `public`, `mobile`
 (375x812), `longtext` (1000-char reason, 600-char selector, 1000-char comment at 375 and 1280),
 `locales` (de, it, with the Dismissed section's dates in the session language; plus the revoke dialog's
-400 copy in en/de/it through an intercepted request),
+400 copy in en/de/it through an intercepted request; and, on the over-long-selector scan, the disabled
+Dismiss's reason in the session language and a preview refused with 403 through an intercepted request
+showing that language's no-permission text),
 `theme` (dark), `keyboard` (real key presses, real Escape), `overflow` (150 rows), and the 89-11 gap
 scenarios (`dismissals/scenarios-gap.mjs`):
 

@@ -8,6 +8,11 @@ import { HERO, NAV, PROMO, LONG, REASON } from './fixture.mjs';
 
 const MARK_PATH = (scanId) => `/api/v1/scans/${scanId}/dismissals`;
 
+/** Per-scenario world options for bootLocal (merged with CORE_WORLD and GAP_WORLD by name). */
+export const VIEW_WORLD = {
+  locales: { overlongScan: true },
+};
+
 async function markApi(page, scanId, f, reason = REASON) {
   const res = await pageFetch(page, 'POST', MARK_PATH(scanId), { code: f.code, selector: f.selector, reason });
   return jsonOf(res);
@@ -72,6 +77,48 @@ async function revokeInvalidCopy(page, S, locale) {
   }));
   check(S, `${locale}: an intercepted 400 on revoke shows the revoke wording, keeps the dialog open and the comment`,
     seen.revokePosts === 1 && after.error === want && after.open && after.comment === comment, JSON.stringify({ ...after, posts: seen.revokePosts }).slice(0, 240));
+}
+
+/**
+ * HARD-01, on the over-long-selector report in this locale: the disabled Dismiss names the
+ * selector-too-long reason in this language, and a preview the server refuses with 403 (answered by
+ * request interception: the GET never reaches the server) shows this locale's "no permission" text,
+ * not the no-element sentence, with no Try again. One screenshot of that dialog.
+ */
+async function refusalCopy(page, S, locale, base, scanId) {
+  await openReport(page, base, scanId, 'issues');
+  const want = localeString(locale, 'issueDismissals.action.refusedSelectorTooLong');
+  const english = localeString('en', 'issueDismissals.action.refusedSelectorTooLong');
+  const titles = await page.evaluate(() => [...document.querySelectorAll('.rpt-dismiss-btn[aria-disabled="true"]')].map((b) => b.getAttribute('title') || ''));
+  check(S, `${locale}: an over-long selector's disabled Dismiss names that reason in ${locale}, not in English`,
+    typeof want === 'string' && want !== english && titles.length > 0 && titles.every((x) => x === want), JSON.stringify(titles).slice(0, 200));
+  const forbidden = localeString(locale, 'issueDismissals.error.forbidden');
+  const noElement = localeString(locale, 'issueDismissals.dialog.preview.refused');
+  const seen = { previews: 0 };
+  const onRequest = (req) => {
+    if (req.method() === 'GET' && /\/dismissals\/preview$/.test(new URL(req.url()).pathname)) {
+      seen.previews += 1;
+      req.respond({ status: 403, contentType: 'application/json', body: JSON.stringify({ error: 'SERVER-DETAIL-NOT-SHOWN' }) });
+    } else req.continue();
+  };
+  await page.setRequestInterception(true);
+  page.on('request', onRequest);
+  try {
+    await openMarkDialog(page, 'panel-issues', PROMO.selector);
+  } finally {
+    page.off('request', onRequest);
+    await page.setRequestInterception(false);
+  }
+  const after = await page.evaluate(() => ({
+    status: (document.querySelector('#issue-dismiss-dialog [data-preview="status"]') || { textContent: '' }).textContent.trim(),
+    retryHidden: document.querySelector('#issue-dismiss-dialog [data-action="rptDismissRetryPreview"]').classList.contains('is-hidden'),
+    body: document.getElementById('issue-dismiss-dialog').innerText,
+  }));
+  check(S, `${locale}: a preview refused with 403 shows the ${locale} no-permission text, not the no-element text, and no Try again`,
+    seen.previews === 1 && typeof forbidden === 'string' && after.status === forbidden && after.status !== noElement && after.retryHidden && !after.body.includes('SERVER-DETAIL-NOT-SHOWN'),
+    JSON.stringify({ status: after.status, retryHidden: after.retryHidden, previews: seen.previews }).slice(0, 240));
+  await shot(page, `locale-${locale}-preview-refused`);
+  await page.click('[data-action="rptDismissCancel"]');
 }
 
 /**
@@ -250,6 +297,8 @@ export const viewScenarios = {
       await page.click('[data-action="rptRevokeCancel"]');
       await scrollToInstant(page, '#rpt-dismissed');
       await shot(page, `locale-${locale}-section`);
+      if (world.overlongScanId) await refusalCopy(page, S, locale, base, world.overlongScanId);
+      else check(S, `${locale}: the over-long-selector report exists for the refusal copy checks`, false);
     }
     void m;
   },
