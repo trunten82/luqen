@@ -112,7 +112,8 @@ from a direct mark, preview and revoke request, and `/admin/roles/new` offers no
 
 `tracer`, `permissions` (its world adds a custom-role reviewer holding `issues.dismiss`, `issues.assign`
 and `reports.view` but not `reports.view_technical`: no Dismiss, no Assign and no seeded selector in the
-page source), `dialog`, `refused` (the whole-page selector, and a second scan whose findings have a
+page source; and a custom-role fixer holding `issues.fix` and `reports.view` only: the fix hint is shown
+and no hint's request carries element markup), `dialog`, `refused` (the whole-page selector, and a second scan whose findings have a
 4001-character selector: a disabled Dismiss at the template item, the page issue and the Templates tab,
 each naming its reason: no specific element, or a selector too long),
 `mark`, `surfaces`, `revoke`, `conflict`, `public`, `mobile`

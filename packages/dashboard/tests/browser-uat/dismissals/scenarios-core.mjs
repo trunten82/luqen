@@ -25,6 +25,18 @@ const SEEDED_SELECTORS = [NAV, HERO, PROMO, LONG].map((f) => f.selector);
 const escapeHtml = (v) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const selectorsIn = (source) => SEEDED_SELECTORS.filter((sel) => source.includes(sel) || source.includes(escapeHtml(sel)));
 
+/**
+ * The fix hints on the open page: how many there are, and how many carry element markup (the
+ * `htmlContext` parameter of the hint's request).
+ */
+async function fixHintSurvey(page) {
+  return page.evaluate(() => {
+    const hints = [...document.querySelectorAll('details.rpt-fix-hint')];
+    const contexts = hints.map((d) => new URL(d.getAttribute('hx-get') ?? '', location.origin).searchParams.get('htmlContext') ?? '');
+    return { hints: hints.length, withMarkup: contexts.filter((c) => c !== '').length };
+  });
+}
+
 const MARK_PATH = (scanId) => `/api/v1/scans/${scanId}/dismissals`;
 const PREVIEW_PATH = (scanId, f) => `${MARK_PATH(scanId)}/preview?code=${encodeURIComponent(f.code)}&selector=${encodeURIComponent(f.selector)}`;
 
@@ -203,6 +215,9 @@ export const coreScenarios = {
     check(S, 'admin: an Assign button is offered on the issues (so its absence below is meaningful)', a.assign > 0, JSON.stringify(a));
     check(S, 'admin: the page source carries every seeded selector (so their absence below is meaningful)',
       selectorsIn(await admin.page.content()).length === SEEDED_SELECTORS.length);
+    // Positive control for the fixer checks below: the admin's fix hints DO carry element markup.
+    const ah = await fixHintSurvey(admin.page);
+    check(S, 'admin: fix hints carry element markup (so its absence below is meaningful)', ah.hints > 0 && ah.withMarkup === ah.hints, JSON.stringify(ah));
     // One existing dismissal so the non-admin personas have a Dismissed section to look at.
     const seeded = await pageFetch(admin.page, 'POST', MARK_PATH(scanId), { code: PROMO.code, selector: PROMO.selector, reason: REASON });
     check(S, 'admin: the seeding mark is accepted (201)', seeded.status === 201, String(seeded.status));
@@ -276,6 +291,20 @@ export const coreScenarios = {
       await rv.page.evaluate(() => window.scrollBy(0, -80));
       await shot(rv.page, 'permissions-reviewer-issues');
       await rv.context.close();
+
+      // HARD-02: a custom org role holding issues.fix and reports.view but NOT reports.view_technical
+      // gets the fix hint, and no hint's request carries the flagged element's markup.
+      const fx = await newPersonaPage(browser, base, personas.fixer);
+      check(S, 'login as the custom-role fixer (fix hints, no technical details)', fx.ok);
+      await openReport(fx.page, base, scanId, 'issues');
+      const fh = await fixHintSurvey(fx.page);
+      check(S, 'fixer: the report page shows the fix hint', fh.hints > 0, JSON.stringify(fh));
+      check(S, 'fixer: no fix hint request carries element markup', fh.withMarkup === 0, JSON.stringify(fh));
+      check(S, 'fixer: the page source contains none of the seeded selectors', selectorsIn(await fx.page.content()).length === 0);
+      await fx.page.click('#panel-issues .rpt-group__header');
+      await fx.page.evaluate(() => document.querySelector('#panel-issues .rpt-group:not(.rpt-group--collapsed) .rpt-fix-hint')?.scrollIntoView({ block: 'center', behavior: 'instant' }));
+      await shot(fx.page, 'permissions-fixer-hint');
+      await fx.context.close();
     }
 
     if (granted) {

@@ -27,6 +27,9 @@ export const PERSONAS = {
   // Seeded only in the permissions world: a custom org role with issues.dismiss, issues.assign and
   // reports.view but NOT reports.view_technical (HARD-02).
   reviewer: { user: 'uat-reviewer', pass: PASS },
+  // Seeded only in the permissions world: a custom org role with issues.fix and reports.view but NOT
+  // reports.view_technical (HARD-02: the fix hint carries no element markup).
+  fixer: { user: 'uat-fixer', pass: PASS },
 };
 
 /** Remove everything under .tmp except the tracked .gitignore and the screenshot directory. */
@@ -135,6 +138,15 @@ async function seedReviewer(storage, raw, bcrypt, orgId, now) {
   return [insertUser(raw, bcrypt, PERSONAS.reviewer, 'uat-none', orgId, now), role.id];
 }
 
+/** The custom-role fixer (HARD-02): sees fix hints, may not see technical details. */
+async function seedFixer(storage, raw, bcrypt, orgId, now) {
+  const role = await storage.roles.createRole({
+    name: 'Fixer', description: 'fix hints without technical details',
+    permissions: ['reports.view', 'issues.fix'], orgId,
+  });
+  return [insertUser(raw, bcrypt, PERSONAS.fixer, 'uat-none', orgId, now), role.id];
+}
+
 export async function bootLocal({ keepShots = true, apiKeyActors = false, reviewer = false, overlongScan = false } = {}) {
   log('resetting .tmp workspace');
   resetWorkspace({ keepShots });
@@ -169,7 +181,7 @@ export async function bootLocal({ keepShots = true, apiKeyActors = false, review
     member: [insertUser(raw, bcrypt, PERSONAS.member, 'uat-none', orgId, now), roleId('Member')],
     viewer: [insertUser(raw, bcrypt, PERSONAS.viewer, 'uat-none', orgId, now), roleId('Viewer')],
     reportsOnly: [insertUser(raw, bcrypt, PERSONAS.reportsOnly, 'uat-none', orgId, now), reportsOnlyRole.id],
-    ...(reviewer ? { reviewer: await seedReviewer(storage, raw, bcrypt, orgId, now) } : {}),
+    ...(reviewer ? { reviewer: await seedReviewer(storage, raw, bcrypt, orgId, now), fixer: await seedFixer(storage, raw, bcrypt, orgId, now) } : {}),
   };
   raw.close();
   for (const [name, [userId, rid]] of Object.entries(people)) {
