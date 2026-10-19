@@ -69,9 +69,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   to viewers who may see technical details (`reports.view_technical`), because
   these controls carry the finding's element selector.
 - The report page disables Dismiss for every finding the server would refuse
-  to dismiss, including a selector or rule code over its length limit. A
-  dismissal preview the server refuses shows the refused hint instead of Try
-  again; timeouts, rate limits and server errors still offer Try again.
+  to dismiss, including a selector or rule code over its length limit, and the
+  disabled button says why (no specific element, element selector too long,
+  rule code missing, rule code too long) in the viewer's interface language. A
+  dismissal preview the server refuses says why in the viewer's language
+  instead of offering Try again; timeouts, rate limits and server errors still
+  offer Try again. The preview answers a selector over 4000 characters as
+  refused with reason `selector-too-long`.
+- The LLM prompt reset and compare dialog titles show the capability name as
+  written, for example "Reset generate-fix to default?".
+- `GET /orgs/current` reports the organization the request acts in, including
+  right after sign-in.
 - Translated text inserts each value exactly as given (`$&`, `` $` `` and `$'`
   in a value such as an API key label are kept as typed) and replaces every
   occurrence of a placeholder.
