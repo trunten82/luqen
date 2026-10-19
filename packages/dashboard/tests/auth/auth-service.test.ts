@@ -577,6 +577,24 @@ describe('AuthService', () => {
       expect(read).toHaveBeenCalled();
     });
 
+    it('HARD-21 an api key session without a key id is refused', async () => {
+      const db = storage.getRawDatabase();
+      const service = new AuthService(db, mockPluginManager([]), storage);
+      const regenerate = vi.fn();
+      const sessionData: Record<string, unknown> = {
+        userId: 'api-key', username: 'admin', role: 'admin', authMethod: 'api-key', bootId: service.getBootId(),
+      };
+      const request = {
+        headers: {},
+        session: { get: vi.fn((key: string) => sessionData[key]), set: vi.fn(), delete: vi.fn(), regenerate },
+      } as unknown as FastifyRequest;
+
+      const result = await service.authenticateRequest(request);
+
+      expect(result.authenticated).toBe(false);
+      expect(regenerate).toHaveBeenCalled();
+    });
+
     it('HARD-21 a session request reads the stored user once', async () => {
       const db = storage.getRawDatabase();
       const user = await storage.users.createUser('fabrikam-c1', 'password123', 'user');

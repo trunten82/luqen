@@ -78,6 +78,16 @@ export function validateApiKey(
 }
 
 /**
+ * May the key with row id `keyId` keep a dashboard session open?
+ */
+export function apiKeyOpensDashboardSession(
+  _db: Database.Database,
+  _keyId: string,
+): boolean {
+  return true;
+}
+
+/**
  * Return an existing active key status or create a new key if none exist.
  * The plaintext key is only returned when newly generated.
  */

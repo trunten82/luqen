@@ -8,7 +8,9 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { LightMyRequestResponse } from 'fastify';
-import { startMcpOauthHarness, type McpOauthHarness } from '../helpers/mcp-oauth-harness.js';
+import { randomUUID } from 'node:crypto';
+import { startMcpOauthHarness, type HarnessSession, type McpOauthHarness } from '../helpers/mcp-oauth-harness.js';
+import { generateApiKey, storeApiKey } from '../../src/auth/api-key.js';
 
 const PASSWORD = 'Fabrikam-Session-42!';
 
@@ -151,5 +153,192 @@ describe('HARD-21 a session answers for its stored user', () => {
 
     expect(page.statusCode, trail).toBe(302);
     expect(rows, trail).toEqual([{ details: 'inactive_user', actor_id: user.id }]);
+  }, 60_000);
+});
+
+/**
+ * Sign in through POST /login from `remoteAddress` (the sign-in route allows ten attempts per
+ * address in 15 minutes; these tests sign in from their own address) and return the session with a
+ * page CSRF token issued for it.
+ */
+async function signInFrom(fields: Record<string, string>, remoteAddress: string): Promise<HarnessSession> {
+  const page = await h.app.inject({ method: 'GET', url: '/login', remoteAddress });
+  const anonymous = page.cookies.find((c) => c.name === 'session')?.value ?? '';
+  const login = await h.app.inject({
+    method: 'POST', url: '/login', remoteAddress, cookies: { session: anonymous },
+    headers: { 'x-csrf-token': csrfOf(page.body) }, payload: fields,
+  });
+  expect(login.statusCode, `login=${login.statusCode}`).toBe(302);
+  const cookie = login.cookies.find((c) => c.name === 'session')?.value ?? '';
+  const account = await get(cookie, '/account');
+  return { cookie: account.cookies.find((c) => c.name === 'session')?.value ?? cookie, csrf: csrfOf(account.body) };
+}
+
+function csrfOf(html: string): string {
+  return /name="csrf-token" content="([^"]+)"/.exec(html)?.[1] ?? /name="_csrf" value="([^"]+)"/.exec(html)?.[1] ?? '';
+}
+
+const SECOND_ADDRESS = '127.0.0.2';
+
+/** A system administrator key; returns its secret and row id. */
+async function systemAdminKey(label: string): Promise<{ readonly key: string; readonly id: string }> {
+  const key = generateApiKey();
+  const id = storeApiKey(h.seed.getRawDatabase(), key, label, 'admin');
+  return { key, id };
+}
+
+/** The organization a session's request acts in, as GET /orgs/current reports it. */
+async function currentOrgOf(cookie: string): Promise<string | null> {
+  const res = await get(cookie, '/orgs/current');
+  expect(res.statusCode, `orgs/current=${res.statusCode}`).toBe(200);
+  return (res.json() as { currentOrgId: string | null }).currentOrgId;
+}
+
+/** The org of a scan as the session's org-scoped GraphQL read answers it (null when not readable). */
+async function scanOrgThrough(cookie: string, scanId: string): Promise<string | null> {
+  const res = await h.app.inject({
+    method: 'POST', url: '/graphql', cookies: { session: cookie },
+    headers: { 'content-type': 'application/json' },
+    payload: { query: 'query Q($id: ID!) { scan(id: $id) { orgId } }', variables: { id: scanId } },
+  });
+  expect(res.statusCode, `graphql=${res.statusCode}`).toBe(200);
+  return (res.json() as { data?: { scan?: { orgId?: string } | null } }).data?.scan?.orgId ?? null;
+}
+
+/** An organization the user belongs to through org_members and the org's Member team. */
+async function joinOrg(orgId: string, userId: string, tag: string): Promise<string> {
+  const memberRole = await h.seed.roles.getRoleByNameAndOrg('Member', orgId);
+  const team = await h.seed.teams.createTeam({ name: `${tag}-members`, description: '', orgId, ...(memberRole !== null ? { roleId: memberRole.id } : {}) });
+  await h.seed.teams.addTeamMember(team.id, userId);
+  await h.seed.organizations.addMember(orgId, userId, 'member');
+  return team.id;
+}
+
+async function leaveOrg(orgId: string, userId: string, teamId: string): Promise<void> {
+  await h.seed.teams.removeTeamMember(teamId, userId);
+  await h.seed.organizations.removeMember(orgId, userId);
+}
+
+const pause = async (): Promise<void> => await new Promise((r) => setTimeout(r, 5));
+
+describe('HARD-21 an api key session answers for its key', () => {
+  it('HARD-21 an api key session ends once its key is revoked', async () => {
+    const { key, id } = await systemAdminKey('Fabrikam s5');
+    const session = await signInFrom({ apiKey: key }, SECOND_ADDRESS);
+    const before = await get(session.cookie, '/account');
+    const trail = [`before=${before.statusCode}`];
+    expect(before.statusCode, trail.join(' ')).toBe(200); // positive control: the key session works
+
+    await h.seed.apiKeys.revokeKey(id);
+    const after = await get(session.cookie, '/account');
+    trail.push(`after=${after.statusCode} location=${String(after.headers.location)}`);
+
+    expect(after.statusCode, trail.join(' ')).toBe(302);
+    expect(String(after.headers.location), trail.join(' ')).toMatch(/^\/login/);
+  }, 60_000);
+
+  it('HARD-21 an api key session ends once its key expires', async () => {
+    const { key, id } = await systemAdminKey('Fabrikam s6');
+    const session = await signInFrom({ apiKey: key }, SECOND_ADDRESS);
+    const before = await get(session.cookie, '/account');
+    const trail = [`before=${before.statusCode}`];
+    expect(before.statusCode, trail.join(' ')).toBe(200); // positive control
+
+    h.seed.getRawDatabase().prepare('UPDATE api_keys SET expires_at = ? WHERE id = ?')
+      .run(new Date(Date.now() - 60_000).toISOString(), id);
+    const after = await get(session.cookie, '/account');
+    trail.push(`after=${after.statusCode} location=${String(after.headers.location)}`);
+
+    expect(after.statusCode, trail.join(' ')).toBe(302);
+    expect(String(after.headers.location), trail.join(' ')).toMatch(/^\/login/);
+  }, 60_000);
+
+  it('HARD-21 an api key session answers while its key is active', async () => {
+    const { key } = await systemAdminKey('Fabrikam s7');
+    const session = await signInFrom({ apiKey: key }, SECOND_ADDRESS);
+    const first = await get(session.cookie, '/account');
+    const second = await get(session.cookie, '/admin/api-keys');
+    const trail = `first=${first.statusCode} second=${second.statusCode}`;
+
+    expect(first.statusCode, trail).toBe(200);
+    expect(second.statusCode, trail).toBe(200);
+  }, 60_000);
+});
+
+describe('HARD-21 a session acts only in an organization of its user', () => {
+  it('HARD-21 a session acts only in an organization its user belongs to', async () => {
+    const user = await h.seed.users.createUser('northwind-s8', PASSWORD, 'user');
+    const northwind = await h.seed.organizations.createOrg({ name: 'Northwind S8', slug: 'northwind-s8' });
+    await pause();
+    const fabrikam = await h.seed.organizations.createOrg({ name: 'Fabrikam S8', slug: 'fabrikam-s8' });
+    await joinOrg(northwind.id, user.id, 'northwind-s8');
+    const fabrikamTeam = await joinOrg(fabrikam.id, user.id, 'fabrikam-s8');
+    const scanId = `scan_${randomUUID().replace(/-/g, '')}`;
+    await h.seed.scans.createScan({
+      id: scanId, siteUrl: 'https://fabrikam.example/', standard: 'WCAG2AA', jurisdictions: [], regulations: [],
+      createdBy: 'seed', createdAt: new Date().toISOString(), orgId: fabrikam.id,
+    });
+    const session = await signInFrom({ username: 'northwind-s8', password: PASSWORD }, SECOND_ADDRESS);
+    const switched = await h.switchOrg(session, fabrikam.id);
+    const trail = [`switch=${switched.status}`];
+    const cookie = switched.session.cookie;
+    const before = await currentOrgOf(cookie);
+    const readBefore = await scanOrgThrough(cookie, scanId);
+    trail.push(`before=${before === fabrikam.id ? 'fabrikam' : String(before)} read=${readBefore === fabrikam.id ? 'fabrikam' : String(readBefore)}`);
+    expect(before, trail.join(' ')).toBe(fabrikam.id); // positive control: the session acts in Fabrikam
+    expect(readBefore, trail.join(' ')).toBe(fabrikam.id);
+
+    await leaveOrg(fabrikam.id, user.id, fabrikamTeam);
+    const after = await currentOrgOf(cookie);
+    const readAfter = await scanOrgThrough(cookie, scanId);
+    trail.push(`after=${after === northwind.id ? 'northwind' : after === fabrikam.id ? 'fabrikam' : String(after)} read=${String(readAfter === fabrikam.id ? 'fabrikam' : readAfter)}`);
+
+    expect(after, trail.join(' ')).toBe(northwind.id);
+    expect(readAfter, trail.join(' ')).toBeNull();
+  }, 60_000);
+
+  it('HARD-21 a session forgets an organization its user left', async () => {
+    const user = await h.seed.users.createUser('northwind-s9', PASSWORD, 'user');
+    const northwind = await h.seed.organizations.createOrg({ name: 'Northwind S9', slug: 'northwind-s9' });
+    await pause();
+    const fabrikam = await h.seed.organizations.createOrg({ name: 'Fabrikam S9', slug: 'fabrikam-s9' });
+    await joinOrg(northwind.id, user.id, 'northwind-s9');
+    const fabrikamTeam = await joinOrg(fabrikam.id, user.id, 'fabrikam-s9');
+    const session = await signInFrom({ username: 'northwind-s9', password: PASSWORD }, SECOND_ADDRESS);
+    const switched = await h.switchOrg(session, fabrikam.id);
+    const name = (id: string | null): string => (id === northwind.id ? 'northwind' : id === fabrikam.id ? 'fabrikam' : String(id));
+    const trail = [`switch=${switched.status}`];
+    let cookie = switched.session.cookie;
+    const before = await currentOrgOf(cookie);
+    trail.push(`before=${name(before)}`);
+    expect(before, trail.join(' ')).toBe(fabrikam.id); // positive control
+
+    await leaveOrg(fabrikam.id, user.id, fabrikamTeam);
+    const afterLeaving = await get(cookie, '/orgs/current');
+    cookie = afterLeaving.cookies.find((c) => c.name === 'session')?.value ?? cookie;
+    trail.push(`left=${name((afterLeaving.json() as { currentOrgId: string | null }).currentOrgId)}`);
+    await h.seed.organizations.addMember(fabrikam.id, user.id, 'member');
+    const afterReturning = await currentOrgOf(cookie);
+    trail.push(`returned=${name(afterReturning)}`);
+
+    expect(afterReturning, trail.join(' ')).toBe(northwind.id);
+  }, 60_000);
+
+  it('HARD-21 a session of a user who left every organization acts in no organization', async () => {
+    const user = await h.seed.users.createUser('contoso-s10', PASSWORD, 'user');
+    const contoso = await h.seed.organizations.createOrg({ name: 'Contoso S10', slug: 'contoso-s10' });
+    const contosoTeam = await joinOrg(contoso.id, user.id, 'contoso-s10');
+    const session = await signInFrom({ username: 'contoso-s10', password: PASSWORD }, SECOND_ADDRESS);
+    const switched = await h.switchOrg(session, contoso.id);
+    const cookie = switched.session.cookie;
+    const before = await currentOrgOf(cookie);
+    const trail = [`switch=${switched.status} before=${before === contoso.id ? 'contoso' : String(before)}`];
+    expect(before, trail.join(' ')).toBe(contoso.id); // positive control
+
+    await leaveOrg(contoso.id, user.id, contosoTeam);
+    const after = await currentOrgOf(cookie);
+    trail.push(`after=${after === contoso.id ? 'contoso' : String(after)}`);
+
+    expect(after, trail.join(' ')).toBeNull();
   }, 60_000);
 });
