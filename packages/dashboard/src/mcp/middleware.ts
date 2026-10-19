@@ -61,6 +61,10 @@ export interface McpAuthPreHandlerOptions {
     readonly roles: {
       getEffectivePermissions(userId: string, orgId?: string): Promise<Set<string>>;
     };
+    /** The organizations the stored user belongs to (read on every request). */
+    readonly organizations: {
+      getUserOrgs(userId: string): Promise<ReadonlyArray<{ readonly id: string }>>;
+    };
     /**
      * Phase 31.2 D-20 bullet 3 — post-verifyToken client-status check.
      * Only `revokedAt` is read; other fields are irrelevant to the middleware.

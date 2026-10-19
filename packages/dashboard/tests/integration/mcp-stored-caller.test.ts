@@ -4,8 +4,8 @@
  * Boots the REAL createServer (tests/helpers/mcp-oauth-harness.ts). Tokens are either minted through
  * the real OAuth flow (register -> authorize -> consent -> token) or signed with the server's own
  * active signing key (`signToken`), so the verifier accepts them exactly as it accepts a minted one.
- * Each test then changes the stored state (role, active flag, user row, client) and reads what
- * /api/v1/mcp answers.
+ * Each test then changes the stored state (role, active flag, user row, organization membership,
+ * client) and reads what /api/v1/mcp answers.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startMcpOauthHarness, type McpOauthHarness } from '../helpers/mcp-oauth-harness.js';
@@ -26,10 +26,14 @@ interface SeededMember {
   readonly orgId: string;
   readonly userId: string;
   readonly username: string;
+  readonly teamId: string;
 }
 
-/** A fresh org and a member whose global role is 'user', holding mcp.use and reports.view in the org through a team. */
-async function seedMember(tag: string): Promise<SeededMember> {
+/**
+ * A fresh org and a member whose global role is 'user', holding mcp.use and reports.view in the org
+ * through a team; `orgMember: false` leaves out the org_members row (membership through the team only).
+ */
+async function seedMember(tag: string, opts: { readonly orgMember?: boolean } = {}): Promise<SeededMember> {
   const org = await h.seed.organizations.createOrg({ name: `Fabrikam ${tag}`, slug: `fabrikam-sc-${tag}` });
   const username = `fabrikam-member-${tag}`;
   const user = await h.seed.users.createUser(username, PASSWORD, 'user');
@@ -38,8 +42,8 @@ async function seedMember(tag: string): Promise<SeededMember> {
   });
   const team = await h.seed.teams.createTeam({ name: `fabrikam-${tag}-team`, description: '', orgId: org.id, roleId: role.id });
   await h.seed.teams.addTeamMember(team.id, user.id);
-  await h.seed.organizations.addMember(org.id, user.id, 'member');
-  return { orgId: org.id, userId: user.id, username };
+  if (opts.orgMember !== false) await h.seed.organizations.addMember(org.id, user.id, 'member');
+  return { orgId: org.id, userId: user.id, username, teamId: team.id };
 }
 
 /** Login, switch to the member's org and mint a read/write token through the real OAuth flow. */
@@ -172,6 +176,7 @@ describe('HARD-19 the mcp endpoint answers for the stored user of the token', ()
     const user = await h.seed.users.createUser('fabrikam-member-c6', PASSWORD, 'user');
     await h.seed.users.updateUserRole(user.id, 'fabrikam-c6-none');
     const org = await h.seed.organizations.createOrg({ name: 'Fabrikam c6', slug: 'fabrikam-sc-c6' });
+    await h.seed.organizations.addMember(org.id, user.id, 'member');
     const token = await h.signToken({ sub: user.id, scopes: ['read', 'write'], orgId: org.id });
     const listed = await h.listTools(token);
     const call = await h.callTool(token, 'dashboard_list_reports', {});
@@ -182,5 +187,66 @@ describe('HARD-19 the mcp endpoint answers for the stored user of the token', ()
     expect(listed.wwwAuthenticate, trail).toContain('error_description="no_permission"');
     expect(listed.names, trail).toEqual([]);
     expect(call.status, trail).toBe(403);
+  }, 60_000);
+
+  it('HARD-19 a token of a user who left the token organization is refused', async () => {
+    const member = await seedMember('c7');
+    const trail: string[] = [];
+    const token = await mintFor(member, trail);
+    expect(token, trail.join(' ')).toBeDefined();
+    const before = await h.listTools(token!);
+    trail.push(`before=${before.status}/${before.names.length}`);
+    expect(before.status, trail.join(' ')).toBe(200); // positive control: the token works while the user belongs to the org
+
+    await h.seed.teams.removeTeamMember(member.teamId, member.userId);
+    await h.seed.organizations.removeMember(member.orgId, member.userId);
+    const after = await h.listTools(token!);
+    const call = await h.callTool(token!, 'dashboard_list_reports', {});
+    trail.push(`after=${after.status}/${after.names.length} call=${call.status}`);
+
+    expect(after.status, trail.join(' ')).toBe(401);
+    expect(after.wwwAuthenticate, trail.join(' ')).toContain('error="invalid_token"');
+    expect(after.wwwAuthenticate, trail.join(' ')).toContain('error_description="not_member"');
+    expect(after.names, trail.join(' ')).toEqual([]);
+    expect(call.status, trail.join(' ')).toBe(401);
+  }, 60_000);
+
+  it('HARD-19 a global admin token answers in an organization the admin is not a member of', async () => {
+    const admin = await h.seed.users.createUser('northwind-admin-c8', PASSWORD, 'admin');
+    const org = await h.seed.organizations.createOrg({ name: 'Fabrikam c8', slug: 'fabrikam-sc-c8' });
+    const token = await h.signToken({ sub: admin.id, scopes: ['read', 'write'], orgId: org.id });
+    const listed = await h.listTools(token);
+    const trail = `list=${listed.status}/${listed.names.length}`;
+
+    expect(listed.status, trail).toBe(200);
+    expect(listed.names, trail).toContain('dashboard_list_users');
+  }, 60_000);
+
+  it('HARD-19 a token without an organization answers from the global role', async () => {
+    const user = await h.seed.users.createUser('fabrikam-member-c9', PASSWORD, 'user');
+    const trail: string[] = [];
+    const login = await h.login('fabrikam-member-c9', PASSWORD);
+    trail.push(`login=${login.status}`);
+    const minted = await h.mintToken(login.session, ['read', 'write']);
+    for (const s of minted.steps) trail.push(`${s.step}=${s.status}`);
+    expect(minted.token, trail.join(' ')).toBeDefined();
+    const listed = await h.listTools(minted.token!);
+    trail.push(`list=${listed.status}/${listed.names.length}`);
+    expect((await h.seed.organizations.getUserOrgs(user.id)).length, trail.join(' ')).toBe(0);
+
+    expect(listed.status, trail.join(' ')).toBe(200);
+    expect(listed.names, trail.join(' ')).toContain('dashboard_list_reports');
+  }, 60_000);
+
+  it('HARD-19 a member through a team of the organization is served', async () => {
+    const member = await seedMember('c10', { orgMember: false });
+    const trail: string[] = [];
+    const token = await mintFor(member, trail);
+    expect(token, trail.join(' ')).toBeDefined();
+    const listed = await h.listTools(token!);
+    trail.push(`list=${listed.status}/${listed.names.length}`);
+
+    expect(listed.status, trail.join(' ')).toBe(200);
+    expect(listed.names, trail.join(' ')).toContain('dashboard_list_reports');
   }, 60_000);
 });

@@ -125,6 +125,27 @@ describe('HARD-19 the assistant acts with the permissions of its stored user', (
     const listed = JSON.parse(payload.content?.[0]?.text ?? '{}') as { data?: Array<{ id: string }> };
     expect((listed.data ?? []).map((o) => o.id).sort()).toEqual([orgId, secondOrg].sort());
   });
+
+  it('HARD-19 the assistant offers and runs no tool in an organization the user left', async () => {
+    const member = await chain.addOrgUser(orgId, 'fabrikam-leaver', 'user', 'Viewer');
+    chain.script([{ text: 'Hello.', toolCalls: [] }]);
+    await chain.runTurn(member.userId, orgId, 'hello');
+    expect(chain.offered[0]).toContain('dashboard_list_reports'); // positive control: offered while a member
+
+    await chain.storage.teams.removeTeamMember(member.teamId, member.userId);
+    await chain.storage.organizations.removeMember(orgId, member.userId);
+    chain.script([
+      { text: 'Listing.', toolCalls: [{ id: 't1', name: 'dashboard_list_reports', args: {} }] },
+      { text: 'No access.', toolCalls: [] },
+    ]);
+
+    const turn = await chain.runTurn(member.userId, orgId, 'list reports');
+
+    expect(chain.offered[1]).toEqual([]);
+    const rows = chain.toolRows(turn.conversationId);
+    expect(rows.map((r) => [r.name, resultError(r.result)])).toEqual([['dashboard_list_reports', DENIED]]);
+    expect(chain.auditRows(turn.conversationId).map((a) => a.outcome)).toEqual(['denied']);
+  });
 });
 
 describe('HARD-13 the assistant follows the role authority rules of its stored user', () => {

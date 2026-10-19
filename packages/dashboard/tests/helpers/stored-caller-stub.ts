@@ -3,7 +3,7 @@
  * global role. The MCP endpoint answers every request for the stored user of the token, so a stub
  * storage that serves /api/v1/mcp needs `users.getUserById` for its token subject.
  */
-import type { DashboardUser } from '../../src/db/types.js';
+import type { DashboardUser, Organization } from '../../src/db/types.js';
 
 export interface StoredCallerUsersStub {
   getUserById(id: string): Promise<DashboardUser | null>;
@@ -52,4 +52,19 @@ export function withStoredCallerStorage<S extends { readonly users: object }>(st
       return typeof value === 'function' ? (value as (...a: unknown[]) => unknown).bind(target) : value;
     },
   });
+}
+
+export interface StoredCallerOrgsStub {
+  getUserOrgs(userId: string): Promise<Organization[]>;
+}
+
+/**
+ * `organizations.getUserOrgs` for a stub storage: every user belongs to exactly `orgIds`. The
+ * stored-caller rule reads it for a non-admin user whose token names an organization.
+ */
+export function storedCallerOrgs(...orgIds: readonly string[]): StoredCallerOrgsStub {
+  return {
+    getUserOrgs: async (): Promise<Organization[]> =>
+      orgIds.map((id) => ({ id, name: id, slug: id, createdAt: '2026-01-01T00:00:00.000Z' })),
+  };
 }

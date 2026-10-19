@@ -1,6 +1,7 @@
 /**
  * HARD-19 unit: the stored-caller rule reads the user row on every call. A missing or deactivated
- * user is refused; otherwise the permissions resolve from the STORED global role.
+ * user is refused, and so is a non-admin user outside the token's organization; otherwise the
+ * permissions resolve from the STORED global role.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { resolveStoredCaller, storedPermissionsOrNone, type StoredCallerStorage } from '../../src/auth/stored-caller.js';
@@ -9,10 +10,12 @@ import { ALL_PERMISSION_IDS } from '../../src/permissions.js';
 function storageWith(
   user: { readonly role: string; readonly active: boolean } | null,
   repositoryAnswer: readonly string[] = [],
+  memberOf: readonly string[] = ['org-1'],
 ): StoredCallerStorage & { readonly roles: { getEffectivePermissions: ReturnType<typeof vi.fn> } } {
   return {
     users: { getUserById: vi.fn(async () => user) },
     roles: { getEffectivePermissions: vi.fn(async () => new Set(repositoryAnswer)) },
+    organizations: { getUserOrgs: vi.fn(async () => memberOf.map((id) => ({ id }))) },
   };
 }
 
@@ -48,5 +51,14 @@ describe('HARD-19 stored caller rule', () => {
     // Control: an active stored user resolves the stored role's set.
     const active = await storedPermissionsOrNone(storageWith({ role: 'user', active: true }, answer), 'fabrikam-user', 'org-1');
     expect([...active].sort()).toEqual([...answer].sort());
+  });
+
+  it('HARD-19 the stored caller rule refuses a user outside the organization', async () => {
+    const answer = ['reports.view', 'scans.create'];
+    const outside = storageWith({ role: 'user', active: true }, answer, ['org-2']);
+    expect(await resolveStoredCaller(outside, 'fabrikam-leaver', 'org-1')).toEqual({ ok: false, refusal: 'not_member' });
+    expect([...(await storedPermissionsOrNone(outside, 'fabrikam-leaver', 'org-1'))]).toEqual([]);
+    // Control: the same user is served in an organization it belongs to.
+    expect(await resolveStoredCaller(outside, 'fabrikam-leaver', 'org-2')).toEqual({ ok: true, role: 'user', permissions: new Set(answer) });
   });
 });

@@ -12,7 +12,7 @@
 import { resolveEffectivePermissions } from '../permissions.js';
 
 /** Why the stored row refuses the caller. */
-export type StoredCallerRefusal = 'unknown_user' | 'inactive_user';
+export type StoredCallerRefusal = 'unknown_user' | 'inactive_user' | 'not_member';
 
 export type StoredCaller =
   | { readonly ok: true; readonly role: string; readonly permissions: Set<string> }
@@ -25,6 +25,10 @@ export interface StoredCallerStorage {
   };
   readonly roles: {
     getEffectivePermissions(userId: string, orgId?: string): Promise<Set<string>>;
+  };
+  /** The organizations the user belongs to: org_members plus the organizations of the user's teams. */
+  readonly organizations: {
+    getUserOrgs(userId: string): Promise<ReadonlyArray<{ readonly id: string }>>;
   };
 }
 
