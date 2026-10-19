@@ -25,18 +25,6 @@ export async function getScanInOrg(ctx: GraphQLContext, id: string): Promise<Sca
   return scan;
 }
 
-/**
- * Rule of DELETE /api/v1/scans/:id (routes/api/data.ts): missing → 404;
- * `!bypassesOrgScope(user) && scan.orgId !== orgId` → 403. A global admin may
- * delete any org's scan.
- */
-export async function getScanForDelete(ctx: GraphQLContext, id: string): Promise<ScanRecord> {
-  const scan = await ctx.storage.scans.getScan(id);
-  if (scan === null || scan === undefined) throw new Error(`Scan not found: ${id}`);
-  if (!bypassesOrgScope(ctx.user) && scan.orgId !== ctx.orgId) throw new Error('Forbidden');
-  return scan;
-}
-
 // ── Assignments (routes/assignments.ts) ─────────────────────────────────
 
 /**

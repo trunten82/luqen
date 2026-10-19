@@ -744,6 +744,8 @@ describe('GraphQL resolvers', () => {
 
     it('requires reports.delete permission', async () => {
       const ctx = makeCtx({ permissions: new Set() });
+      // The delete rule reads the scan first: an existing scan of the caller's org started by someone else.
+      ctx.storage.scans.getScan.mockResolvedValue({ id: '1', orgId: 'org-1', createdBy: 'someone-else' });
       await expect(resolvers.Mutation.deleteScan({}, { id: '1' }, ctx))
         .rejects.toThrow('Forbidden');
     });

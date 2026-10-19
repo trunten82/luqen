@@ -17,10 +17,11 @@ import { applyActiveDismissals } from '../services/issue-dismissals/load-dismiss
 import type { BrandingOrchestrator } from '../services/branding/branding-orchestrator.js';
 import { bypassesOrgScope } from '../permissions.js';
 import {
-  getScanInOrg, getScanForDelete, getScanForAssignment, getAssignmentInOrg, getTeamInOrg,
+  getScanInOrg, getScanForAssignment, getAssignmentInOrg, getTeamInOrg,
   getGuidelineInOrg, requireGuidelineInOrg, requireBrandChildInOrg, requireCanManageUser, listOrgsInScope,
 } from './org-scope.js';
 import { isLastActiveAdmin } from '../services/user-scope.js';
+import { scanDeleteRefusal, SCAN_DELETE_PERMISSION } from '../services/scan-delete-access.js';
 
 // ---------------------------------------------------------------------------
 // Context typing
@@ -478,9 +479,12 @@ export const resolvers = {
       args: { id: string },
       ctx: GraphQLContext,
     ) => {
-      requirePerm(ctx, 'reports.delete');
-
-      await getScanForDelete(ctx, args.id);
+      requireAuth(ctx);
+      const scan = await ctx.storage.scans.getScan(args.id);
+      if (scan === null || scan === undefined) throw new Error(`Scan not found: ${args.id}`);
+      const refusal = scanDeleteRefusal({ user: ctx.user, permissions: ctx.permissions }, scan);
+      if (refusal === 'org') throw new Error('Forbidden');
+      if (refusal === 'permission') throw new Error(`Forbidden: requires ${SCAN_DELETE_PERMISSION}`);
       await ctx.storage.scans.deleteScan(args.id);
       return true;
     },

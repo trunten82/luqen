@@ -1,8 +1,8 @@
 /**
- * deleteScan mirrors REST DELETE /api/v1/scans/:id (routes/api/data.ts):
- * missing → 404 "Scan not found"; `!bypassesOrgScope(user) && scan.orgId !== orgId`
- * → 403 "Forbidden". A global admin (role 'admin', not an org-scoped key)
- * may delete any org's scan.
+ * deleteScan asks the shared scan delete rule (services/scan-delete-access.ts), as
+ * REST DELETE /api/v1/scans/:id does: missing → "Scan not found"; a scan outside the
+ * caller's organization → "Forbidden". A global admin (role 'admin', not an
+ * org-scoped key) may delete any org's scan.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { resolvers } from '../../src/graphql/resolvers.js';

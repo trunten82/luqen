@@ -1,6 +1,7 @@
 import { bypassesOrgScope, hasPermission } from '../permissions.js';
 import { mayTouchDismissalOrg, mayViewScanReport } from '../services/issue-dismissals/scan-access.js';
 import { mayControlScan, SCAN_CREATE_PERMISSION } from '../services/scan-lifecycle.js';
+import { scanDeleteRefusal } from '../services/scan-delete-access.js';
 import { toSiteKey } from '../services/issue-dismissals/site-key.js';
 import {
   buildDismissalsView,
@@ -1183,11 +1184,15 @@ export async function reportRoutes(
         return reply.code(404).send({ error: 'Report not found' });
       }
 
-      // Only users with reports.delete permission can delete (or the creator)
-      const user = request.user;
+      // The one scan delete rule (services/scan-delete-access.ts), as the API and GraphQL ask it.
       const permsSet = (request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined;
-      const canDelete = permsSet?.has('reports.delete') === true || scan.createdBy === user?.username;
-      if (!canDelete) {
+      const refusal = scanDeleteRefusal({ user: request.user, permissions: permsSet ?? new Set<string>() }, scan);
+      if (refusal === 'org') {
+        return reply.code(403).send({
+          error: 'Only a global administrator or a user outside every organization can delete a report shared with every organization',
+        });
+      }
+      if (refusal === 'permission') {
         return reply.code(403).send({ error: 'You can only delete your own reports' });
       }
 
