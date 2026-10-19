@@ -17,6 +17,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   user's organizations; otherwise the user's first organization (or none) is
   used. Signed-in sessions record a `session.ended` audit entry when they are
   ended for their user or key.
+- MCP requests require `mcp.use` in the token's organization on every
+  request (`403 insufficient_scope`, `no_mcp_use`). The token endpoint answers
+  a refresh or an authorization-code exchange with `400 invalid_grant` for a
+  user the MCP endpoint would refuse, and a refused refresh leaves its refresh
+  token usable once the user's access is restored.
+- OAuth consent acts in, and names, the organization the dashboard shows,
+  and offers to switch only to organizations the user belongs to. Consent
+  needs a dashboard user account (`403 access_denied`,
+  `dashboard_user_required`).
 - MCP requests are answered for the stored, active user of the token: tools
   and permissions follow the user's current roles, a role claim in a token is
   not read, and tokens of deactivated or removed users and of revoked OAuth

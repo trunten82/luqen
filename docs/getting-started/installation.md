@@ -225,7 +225,7 @@ break OAuth client credential flows.
 |-----|---------|------------|
 | `/admin/audit` | Agent audit log viewer with filter bar + CSV export | `audit.view` |
 | `/admin/oauth-keys` | OAuth signing-key inventory with manual rotate | `admin.system` |
-| `/agent` | Agent companion side panel (text + speech) | `mcp.use` |
+| `/agent` | Agent companion side panel (text + speech) | signed-in users; its tools follow the user's role |
 | `/agent/share/<id>` | Read-only share-link permalinks | (public, token-gated) |
 | `/api/mcp` | Streamable HTTP MCP endpoint | `mcp.use` |
 
@@ -235,7 +235,7 @@ break OAuth client credential flows.
 
 | Permission | Description |
 |------------|-------------|
-| `mcp.use` | Required to call MCP tools (the dashboard agent panel and all external MCP clients). Migration 054 back-fills this permission onto every role that existed before the upgrade so existing users keep working. |
+| `mcp.use` | Required to connect external MCP clients: for consent and on every MCP request, in the token's organization. The in-dashboard assistant does not require it. Migration 054 back-fills this permission onto every role that existed before the upgrade so existing users keep working. |
 
 ---
 

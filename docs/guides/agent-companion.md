@@ -155,8 +155,8 @@ happened.
 
 The agent is available to every signed-in user; there is no separate
 "agent on/off" toggle, and the `mcp.use` permission governs connecting
-external MCP clients (the OAuth consent screen), not the in-dashboard
-agent. What the agent can do follows the user's permissions in the
+external MCP clients (the OAuth consent screen and every MCP request), not
+the in-dashboard agent. What the agent can do follows the user's permissions in the
 organisation: tools are offered and run only when the user's role holds
 the tool's permission, re-checked at every step, so removing a permission
 removes the tools that need it from the agent's next step.

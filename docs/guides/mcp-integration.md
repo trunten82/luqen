@@ -169,10 +169,24 @@ RBAC further filters the catalogue: a token's effective tools are the
 the active org. See the [RBAC matrix](../reference/rbac-matrix.md) for the
 full mapping.
 
-The `mcp.use` permission gates *consent itself* — `/oauth/authorize`
-refuses to issue a code unless the consenting user has `mcp.use` in the
-active org (or `admin.system`). Org admins grant `mcp.use` from the role
-editor at `/admin/roles`.
+The `mcp.use` permission is required to connect an MCP client, both for
+consent and on every MCP request. `/oauth/authorize` issues a code only to a
+user who holds `mcp.use` in the organization the consent screen names (or is
+a global administrator). Every request to `/api/v1/mcp` requires `mcp.use`
+again, from the user's current permissions in the token's organization: a
+request whose user does not hold it there is refused with `403`
+`insufficient_scope` (`error_description` `no_mcp_use`). Org admins grant
+`mcp.use` from the role editor at `/admin/roles`.
+
+**Consent acts in your organization.** The consent screen names the
+organization the dashboard shows for you (the one you switched to, or your
+first organization right after sign-in; no organization when you belong to
+none), and the token is issued for that organization. When you hold
+`mcp.use` in another of your organizations, the screen offers to switch to
+it; it lists only organizations you belong to. Consent needs a dashboard
+user account: a session without one, such as a sign-in with an API key, is
+answered `403` `access_denied` (`error_description`
+`dashboard_user_required`).
 
 **The stored user answers every request.** Each request to `/api/v1/mcp` is
 answered for the stored, active user the token was issued to: the tools and
@@ -186,9 +200,10 @@ every organization): otherwise the token is refused with `401`
 `invalid_token` (`error_description` `not_member`). A user holding no
 permission in the token's organization is refused with `403`
 `insufficient_scope` (`error_description` `no_permission`). The
-dashboard's built-in assistant applies the same rule: it offers and runs only
-the tools the stored user may use in the conversation's organization, and
-each tool runs with that user's permissions.
+dashboard's built-in assistant follows the same stored user: it offers and
+runs only the tools the stored user may use in the conversation's
+organization, and each tool runs with that user's permissions. The assistant
+does not require `mcp.use`.
 
 MCP clients and the assistant act for a dashboard user account. To
 authorize a client or use the assistant, sign in with a dashboard user
@@ -215,7 +230,14 @@ are enforced.
 **Token lifetime + refresh:** access tokens are short-lived (typically
 1 hour — verify with `expires_in` in the `/oauth/token` response). Refresh
 tokens rotate on every refresh. Clients should refresh proactively rather
-than on 401.
+than on 401. The token endpoint issues tokens only for a user `/api/v1/mcp`
+would serve: a refresh or an authorization-code exchange for a user who has
+been deactivated or removed, who no longer belongs to the token's
+organization, or who no longer holds a permission there (`mcp.use`, or any
+permission at all) is answered `400` `invalid_grant`, the same answer as any
+other refused grant. A refused refresh changes nothing: the same refresh
+token works again once the user's access is restored, within the refresh
+chain's 30-day limit.
 
 ### Server-side configuration
 
@@ -261,9 +283,12 @@ MCP call (no waiting for the token TTL).
 | `401 client_revoked` | OAuth client was revoked at `/admin/clients` | Register a fresh client (DCR re-runs automatically on bridge restart) |
 | `403 Insufficient scope` | Token issued with `read` but tool requires `write` | Re-consent with `scope=read+write` at `/oauth/authorize` |
 | `403 insufficient_scope` with `no_permission` | The user holds no permission in the token's organization | Grant the user a role in that organization (at `/admin/teams` or `/admin/roles`), or authorize against an organization where they hold one |
-| Empty tools list | Caller has no `mcp.use` permission in the active org, or RBAC filters every tool | Grant `mcp.use` at `/admin/roles`; verify role permissions |
+| `403 insufficient_scope` with `no_mcp_use` | The user does not hold `mcp.use` in the token's organization | Grant `mcp.use` on the user's role in that organization at `/admin/roles` |
+| `400 invalid_grant` on refresh | The user was deactivated or removed, left the token's organization, or no longer holds `mcp.use` (or any permission) there | Restore the user's access, then refresh again with the same refresh token; or authorize the client again |
+| `403 access_denied` with `dashboard_user_required` at `/oauth/authorize` | The session has no dashboard user account (for example an API-key sign-in) | Sign in with a dashboard user account (managed at `/admin/dashboard-users`) |
+| Empty tools list | The role's permissions in the token's organization match none of the tools | Verify the role's permissions at `/admin/roles` against the [RBAC matrix](../reference/rbac-matrix.md) |
 | `Transport not supported` / SSE-only error | Client speaks pure SSE (deprecated transport) | Upgrade client; use Streamable HTTP — Luqen will not negotiate SSE-only |
-| Consent screen says "MCP access not enabled for your org" | Active org lacks `mcp.use` for your role | Org admin must grant `mcp.use` |
+| Consent screen says "MCP access required" | Your role does not hold `mcp.use` in the organization the screen names | Switch to an organization the screen offers, or ask an org admin to grant `mcp.use` |
 | First-run browser does not open | `mcp-remote` could not bind localhost callback port | Check firewall; try `npx mcp-remote ... --port 7842` |
 
 ## See also
