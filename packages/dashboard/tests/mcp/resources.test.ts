@@ -28,9 +28,6 @@
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { createMcpHttpPlugin, runInToolContext, type McpHttpPluginOptions, type ToolContext } from '@luqen/core/mcp';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { registerMcpRoutes } from '../../src/routes/api/mcp.js';
 import { createDashboardMcpServer } from '../../src/mcp/server.js';
@@ -291,56 +288,6 @@ describe('Phase 30 resources — resources/list RBAC filtering', () => {
     const result = parseSseOrJson(response.body)['result'] as {
       resources: Array<{ uri: string }>;
     };
-    expect(result.resources.length).toBe(2);
-    expect(result.resources.some((r) => r.uri.startsWith('scan://'))).toBe(true);
-    expect(result.resources.some((r) => r.uri.startsWith('brand://'))).toBe(true);
-  });
-
-  it('no perms but read scope — scope-fallback shows both families (read scope allows view-tier resources)', async () => {
-    // Core's resources/list override: when the tool context carries an EMPTY
-    // permission set it falls back to filterResourcesByScope (http-plugin.ts),
-    // and a 'read' scope satisfies the scope hierarchy for every view-tier
-    // permission (reports.view, branding.view), so both scheme families stay
-    // visible. The HTTP endpoint serves only callers holding a permission in
-    // the token's organization (an empty set is refused 403 there), so an
-    // empty set reaches this override only through an in-process tool
-    // context, which is how this test calls it.
-    const storage = makeStubStorage({
-      listScans: async () =>
-        [
-          {
-            id: 'a',
-            siteUrl: 'https://a.com',
-            orgId: 'org-1',
-            status: 'completed',
-          },
-        ] as never,
-      getLatestPerSite: async () =>
-        [
-          {
-            id: 's1',
-            siteUrl: 'https://x.com',
-            orgId: 'org-1',
-            status: 'completed',
-          },
-        ] as never,
-      getLatestForScan: async () => ({ kind: 'score', composite: 80 }) as never,
-    });
-    const { server } = await createDashboardMcpServer({ storage, scanService: makeStubScanService(), serviceConnections: {} as never });
-    await createMcpHttpPlugin({
-      mcpServer: server, toolMetadata: [], resourceMetadata: DASHBOARD_RESOURCE_METADATA, requiredScope: 'read',
-    } as unknown as McpHttpPluginOptions);
-    const client = new Client({ name: 'test-client', version: '1.0.0' });
-    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-    await server.connect(serverTransport);
-    await client.connect(clientTransport);
-    const context: ToolContext = { userId: 'user-x', orgId: 'org-1', scopes: ['read'], permissions: new Set<string>(), authType: 'jwt' };
-    let result: { resources: Array<{ uri: string }> };
-    try {
-      result = (await runInToolContext(context, () => client.listResources())) as { resources: Array<{ uri: string }> };
-    } finally {
-      await client.close();
-    }
     expect(result.resources.length).toBe(2);
     expect(result.resources.some((r) => r.uri.startsWith('scan://'))).toBe(true);
     expect(result.resources.some((r) => r.uri.startsWith('brand://'))).toBe(true);

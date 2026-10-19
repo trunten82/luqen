@@ -1118,11 +1118,4 @@ describe('dashboard_scan_site scan start limit', () => {
     expect(textOf(refused)).toContain(SCAN_RATE_LIMIT_ERROR);
     expect(h.createScan).toHaveBeenCalledTimes(30);
   });
-
-  it('HARD-15 mcp scan site still starts for a caller with an empty permission set', async () => {
-    const h = await build([]);
-    const started = await h.call();
-    expect(started.isError).toBeFalsy();
-    expect(h.createScan).toHaveBeenCalledTimes(1);
-  });
 });

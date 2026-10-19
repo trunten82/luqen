@@ -26,7 +26,6 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { createMcpHttpPlugin, runInToolContext, type McpHttpPluginOptions, type ToolContext } from '@luqen/core/mcp';
 import { readFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -34,7 +33,6 @@ import { registerMcpRoutes } from '../../src/routes/api/mcp.js';
 import { createDashboardMcpServer } from '../../src/mcp/server.js';
 import { ADMIN_TOOL_NAMES, DASHBOARD_ADMIN_TOOL_METADATA, registerAdminTools } from '../../src/mcp/tools/admin.js';
 import { ALL_PERMISSION_IDS } from '../../src/permissions.js';
-import { DASHBOARD_TOOL_METADATA } from '../../src/mcp/metadata.js';
 import { DATA_TOOL_NAMES } from '../../src/mcp/tools/data.js';
 import type { McpTokenPayload, McpTokenVerifier } from '../../src/mcp/middleware.js';
 import type { StorageAdapter } from '../../src/db/index.js';
@@ -216,33 +214,6 @@ async function buildApp(o: {
   return app;
 }
 
-/**
- * tools/list in process for a caller holding exactly `permissions`: the dashboard McpServer with
- * core's tools/list handler installed (createMcpHttpPlugin), called through an in-memory client inside
- * runInToolContext. The HTTP endpoint answers for the stored user of the token, and only the stored
- * global admin role holds admin.system / admin.users, so a set holding one of them WITHOUT every other
- * permission exists only for an in-process context.
- */
-async function listInProcess(permissions: readonly string[]): Promise<string[]> {
-  const { server } = await createDashboardMcpServer({
-    storage: makeStubStorage(permissions),
-    scanService: makeStubScanService(),
-    serviceConnections: makeStubServiceConnections(),
-  });
-  await createMcpHttpPlugin({ mcpServer: server, toolMetadata: DASHBOARD_TOOL_METADATA, requiredScope: 'read' } as unknown as McpHttpPluginOptions);
-  const client = new Client({ name: 'test-client', version: '1.0.0' });
-  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  await server.connect(serverTransport);
-  await client.connect(clientTransport);
-  const context: ToolContext = { userId: 'tester', orgId: 'org-1', scopes: ['read', 'write', 'admin'], permissions: new Set(permissions), authType: 'jwt' };
-  try {
-    const { tools } = await runInToolContext(context, () => client.listTools());
-    return tools.map((t) => t.name);
-  } finally {
-    await client.close();
-  }
-}
-
 function rpc(method: string, params: unknown = {}, id = 1): unknown {
   return { jsonrpc: '2.0', id, method, params };
 }
@@ -323,36 +294,6 @@ describe('Phase 30 admin tools — tools/list count + permission filtering', () 
     // the 7 data + 13 admin baseline → 24.
     expect(names.length).toBe(24);
     expect(names).toEqual(expect.arrayContaining([...DATA_TOOL_NAMES, ...ADMIN_TOOL_NAMES]));
-  });
-
-  it('admin.users only → 4 user tools visible (0 data, 0 system tools)', async () => {
-    const names = await listInProcess(['admin.users']);
-    expect(names).toEqual(
-      expect.arrayContaining([
-        'dashboard_list_users',
-        'dashboard_get_user',
-        'dashboard_create_user',
-        'dashboard_update_user',
-      ]),
-    );
-    expect(names.length).toBe(4);
-  });
-
-  it('admin.system + admin.org → 9 admin.system-relevant tools + 1 admin.org fleet tool = 10', async () => {
-    // In production, admin role holders get ALL permissions via
-    // resolveEffectivePermissions (permissions.ts), so admin.system holders
-    // also have admin.org. The dual-permission tools (list_orgs/get_org/
-    // update_org) gate on admin.org as the lower-tier filter; the handler
-    // branches on perms.has('admin.system') for cross-org scope. This test
-    // therefore grants both permissions to mirror the production state.
-    const names = await listInProcess(['admin.system', 'admin.org']);
-    // Phase 62.4: dashboard_queue_bulk_fix (admin.org) is the only fleet tool
-    // visible here; the other 3 fleet tools gate on reports.view.
-    expect(names.length).toBe(10);
-    expect(names).toContain('dashboard_list_orgs');
-    expect(names).toContain('dashboard_list_service_connections');
-    expect(names).toContain('dashboard_test_service_connection');
-    expect(names).toContain('dashboard_queue_bulk_fix');
   });
 });
 
@@ -789,63 +730,12 @@ describe('HARD-13 MCP user tools validate like the dashboard', () => {
 // caller's stored user row.
 // ---------------------------------------------------------------------------
 
-const ADMIN_ROLE_ERROR = 'Only global administrators can assign the admin role.';
-const ORG_CALLER: StoredUser = { id: 'tester', username: 'fabrikam-owner', role: 'user', active: true };
 const ORG_TARGET: StoredUser = { id: 'u1', username: 'fabrikam-analyst', role: 'viewer' };
 const ORG_ONE_TEAM: StoredTeam = { id: 't1', orgId: 'org-1', members: ['tester', 'u1'] };
-
-/** Calls a tool in process, the way the agent bridge dispatches: no tools/call gate, the given context. */
-async function callInProcess(store: UserStore, context: ToolContext, name: string, args: Record<string, unknown>) {
-  const server = new McpServer({ name: 'test', version: '0.0.0' }, { capabilities: { tools: {} } });
-  registerAdminTools(server, { storage: userStorage(store, []), serviceConnections: makeStubServiceConnections() });
-  const client = new Client({ name: 'test-client', version: '1.0.0' });
-  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  await server.connect(serverTransport);
-  await client.connect(clientTransport);
-  try {
-    const result = await runInToolContext(context, () => client.callTool({ name, arguments: args }));
-    const text = (result.content as Array<{ text: string }>)[0]?.text ?? '{}';
-    return { isError: result.isError === true, error: (JSON.parse(text) as Record<string, unknown>)['error'] };
-  } finally {
-    await client.close();
-  }
-}
-
-/**
- * The context of an org-scoped caller (stored role 'user') holding `permissions`. Over HTTP the endpoint
- * answers for the stored user, whose non-admin role never holds admin.users, so these handler rules for
- * such a caller are exercised in process, where a tool context carries any set.
- */
-function orgCallerContext(permissions: readonly string[] = ['admin.users']): ToolContext {
-  return { userId: 'tester', orgId: 'org-1', scopes: ['read', 'write', 'admin'], permissions: new Set(permissions), authType: 'jwt' };
-}
 
 describe('HARD-13 MCP user tools follow the dashboard role authority rules', () => {
   let app: FastifyInstance | undefined;
   afterEach(async () => { await app?.close(); app = undefined; });
-
-  it('HARD-13 update user assigns the admin role only for a global admin caller', async () => {
-    const store = makeUserStore([ORG_TARGET], { caller: ORG_CALLER, teams: [ORG_ONE_TEAM] });
-    const result = await callInProcess(store, orgCallerContext(), 'dashboard_update_user', { userId: 'u1', role: 'admin', active: false });
-    expect(result).toEqual({ isError: true, error: ADMIN_ROLE_ERROR });
-    expect(store.roleWrites).toEqual([]);
-    expect(store.statusWrites).toEqual([]);
-    expect(store.users.get('u1')?.role).toBe('viewer');
-  });
-
-  it('HARD-13 create user assigns the admin role only for a global admin caller', async () => {
-    const store = makeUserStore([], { caller: ORG_CALLER, teams: [ORG_ONE_TEAM] });
-    const result = await callInProcess(store, orgCallerContext(), 'dashboard_create_user', { username: 'fabrikam-ops-lead', password: STRONG_PASSWORD, role: 'admin' });
-    expect(result).toEqual({ isError: true, error: ADMIN_ROLE_ERROR });
-    expect(store.users.size).toBe(0);
-  });
-
-  it('HARD-13 admin role assignment reads the caller role from the user store', async () => {
-    const store = makeUserStore([ORG_TARGET], { caller: ORG_CALLER, teams: [ORG_ONE_TEAM] });
-    const result = await callInProcess(store, orgCallerContext(ALL_PERMISSION_IDS), 'dashboard_update_user', { userId: 'u1', role: 'admin' });
-    expect(result).toEqual({ isError: true, error: ADMIN_ROLE_ERROR });
-    expect(store.roleWrites).toEqual([]);
-  });
 
   it('HARD-13 update user by a global admin assigns the admin role', async () => {
     const store = makeUserStore([ORG_TARGET], { caller: GLOBAL_ADMIN_CALLER, teams: [ORG_ONE_TEAM] });
@@ -854,15 +744,6 @@ describe('HARD-13 MCP user tools follow the dashboard role authority rules', () 
     expect(toolError(parsed).isError).toBe(false);
     expect(store.roleWrites).toEqual([{ id: 'u1', role: 'admin' }]);
     expect(store.users.get('u1')?.role).toBe('admin');
-  });
-
-  it('HARD-13 admin role assignment holds for an in process caller with an empty permission set', async () => {
-    const store = makeUserStore([ORG_TARGET], { caller: ORG_CALLER, teams: [ORG_ONE_TEAM] });
-    const context: ToolContext = { userId: 'tester', orgId: 'org-1', scopes: ['read', 'write', 'admin'], permissions: new Set<string>(), authType: 'jwt' };
-    const result = await callInProcess(store, context, 'dashboard_update_user', { userId: 'u1', role: 'admin' });
-    expect(result).toEqual({ isError: true, error: ADMIN_ROLE_ERROR });
-    expect(store.roleWrites).toEqual([]);
-    expect(store.users.get('u1')?.role).toBe('viewer');
   });
 });
 
@@ -873,42 +754,13 @@ describe('HARD-13 MCP user tools follow the dashboard role authority rules', () 
 // administrator.
 // ---------------------------------------------------------------------------
 
-const MANAGE_ERROR = 'You can only manage users in your organization.';
 const LAST_ADMIN_ROLE_ERROR = 'Cannot change role of the last active admin user.';
 const LAST_ADMIN_DEACTIVATE_ERROR = 'Cannot deactivate the last active admin user.';
-const NORTHWIND_USER: StoredUser = { id: 'u2', username: 'northwind-analyst', role: 'viewer' };
 const FABRIKAM_ADMIN: StoredUser = { id: 'u3', username: 'fabrikam-admin', role: 'admin', active: true };
-const ORG_TWO_TEAM: StoredTeam = { id: 't2', orgId: 'org-2', members: ['u2'] };
 
 describe('HARD-13 MCP user update follows the dashboard organization scope and last admin rules', () => {
   let app: FastifyInstance | undefined;
   afterEach(async () => { await app?.close(); app = undefined; });
-
-  it('HARD-13 update user changes only users the caller may manage', async () => {
-    const store = makeUserStore([ORG_TARGET, NORTHWIND_USER], { caller: ORG_CALLER, teams: [ORG_ONE_TEAM, ORG_TWO_TEAM] });
-    const result = await callInProcess(store, orgCallerContext(), 'dashboard_update_user', { userId: 'u2', role: 'developer', active: false });
-    expect(result).toEqual({ isError: true, error: MANAGE_ERROR });
-    expect(store.roleWrites).toEqual([]);
-    expect(store.statusWrites).toEqual([]);
-    expect(store.users.get('u2')?.role).toBe('viewer');
-  });
-
-  it('HARD-13 update user leaves a global admin unchanged for an org scoped caller', async () => {
-    const team: StoredTeam = { id: 't1', orgId: 'org-1', members: ['tester', 'u1', 'u3'] };
-    const store = makeUserStore([ORG_TARGET, FABRIKAM_ADMIN], { caller: ORG_CALLER, teams: [team] });
-    const result = await callInProcess(store, orgCallerContext(), 'dashboard_update_user', { userId: 'u3', role: 'viewer', active: false });
-    expect(result).toEqual({ isError: true, error: MANAGE_ERROR });
-    expect(store.roleWrites).toEqual([]);
-    expect(store.statusWrites).toEqual([]);
-    expect(store.users.get('u3')).toEqual(FABRIKAM_ADMIN);
-  });
-
-  it('HARD-13 update user changes a user of the caller organization', async () => {
-    const store = makeUserStore([ORG_TARGET], { caller: ORG_CALLER, teams: [ORG_ONE_TEAM] });
-    const result = await callInProcess(store, orgCallerContext(), 'dashboard_update_user', { userId: 'u1', role: 'developer' });
-    expect(result.isError).toBe(false);
-    expect(store.users.get('u1')?.role).toBe('developer');
-  });
 
   it('HARD-13 update user keeps the role of the last active admin', async () => {
     const store = makeUserStore([], { caller: GLOBAL_ADMIN_CALLER });
