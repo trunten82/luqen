@@ -144,8 +144,10 @@ export function registerScanTools(
       }
 
       // Every invocation is a scan, so each one draws one start from the
-      // shared scan-start limit, keyed by the caller's user id. No permission
-      // check: the permission stays at tool-metadata level (D-90-02).
+      // shared scan-start limit, keyed by the caller's user id. The tool's
+      // permission (scans.create) is enforced before this handler runs: by
+      // the endpoint's tools/call guard over HTTP and by the assistant's
+      // dispatcher in process.
       const ctx = getCurrentToolContext();
       const refusal = scanStarts.consumeScanStart({
         userId: ctx?.userId,

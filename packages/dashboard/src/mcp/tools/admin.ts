@@ -112,8 +112,8 @@ const ADMIN_ROLE_NOTE = 'the admin role needs a global administrator';
 /**
  * The calling user's STORED row, or null when the call carries no user. The user tools decide who
  * the caller is from this row (its role and active status), never from the token's claims or the
- * permission set the call carries: the in-process agent path stamps its own permission set, and a
- * token's claims are fixed when it is minted.
+ * permission set the call carries: a token's claims are fixed when it is minted, and the stored row
+ * is what the dashboard's own user routes read.
  */
 async function loadCaller(storage: StorageAdapter): Promise<DashboardUser | null> {
   const userId = getCurrentToolContext()?.userId;
