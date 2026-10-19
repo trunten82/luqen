@@ -241,8 +241,11 @@ client-credentials surface used by sibling services (compliance →
 dashboard, etc.). MCP-via-DCR clients also surface here for visibility,
 revocation, and audit.
 
-**Audit log coverage:** every MCP request is logged. The dashboard surface
-is `/admin/audit` — filter by `actor.type = oauth_client` for MCP traffic.
+**Audit log coverage:** MCP requests are not written to an audit log one
+by one. Some tools record their own entries: queueing a bulk fix writes one
+to the audit log (`/admin/audit-log`). The agent audit (`/admin/audit`)
+records the dashboard assistant's tool calls, refresh-token reuse (the
+token chain is revoked) and refused cross-organization client revocations.
 Revoking a client at `/admin/clients` triggers an immediate
 `error="invalid_token", error_description="client_revoked"` on the next
 MCP call (no waiting for the token TTL).
