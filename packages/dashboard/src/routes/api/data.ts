@@ -1,7 +1,7 @@
-import { scanDeleteRefusal, SCAN_DELETE_PERMISSION } from '../../services/scan-delete-access.js';
+import { deleteScanAndFiles, scanDeleteRefusal, SCAN_DELETE_PERMISSION } from '../../services/scan-delete-access.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
-import { readFile, unlink } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import type { StorageAdapter, ScanRecord } from '../../db/index.js';
 import { SqliteStorageAdapter } from '../../db/sqlite/index.js';
@@ -728,11 +728,7 @@ export async function dataApiRoutes(
         return reply.code(403).send({ error: `Forbidden: requires ${SCAN_DELETE_PERMISSION}` });
       }
 
-      if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
-        await unlink(scan.jsonReportPath).catch(() => undefined);
-      }
-
-      await storage.scans.deleteScan(request.params.id);
+      await deleteScanAndFiles(storage, scan);
       return reply.code(200).send({ success: true });
     },
   );

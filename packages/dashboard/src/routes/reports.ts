@@ -1,7 +1,7 @@
 import { bypassesOrgScope, hasPermission } from '../permissions.js';
 import { mayTouchDismissalOrg, mayViewScanReport } from '../services/issue-dismissals/scan-access.js';
 import { mayControlScan, SCAN_CREATE_PERMISSION } from '../services/scan-lifecycle.js';
-import { scanDeleteRefusal } from '../services/scan-delete-access.js';
+import { deleteScanAndFiles, scanDeleteRefusal } from '../services/scan-delete-access.js';
 import { toSiteKey } from '../services/issue-dismissals/site-key.js';
 import {
   buildDismissalsView,
@@ -17,7 +17,7 @@ import {
 import type { FastifyBaseLogger, FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { requirePermission } from '../auth/middleware.js';
 import { Type } from '@sinclair/typebox';
-import { readFile, unlink } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -1196,12 +1196,8 @@ export async function reportRoutes(
         return reply.code(403).send({ error: 'You can only delete your own reports' });
       }
 
-      // Delete report files
-      if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
-        await unlink(scan.jsonReportPath).catch(() => undefined);
-      }
-
-      await storage.scans.deleteScan(id);
+      // The row and the stored report file, through the one delete function.
+      await deleteScanAndFiles(storage, scan);
 
       // HTMX request — return empty fragment for swap
       if (request.headers['hx-request'] === 'true') {

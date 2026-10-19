@@ -21,7 +21,7 @@ import {
   getGuidelineInOrg, requireGuidelineInOrg, requireBrandChildInOrg, requireCanManageUser, listOrgsInScope,
 } from './org-scope.js';
 import { isLastActiveAdmin } from '../services/user-scope.js';
-import { scanDeleteRefusal, SCAN_DELETE_PERMISSION } from '../services/scan-delete-access.js';
+import { deleteScanAndFiles, scanDeleteRefusal, SCAN_DELETE_PERMISSION } from '../services/scan-delete-access.js';
 
 // ---------------------------------------------------------------------------
 // Context typing
@@ -485,7 +485,7 @@ export const resolvers = {
       const refusal = scanDeleteRefusal({ user: ctx.user, permissions: ctx.permissions }, scan);
       if (refusal === 'org') throw new Error('Forbidden');
       if (refusal === 'permission') throw new Error(`Forbidden: requires ${SCAN_DELETE_PERMISSION}`);
-      await ctx.storage.scans.deleteScan(args.id);
+      await deleteScanAndFiles(ctx.storage, scan);
       return true;
     },
 

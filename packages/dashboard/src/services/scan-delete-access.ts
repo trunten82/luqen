@@ -3,8 +3,10 @@
  *
  * REST `DELETE /api/v1/scans/:id` (routes/api/data.ts), GraphQL `deleteScan` (graphql/resolvers.ts)
  * and the report page `DELETE /reports/:id` (routes/reports.ts) each load the scan, ask
- * {@link scanDeleteRefusal}, and map its answer to their own status and message. A test over src/
- * (tests/integration/scan-delete-paths.test.ts) keeps every scan delete call on this rule.
+ * {@link scanDeleteRefusal}, map its answer to their own status and message, and then delete through
+ * {@link deleteScanAndFiles}, the one place that removes a scan row: it removes the scan's stored
+ * report file as well. A test over src/ (tests/integration/scan-delete-paths.test.ts) keeps every scan
+ * delete call on this rule and this function.
  *
  * The rule, in order:
  * 1. Organization: a global administrator may delete a scan of any organization. Everyone else may
@@ -15,6 +17,8 @@
  *    started the scan. An API key is never the user who started a scan: every key signs in under
  *    the same user name.
  */
+import { existsSync } from 'node:fs';
+import { unlink } from 'node:fs/promises';
 import { bypassesOrgScope } from '../permissions.js';
 
 /** Permission that lets a caller delete any scan it may reach. */
@@ -60,4 +64,23 @@ export function scanDeleteRefusal(caller: ScanDeleteCaller, scan: ScanDeleteTarg
 function startedTheScan(user: ScanDeleteUser, scan: ScanDeleteTarget): boolean {
   if (user.id === API_KEY_USER_ID) return false;
   return user.username !== '' && scan.createdBy === user.username;
+}
+
+/** The storage a scan delete writes to: the scan row. */
+export interface ScanDeleteStorage {
+  readonly scans: { deleteScan(id: string): Promise<void> };
+}
+
+/**
+ * Delete `scan` once the rule has admitted the caller: its stored report file first (when it exists),
+ * then its row.
+ */
+export async function deleteScanAndFiles(
+  storage: ScanDeleteStorage,
+  scan: { readonly id: string; readonly jsonReportPath?: string },
+): Promise<void> {
+  if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
+    await unlink(scan.jsonReportPath).catch(() => undefined);
+  }
+  await storage.scans.deleteScan(scan.id);
 }

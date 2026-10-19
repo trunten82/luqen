@@ -32,7 +32,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Deleting a scan follows one rule through the API, GraphQL and the report
   page: `reports.delete` or having started the scan, for scans of the caller's
   organization (`system` scans by global administrators and users outside every
-  organization); read-only and scan-only API keys cannot delete.
+  organization); read-only and scan-only API keys cannot delete. Deleting a
+  scan through GraphQL also removes its stored report file, as the API and the
+  report page do.
 - Report retry and cancel require `scans.create` and act on scans of the
   caller's organization. The report page shows Retry and Cancel only to viewers
   who may use them, and the RBAC matrix lists both routes.
