@@ -378,15 +378,11 @@ export class AgentService {
 
     const agentDisplayName = await this.resolveDisplayName(orgId);
 
-    // Plan 33-02 (AGENT-04): collect context hints once per runTurn so every
-    // iteration shares the same snapshot, read in the conversation's org.
+    // Plan 33-02 (AGENT-04): context hints are collected once per runTurn so every
+    // iteration shares the same snapshot, read in the conversation's org. They are
+    // read with the permissions resolved for the turn (set at the top of the try
+    // below), which the first iteration reuses.
     let contextHintsBlock = '';
-    try {
-      const hints = await collectContextHints(this.storage, { userId, orgId });
-      contextHintsBlock = formatContextHints(hints);
-    } catch {
-      contextHintsBlock = '';
-    }
 
     // Phase 36 ATOOL-02 — shared per-turn retry budget. Closure-scoped so the
     // LLM cannot influence it (T-36-08); decremented for every non-success
@@ -402,6 +398,14 @@ export class AgentService {
     const turnStart = Date.now();
 
     try {
+      const turnPermissions = await this.resolvePermissions(userId, orgId);
+      try {
+        const hints = await collectContextHints(this.storage, { userId, orgId, readPermissions: turnPermissions });
+        contextHintsBlock = formatContextHints(hints);
+      } catch {
+        contextHintsBlock = '';
+      }
+
       for (let iter = 0; iter < MAX_TOOL_ITERATIONS; iter++) {
         // Phase 43 Plan 02 — between-iteration abort check. The dispatcher
         // also receives `signal` and aborts in-flight fetches, but a cancel
@@ -420,8 +424,9 @@ export class AgentService {
           emit({ type: 'done', aborted: true });
           return;
         }
-        // (1) Re-resolve permissions every iteration (D-07, Guardrail 1).
-        const perms = await this.resolvePermissions(userId, orgId);
+        // (1) Re-resolve permissions every iteration (D-07, Guardrail 1); the
+        //     first iteration uses the set resolved for the turn just above.
+        const perms = iter === 0 ? turnPermissions : await this.resolvePermissions(userId, orgId);
         const manifest = buildManifest(this.allTools, perms, this.toolCatalog);
         // Only a tool offered to the model in THIS iteration may run.
         const offeredNames = new Set(manifest.map((t) => t.name));

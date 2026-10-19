@@ -7,7 +7,7 @@
  *   (resolvePermissions = storedPermissionsOrNone)
  *
  * Only the model is scripted: each step returns text and tool calls, and the model records the tool
- * list it was offered. The service-connection repository is a spy on every method, and the scan
+ * list it was offered and the context hints block it received. The service-connection repository is a spy on every method, and the scan
  * service is a real ScanService over a spy storage and orchestrator with its own start limiter, so a
  * test can see whether a scan start was attempted, created and metered.
  *
@@ -69,6 +69,8 @@ export interface AgentChain {
   readonly service: AgentService;
   /** Tool names offered to the model, one entry per model call (in call order). */
   readonly offered: string[][];
+  /** The context hints block the model received, one entry per model call (in call order). */
+  readonly hints: string[];
   readonly serviceConnections: {
     readonly list: ReturnType<typeof vi.fn>;
     readonly get: ReturnType<typeof vi.fn>;
@@ -146,9 +148,11 @@ export async function buildAgentChain(): Promise<AgentChain> {
 
   const queue: ScriptStep[] = [];
   const offered: string[][] = [];
+  const hints: string[] = [];
   const llm = {
     streamAgentConversation: async (input: AgentStreamInput): Promise<AgentStreamTurn> => {
       offered.push(input.tools.map((t) => t.name));
+      hints.push(input.contextHintsBlock ?? '');
       const next = queue.shift() ?? { text: 'done', toolCalls: [] };
       return { text: next.text, toolCalls: [...next.toolCalls] } as AgentStreamTurn;
     },
@@ -180,6 +184,7 @@ export async function buildAgentChain(): Promise<AgentChain> {
     dispatcher,
     service,
     offered,
+    hints,
     serviceConnections,
     scanService,
     scanStart,

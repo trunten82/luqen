@@ -103,6 +103,8 @@ export type ComplianceAccess = () => Promise<{
 export interface CollectHintsInput {
   readonly userId: string;
   readonly orgId: string; // '' signifies cross-org (admin.system)
+  /** The stored caller's permissions in `orgId`, resolved for the turn. */
+  readonly readPermissions: ReadonlySet<string>;
   /** Phase 44: opt-in compliance fetch for proposals/regs/jurisdictions. */
   readonly complianceAccess?: ComplianceAccess;
   /** Phase 44: caller's effective permissions for role-hint rendering. */
