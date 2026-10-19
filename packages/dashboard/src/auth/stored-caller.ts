@@ -52,6 +52,24 @@ export async function resolveStoredCaller(
   return { ok: true, role: user.role, permissions };
 }
 
+/** Why the MCP rule refuses the caller: the stored-caller refusals, then the permission refusals. */
+export type McpCallerRefusal = StoredCallerRefusal | 'no_permission' | 'no_mcp_use';
+
+export type McpCaller =
+  | { readonly ok: true; readonly role: string; readonly permissions: Set<string> }
+  | { readonly ok: false; readonly refusal: McpCallerRefusal };
+
+export async function resolveMcpCaller(
+  storage: StoredCallerStorage,
+  userId: string,
+  orgId?: string,
+): Promise<McpCaller> {
+  const caller = await resolveStoredCaller(storage, userId, orgId);
+  if (!caller.ok) return caller;
+  if (caller.permissions.size === 0) return { ok: false, refusal: 'no_permission' };
+  return caller;
+}
+
 /**
  * The permission set of the stored caller for in-process use (the agent bridge): the stored role's
  * permissions, or an EMPTY set when the stored-caller rule refuses the user.
