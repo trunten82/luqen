@@ -11,7 +11,7 @@
  *
  * Every step returns its status and body, so a test can say why a chain stopped.
  */
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer as createNetServer } from 'node:net';
@@ -68,6 +68,8 @@ export interface McpOauthHarness {
   readonly app: FastifyInstance;
   readonly seed: SqliteStorageAdapter;
   readonly publicUrl: string;
+  /** The reports directory the server was configured with (created by the harness). */
+  readonly reportsDir: string;
   login(username: string, password: string): Promise<StepResult>;
   switchOrg(session: HarnessSession, orgId: string): Promise<StepResult>;
   postForm(session: HarnessSession, url: string, fields: Record<string, string | readonly string[]>): Promise<StepResult>;
@@ -146,6 +148,8 @@ export async function startMcpOauthHarness(tag: string): Promise<McpOauthHarness
   process.env['DASHBOARD_JWKS_URI'] = `${publicUrl}/oauth/jwks.json`;
   const tmpRoot = mkdtempSync(join(tmpdir(), `luqen-mcp-oauth-${tag}-`));
   const dbPath = join(tmpRoot, 'dashboard.db');
+  const reportsDir = join(tmpRoot, 'reports');
+  mkdirSync(reportsDir, { recursive: true });
   let app: FastifyInstance | undefined;
   let seed: SqliteStorageAdapter | undefined;
   const close = async (): Promise<void> => {
@@ -156,7 +160,7 @@ export async function startMcpOauthHarness(tag: string): Promise<McpOauthHarness
   };
   try {
     app = (await createServer({
-      dbPath, reportsDir: join(tmpRoot, 'reports'), sessionSecret: SESSION_SECRET,
+      dbPath, reportsDir, sessionSecret: SESSION_SECRET,
       catalogueUrl: '', catalogueCacheTtl: 0, redisUrl: '', maxConcurrentScans: 1,
     } as never)) as FastifyInstance;
     await app.listen({ host: '127.0.0.1', port });
@@ -306,7 +310,7 @@ export async function startMcpOauthHarness(tag: string): Promise<McpOauthHarness
   };
 
   return {
-    app: server, seed: seed!, publicUrl, login, switchOrg, postForm, mintToken, newClient, signToken, clientId: harnessClientId,
+    app: server, seed: seed!, publicUrl, reportsDir, login, switchOrg, postForm, mintToken, newClient, signToken, clientId: harnessClientId,
     callTool, listTools, close,
   };
 }

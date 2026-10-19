@@ -10,7 +10,7 @@
  * Organization names, user names and site hosts are placeholders (Fabrikam / Northwind, *.example).
  */
 import { randomUUID } from 'node:crypto';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -33,8 +33,8 @@ let northwindId: string;
 let orgAdminKey: string;
 let readOnlyKey: string;
 const sessions = new Map<string, HarnessSession>();
-/** Stored report files of seeded scans live here (removed in afterAll). */
-let reportDir: string;
+/** Files that a stored report path may name but that sit outside the reports directory (removed in afterAll). */
+let outsideDir: string;
 
 /** A caller: a password session (by user name) or an API key. */
 type Credential = { readonly session: string } | { readonly key: string };
@@ -60,13 +60,34 @@ async function seedScan(orgId: string, createdBy: string): Promise<string> {
 
 const scanExists = async (id: string): Promise<boolean> => (await h.seed.scans.getScan(id)) !== null;
 
-/** A scan whose stored report file exists on disk; returns the scan id and the file path. */
-async function seedScanWithReportFile(orgId: string, createdBy: string): Promise<{ id: string; file: string }> {
+/**
+ * A scan whose stored report file exists on disk, in the server's reports directory unless `dir` names
+ * another one; returns the scan id and the file path.
+ */
+async function seedScanWithReportFile(orgId: string, createdBy: string, dir?: string): Promise<{ id: string; file: string }> {
   const id = await seedScan(orgId, createdBy);
-  const file = join(reportDir, `${id}.json`);
+  const file = join(dir ?? h.reportsDir, `${id}.json`);
   writeFileSync(file, '{"pages":[]}');
   await h.seed.scans.updateScan(id, { jsonReportPath: file });
   return { id, file };
+}
+
+/** A scan whose stored report path names a directory, which unlink cannot remove. */
+async function seedScanWithUnremovableReport(orgId: string, createdBy: string): Promise<{ id: string; file: string }> {
+  const id = await seedScan(orgId, createdBy);
+  const file = join(h.reportsDir, `${id}.json`);
+  mkdirSync(file);
+  await h.seed.scans.updateScan(id, { jsonReportPath: file });
+  return { id, file };
+}
+
+/** REST status/body, GraphQL answer and page status of one delete each, for three scans. */
+async function deleteThroughEveryPath(ids: readonly [string, string, string]): Promise<{ rest: string; graphql: string; page: string }> {
+  const { headers, cookies } = await headersOf({ session: MEMBER });
+  const rest = await h.app.inject({ method: 'DELETE', url: `/api/v1/scans/${ids[0]}`, headers, cookies });
+  const graphql = await graphqlDelete({ session: MEMBER }, ids[1]);
+  const page = await h.app.inject({ method: 'DELETE', url: `/reports/${ids[2]}`, headers, cookies });
+  return { rest: `${rest.statusCode}:${rest.body}`, graphql, page: `${page.statusCode}:${page.body}` };
 }
 
 /** A browser's session after sign-in: the cookie and the page token of an authenticated page. */
@@ -118,7 +139,7 @@ async function pageDelete(cred: Credential, id: string): Promise<number> {
 }
 
 beforeAll(async () => {
-  reportDir = mkdtempSync(join(tmpdir(), 'luqen-scan-delete-files-'));
+  outsideDir = mkdtempSync(join(tmpdir(), 'luqen-scan-delete-outside-'));
   h = await startMcpOauthHarness('scan-delete');
   fabrikamId = (await h.seed.organizations.createOrg({ name: 'Fabrikam Delete', slug: 'fabrikam-delete' })).id;
   northwindId = (await h.seed.organizations.createOrg({ name: 'Northwind Delete', slug: 'northwind-delete' })).id;
@@ -135,7 +156,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (h !== undefined) await h.close();
-  if (reportDir !== undefined) rmSync(reportDir, { recursive: true, force: true });
+  if (outsideDir !== undefined) rmSync(outsideDir, { recursive: true, force: true });
 });
 
 describe('HARD-18 scan delete paths', () => {
@@ -269,6 +290,40 @@ describe('HARD-18 scan delete paths', () => {
     await pageDelete({ session: MEMBER }, page.id);
     expect([await scanExists(rest.id), await scanExists(page.id)]).toEqual([false, false]);
     expect([existsSync(rest.file), existsSync(page.file)]).toEqual([false, false]);
+  }, 60_000);
+
+  it('HARD-18 every delete path keeps the scan when its report file cannot be removed', async () => {
+    const seeded = [
+      await seedScanWithUnremovableReport(fabrikamId, MEMBER),
+      await seedScanWithUnremovableReport(fabrikamId, MEMBER),
+      await seedScanWithUnremovableReport(fabrikamId, MEMBER),
+    ] as const;
+    const answers = await deleteThroughEveryPath([seeded[0].id, seeded[1].id, seeded[2].id]);
+    expect(answers.rest).toBe('500:{"error":"The scan could not be deleted"}');
+    expect(answers.graphql).toBe('200:The scan could not be deleted');
+    expect(answers.page.startsWith('500:')).toBe(true);
+    expect(JSON.stringify(answers)).not.toContain(h.reportsDir);
+    for (const { id, file } of seeded) {
+      expect(await scanExists(id), `scan ${id} kept`).toBe(true);
+      expect(existsSync(file)).toBe(true);
+    }
+  }, 60_000);
+
+  it('HARD-18 every delete path keeps the scan and the file when the stored report path is outside the reports directory', async () => {
+    const seeded = [
+      await seedScanWithReportFile(fabrikamId, MEMBER, outsideDir),
+      await seedScanWithReportFile(fabrikamId, MEMBER, outsideDir),
+      await seedScanWithReportFile(fabrikamId, MEMBER, outsideDir),
+    ] as const;
+    const answers = await deleteThroughEveryPath([seeded[0].id, seeded[1].id, seeded[2].id]);
+    expect(answers.rest).toBe('500:{"error":"The scan could not be deleted"}');
+    expect(answers.graphql).toBe('200:The scan could not be deleted');
+    expect(answers.page.startsWith('500:')).toBe(true);
+    expect(JSON.stringify(answers)).not.toContain(outsideDir);
+    for (const { id, file } of seeded) {
+      expect(await scanExists(id), `scan ${id} kept`).toBe(true);
+      expect(existsSync(file), 'the file outside the reports directory').toBe(true);
+    }
   }, 60_000);
 
   it('HARD-18 only the shared delete function removes a scan row', () => {
