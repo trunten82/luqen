@@ -25,6 +25,8 @@ interface Harness {
   /** Runs a turn in which the model asks to scan a site; returns the pending message id. */
   pauseOnSiteScan(userId: string): Promise<{ conversationId: string; messageId: string }>;
   pendingStatus(messageId: string): string | undefined;
+  /** The stored args_json of every agent audit row of a conversation, oldest first. */
+  auditArgs(conversationId: string): string[];
 }
 
 async function buildHarness(): Promise<Harness> {
@@ -69,6 +71,12 @@ async function buildHarness(): Promise<Harness> {
     pendingStatus(messageId) {
       const row = raw.prepare('SELECT status FROM agent_messages WHERE id = ?').get(messageId) as { status: string } | undefined;
       return row?.status;
+    },
+    auditArgs(conversationId) {
+      const rows = raw
+        .prepare('SELECT args_json FROM agent_audit_log WHERE conversation_id = ? ORDER BY created_at, rowid')
+        .all(conversationId) as Array<{ args_json: string }>;
+      return rows.map((r) => r.args_json);
     },
   };
 }
@@ -139,6 +147,59 @@ describe('HARD-19 confirming a paused assistant action', () => {
     expect(h.chain.scanStart).toHaveBeenCalledTimes(1);
     expect(h.chain.createScan).toHaveBeenCalledTimes(1);
     expect(h.chain.startStore.get(`user:${member.userId}`)).toHaveLength(1);
+  });
+
+  it('HARD-19 a confirm whose tool run fails is marked failed, recorded as an error and answered with a server error', async () => {
+    const member = await h.chain.addOrgUser(h.orgId, 'fabrikam-member', 'viewer', 'Member');
+    const { conversationId, messageId } = await h.pauseOnSiteScan(member.userId);
+    // A storage fault while the dispatcher reads the confirming user's organizations.
+    const fault = vi.spyOn(h.chain.storage.organizations, 'getUserOrgs').mockRejectedValue(new Error('storage unavailable'));
+
+    const res = await h.confirm(member.userId, messageId);
+
+    expect([res.status, res.body]).toEqual([500, { error: 'internal' }]);
+    expect(h.chain.scanStart).not.toHaveBeenCalled();
+    expect(h.pendingStatus(messageId)).toBe('failed');
+    expect(h.chain.auditRows(conversationId).map((a) => [a.toolName, a.outcome, a.outcomeDetail, a.userId])).toEqual([
+      ['dashboard_scan_site', 'error', 'internal', member.userId],
+    ]);
+
+    // The action is no longer pending: a later confirm runs nothing.
+    fault.mockRestore();
+    const again = await h.confirm(member.userId, messageId);
+    expect([again.status, again.body]).toEqual([409, { error: 'not_pending' }]);
+    expect(h.chain.scanStart).not.toHaveBeenCalled();
+  });
+
+  it('HARD-19 the agent audit stores no secret argument of a confirmed action', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }));
+    const member = await h.chain.addOrgUser(h.orgId, 'fabrikam-member', 'viewer', 'Member');
+    const firstValue = 'placeholder-confirm-value-1';
+    const secondValue = 'placeholder-confirm-value-2';
+    h.chain.script([
+      {
+        text: 'Starting.',
+        toolCalls: [{
+          id: 's1',
+          name: 'dashboard_scan_site',
+          args: { siteUrl: 'https://example.com', login: { password: firstValue, headers: [{ Authorization: secondValue }] } },
+        }],
+      },
+    ]);
+    const turn = await h.chain.runTurn(member.userId, h.orgId, 'scan the site');
+    const frame = turn.frames.find((f) => f.type === 'pending_confirmation') as { messageId?: string } | undefined;
+    expect(frame?.messageId).toBeDefined();
+
+    await h.confirm(member.userId, frame!.messageId!);
+
+    const stored = h.auditArgs(turn.conversationId);
+    expect(stored).toHaveLength(1);
+    expect(stored.join('\n')).not.toContain(firstValue);
+    expect(stored.join('\n')).not.toContain(secondValue);
+    expect(JSON.parse(stored[0]!)).toEqual({
+      siteUrl: 'https://example.com',
+      login: { password: '[redacted]', headers: [{ Authorization: '[redacted]' }] },
+    });
   });
 
   it('HARD-19 every confirm attempt is recorded in the agent audit', async () => {

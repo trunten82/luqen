@@ -231,6 +231,67 @@ describe('HARD-13 the assistant follows the role authority rules of its stored u
   });
 });
 
+describe('HARD-19 the agent audit stores no secret argument', () => {
+  let chain: AgentChain;
+  let orgId: string;
+  const password = 'Placeholder-Pass-word-17!';
+
+  /** The stored args_json of every agent audit row of a conversation, oldest first. */
+  const auditArgs = (conversationId: string): string[] =>
+    (chain.storage.getRawDatabase()
+      .prepare('SELECT args_json FROM agent_audit_log WHERE conversation_id = ? ORDER BY created_at, rowid')
+      .all(conversationId) as Array<{ args_json: string }>).map((r) => r.args_json);
+
+  beforeEach(async () => {
+    chain = await buildAgentChain();
+    orgId = await chain.createOrg('Fabrikam Audit');
+  });
+  afterEach(async () => {
+    await chain.cleanup();
+  });
+
+  it('HARD-19 the agent audit stores no secret argument of a tool the assistant runs', async () => {
+    const adminId = await chain.addUser('fabrikam-global-admin', 'admin');
+    chain.script([
+      { text: 'Creating.', toolCalls: [{ id: 't1', name: 'dashboard_create_user', args: { username: 'fabrikam-ops-lead', password, role: 'viewer' } }] },
+      { text: 'Done.', toolCalls: [] },
+    ]);
+
+    const turn = await chain.runTurn(adminId, orgId, 'create a user');
+
+    expect(chain.auditRows(turn.conversationId).map((a) => a.outcome)).toEqual(['success']);
+    const stored = auditArgs(turn.conversationId);
+    expect(stored.join('\n')).not.toContain(password);
+    expect(JSON.parse(stored[0]!)).toEqual({ username: 'fabrikam-ops-lead', password: '[redacted]', role: 'viewer' });
+    // The tool itself received the password as given.
+    expect(await chain.storage.users.verifyPassword('fabrikam-ops-lead', password)).toBe(true);
+  });
+
+  it('HARD-19 the agent audit stores no secret argument of a refused tool call', async () => {
+    const viewer = await chain.addOrgUser(orgId, 'fabrikam-viewer', 'viewer', 'Viewer');
+    chain.script([
+      {
+        text: 'Creating.',
+        toolCalls: [
+          { id: 't1', name: 'dashboard_create_user', args: { username: 'fabrikam-ops-lead', password, role: 'admin' } },
+          { id: 't2', name: 'dashboard_update_service_connection', args: { serviceId: 'llm', clientSecret: password } },
+        ],
+      },
+      { text: 'Not allowed.', toolCalls: [] },
+    ]);
+
+    const turn = await chain.runTurn(viewer.userId, orgId, 'create an admin');
+
+    expect(chain.auditRows(turn.conversationId).map((a) => a.outcome)).toEqual(['denied', 'denied']);
+    const stored = auditArgs(turn.conversationId);
+    expect(stored.join('\n')).not.toContain(password);
+    expect(stored.map((s) => JSON.parse(s) as unknown)).toEqual([
+      { username: 'fabrikam-ops-lead', password: '[redacted]', role: 'admin' },
+      { serviceId: 'llm', clientSecret: '[redacted]' },
+    ]);
+  });
+});
+
 describe('HARD-17 the assistant offers the user and system tools to a global admin only', () => {
   let chain: AgentChain;
 
