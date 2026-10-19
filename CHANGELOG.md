@@ -14,8 +14,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   and permissions follow the user's current roles, a role claim in a token is
   not read, and tokens of deactivated or removed users and of revoked OAuth
   clients are refused on their next use. A user holding no permission in the
-  token's organization is refused with `403 insufficient_scope`, and the
-  built-in agent resolves its tools from the same stored user.
+  token's organization is refused with `403 insufficient_scope`.
+- The dashboard assistant offers and runs only the tools the stored user may
+  use in the conversation's organization, and hands each tool that user's
+  permissions. A tool call outside that set is refused and recorded in the
+  agent audit. Confirming or declining a paused action is limited to the
+  conversation's user, every confirmation is recorded in the agent audit, and
+  a confirmation checks again that the user may still run the tool (`403`
+  otherwise, leaving the action pending).
 - Scheduled scans, schedule creation, report retry and startup recovery use the
   same start-URL validation as the scan form: a schedule's URL is checked when
   it is created and at every run, and a refused run records a failed scan.

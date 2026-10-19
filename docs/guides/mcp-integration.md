@@ -182,7 +182,9 @@ has been deactivated or removed is refused with `401` `invalid_token`
 (`error_description` `inactive_user` or `unknown_user`) on its next use, and
 a user holding no permission in the token's organization is refused with
 `403` `insufficient_scope` (`error_description` `no_permission`). The
-dashboard's built-in agent resolves its tools from the same stored user.
+dashboard's built-in assistant applies the same rule: it offers and runs only
+the tools the stored user may use in the conversation's organization, and
+each tool runs with that user's permissions.
 
 **Dynamic Client Registration via `POST /oauth/register`:** open endpoint,
 rate-limited per IP. The client posts `client_metadata`:
