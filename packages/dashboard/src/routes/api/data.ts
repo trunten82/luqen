@@ -1,4 +1,4 @@
-import { bypassesOrgScope } from '../../permissions.js';
+import { scanDeleteRefusal, SCAN_DELETE_PERMISSION } from '../../services/scan-delete-access.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { readFile, unlink } from 'node:fs/promises';
@@ -208,6 +208,12 @@ function isValidIsoDate(value: string | undefined): boolean {
 
 function getOrgId(request: FastifyRequest): string {
   return request.user?.currentOrgId ?? 'system';
+}
+
+/** The permission set the auth layer resolved for this request (empty when none was attached). */
+function permissionsOf(request: FastifyRequest): ReadonlySet<string> {
+  const granted = (request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined;
+  return granted ?? new Set<string>();
 }
 
 async function readReport(reportPath: string | undefined): Promise<JsonReport | null> {
@@ -714,10 +720,12 @@ export async function dataApiRoutes(
         return reply.code(404).send({ error: 'Scan not found' });
       }
 
-      // Admin-only: API key users are treated as admin
-      const orgId = getOrgId(request);
-      if (!bypassesOrgScope(request.user) && scan.orgId !== orgId) {
+      const refusal = scanDeleteRefusal({ user: request.user, permissions: permissionsOf(request) }, scan);
+      if (refusal === 'org') {
         return reply.code(403).send({ error: 'Forbidden' });
+      }
+      if (refusal === 'permission') {
+        return reply.code(403).send({ error: `Forbidden: requires ${SCAN_DELETE_PERMISSION}` });
       }
 
       if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {

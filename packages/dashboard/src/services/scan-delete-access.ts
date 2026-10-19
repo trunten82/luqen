@@ -15,6 +15,8 @@
  *    started the scan. An API key is never the user who started a scan: every key signs in under
  *    the same user name.
  */
+import { bypassesOrgScope } from '../permissions.js';
+
 /** Permission that lets a caller delete any scan it may reach. */
 export const SCAN_DELETE_PERMISSION = 'reports.delete';
 
@@ -42,9 +44,20 @@ export interface ScanDeleteTarget {
   readonly createdBy?: string;
 }
 
+/** The user id every API key authenticates as (auth/auth-service.ts). */
+const API_KEY_USER_ID = 'api-key';
+
 /** May `caller` delete `scan`? `null` = yes; otherwise the clause that refused. */
 export function scanDeleteRefusal(caller: ScanDeleteCaller, scan: ScanDeleteTarget): ScanDeleteRefusal | null {
-  void caller;
-  void scan;
-  return null;
+  const { user, permissions } = caller;
+  if (user === undefined) return 'org';
+  if (!bypassesOrgScope(user) && scan.orgId !== (user.currentOrgId ?? 'system')) return 'org';
+  if (permissions.has(SCAN_DELETE_PERMISSION)) return null;
+  return startedTheScan(user, scan) ? null : 'permission';
+}
+
+/** Is `user` the signed-in dashboard user who started `scan`? Never true for an API key. */
+function startedTheScan(user: ScanDeleteUser, scan: ScanDeleteTarget): boolean {
+  if (user.id === API_KEY_USER_ID) return false;
+  return user.username !== '' && scan.createdBy === user.username;
 }
