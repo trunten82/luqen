@@ -39,3 +39,17 @@ export async function resolveStoredCaller(
   const permissions = await resolveEffectivePermissions(storage.roles, userId, user.role, orgId);
   return { ok: true, role: user.role, permissions };
 }
+
+/**
+ * The permission set of the stored caller for in-process use (the agent bridge): the stored role's
+ * permissions, or an EMPTY set when the stored-caller rule refuses the user.
+ */
+export async function storedPermissionsOrNone(
+  storage: StoredCallerStorage,
+  userId: string,
+  orgId?: string,
+): Promise<Set<string>> {
+  // Placeholder body; the rule lands with the agent wiring change.
+  const user = await storage.users.getUserById(userId);
+  return resolveEffectivePermissions(storage.roles, userId, user?.role ?? 'viewer', orgId);
+}

@@ -3,7 +3,7 @@
  * user is refused; otherwise the permissions resolve from the STORED global role.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { resolveStoredCaller, type StoredCallerStorage } from '../../src/auth/stored-caller.js';
+import { resolveStoredCaller, storedPermissionsOrNone, type StoredCallerStorage } from '../../src/auth/stored-caller.js';
 import { ALL_PERMISSION_IDS } from '../../src/permissions.js';
 
 function storageWith(
@@ -37,5 +37,16 @@ describe('HARD-19 stored caller rule', () => {
 
     const user = await resolveStoredCaller(storageWith({ role: 'user', active: true }, ['reports.view']), 'fabrikam-user', 'org-1');
     expect(user).toEqual({ ok: true, role: 'user', permissions: new Set(['reports.view']) });
+  });
+
+  it('HARD-19 the agent resolves no permission for a deactivated user', async () => {
+    const answer = ['reports.view', 'scans.create'];
+    const inactive = await storedPermissionsOrNone(storageWith({ role: 'user', active: false }, answer), 'fabrikam-inactive', 'org-1');
+    expect([...inactive]).toEqual([]);
+    const missing = await storedPermissionsOrNone(storageWith(null, answer), 'fabrikam-removed', 'org-1');
+    expect([...missing]).toEqual([]);
+    // Control: an active stored user resolves the stored role's set.
+    const active = await storedPermissionsOrNone(storageWith({ role: 'user', active: true }, answer), 'fabrikam-user', 'org-1');
+    expect([...active].sort()).toEqual([...answer].sort());
   });
 });
