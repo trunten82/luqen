@@ -558,6 +558,36 @@ describe('AuthService', () => {
       expect(result.user?.role).toBe('viewer');
     });
 
+    it('HARD-21 a session signed in through an external identity service follows its stored user when one exists', async () => {
+      const db = storage.getRawDatabase();
+      const service = new AuthService(db, mockPluginManager([]), storage);
+      const demoted = await storage.users.createUser('fabrikam-u6-demoted', 'password123', 'user');
+      const inactive = await storage.users.createUser('fabrikam-u6-inactive', 'password123', 'admin');
+      await storage.users.deactivateUser(inactive.id);
+      const answers: string[] = [];
+      for (const authMethod of ['oauth', 'sso']) {
+        const regenerate = vi.fn();
+        const demotedSession: Record<string, unknown> = {
+          userId: demoted.id, username: 'claimed-name', role: 'admin', authMethod, bootId: service.getBootId(),
+        };
+        const inactiveSession: Record<string, unknown> = {
+          userId: inactive.id, username: 'fabrikam-u6-inactive', role: 'admin', authMethod, bootId: service.getBootId(),
+        };
+        const asDemoted = await service.authenticateRequest(fakeRequest({}, demotedSession));
+        const asInactive = await service.authenticateRequest({
+          headers: {},
+          session: { get: vi.fn((key: string) => inactiveSession[key]), set: vi.fn(), delete: vi.fn(), regenerate },
+        } as unknown as FastifyRequest);
+        answers.push(`${authMethod}: demoted=${String(asDemoted.authenticated)}/${String(asDemoted.user?.role)}/${String(asDemoted.user?.username)} inactive=${String(asInactive.authenticated)}`);
+
+        expect(asDemoted.authenticated, answers.join(' ')).toBe(true);
+        expect(asDemoted.user?.role, answers.join(' ')).toBe('user');
+        expect(asDemoted.user?.username, answers.join(' ')).toBe('fabrikam-u6-demoted');
+        expect(asInactive.authenticated, answers.join(' ')).toBe(false);
+        expect(regenerate, answers.join(' ')).toHaveBeenCalled();
+      }
+    });
+
     it('HARD-21 a session is not answered when its stored user cannot be read', async () => {
       const db = storage.getRawDatabase();
       const user = await storage.users.createUser('fabrikam-u5', 'password123', 'admin');
