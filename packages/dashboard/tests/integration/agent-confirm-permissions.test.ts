@@ -109,4 +109,56 @@ describe('HARD-19 confirming a paused assistant action', () => {
     expect(h.chain.scanStart).not.toHaveBeenCalled();
     expect(h.pendingStatus(messageId)).toBe('pending_confirmation');
   });
+
+  it('HARD-19 only the user of the conversation can confirm or decline its pending action', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }));
+    const member = await h.chain.addOrgUser(h.orgId, 'fabrikam-member', 'viewer', 'Member');
+    const colleague = await h.chain.addOrgUser(h.orgId, 'fabrikam-colleague', 'viewer', 'Member');
+    const { messageId } = await h.pauseOnSiteScan(member.userId);
+
+    const foreignConfirm = await h.confirm(colleague.userId, messageId);
+    const foreignDeny = await h.deny(colleague.userId, messageId);
+
+    expect([foreignConfirm.status, foreignConfirm.body]).toEqual([404, { error: 'pending_not_found' }]);
+    expect([foreignDeny.status, foreignDeny.body]).toEqual([404, { error: 'pending_not_found' }]);
+    expect(h.chain.scanStart).not.toHaveBeenCalled();
+    expect(h.pendingStatus(messageId)).toBe('pending_confirmation');
+
+    const own = await h.confirm(member.userId, messageId);
+    expect(own.status).toBe(202);
+  });
+
+  it('HARD-15 a member confirms a scan through the assistant and it draws from the shared start limit', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }));
+    const member = await h.chain.addOrgUser(h.orgId, 'fabrikam-member', 'viewer', 'Member');
+    const { messageId } = await h.pauseOnSiteScan(member.userId);
+
+    const res = await h.confirm(member.userId, messageId);
+
+    expect(res.status).toBe(202);
+    expect(h.chain.scanStart).toHaveBeenCalledTimes(1);
+    expect(h.chain.createScan).toHaveBeenCalledTimes(1);
+    expect(h.chain.startStore.get(`user:${member.userId}`)).toHaveLength(1);
+  });
+
+  it('HARD-19 every confirm attempt is recorded in the agent audit', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }));
+    const member = await h.chain.addOrgUser(h.orgId, 'fabrikam-member', 'viewer', 'Member');
+    const { conversationId, messageId } = await h.pauseOnSiteScan(member.userId);
+    await h.chain.bindTeamToOrgRole(member.teamId, h.orgId, 'Viewer');
+
+    const refused = await h.confirm(member.userId, messageId);
+    expect(refused.status).toBe(403);
+    expect(h.chain.auditRows(conversationId).map((a) => [a.toolName, a.outcome, a.userId])).toEqual([
+      ['dashboard_scan_site', 'denied', member.userId],
+    ]);
+
+    await h.chain.bindTeamToOrgRole(member.teamId, h.orgId, 'Member');
+    const ran = await h.confirm(member.userId, messageId);
+    expect(ran.status).toBe(202);
+    expect(h.chain.auditRows(conversationId).map((a) => [a.toolName, a.outcome, a.conversationId])).toEqual([
+      ['dashboard_scan_site', 'denied', conversationId],
+      ['dashboard_scan_site', 'success', conversationId],
+    ]);
+  });
 });
