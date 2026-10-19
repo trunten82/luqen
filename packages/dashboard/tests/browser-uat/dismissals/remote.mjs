@@ -71,10 +71,13 @@ const hasButtonFor = (page, f) => page.evaluate((code, sel) => [...document.quer
   .some((b) => b.getAttribute('data-code') === code && b.getAttribute('data-selector') === sel), f.code, f.selector);
 
 /**
- * The target scan's org name and site URL, read as the logged-in admin. Both reads are scoped to the
- * admin's current org (GraphQL `scan` answers null for a scan of any other org), so the org name is
- * known only when the scan belongs to the org the session is in; otherwise it stays null and the guard
- * refuses. Read-only: one GET and one GraphQL query, no session change. Nothing here is printed.
+ * The target scan's org name and site URL, read as the logged-in admin. GraphQL `scan` answers only for
+ * a scan of the org the session is in (null for any other org), and returns that scan's own orgId; the
+ * name is then taken from the admin's org memberships (`/orgs/current` userOrgs) by that id. A scan the
+ * admin cannot read in its session org, or an org it is not a member of, leaves the name null and the
+ * guard refuses. (`/orgs/current`'s currentOrgId is not used: it reads the raw session key, which a fresh
+ * login has not set even though the request's org is already resolved.) Read-only: one GET and one
+ * GraphQL query, no session change. Nothing here is printed.
  */
 async function observeTarget(page, scanId) {
   try {
@@ -84,11 +87,10 @@ async function observeTarget(page, scanId) {
       variables: { id: scanId },
     });
     const scan = res.status === 200 ? (jsonOf(res)?.data?.scan ?? null) : null;
-    const org = current?.currentOrg ?? null;
-    const sameOrg = scan !== null && typeof scan.orgId === 'string' && org !== null
-      && current?.currentOrgId === scan.orgId && org.id === scan.orgId;
+    const orgs = Array.isArray(current?.userOrgs) ? current.userOrgs : [];
+    const org = scan !== null && typeof scan.orgId === 'string' ? orgs.find((o) => o?.id === scan.orgId) : undefined;
     return {
-      orgName: sameOrg && typeof org.name === 'string' ? org.name : null,
+      orgName: org !== undefined && typeof org.name === 'string' ? org.name : null,
       siteUrl: scan !== null && typeof scan.siteUrl === 'string' ? scan.siteUrl : null,
     };
   } catch {

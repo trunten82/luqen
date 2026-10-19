@@ -82,11 +82,13 @@ self-contained: the entry point is `uat-dismissals.mjs`, the helpers are in `dis
 cd packages/dashboard && npm run build        # the script runs dist/, so build first
 node tests/browser-uat/uat-dismissals.mjs [--mode local|remote|remote-selftest]
      [--expect dark|granted] [--scenario <name>|all] [--leave-active] [--keep-going]
+     [--check-target-only]
 ```
 
 Output is one `PASS <scenario>: <check>` or `FAIL <scenario>: <check> :: <detail>` line per check and a
 final `UAT GREEN: <n> checks`. It stops at the first FAIL (exit 1); bad arguments or a missing remote
-environment exit 2. Browser waits are 90 s. `--keep-going` (local mode only, for break-tests) reports
+environment exit 2, and so does a remote target that is not the dedicated UAT org and site (see "Target
+rule" below). Browser waits are 90 s. `--keep-going` (local mode only, for break-tests) reports
 every FAIL instead of stopping at the first, so a mutation's whole red set is visible; the run still
 exits 1 and never prints `UAT GREEN`.
 
@@ -95,8 +97,8 @@ exits 1 and never prints `UAT GREEN`.
 | Mode | What it does |
 |------|--------------|
 | `local` (default) | Per scenario: boots a fresh-DB dashboard from `dist/` on the `uat.config.json` port, seeds a Fabrikam test org, five personas, a four-page scan and a site with 150 dismissals, then drives Chromium. Each scenario gets its own world (they mark and revoke real data). |
-| `remote` | Drives an already-running dashboard from environment variables only. Never seeds. Never prints a value (check output carries names only, details are withheld, no screenshots are written, and every credential value is redacted from the process output; a leak fails the run). Writes one mark, one revoke and, with `--leave-active`, one re-mark of the same finding. Persona write probes use a refused selector, so a missing 403 shows up as a FAIL and never as a stray row. |
-| `remote-selftest` | Boots and seeds exactly like `local`, then runs the remote code path against that server with an in-process env object (no files). This is how the remote path is proven without production. |
+| `remote` | Drives an already-running dashboard from environment variables only. Never seeds. Never prints a value (check output carries names only, details are withheld, no screenshots are written, and every credential value is redacted from the process output; a leak fails the run). Writes one mark, one revoke and, with `--leave-active`, one re-mark of the same finding. Persona write probes use a refused selector, so a missing 403 shows up as a FAIL and never as a stray row. Writes only into the dedicated UAT org and site (see "Target rule"). |
+| `remote-selftest` | Boots and seeds exactly like `local`, then runs the remote code path against that server with an in-process env object (no files). This is how the remote path is proven without production. The seeded world declares itself as the expected target; `LUQEN_UAT_SELFTEST_EXPECT_ORG` / `LUQEN_UAT_SELFTEST_EXPECT_SITE_HOST`, when set, replace those expected values so the refusal can be watched. |
 
 ### `--expect`
 
@@ -125,16 +127,39 @@ view first: they prove a button CAN be reached, not that it is visible at open (
 
 ### Remote environment variables
 
-Names only; values are never printed and must never be committed. All ten are required or the script
-exits 2 naming the missing ones.
+Names only; values are never printed and must never be committed. All twelve are required for a full
+remote run, or the script exits 2 naming the missing ones.
 
 ```
 LUQEN_UAT_BASE_URL   LUQEN_UAT_SCAN_ID
 LUQEN_UAT_ADMIN_USER LUQEN_UAT_ADMIN_PASS
+LUQEN_UAT_EXPECT_ORG LUQEN_UAT_EXPECT_SITE_HOST
 LUQEN_UAT_OWNER_USER LUQEN_UAT_OWNER_PASS
 LUQEN_UAT_MEMBER_USER LUQEN_UAT_MEMBER_PASS
 LUQEN_UAT_VIEWER_USER LUQEN_UAT_VIEWER_PASS
 ```
+
+`--check-target-only` needs only the first six: base URL, scan id, admin user and password, and the two
+expected values.
+
+### Target rule
+
+The remote run marks and revokes a real finding, so it refuses any target that is not the dedicated UAT
+org and site. Right after the admin login, and before any persona login or write, it reads the target
+scan's organization name and site as the admin and compares them with:
+
+- `LUQEN_UAT_EXPECT_ORG`: the organization name, compared exactly. The scan must belong to the org the
+  admin session is in; a scan the admin cannot read in that org counts as a different org.
+- `LUQEN_UAT_EXPECT_SITE_HOST`: the site's host name only (no scheme, port or path), compared without
+  regard to case.
+
+Both are required and have no defaults: a forgotten variable refuses, it never passes. On a mismatch the
+run prints `REFUSED target is not the dedicated UAT org and site: <variable names>` (names only, never a
+value, URL, host or org name) and exits 2 with nothing written.
+
+`--check-target-only` performs only the admin login and this check, prints
+`PASS the target is the dedicated UAT org and site` (exit 0) or the REFUSED line (exit 2), and stops: no
+persona login and no write. Use it to read the rule back against a live server before a full run.
 
 ### Artifacts
 
