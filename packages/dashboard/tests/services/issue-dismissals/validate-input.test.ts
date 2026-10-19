@@ -4,6 +4,7 @@ import {
   DISMISSAL_COMMENT_MAX_LENGTH,
   DISMISSAL_REASON_MAX_LENGTH,
   DISMISSAL_SELECTOR_MAX_LENGTH,
+  dismissalRefusalReason,
   isWholePageSelector,
   validateDismissalCode,
   validateDismissalReason,
@@ -34,6 +35,30 @@ describe('the shared refusal cases', () => {
     // Both verdicts occur, so the list can catch a drift in either direction.
     expect(DISMISSAL_REFUSAL_CASES.some((c) => c.refused)).toBe(true);
     expect(DISMISSAL_REFUSAL_CASES.some((c) => !c.refused)).toBe(true);
+  });
+});
+
+describe('the refusal reason', () => {
+  /** The reason the validators themselves give, read from which validator refuses and with which message. */
+  function validatorReason(selector: unknown, code: unknown): string | null {
+    const c = validateDismissalCode(code);
+    if (!c.ok) return c.error.includes('at most') ? 'code-too-long' : 'code-missing';
+    const s = validateDismissalSelector(selector);
+    if (!s.ok) return s.error.includes(WHOLE_PAGE_ERROR) ? 'no-element' : 'selector-too-long';
+    return null;
+  }
+
+  it('HARD-01 helper and validator agree on the refusal reason of every shared case', () => {
+    const wrong = DISMISSAL_REFUSAL_CASES.filter(
+      (c) => dismissalRefusalReason(c.selector, c.code) !== c.reason || validatorReason(c.selector, c.code) !== c.reason,
+    ).map((c) => `${c.why}: listed ${String(c.reason)}, helper ${String(dismissalRefusalReason(c.selector, c.code))}, validator ${String(validatorReason(c.selector, c.code))}`);
+    expect(wrong).toEqual([]);
+    // Every reason occurs in the list, so a reason the helper never answers cannot pass by absence.
+    expect(new Set(DISMISSAL_REFUSAL_CASES.map((c) => c.reason))).toEqual(
+      new Set([null, 'no-element', 'selector-too-long', 'code-missing', 'code-too-long']),
+    );
+    // The reason is null exactly when the pair is not refused.
+    expect(DISMISSAL_REFUSAL_CASES.filter((c) => (c.reason === null) === c.refused).map((c) => c.why)).toEqual([]);
   });
 });
 

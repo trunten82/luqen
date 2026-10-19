@@ -11,7 +11,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Handlebars from 'handlebars';
 import { JSDOM } from 'jsdom';
-import { collectPartials, dismissalRefused } from '../../src/server.js';
+import { collectPartials, dismissalRefused, dismissalRefusedKey } from '../../src/server.js';
 import { loadTranslations, t, type Locale } from '../../src/i18n/index.js';
 import {
   DISMISSAL_CODE_MAX_LENGTH,
@@ -44,6 +44,7 @@ beforeAll(() => {
   hb.registerHelper('issueAssignStatus', () => '');
   hb.registerHelper('fixSuggestion', () => '');
   hb.registerHelper('dismissalRefused', dismissalRefused);
+  hb.registerHelper('dismissalRefusedKey', dismissalRefusedKey);
   hb.registerHelper(
     't',
     function (key: string, options: { hash?: Record<string, unknown>; data?: { root?: { locale?: string } } }) {
@@ -77,9 +78,10 @@ function reportData(
   pageSelectors: readonly unknown[],
   templateSelector: unknown = SEL_TEMPLATE,
   tabSelector: unknown = SEL_TAB,
+  code: unknown = CODE,
 ): Record<string, unknown> {
   const templateItem = {
-    ...issue(templateSelector),
+    ...issue(templateSelector, { code }),
     componentName: 'Navigation',
     affectedCount: 4,
     affectedPages: ['https://fabrikam.example/a'],
@@ -98,7 +100,7 @@ function reportData(
         pageCount: 2,
         totalCount: 3,
         templateItems: [templateItem],
-        issues: pageSelectors.map((s) => issue(s)),
+        issues: pageSelectors.map((s) => issue(s, { code })),
         regulations: [],
         components: [],
       },
@@ -108,7 +110,7 @@ function reportData(
         componentName: 'Footer',
         issueCount: 1,
         maxAffectedPages: 3,
-        issues: [{ ...issue(tabSelector), affectedCount: 3, affectedPages: ['https://fabrikam.example/a'] }],
+        issues: [{ ...issue(tabSelector, { code }), affectedCount: 3, affectedPages: ['https://fabrikam.example/a'] }],
       },
     ],
   };
@@ -123,6 +125,7 @@ interface RenderOptions {
   readonly tabSelector?: unknown;
   readonly locale?: string;
   readonly dismissals?: Record<string, unknown>;
+  readonly code?: unknown;
 }
 
 function dismissalRow(id: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
@@ -167,6 +170,7 @@ function render(opts: RenderOptions = {}): string {
       opts.selectors ?? [SEL_PAGE],
       opts.templateSelector ?? SEL_TEMPLATE,
       opts.tabSelector ?? SEL_TAB,
+      opts.code ?? CODE,
     ),
     locale: opts.locale ?? 'en',
     perm: { reportsViewTechnical: opts.technical ?? true, issuesAssign: opts.assign ?? false },
@@ -421,6 +425,44 @@ describe('the Dismiss button refuses what the server validator refuses', () => {
       expect(own, selector).toHaveLength(1);
       expect(own[0]).toContain('data-action="rptDismissIssue"');
       expect(own[0]).not.toContain('aria-disabled');
+    }
+  });
+});
+
+describe('a disabled Dismiss button names its reason', () => {
+  // The English copy per reason. The other locales are checked by the i18n refusal-copy test.
+  const NO_ELEMENT = 'This finding has no specific element and cannot be dismissed.';
+  const SELECTOR_TOO_LONG = "This finding's element selector is too long to be dismissed.";
+  const CODE_TOO_LONG = "This finding's rule code is too long to be dismissed.";
+  const CODE_MISSING = 'This finding has no rule code and cannot be dismissed.';
+  const LONG_SELECTOR = `#${'a'.repeat(DISMISSAL_SELECTOR_MAX_LENGTH)}`;
+  const LONG_CODE = `R.${'x'.repeat(DISMISSAL_CODE_MAX_LENGTH - 1)}`;
+
+  it('HARD-01 a disabled Dismiss button names the reason the server refuses at every issue site', () => {
+    const cases = [
+      { why: 'a whole-page selector', selector: 'html', code: CODE, copy: NO_ELEMENT },
+      { why: 'a selector over the length limit', selector: LONG_SELECTOR, code: CODE, copy: SELECTOR_TOO_LONG },
+      { why: 'a rule code over the length limit', selector: SEL_PAGE, code: LONG_CODE, copy: CODE_TOO_LONG },
+      { why: 'a blank rule code', selector: SEL_PAGE, code: '   ', copy: CODE_MISSING },
+    ];
+    expect(LONG_SELECTOR).toHaveLength(DISMISSAL_SELECTOR_MAX_LENGTH + 1);
+    expect(LONG_CODE).toHaveLength(DISMISSAL_CODE_MAX_LENGTH + 1);
+    // The four sentences differ, so a button showing the wrong one cannot pass.
+    expect(new Set(cases.map((c) => c.copy)).size).toBe(4);
+    for (const c of cases) {
+      const html = render({ selectors: [c.selector], templateSelector: c.selector, tabSelector: c.selector, code: c.code });
+      const buttons = dismissButtons(html);
+      const doc = new JSDOM(html).window.document;
+      // Page issue, template item and Templates-tab item: three buttons, every one disabled.
+      expect(buttons, c.why).toHaveLength(3);
+      for (const button of buttons) {
+        expect(button, c.why).toContain('aria-disabled="true"');
+        expect(button, c.why).toContain(`title="${Handlebars.escapeExpression(c.copy)}"`);
+        const describedBy = /aria-describedby="([^"]+)"/.exec(button);
+        expect(describedBy, c.why).not.toBeNull();
+        const span = doc.getElementById(describedBy![1]);
+        expect(span?.textContent, c.why).toBe(c.copy);
+      }
     }
   });
 });

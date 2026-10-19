@@ -186,6 +186,11 @@ export function dismissalRefused(selector: unknown, code: unknown): boolean {
   return !validateDismissalSelector(selector).ok || !validateDismissalCode(code).ok;
 }
 
+/** Placeholder until the per-reason copy lands: the i18n key of a disabled Dismiss button's title. */
+export function dismissalRefusedKey(_selector: unknown, _code: unknown): string {
+  return 'issueDismissals.action.refusedTitle';
+}
+
 function wantsHtml(request: FastifyRequest): boolean {
   const accept = request.headers.accept || '';
   const isHtmx = request.headers['hx-request'] === 'true';
@@ -807,6 +812,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   handlebars.registerHelper('dismissalRefused', dismissalRefused);
+  handlebars.registerHelper('dismissalRefusedKey', dismissalRefusedKey);
 
   // 4th arg is the issue's flagged-HTML snippet; handlebars appends its options
   // object as the trailing argument, which buildFixSuggestionHint ignores.

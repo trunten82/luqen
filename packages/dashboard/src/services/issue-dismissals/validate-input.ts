@@ -88,6 +88,14 @@ export function validateDismissalSelector(raw: unknown): ValidationResult<string
   return ok(raw);
 }
 
+/** Why a finding cannot be dismissed, in the order the validators check it (rule code first). */
+export type DismissalRefusalReason = 'no-element' | 'selector-too-long' | 'code-missing' | 'code-too-long';
+
+/** Placeholder until the per-reason classification lands: every refusal answers 'no-element'. */
+export function dismissalRefusalReason(selector: unknown, code: unknown): DismissalRefusalReason | null {
+  return validateDismissalCode(code).ok && validateDismissalSelector(selector).ok ? null : 'no-element';
+}
+
 export function validateRevokeComment(raw: unknown): ValidationResult<string | null> {
   if (raw === undefined || raw === null) return ok(null);
   if (typeof raw !== 'string') return fail('The comment must be text');
