@@ -55,6 +55,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   connections) are not offered to them.
 - MCP `tools/list` publishes each tool's input schema as JSON Schema, including
   the parameter descriptions.
+- The report page offers Dismiss, Revoke and the per-issue Assign buttons only
+  to viewers who may see technical details (`reports.view_technical`), because
+  these controls carry the finding's element selector.
+- The report page disables Dismiss for every finding the server would refuse
+  to dismiss, including a selector or rule code over its length limit. A
+  dismissal preview the server refuses shows the refused hint instead of Try
+  again; timeouts, rate limits and server errors still offer Try again.
+- Translated text inserts each value exactly as given (`$&`, `` $` `` and `$'`
+  in a value such as an API key label are kept as typed) and replaces every
+  occurrence of a placeholder.
+- Dismissal dates in the report's Dismissed section follow the viewer's
+  interface language.
+- A dismissal marked with an API key of the scan's organization keeps that
+  key's label and creation time. The Dismissed section reads
+  `API key: <label> (Created <date>)`, also after the key is deleted, and keys
+  with the same label read differently. Migration 092 adds one nullable column
+  for this; existing dismissals are unchanged.
+- The remote dismissal browser UAT runs only against the dedicated UAT
+  organization and site named by `LUQEN_UAT_EXPECT_ORG` and
+  `LUQEN_UAT_EXPECT_SITE_HOST`; `--check-target-only` checks that rule without
+  writing anything.
 - Tests: each dark-permission filter is covered by its own test.
 
 ### Added
