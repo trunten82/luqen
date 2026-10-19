@@ -295,6 +295,10 @@ on a server reachable by untrusted users.
 | Cookie flags | `httpOnly`, `SameSite=Strict` | Prevents XSS and CSRF via cookie theft |
 | Encryption salt | Per-installation random 32 bytes | Unique encryption per deployment |
 | Boot ID | UUID per database instance | Invalidates sessions when the DB is reset |
+| Signed-in user | Read from the stored dashboard user on every request | A signed-in session follows the stored dashboard user: deactivating or deleting the user ends the session on its next request, and a role change applies on the next request. A session signed in through the compliance service or an SSO plugin whose user has no stored dashboard user keeps the values given at sign-in. |
+| API-key session | The key is checked on every request (active, unexpired, `system` organization, admin role) | A session opened with an API key ends when the key is revoked or expires |
+| Session organization | Checked against the user's organizations on every request | The session's organization must be one of the user's organizations; otherwise the user's first organization (or none) is used |
+| Ended sessions | One `session.ended` audit entry per refused request | The entry's details name the reason: `inactive_user`, `unknown_user` or `key_refused` |
 | Login rate limit | 5 attempts / 15 minutes | Prevents brute-force attacks |
 | Global rate limiting | Per-endpoint limits on all state-changing routes | Prevents abuse of scan, schedule, and admin endpoints |
 | CSRF protection | `@fastify/csrf-protection` | Prevents cross-site request forgery |

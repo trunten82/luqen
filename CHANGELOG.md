@@ -10,6 +10,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- A signed-in session follows the stored dashboard user on every request:
+  deactivating or deleting a user ends their session on its next request, and
+  a role change applies on the next request. A session opened with an API key
+  ends when the key is revoked or expires. A session acts only in one of its
+  user's organizations; otherwise the user's first organization (or none) is
+  used. Signed-in sessions record a `session.ended` audit entry when they are
+  ended for their user or key.
 - MCP requests are answered for the stored, active user of the token: tools
   and permissions follow the user's current roles, a role claim in a token is
   not read, and tokens of deactivated or removed users and of revoked OAuth
