@@ -1,12 +1,14 @@
 /**
- * HARD-21: a paused (destructive) assistant action is stored with secret-named argument values
- * redacted, and its confirmation dispatches the arguments as stored. These tests pin what makes
- * that safe, over each destructive tool's REGISTERED input schema (walked at every depth as JSON
- * Schema):
+ * HARD-21: a paused (destructive) assistant action keeps its arguments as given while it awaits
+ * confirmation and is stored redacted once it is resolved (src/db/sqlite/repositories/
+ * conversation-repository.ts). A destructive tool may carry a secret argument when it declares a
+ * secret-named argument or takes an argument whose entry names the caller chooses (a record or an
+ * open object); such a tool relies on that rule, so the set is pinned here over each destructive
+ * tool's REGISTERED input schema (walked at every depth as JSON Schema):
  *
  *   - no destructive tool declares an argument whose name matches SECRET_ARGUMENT_KEY
- *   - the destructive tool arguments whose names the caller chooses (a record) are listed, so adding
- *     one is a reviewed decision: their secret-named entries are stored redacted like any other
+ *   - the destructive tools that may carry a secret argument, and their caller-named arguments, are
+ *     listed, so adding one is a reviewed decision
  *
  * Each test carries a positive control showing the walk can find what it looks for.
  */
@@ -85,17 +87,21 @@ function callerNamedArguments(schema: Json): string[] {
 const DESTRUCTIVE = DASHBOARD_TOOL_METADATA.filter((t) => t.destructive === true).map((t) => t.name);
 
 describe('HARD-21 destructive assistant tools and secret named arguments', () => {
-  it('HARD-21 no destructive tool declares a secret named argument', async () => {
+  it('HARD-21 destructive tools that may carry a secret argument are listed', async () => {
     const schemas = await registeredSchemas();
     expect(DESTRUCTIVE.length).toBeGreaterThan(0);
+    const secretNamed = (schema: Json): string[] =>
+      declaredArguments(schema).filter((path) => SECRET_ARGUMENT_KEY.test(path.split('.').pop() ?? ''));
     for (const name of DESTRUCTIVE) {
-      const declared = declaredArguments(schemas[name]);
-      expect(declared.length, `${name} has a registered input schema`).toBeGreaterThan(0);
-      expect(declared.filter((path) => SECRET_ARGUMENT_KEY.test(path.split('.').pop() ?? '')), name).toEqual([]);
+      expect(declaredArguments(schemas[name]).length, `${name} has a registered input schema`).toBeGreaterThan(0);
+      expect(secretNamed(schemas[name]), name).toEqual([]);
     }
+    const mayCarry = DESTRUCTIVE.filter(
+      (name) => secretNamed(schemas[name]).length > 0 || callerNamedArguments(schemas[name]).length > 0,
+    ).sort();
+    expect(mayCarry).toEqual(['dashboard_scan_site']);
     // Positive control: the same walk finds the password argument of dashboard_create_user.
-    const control = declaredArguments(schemas['dashboard_create_user']);
-    expect(control.filter((path) => SECRET_ARGUMENT_KEY.test(path.split('.').pop() ?? ''))).toEqual(['password']);
+    expect(secretNamed(schemas['dashboard_create_user'])).toEqual(['password']);
   });
 
   it('HARD-21 destructive tool arguments with caller chosen names are listed', async () => {
