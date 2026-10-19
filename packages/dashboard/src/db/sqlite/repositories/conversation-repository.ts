@@ -221,8 +221,11 @@ export class SqliteConversationRepository implements ConversationRepository {
         conversationId: input.conversationId,
         role: input.role,
         content: input.content ?? null,
-        // HARD-21: secret-named tool arguments are stored as [redacted], for every writer.
-        toolCallJson: input.toolCallJson !== undefined ? redactArgumentsJson(input.toolCallJson) : null,
+        // HARD-21: secret-named tool arguments are stored as [redacted], for every writer; a paused
+        // action keeps its arguments as given until the write that resolves it.
+        toolCallJson: input.toolCallJson === undefined
+          ? null
+          : status === 'pending_confirmation' ? input.toolCallJson : redactArgumentsJson(input.toolCallJson),
         toolResultJson: input.toolResultJson ?? null,
         status,
         createdAt: now,
@@ -255,18 +258,38 @@ export class SqliteConversationRepository implements ConversationRepository {
     status: MessageStatus,
     toolResultJson?: string,
   ): Promise<void> {
-    this.db
-      .prepare(
-        `UPDATE agent_messages
-         SET status = @status,
-             tool_result_json = COALESCE(@toolResultJson, tool_result_json)
-         WHERE id = @messageId`,
-      )
-      .run({
+    const read = this.db.prepare('SELECT status, tool_call_json FROM agent_messages WHERE id = ?');
+    const write = this.db.prepare(
+      `UPDATE agent_messages
+       SET status = @status,
+           tool_result_json = COALESCE(@toolResultJson, tool_result_json),
+           tool_call_json = COALESCE(@resolvedCallJson, tool_call_json)
+       WHERE id = @messageId`,
+    );
+    this.db.transaction(() => {
+      const row = read.get(messageId) as { status: string; tool_call_json: string | null } | undefined;
+      // HARD-21: the write that moves a paused action out of pending_confirmation stores its
+      // arguments redacted, in the same UPDATE as the status change.
+      const resolvesPending = row !== undefined && row.status === 'pending_confirmation'
+        && status !== 'pending_confirmation' && row.tool_call_json !== null;
+      write.run({
         messageId,
         status,
         toolResultJson: toolResultJson ?? null,
+        resolvedCallJson: resolvesPending ? redactArgumentsJson(row.tool_call_json as string) : null,
       });
+    })();
+  }
+
+  async reopenPendingMessage(messageId: string, toolCallJson: string): Promise<void> {
+    this.db
+      .prepare(
+        `UPDATE agent_messages
+         SET status = 'pending_confirmation',
+             tool_call_json = @toolCallJson
+         WHERE id = @messageId`,
+      )
+      .run({ messageId, toolCallJson });
   }
 
   async getWindow(conversationId: string): Promise<Message[]> {

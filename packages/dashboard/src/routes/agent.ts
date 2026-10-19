@@ -677,6 +677,8 @@ export async function registerAgentRoutes(
           return reply.code(400).send({ error: 'malformed_tool_call' });
         }
 
+        // The action leaves pending_confirmation: its stored arguments become redacted in this
+        // write, and the dispatch below runs `call`, the arguments it was paused with.
         await storage.conversations.updateMessageStatus(messageId, 'sent');
         const agentGroupId = readAgentGroupCookie(request.headers.cookie);
         const startedAt = Date.now();
@@ -717,10 +719,10 @@ export async function registerAgentRoutes(
           latencyMs: Date.now() - startedAt,
         });
         // The dispatcher resolves the confirming user's permissions now: a user who may no
-        // longer use the tool gets 403, nothing runs, and the action stays pending (it can
-        // still be declined).
+        // longer use the tool gets 403, nothing runs, and the action returns to pending with the
+        // arguments it was paused with (it can still be confirmed later or declined).
         if (audited.outcome === 'denied') {
-          await storage.conversations.updateMessageStatus(messageId, 'pending_confirmation');
+          await storage.conversations.reopenPendingMessage(messageId, pending.toolCallJson ?? JSON.stringify(call));
           return reply.code(403).send({ error: 'denied' });
         }
         // Persist the dispatched tool result as a NEW tool row so the loop

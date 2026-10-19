@@ -145,14 +145,19 @@ export interface ConversationRepository {
    * also maintains the rolling-window flag on older messages.
    *
    * `toolCallJson` is stored with secret-named argument values redacted, by
-   * the rule the agent audit uses (src/db/agent-audit-redaction.ts).
+   * the rule the agent audit uses (src/db/agent-audit-redaction.ts), except
+   * on a `pending_confirmation` row: a paused action keeps its arguments as
+   * given until the write that resolves it (`updateMessageStatus`).
    */
   appendMessage(input: AppendMessageInput): Promise<Message>;
 
   /**
    * Transitions a message's status. The optional `toolResultJson` is
    * persisted via `COALESCE(?, tool_result_json)` so callers may update
-   * status without touching an existing result payload.
+   * status without touching an existing result payload. A transition that
+   * moves a `pending_confirmation` row to any other status stores its
+   * `toolCallJson` with secret-named argument values redacted, in the same
+   * write.
    *
    * NOTE: no userId / orgId guard — Phase 32's AgentService is
    * responsible for verifying the caller owns the message (T-31-03).
@@ -162,6 +167,13 @@ export interface ConversationRepository {
     status: MessageStatus,
     toolResultJson?: string,
   ): Promise<void>;
+
+  /**
+   * Returns a paused action whose confirmation did not run (the dispatcher
+   * refused it) to `pending_confirmation`, with the arguments it was paused
+   * with (`toolCallJson`, as read from the paused row before the attempt).
+   */
+  reopenPendingMessage(messageId: string, toolCallJson: string): Promise<void>;
 
   /** Rolling-window read: `in_window = 1` only, ordered `created_at ASC`. */
   getWindow(conversationId: string): Promise<Message[]>;
