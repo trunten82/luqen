@@ -27,8 +27,11 @@ export const DISMISSAL_SELECTOR_MAX_LENGTH = 4000;
 /**
  * The largest selector the dismissal preview request accepts (a 400 above it). It bounds the request
  * only: a selector over DISMISSAL_SELECTOR_MAX_LENGTH is refused with the selector-too-long reason.
+ * The preview is a GET, so the selector travels in the URL: the bound sits well inside Node's 16 KiB
+ * header limit, which refuses a longer request line with 431 before any validation. A selector whose
+ * URL encoding is over that limit (each reserved character takes three bytes) still gets 431.
  */
-export const DISMISSAL_PREVIEW_SELECTOR_MAX_LENGTH = 16384;
+export const DISMISSAL_PREVIEW_SELECTOR_MAX_LENGTH = 8192;
 
 export type ValidationResult<T> =
   | { readonly ok: true; readonly value: T }

@@ -251,9 +251,10 @@ export async function reportRoutes(
   /**
    * Dashboard config. `selfScanId` back-compats the dogfood login badge through
    * the public-share gate; `uploadsRoot` resolves manual-test evidence images to
-   * data URIs for the shared-template ACR render.
+   * data URIs for the shared-template ACR render; `reportsDir` is the only
+   * directory a report delete removes stored report files from.
    */
-  config: { selfScanId?: string; uploadsRoot?: string } = {},
+  config: { selfScanId?: string; uploadsRoot?: string; reportsDir?: string } = {},
 ): Promise<void> {
   const uploadsRoot = config.uploadsRoot ?? './uploads';
   // GET /reports — list with pagination and search
@@ -1197,7 +1198,7 @@ export async function reportRoutes(
       }
 
       // The row and the stored report file, through the one delete function.
-      await deleteScanAndFiles(storage, scan);
+      await deleteScanAndFiles(storage, scan, { reportsDir: config.reportsDir, log: request.log });
 
       // HTMX request — return empty fragment for swap
       if (request.headers['hx-request'] === 'true') {

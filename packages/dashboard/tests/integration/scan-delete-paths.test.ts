@@ -299,7 +299,8 @@ describe('HARD-18 scan delete paths', () => {
       await seedScanWithUnremovableReport(fabrikamId, MEMBER),
     ] as const;
     const answers = await deleteThroughEveryPath([seeded[0].id, seeded[1].id, seeded[2].id]);
-    expect(answers.rest).toBe('500:{"error":"The scan could not be deleted"}');
+    expect(answers.rest.startsWith('500:')).toBe(true);
+    expect(answers.rest).toContain('The scan could not be deleted');
     expect(answers.graphql).toBe('200:The scan could not be deleted');
     expect(answers.page.startsWith('500:')).toBe(true);
     expect(JSON.stringify(answers)).not.toContain(h.reportsDir);
@@ -316,7 +317,8 @@ describe('HARD-18 scan delete paths', () => {
       await seedScanWithReportFile(fabrikamId, MEMBER, outsideDir),
     ] as const;
     const answers = await deleteThroughEveryPath([seeded[0].id, seeded[1].id, seeded[2].id]);
-    expect(answers.rest).toBe('500:{"error":"The scan could not be deleted"}');
+    expect(answers.rest.startsWith('500:')).toBe(true);
+    expect(answers.rest).toContain('The scan could not be deleted');
     expect(answers.graphql).toBe('200:The scan could not be deleted');
     expect(answers.page.startsWith('500:')).toBe(true);
     expect(JSON.stringify(answers)).not.toContain(outsideDir);

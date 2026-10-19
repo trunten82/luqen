@@ -99,8 +99,10 @@ export const RevokeBody = Type.Object(
  * selector the mark route would refuse, with its `reason`: 'selector' for a selector that matches
  * the whole page or names no element (FP-04), 'selector-too-long' for one over
  * DISMISSAL_SELECTOR_MAX_LENGTH (HARD-01). The UI translates the reason. The schema bounds the
- * request at DISMISSAL_PREVIEW_SELECTOR_MAX_LENGTH (a 400 above it), well above the refusal limit,
- * so a selector between the two limits is answered with its reason.
+ * request at DISMISSAL_PREVIEW_SELECTOR_MAX_LENGTH (8192 characters, a 400 above it), above the
+ * refusal limit, so a selector between the two limits is answered with its reason. The selector is
+ * part of the URL: a request whose URL is over the server's 16 KiB header limit after encoding is
+ * refused with 431 before this schema runs.
  */
 export const PreviewQuery = Type.Object(
   {

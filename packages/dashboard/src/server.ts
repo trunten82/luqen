@@ -1160,7 +1160,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // LLM client is owned by serviceClientRegistry (constructed above).
   // Routes receive getLLMClient and resolve the current live instance per
   // request so a runtime reload is picked up without a restart.
-  await reportRoutes(server, storage, getLLMClient, { selfScanId: config.selfScanId, uploadsRoot });
+  await reportRoutes(server, storage, getLLMClient, { selfScanId: config.selfScanId, uploadsRoot, reportsDir: config.reportsDir });
   await accessibilityStatementRoutes(server, storage);
   await reportIdentityRoutes(server, storage);
   await acrWordingRoutes(server, storage);
@@ -1264,7 +1264,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   );
 
   // ── Data API routes (Power BI / external integrations) ──────────────────
-  await dataApiRoutes(server, storage);
+  await dataApiRoutes(server, storage, { reportsDir: config.reportsDir });
 
   // ── Branding API routes ──────────────────────────────────────────────────
   await brandingApiRoutes(server, storage);
@@ -1484,6 +1484,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
       scanService: sharedScanService,
       complianceToken: getToken(request),
       clientIp: request.ip,
+      reportsDir: config.reportsDir,
+      log: request.log,
     }),
   });
 

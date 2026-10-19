@@ -262,6 +262,8 @@ const rateLimitConfig = {
 export async function dataApiRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
+  /** `reportsDir`: the only directory a scan delete removes stored report files from. */
+  options: { readonly reportsDir?: string } = {},
 ): Promise<void> {
   const rawDb = (storage as SqliteStorageAdapter).getRawDatabase();
 
@@ -728,7 +730,7 @@ export async function dataApiRoutes(
         return reply.code(403).send({ error: `Forbidden: requires ${SCAN_DELETE_PERMISSION}` });
       }
 
-      await deleteScanAndFiles(storage, scan);
+      await deleteScanAndFiles(storage, scan, { reportsDir: options.reportsDir, log: request.log });
       return reply.code(200).send({ success: true });
     },
   );

@@ -146,7 +146,7 @@ export async function createTestServer(): Promise<TestContext> {
   await homeRoutes(server, storage, config);
   await scanRoutes(server, storage, orchestrator, config);
   await compareRoutes(server, storage);
-  await reportRoutes(server, storage);
+  await reportRoutes(server, storage, undefined, { reportsDir });
 
   // ── Additional core routes ─────────────────────────────────────────────────
   // Hermetic start-URL validation: every host resolves to a public documentation address.
@@ -188,7 +188,7 @@ export async function createTestServer(): Promise<TestContext> {
   await pluginApiRoutes(server, pluginManager);
 
   // ── API routes ─────────────────────────────────────────────────────────────
-  await dataApiRoutes(server, storage);
+  await dataApiRoutes(server, storage, { reportsDir });
   await exportRoutes(server, storage);
   await setupRoutes(server, storage, authService);
 

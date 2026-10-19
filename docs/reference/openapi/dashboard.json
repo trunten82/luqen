@@ -39074,7 +39074,7 @@
           },
           {
             "schema": {
-              "maxLength": 16384,
+              "maxLength": 8192,
               "type": "string"
             },
             "in": "query",

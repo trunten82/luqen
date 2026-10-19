@@ -400,7 +400,7 @@ Dismissals mark a finding (rule code plus selector) as not applicable on a site.
 | Endpoint | Permissions | Notes |
 |----------|-------------|-------|
 | `POST /api/v1/scans/:scanId/dismissals` (mark) | `issues.dismiss` and `reports.view` | Body `{ code, selector, reason }`; `201` with the dismissal |
-| `GET /api/v1/scans/:scanId/dismissals/preview` (preview) | `issues.dismiss` and `reports.view` | Query `code`, `selector`; a selector that cannot be dismissed answers `200` with `refused: true` and `reason` `selector` (whole page or no element) or `selector-too-long` (over 4000 characters, checked before the selector's shape); a selector over 16384 characters answers `400` |
+| `GET /api/v1/scans/:scanId/dismissals/preview` (preview) | `issues.dismiss` and `reports.view` | Query `code`, `selector`; a selector that cannot be dismissed answers `200` with `refused: true` and `reason` `selector` (whole page or no element) or `selector-too-long` (over 4000 characters, checked before the selector's shape); a selector over 8192 characters answers `400`. The selector travels in the URL: a request whose URL is over the server's 16 KB header limit after URL encoding is refused with `431` before validation, and a reverse proxy in front of the dashboard may set a lower URL limit of its own |
 | `POST /api/v1/dismissals/:id/revoke` (revoke) | `issues.dismiss` and `reports.view` | Body `{ comment? }` |
 | `GET /api/v1/scans/:scanId/dismissals` (list) | `reports.view` | Returns the rows the report's Dismissed section shows, each with its `selector` (the section shows the selector only to viewers holding `reports.view_technical`) |
 
@@ -779,7 +779,7 @@ curl -H "X-API-Key: $LUQEN_API_KEY" \
 
 ### `DELETE /api/v1/scans/:id`
 
-Delete a scan record and its associated report files.
+Delete a scan record and its stored report file. The file is removed first, and only from the configured reports directory; a stored path outside it is never removed.
 
 **Authentication:** Requires `reports.delete`, or being the signed-in user who started the scan. Outside global administrators, only scans of the caller's current organization can be deleted; a caller outside every organization can delete only `system` scans. API keys need `reports.delete`: admin keys hold it (an organization admin key within its organization), read-only and scan-only keys cannot delete. The same rule applies to GraphQL `deleteScan` and to the report page delete (`DELETE /reports/:id`).
 
@@ -804,6 +804,7 @@ curl -X DELETE -H "X-API-Key: $LUQEN_API_KEY" \
 | 403 | `Forbidden` — the scan belongs to another organization |
 | 403 | `Forbidden: requires reports.delete` — the caller neither holds `reports.delete` nor started the scan |
 | 403 | A session-cookie request without the CSRF token (see [Dashboard `/api` writes and the CSRF token](#dashboard-api-writes-and-the-csrf-token)) |
+| 500 | `The scan could not be deleted` — the stored report file could not be removed, or a file exists at a stored path outside the reports directory. The scan is kept, so the delete can be retried. GraphQL `deleteScan` answers the same message as an error, and the report page answers `500` |
 
 ---
 

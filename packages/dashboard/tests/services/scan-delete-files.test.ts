@@ -5,8 +5,8 @@
  * - A file that is already gone does not stop the delete.
  * - Any other failure to remove the file keeps the row, writes one warning without the path, and
  *   rejects, so the caller answers a server error and the delete can be retried.
- * - A stored path that does not resolve inside the reports directory is never removed: the row is
- *   kept and one warning is written.
+ * - A stored path that does not resolve inside the reports directory is never removed: when something
+ *   exists there the row is kept and one warning is written; when nothing does, the row is deleted.
  *
  * `unlink` is wrapped (behaviour unchanged) so one test can make it fail with EACCES, which a test
  * running as root cannot produce on a real file.
@@ -116,6 +116,14 @@ describe('HARD-18 deleteScanAndFiles', () => {
       .rejects.toThrow('The scan could not be deleted');
     expect(existsSync(file)).toBe(true);
     expect(h.deleteScan).not.toHaveBeenCalled();
+  });
+
+  it('HARD-18 a stored report path outside the reports directory that names no file does not stop the delete', async () => {
+    const h = harness();
+    await deleteScanAndFiles(h.storage, { id: 'scan-8', jsonReportPath: join(outsideDir, 'moved-away.json') }, h.options);
+    expect(h.deleteScan).toHaveBeenCalledWith('scan-8');
+    expect(fsPromises.unlink).not.toHaveBeenCalled();
+    expect(h.warn).not.toHaveBeenCalled();
   });
 
   it('HARD-18 a scan without a stored report file is deleted without touching the file system', async () => {

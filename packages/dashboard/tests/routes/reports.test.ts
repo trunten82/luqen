@@ -61,7 +61,7 @@ async function createTestServer(
     (request as unknown as Record<string, unknown>)['permissions'] = new Set([...permissions, 'reports.view', 'llm.view']);
   });
 
-  await reportRoutes(server, storage, getLLMClient);
+  await reportRoutes(server, storage, getLLMClient, { reportsDir });
   await server.ready();
 
   const cleanup = (): void => {

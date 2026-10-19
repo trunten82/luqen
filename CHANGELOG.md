@@ -32,9 +32,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Deleting a scan follows one rule through the API, GraphQL and the report
   page: `reports.delete` or having started the scan, for scans of the caller's
   organization (`system` scans by global administrators and users outside every
-  organization); read-only and scan-only API keys cannot delete. Deleting a
-  scan through GraphQL also removes its stored report file, as the API and the
-  report page do.
+  organization); read-only and scan-only API keys cannot delete. Every path
+  removes the scan's stored report file first, and only from the reports
+  directory. When the file cannot be removed, the scan is kept and the delete
+  answers a server error, so it can be retried.
 - Report retry and cancel require `scans.create` and act on scans of the
   caller's organization. The report page shows Retry and Cancel only to viewers
   who may use them, and the RBAC matrix lists both routes.
@@ -90,7 +91,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   instead of offering Try again; timeouts, rate limits and server errors still
   offer Try again. The preview refuses a selector over 4000 characters by its
   length, before any other check, with reason `selector-too-long`, and answers
-  `400` for a selector over 16384 characters.
+  `400` for a selector over 8192 characters. The selector travels in the URL:
+  a request whose encoded URL is over the server's 16 KB header limit is
+  refused with `431` before it is checked.
 - The LLM prompt reset and compare dialog titles show the capability name as
   written, for example "Reset generate-fix to default?".
 - `GET /orgs/current` reports the organization the request acts in, including
