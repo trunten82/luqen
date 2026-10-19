@@ -13,6 +13,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Scheduled scans, schedule creation, report retry and startup recovery use the
   same start-URL validation as the scan form: a schedule's URL is checked when
   it is created and at every run, and a refused run records a failed scan.
+- Deleting a scan follows one rule through the API, GraphQL and the report
+  page: `reports.delete` or having started the scan, for scans of the caller's
+  organization (`system` scans by global administrators and users outside every
+  organization); read-only and scan-only API keys cannot delete.
 - Report retry and cancel require `scans.create` and act on scans of the
   caller's organization. The report page shows Retry and Cancel only to viewers
   who may use them, and the RBAC matrix lists both routes.

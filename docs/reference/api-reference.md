@@ -780,7 +780,7 @@ curl -H "X-API-Key: $LUQEN_API_KEY" \
 
 Delete a scan record and its associated report files.
 
-**Authentication:** Requires admin role or API key. Non-admin users can only delete scans belonging to their organization.
+**Authentication:** Requires `reports.delete`, or being the signed-in user who started the scan. Outside global administrators, only scans of the caller's current organization can be deleted; a caller outside every organization can delete only `system` scans. API keys need `reports.delete`: admin keys hold it (an organization admin key within its organization), read-only and scan-only keys cannot delete. The same rule applies to GraphQL `deleteScan` and to the report page delete (`DELETE /reports/:id`).
 
 **Example request:**
 
@@ -800,7 +800,8 @@ curl -X DELETE -H "X-API-Key: $LUQEN_API_KEY" \
 | Code | Description |
 |------|-------------|
 | 404 | Scan not found |
-| 403 | Forbidden — not admin and scan belongs to different org |
+| 403 | `Forbidden` — the scan belongs to another organization |
+| 403 | `Forbidden: requires reports.delete` — the caller neither holds `reports.delete` nor started the scan |
 | 403 | A session-cookie request without the CSRF token (see [Dashboard `/api` writes and the CSRF token](#dashboard-api-writes-and-the-csrf-token)) |
 
 ---

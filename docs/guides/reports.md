@@ -410,7 +410,7 @@ The dashboard's **Reports** page shows all completed and in-progress scans with:
 - Search by URL
 - Filter by status (queued, running, completed, failed)
 - Pagination (20 per page). The `limit` parameter is clamped to 1-100.
-- Delete action (available to the scan creator or admins)
+- Delete action (available to users with the Delete reports permission and to the user who started the scan, for scans of their organization; reports shared with every organization are deleted by a global administrator or a user outside every organization)
 - HTMX-powered live table updates
 
 ---

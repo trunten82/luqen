@@ -38,7 +38,7 @@ Resolvers enforce permissions identically to the REST endpoints:
 | `auditLog` | `audit.view` |
 | `health` | Authenticated |
 | `createScan` | `scans.create` |
-| `deleteScan` | `reports.delete` |
+| `deleteScan` | `reports.delete`, or the signed-in user who started the scan (scans of the caller's organization; see `DELETE /api/v1/scans/:id`) |
 | `assignIssue`, `updateAssignment`, `deleteAssignment` | `issues.assign` |
 | `createUser` | `users.create` |
 | `deleteUser` | `users.delete` |
