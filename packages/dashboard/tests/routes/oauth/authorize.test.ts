@@ -8,9 +8,10 @@
  *   - Temp-file SQLite (matches the Wave 1 repo-test style).
  *   - Fastify.inject() — no real HTTP.
  *   - @fastify/secure-session + @fastify/formbody + @fastify/csrf-protection.
- *   - A preHandler stub attaches request.user + request.permissions + a
- *     session "orgId" so the route sees an authenticated dashboard user
- *     without running the full AuthService.
+ *   - A preHandler stub attaches request.user (with currentOrgId, as the
+ *     org-context preHandler resolves it) + request.permissions so the route
+ *     sees an authenticated dashboard user without running the full
+ *     AuthService.
  *   - `reply.view` is decorated to return { template, data } JSON for
  *     non-HTMX rendering assertions.
  */
@@ -96,22 +97,13 @@ async function buildCtx(opts: {
   // Attach test user + permissions + csrfToken to session.
   let capturedCsrfToken = '';
   server.addHook('preHandler', async (request, reply) => {
-    request.user = { id: userId, username: `user-${userId}`, role };
+    // The organization the request acts in, as the org-context preHandler sets it.
+    request.user = { id: userId, username: `user-${userId}`, role, currentOrgId: 'org-test' };
     const permissions =
       opts.adminPermissions === false
         ? new Set<string>(['reports.view']) // no admin.system
         : new Set(ALL_PERMISSION_IDS);
     (request as unknown as Record<string, unknown>)['permissions'] = permissions;
-
-    const session = request.session as {
-      get?: (k: string) => unknown;
-      set?: (k: string, v: unknown) => void;
-    };
-    if (typeof session.set === 'function') {
-      session.set('currentOrgId', 'org-test');
-      // Expose orgId at top-level for handler convenience.
-      session.set('orgId', 'org-test');
-    }
 
     // Make csrfToken available to the handler via reply.generateCsrf()
     capturedCsrfToken = reply.generateCsrf();

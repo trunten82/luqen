@@ -160,7 +160,7 @@ describe('HARD-21 consent acts in the organization the dashboard shows', () => {
     trail.push(`consent=${consent.statusCode} ${consent.body.slice(0, 120)}`);
     expect(consent.statusCode, trail.join(' ')).toBe(403);
     expect(consent.json(), trail.join(' ')).toEqual({ error: 'access_denied', error_description: 'dashboard_user_required' });
-    expect(rowCount('SELECT COUNT(*) AS n FROM oauth_consents WHERE user_id = ?', 'api-key'), trail.join(' ')).toBe(0);
+    expect(rowCount('SELECT COUNT(*) AS n FROM oauth_user_consents WHERE user_id = ?', 'api-key'), trail.join(' ')).toBe(0);
     expect(rowCount('SELECT COUNT(*) AS n FROM oauth_authorization_codes WHERE user_id = ?', 'api-key'), trail.join(' ')).toBe(0);
     expect(rowCount('SELECT COUNT(*) AS n FROM oauth_clients_v2 WHERE registered_by_user_id = ?', 'api-key'), trail.join(' ')).toBe(0);
   }, 60_000);
