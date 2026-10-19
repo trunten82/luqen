@@ -91,7 +91,7 @@ Plans:
 - [x] 91-14-PLAN.md — PR3: Dismiss/Assign need technical-details access; the Dismiss button refuses what the server validator refuses
 - [x] 91-15-PLAN.md — PR3: API-key dismissals keep the key's label and creation time (migration 092); dismissal dates in the viewer's locale
 - [x] 91-16-PLAN.md — PR3: the remote UAT harness requires a dedicated target; i18n values render literally
-- [ ] 91-17-PLAN.md — PR3: gates, break every new guard, real-browser UAT read by eye
+- [x] 91-17-PLAN.md — PR3: gates, break every new guard, real-browser UAT read by eye
 - [ ] 91-18-PLAN.md — PR3 ship: migration dry-run on prod, outgoing-content scan, PR, merge, deploy, schema and harness read-back
 
 **UI hint**: yes

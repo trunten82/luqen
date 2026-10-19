@@ -5,16 +5,16 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: "Completed 91-16-PLAN.md (PR3: the remote dismissal UAT requires the dedicated UAT org and site; i18n placeholder values render literally)"
-last_updated: "2026-10-19T07:49:01.301Z"
+stopped_at: Completed 91-17-PLAN.md
+last_updated: "2026-10-19T09:59:33.015Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
-state_head: f618f4e917ecab5f1e055bbdf2eb00da8030bb99
+state_head: c16264aefebd154ee68faf75b6818388c1903d3b
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 28
-  completed_plans: 26
+  completed_plans: 27
   percent: 33
 ---
 
@@ -128,7 +128,7 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 ## Current Position
 
 Phase: 91 (Dismissal and permission hardening) — EXECUTING
-Plan: 13 of 18
+Plan: 18 of 18
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 91 execution started
 
@@ -219,8 +219,8 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-19T07:49:01.237Z
-Stopped at: Completed 91-16-PLAN.md (PR3: the remote dismissal UAT requires the dedicated UAT org and site; i18n placeholder values render literally)
+Last session: 2026-10-19T09:59:32.931Z
+Stopped at: Completed 91-17-PLAN.md
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -282,6 +282,7 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 91 P14 | 25min | 3 tasks | 11 files |
 | Phase 91 P15 | 27min | 3 tasks | 14 files |
 | Phase 91 P16 | 23min | 3 tasks | 8 files |
+| Phase 91 P17 | 126min | 3 tasks | 10 files |
 
 ## Decisions
 
@@ -333,6 +334,8 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 91]: Phase 91 P14: the report page offers the dismissal controls (Dismiss, Revoke and both dialogs) and the per-issue Assign buttons only to viewers with technical-details access; the disabled Dismiss button is decided by the mark validator for both the selector and the rule code, pinned by one shared case list; a preview answered with a 4xx other than 408/429 shows the refused hint
 - [Phase 91]: Phase 91 P15: a dismissal marked by an API key of the scan's own organization keeps that key's label and creation time in one nullable column (migration 092); the Dismissed section names a marking key from that record first and a revoking key from live key rows, each with the key's creation time as a tag, only for viewers who may touch the scan's organization; dismissal dates read in the viewer's session language
 - [Phase 91]: Phase 91 P16: the remote dismissal UAT writes only into the declared UAT organization and site: two required variables with no defaults are checked after the admin login and before any persona login or write, a mismatch exits 2 naming variables only, and --check-target-only reads the rule back without writing; translated strings insert placeholder values literally, in one pass, replacing every occurrence
+- [Phase 91]: 91-17: a named API key's label and creation tag render as one element in each Dismissed-section actor cell (phone card layout keeps the sentence whole)
+- [Phase 91]: 91-17: the dismissal browser UAT seeds API-key dismissals through the real mark API, so the stored key label and time are the route's own
 
 ### Blockers
 
