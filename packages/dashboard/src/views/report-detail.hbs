@@ -380,7 +380,7 @@
               {{/unless}}
               {{/if}}
               {{#if @root.dismissalControls}}
-              {{#if (dismissalRefused selector)}}
+              {{#if (dismissalRefused selector code)}}
               <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" aria-disabled="true" title="{{t 'issueDismissals.action.refusedTitle'}}" aria-describedby="dismiss-refused-ti-{{@../index}}-{{@index}}">{{t "issueDismissals.action.dismiss"}}</button>
               <span class="sr-only" id="dismiss-refused-ti-{{@../index}}-{{@index}}">{{t "issueDismissals.action.refusedTitle"}}</span>
               {{else}}
@@ -426,7 +426,7 @@
             {{/unless}}
             {{/if}}
             {{#if @root.dismissalControls}}
-            {{#if (dismissalRefused selector)}}
+            {{#if (dismissalRefused selector code)}}
             <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" aria-disabled="true" title="{{t 'issueDismissals.action.refusedTitle'}}" aria-describedby="dismiss-refused-pi-{{@../index}}-{{@index}}">{{t "issueDismissals.action.dismiss"}}</button>
             <span class="sr-only" id="dismiss-refused-pi-{{@../index}}-{{@index}}">{{t "issueDismissals.action.refusedTitle"}}</span>
             {{else}}
@@ -567,7 +567,7 @@
             {{/if}}
             <span class="rpt-text--muted">({{affectedCount}} pages)</span>
             {{#if @root.dismissalControls}}
-            {{#if (dismissalRefused selector)}}
+            {{#if (dismissalRefused selector code)}}
             <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" aria-disabled="true" title="{{t 'issueDismissals.action.refusedTitle'}}" aria-describedby="dismiss-refused-tt-{{@../index}}-{{@index}}">{{t "issueDismissals.action.dismiss"}}</button>
             <span class="sr-only" id="dismiss-refused-tt-{{@../index}}-{{@index}}">{{t "issueDismissals.action.refusedTitle"}}</span>
             {{else}}

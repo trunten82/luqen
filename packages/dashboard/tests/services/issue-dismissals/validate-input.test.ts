@@ -11,6 +11,7 @@ import {
   validateMarkInput,
   validateRevokeComment,
 } from '../../../src/services/issue-dismissals/validate-input.js';
+import { DISMISSAL_REFUSAL_CASES } from '../../fixtures/dismissal-refusal-cases.js';
 
 const WHOLE_PAGE_ERROR = 'cannot identify an element';
 
@@ -20,6 +21,19 @@ describe('limits', () => {
     expect(DISMISSAL_COMMENT_MAX_LENGTH).toBe(1000);
     expect(DISMISSAL_CODE_MAX_LENGTH).toBe(300);
     expect(DISMISSAL_SELECTOR_MAX_LENGTH).toBe(4000);
+  });
+});
+
+describe('the shared refusal cases', () => {
+  it('HARD-01 validator refuses exactly the shared refusal cases', () => {
+    // The same list the report page's Dismiss button helper is tested against.
+    const disagree = DISMISSAL_REFUSAL_CASES.filter(
+      (c) => (!validateDismissalSelector(c.selector).ok || !validateDismissalCode(c.code).ok) !== c.refused,
+    ).map((c) => c.why);
+    expect(disagree).toEqual([]);
+    // Both verdicts occur, so the list can catch a drift in either direction.
+    expect(DISMISSAL_REFUSAL_CASES.some((c) => c.refused)).toBe(true);
+    expect(DISMISSAL_REFUSAL_CASES.some((c) => !c.refused)).toBe(true);
   });
 });
 

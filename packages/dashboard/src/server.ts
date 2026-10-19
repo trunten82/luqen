@@ -77,7 +77,7 @@ import { apiKeyRoutes } from './routes/admin/api-keys.js';
 import { organizationRoutes } from './routes/admin/organizations.js';
 import { VERSION } from './version.js';
 import { buildFixSuggestionHint } from './fix-suggestions.js';
-import { isWholePageSelector } from './services/issue-dismissals/validate-input.js';
+import { validateDismissalCode, validateDismissalSelector } from './services/issue-dismissals/validate-input.js';
 import { ALL_PERMISSION_IDS, resolveEffectivePermissions } from './permissions.js';
 import { roleRoutes } from './routes/admin/roles.js';
 import { teamRoutes } from './routes/admin/teams.js';
@@ -173,13 +173,16 @@ export function collectPartials(viewsDir: string): Record<string, string> {
 }
 
 /**
- * Template predicate behind the disabled Dismiss button (Phase 89 D-05, UD-04). It mirrors
- * validateDismissalSelector's refusal: a non-string selector, or one isWholePageSelector says
- * targets the whole page, can never be dismissed. Exported so the template tests run the
- * registered predicate itself rather than a copy.
+ * Template predicate behind the disabled Dismiss button (Phase 89 D-05, UD-04; HARD-01). It is
+ * the server validator itself, for BOTH inputs: a finding whose selector or rule code the mark
+ * route would refuse (whole-page or non-string selector, either value over its length limit, a
+ * missing rule code) renders the disabled button. Templates must pass both arguments, as
+ * `(dismissalRefused selector code)`: a missing second argument would be Handlebars' options
+ * object, which is not a rule code, and would disable the button. Exported so the template tests
+ * run the registered predicate itself rather than a copy.
  */
-export function dismissalRefused(selector: unknown): boolean {
-  return typeof selector !== 'string' || isWholePageSelector(selector);
+export function dismissalRefused(selector: unknown, code: unknown): boolean {
+  return !validateDismissalSelector(selector).ok || !validateDismissalCode(code).ok;
 }
 
 function wantsHtml(request: FastifyRequest): boolean {

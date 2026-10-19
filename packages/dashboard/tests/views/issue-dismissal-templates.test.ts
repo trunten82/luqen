@@ -12,7 +12,12 @@ import { fileURLToPath } from 'node:url';
 import Handlebars from 'handlebars';
 import { collectPartials, dismissalRefused } from '../../src/server.js';
 import { loadTranslations, t, type Locale } from '../../src/i18n/index.js';
-import { DISMISSAL_REASON_MAX_LENGTH } from '../../src/services/issue-dismissals/validate-input.js';
+import {
+  DISMISSAL_CODE_MAX_LENGTH,
+  DISMISSAL_REASON_MAX_LENGTH,
+  DISMISSAL_SELECTOR_MAX_LENGTH,
+} from '../../src/services/issue-dismissals/validate-input.js';
+import { DISMISSAL_REFUSAL_CASES } from '../fixtures/dismissal-refusal-cases.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const VIEWS_DIR = join(HERE, '..', '..', 'src', 'views');
@@ -63,9 +68,13 @@ function issue(selector: unknown, extra: Record<string, unknown> = {}): Record<s
   };
 }
 
-function reportData(pageSelectors: readonly unknown[]): Record<string, unknown> {
+function reportData(
+  pageSelectors: readonly unknown[],
+  templateSelector: unknown = SEL_TEMPLATE,
+  tabSelector: unknown = SEL_TAB,
+): Record<string, unknown> {
   const templateItem = {
-    ...issue(SEL_TEMPLATE),
+    ...issue(templateSelector),
     componentName: 'Navigation',
     affectedCount: 4,
     affectedPages: ['https://fabrikam.example/a'],
@@ -94,7 +103,7 @@ function reportData(pageSelectors: readonly unknown[]): Record<string, unknown> 
         componentName: 'Footer',
         issueCount: 1,
         maxAffectedPages: 3,
-        issues: [{ ...issue(SEL_TAB), affectedCount: 3, affectedPages: ['https://fabrikam.example/a'] }],
+        issues: [{ ...issue(tabSelector), affectedCount: 3, affectedPages: ['https://fabrikam.example/a'] }],
       },
     ],
   };
@@ -105,6 +114,8 @@ interface RenderOptions {
   readonly technical?: boolean;
   readonly assign?: boolean;
   readonly selectors?: readonly unknown[];
+  readonly templateSelector?: unknown;
+  readonly tabSelector?: unknown;
   readonly locale?: string;
   readonly dismissals?: Record<string, unknown>;
 }
@@ -147,7 +158,11 @@ function render(opts: RenderOptions = {}): string {
   const template = hb.compile(reportSource);
   return template({
     scan: { id: 'scan-fabrikam-1', siteUrl: 'https://fabrikam.example', status: 'completed' },
-    reportData: reportData(opts.selectors ?? [SEL_PAGE]),
+    reportData: reportData(
+      opts.selectors ?? [SEL_PAGE],
+      opts.templateSelector ?? SEL_TEMPLATE,
+      opts.tabSelector ?? SEL_TAB,
+    ),
     locale: opts.locale ?? 'en',
     perm: { reportsViewTechnical: opts.technical ?? true, issuesAssign: opts.assign ?? false },
     brandingGuidelineActive: false,
@@ -338,19 +353,70 @@ describe('source discipline', () => {
 });
 
 describe('dismissalRefused', () => {
+  // Always TWO explicit arguments: in a template a missing second argument becomes Handlebars'
+  // options object, which is not a rule code.
   it.each(['html', 'HTML', ' body ', ':root', '', '   ', 'html > body', '/html/body'])(
     'refuses the whole-page selector %j',
     (selector) => {
-      expect(dismissalRefused(selector)).toBe(true);
+      expect(dismissalRefused(selector, CODE)).toBe(true);
     },
   );
 
   it.each([undefined, null, 5, {}])('refuses a non-string selector %j', (selector) => {
-    expect(dismissalRefused(selector)).toBe(true);
+    expect(dismissalRefused(selector, CODE)).toBe(true);
   });
 
   it.each(['#hero > p', '.site-nav a', 'body > div', 'body *'])('allows the specific selector %j', (selector) => {
-    expect(dismissalRefused(selector)).toBe(false);
+    expect(dismissalRefused(selector, CODE)).toBe(false);
+  });
+});
+
+describe('the Dismiss button refuses what the server validator refuses', () => {
+  const LONG_SELECTOR = `#${'a'.repeat(DISMISSAL_SELECTOR_MAX_LENGTH)}`;
+
+  it('HARD-01 helper and validator agree on every shared refusal case', () => {
+    const disagree = DISMISSAL_REFUSAL_CASES.filter((c) => dismissalRefused(c.selector, c.code) !== c.refused).map(
+      (c) => c.why,
+    );
+    expect(disagree).toEqual([]);
+  });
+
+  it('HARD-01 helper refuses a selector over the length limit', () => {
+    expect(LONG_SELECTOR).toHaveLength(DISMISSAL_SELECTOR_MAX_LENGTH + 1);
+    expect(dismissalRefused(LONG_SELECTOR, CODE)).toBe(true);
+    // Control: the same selector shape at the limit is allowed.
+    expect(dismissalRefused(LONG_SELECTOR.slice(0, DISMISSAL_SELECTOR_MAX_LENGTH), CODE)).toBe(false);
+  });
+
+  it('HARD-01 helper refuses a rule code over the length limit', () => {
+    const longCode = `R.${'x'.repeat(DISMISSAL_CODE_MAX_LENGTH - 1)}`;
+    expect(longCode).toHaveLength(DISMISSAL_CODE_MAX_LENGTH + 1);
+    expect(dismissalRefused(SEL_PAGE, longCode)).toBe(true);
+    expect(dismissalRefused(SEL_PAGE, longCode.slice(0, DISMISSAL_CODE_MAX_LENGTH))).toBe(false);
+  });
+
+  it('HARD-01 report page renders a disabled Dismiss button for an over long selector at every issue site', () => {
+    const html = render({ selectors: [LONG_SELECTOR], templateSelector: LONG_SELECTOR, tabSelector: LONG_SELECTOR });
+    const buttons = dismissButtons(html);
+    // Page issue, template item and Templates-tab item: three buttons, every one disabled.
+    expect(buttons).toHaveLength(3);
+    for (const button of buttons) {
+      expect(button).toContain('aria-disabled="true"');
+      expect(button).not.toContain('data-action');
+      expect(button).not.toContain('data-selector');
+    }
+  });
+
+  it('HARD-01 report page renders an enabled Dismiss button for a valid finding at every issue site', () => {
+    // Each site must hand the helper its rule code: a site that does not would disable its button.
+    const buttons = dismissButtons(render());
+    expect(buttons).toHaveLength(3);
+    for (const selector of [SEL_TEMPLATE, SEL_PAGE, SEL_TAB]) {
+      const own = buttons.filter((b) => b.includes(`data-selector="${selector}"`));
+      expect(own, selector).toHaveLength(1);
+      expect(own[0]).toContain('data-action="rptDismissIssue"');
+      expect(own[0]).not.toContain('aria-disabled');
+    }
   });
 });
 
