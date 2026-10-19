@@ -33,7 +33,7 @@ import { DASHBOARD_PROMPT_NAMES } from '../../src/mcp/prompts.js';
 import type { McpTokenPayload, McpTokenVerifier } from '../../src/mcp/middleware.js';
 import type { StorageAdapter } from '../../src/db/index.js';
 import type { ScanService } from '../../src/services/scan-service.js';
-import { storedCallerUsers } from '../helpers/stored-caller-stub.js';
+import { storedCallerOrgs, storedCallerUsers } from '../helpers/stored-caller-stub.js';
 
 // ---------------------------------------------------------------------------
 // Stubs (inlined — matches 30-02 data-tools.test.ts scaffolding)
@@ -69,7 +69,8 @@ function makeStubStorage(o: StubOverrides = {}): StorageAdapter {
       getHistoryForSite: async () => [],
     } as unknown as StorageAdapter['brandScores'],
     users: storedCallerUsers('user') as unknown as StorageAdapter['users'],
-    organizations: empty as StorageAdapter['organizations'],
+    // The token's subject belongs to the token organizations used in this file.
+    organizations: storedCallerOrgs('org-test') as unknown as StorageAdapter['organizations'],
     roles: {
       getEffectivePermissions: o.getEffectivePermissions ?? (async () => perms),
     } as unknown as StorageAdapter['roles'],

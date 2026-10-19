@@ -31,7 +31,7 @@ import {
 } from '../../src/services/scan-service.js';
 import { runInToolContext, type ToolContext } from '@luqen/core/mcp';
 import type { ServiceConnectionsRepository } from '../../src/db/service-connections-repository.js';
-import { storedCallerUsers } from '../helpers/stored-caller-stub.js';
+import { storedCallerOrgs, storedCallerUsers } from '../helpers/stored-caller-stub.js';
 
 // ---------------------------------------------------------------------------
 // Shared stub factories (copied verbatim from compliance-tools.test.ts pattern)
@@ -508,7 +508,8 @@ function makeIntegrationStubStorage(perms: readonly string[] = []): StorageAdapt
     scans: empty as StorageAdapter['scans'],
     brandScores: empty as StorageAdapter['brandScores'],
     users: storedCallerUsers('user') as unknown as StorageAdapter['users'],
-    organizations: empty as StorageAdapter['organizations'],
+    // The token's subject belongs to the token organizations used in this file.
+    organizations: storedCallerOrgs('org-1', 'org-fabrikam') as unknown as StorageAdapter['organizations'],
     roles: {
       getEffectivePermissions: async () => permSet,
     } as unknown as StorageAdapter['roles'],

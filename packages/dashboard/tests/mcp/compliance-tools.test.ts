@@ -30,7 +30,7 @@ import type {
   ServiceConnectionsRepository,
 } from '../../src/db/service-connections-repository.js';
 import * as complianceClient from '../../src/compliance-client.js';
-import { storedCallerUsers } from '../helpers/stored-caller-stub.js';
+import { storedCallerOrgs, storedCallerUsers } from '../helpers/stored-caller-stub.js';
 
 // ---------------------------------------------------------------------------
 // Stubs
@@ -43,7 +43,8 @@ function makeStubStorage(perms: readonly string[] = []): StorageAdapter {
     scans: empty as StorageAdapter['scans'],
     brandScores: empty as StorageAdapter['brandScores'],
     users: storedCallerUsers('user') as unknown as StorageAdapter['users'],
-    organizations: empty as StorageAdapter['organizations'],
+    // The token's subject belongs to the token organizations used in this file.
+    organizations: storedCallerOrgs('org-1') as unknown as StorageAdapter['organizations'],
     roles: {
       getEffectivePermissions: async () => permSet,
     } as unknown as StorageAdapter['roles'],

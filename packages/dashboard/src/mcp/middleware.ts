@@ -12,8 +12,10 @@
  *   2. Calls the injected verifyToken (RS256 jose.jwtVerify) — reply 401 on failure
  *   3. Refuses a token whose OAuth client was revoked (401 client_revoked)
  *   4. Answers for the STORED user of the token on every request
- *      (src/auth/stored-caller.ts): no stored user or a deactivated one -> 401
- *      invalid_token; permissions resolve from the stored global role through
+ *      (src/auth/stored-caller.ts): no stored user, a deactivated one, or a
+ *      non-admin user who does not belong to the token's organization -> 401
+ *      invalid_token (error_description unknown_user, inactive_user or
+ *      not_member); permissions resolve from the stored global role through
  *      resolveEffectivePermissions, so the Bearer context matches what a
  *      cookie-session user sees for the same (userId, orgId)
  *   5. Refuses a caller holding no permission in the token's organization

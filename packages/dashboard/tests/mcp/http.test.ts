@@ -30,7 +30,7 @@ import type {
   ServiceConnection,
   ServiceConnectionsRepository,
 } from '../../src/db/service-connections-repository.js';
-import { storedCallerUsers } from '../helpers/stored-caller-stub.js';
+import { storedCallerOrgs, storedCallerUsers } from '../helpers/stored-caller-stub.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -53,7 +53,8 @@ function makeStubStorage(perms: readonly string[] = [], storedRole = 'user'): St
     // shape-compatible stub that satisfies TypeScript for registerMcpRoutes.
     scans: empty as StorageAdapter['scans'],
     users: storedCallerUsers(storedRole) as unknown as StorageAdapter['users'],
-    organizations: empty as StorageAdapter['organizations'],
+    // The token's subject belongs to the token organizations used in this file.
+    organizations: storedCallerOrgs('org-1', 'org-3', 'org-4', 'org-any', 'org-prompts') as unknown as StorageAdapter['organizations'],
     schedules: empty as StorageAdapter['schedules'],
     assignments: empty as StorageAdapter['assignments'],
     repos: empty as StorageAdapter['repos'],

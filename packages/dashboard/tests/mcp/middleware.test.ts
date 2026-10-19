@@ -6,7 +6,7 @@ import {
   type McpTokenVerifier,
 } from '../../src/mcp/middleware.js';
 import { ALL_PERMISSION_IDS } from '../../src/permissions.js';
-import { storedCallerUsers } from '../helpers/stored-caller-stub.js';
+import { storedCallerOrgs, storedCallerUsers } from '../helpers/stored-caller-stub.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -62,6 +62,8 @@ function makeStubStorage(
     oauthClients: {
       findByClientId: vi.fn(async (_clientId: string) => oauthClientRow),
     },
+    // The token's subject belongs to the token organizations used in this file.
+    organizations: storedCallerOrgs('org-1', 'org-2', 'org-x', 'org-8'),
   };
 }
 
