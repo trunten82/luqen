@@ -71,7 +71,8 @@ that you declined. Approve runs the tool and resumes streaming. Only you
 can approve or cancel an action paused in your conversation, and Approve
 checks again that your role still allows the tool: if it no longer does,
 nothing runs and the dialog reports the error. Every approval is recorded
-in the agent audit.
+in the agent audit. If the approved tool fails to run, the action is closed
+as failed and recorded in the agent audit as an error.
 
 ### Multi-step tool transparency
 
@@ -195,8 +196,10 @@ Every agent turn produces audit entries:
 
 - The user prompt and the model response (truncated to a configurable
   preview length)
-- Each tool call, with arguments, result envelope, and outcome
-  (`approved`, `denied`, `failed`)
+- Each tool call, with arguments and outcome (`success`, `error`,
+  `denied`, `timeout`). An argument named like a password, secret, token,
+  API key, authorization value or credential is stored as `[redacted]`,
+  at any depth
 - Token-budget compaction events
 - Soft-delete and share-link operations on conversations
 

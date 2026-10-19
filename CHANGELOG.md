@@ -25,7 +25,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   agent audit. Confirming or declining a paused action is limited to the
   conversation's user, every confirmation is recorded in the agent audit, and
   a confirmation checks again that the user may still run the tool (`403`
-  otherwise, leaving the action pending).
+  otherwise, leaving the action pending). A confirmation whose tool fails to
+  run closes the action as failed, is recorded in the agent audit as an
+  error, and answers `500` with a generic message.
+- The agent audit stores tool arguments named like a password, secret, token,
+  API key, authorization value or credential as `[redacted]`, at any depth,
+  for every tool call the assistant runs, refuses or confirms.
 - Scheduled scans, schedule creation, report retry and startup recovery use the
   same start-URL validation as the scan form: a schedule's URL is checked when
   it is created and at every run, and a refused run records a failed scan.

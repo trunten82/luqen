@@ -28,7 +28,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyBaseLogger, FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import rateLimit from '@fastify/rate-limit';
 import Handlebars from 'handlebars';
 import { Type, type Static, type TSchema } from '@sinclair/typebox';
@@ -680,11 +680,29 @@ export async function registerAgentRoutes(
         await storage.conversations.updateMessageStatus(messageId, 'sent');
         const agentGroupId = readAgentGroupCookie(request.headers.cookie);
         const startedAt = Date.now();
-        const result = await dispatcher.dispatch(call, {
-          userId: user.id,
-          orgId,
-          ...(agentGroupId !== '' ? { groupId: agentGroupId } : {}),
-        });
+        let result: Awaited<ReturnType<typeof dispatcher.dispatch>>;
+        try {
+          result = await dispatcher.dispatch(call, {
+            userId: user.id,
+            orgId,
+            ...(agentGroupId !== '' ? { groupId: agentGroupId } : {}),
+          });
+        } catch (err) {
+          // The tool run failed before it answered (for example a storage fault while the
+          // confirming user's permissions are read): the action is closed as failed, one audit row
+          // records the error, and the caller gets a generic server error.
+          request.log.error({ err, messageId, toolName: call.name }, 'agent confirm: the tool run failed');
+          await closeFailedConfirm(storage, request.log, {
+            messageId,
+            userId: user.id,
+            orgId,
+            conversationId: pending.conversationId,
+            toolName: call.name,
+            argsJson: JSON.stringify(call.args),
+            latencyMs: Date.now() - startedAt,
+          });
+          return reply.code(500).send({ error: 'internal' });
+        }
         // One agent audit row per confirm attempt that reaches the permission decision, with the
         // outcome classified as the assistant loop classifies a dispatch result.
         const audited = classifyDispatchOutcome(result);
@@ -1646,6 +1664,45 @@ async function loadConversationAnyOrg(
  * sentinel of 'timeout' or 'denied' keeps its name, any other sentinel is 'error', anything else
  * is 'success'.
  */
+/**
+ * Close a confirm whose tool run threw: mark the pending action failed and write one agent audit row
+ * with outcome error. A failure of either write is logged, never thrown, so the caller still answers
+ * its generic server error.
+ */
+async function closeFailedConfirm(
+  storage: StorageAdapter,
+  log: FastifyBaseLogger,
+  failed: {
+    readonly messageId: string;
+    readonly userId: string;
+    readonly orgId: string;
+    readonly conversationId: string;
+    readonly toolName: string;
+    readonly argsJson: string;
+    readonly latencyMs: number;
+  },
+): Promise<void> {
+  try {
+    await storage.conversations.updateMessageStatus(failed.messageId, 'failed');
+  } catch (err) {
+    log.error({ err, messageId: failed.messageId }, 'agent confirm: the failed action could not be marked failed');
+  }
+  try {
+    await storage.agentAudit.append({
+      userId: failed.userId,
+      orgId: failed.orgId,
+      conversationId: failed.conversationId,
+      toolName: failed.toolName,
+      argsJson: failed.argsJson,
+      outcome: 'error',
+      outcomeDetail: 'internal',
+      latencyMs: failed.latencyMs,
+    });
+  } catch (err) {
+    log.error({ err, messageId: failed.messageId }, 'agent confirm: the failed action could not be audited');
+  }
+}
+
 function classifyDispatchOutcome(result: unknown): {
   readonly outcome: 'success' | 'error' | 'timeout' | 'denied';
   readonly outcomeDetail?: string;

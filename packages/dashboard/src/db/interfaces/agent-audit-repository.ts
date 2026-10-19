@@ -87,6 +87,9 @@ export interface AgentAuditRepository {
    * Append a single audit entry and return the persisted row (with
    * server-generated id + createdAt). ONLY mutation method on this
    * repository — see Immutability Contract in the file docblock.
+   * `argsJson` is stored with every secret-named argument's value replaced
+   * by `[redacted]` (db/agent-audit-redaction.ts); the returned row is the
+   * stored one.
    */
   append(input: AppendAuditInput): Promise<AgentAuditEntry>;
 
