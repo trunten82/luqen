@@ -84,8 +84,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   rule code missing, rule code too long) in the viewer's interface language. A
   dismissal preview the server refuses says why in the viewer's language
   instead of offering Try again; timeouts, rate limits and server errors still
-  offer Try again. The preview answers a selector over 4000 characters as
-  refused with reason `selector-too-long`.
+  offer Try again. The preview refuses a selector over 4000 characters by its
+  length, before any other check, with reason `selector-too-long`, and answers
+  `400` for a selector over 16384 characters.
 - The LLM prompt reset and compare dialog titles show the capability name as
   written, for example "Reset generate-fix to default?".
 - `GET /orgs/current` reports the organization the request acts in, including

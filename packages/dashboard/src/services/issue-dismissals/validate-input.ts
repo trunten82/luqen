@@ -14,12 +14,21 @@
  *
  * An accepted selector and code are returned UNCHANGED: matching is
  * byte-exact by design (normalised matching, FP-V2-02, is deferred).
+ *
+ * A selector is classified by its length first (constant time), and only a
+ * selector within DISMISSAL_SELECTOR_MAX_LENGTH is read for its shape; the
+ * shape check runs in time linear in the selector's length.
  */
 
 export const DISMISSAL_REASON_MAX_LENGTH = 1000;
 export const DISMISSAL_COMMENT_MAX_LENGTH = 1000;
 export const DISMISSAL_CODE_MAX_LENGTH = 300;
 export const DISMISSAL_SELECTOR_MAX_LENGTH = 4000;
+/**
+ * The largest selector the dismissal preview request accepts (a 400 above it). It bounds the request
+ * only: a selector over DISMISSAL_SELECTOR_MAX_LENGTH is refused with the selector-too-long reason.
+ */
+export const DISMISSAL_PREVIEW_SELECTOR_MAX_LENGTH = 16384;
 
 export type ValidationResult<T> =
   | { readonly ok: true; readonly value: T }
@@ -52,13 +61,39 @@ function targetsRootElement(part: string): boolean {
   return base !== null && ROOT_ELEMENTS.has(base[1]);
 }
 
+/**
+ * Replace every `open ... close` group with the empty pair, in one left-to-right pass: from an opening
+ * character, the group ends at the first closing character after it; an opening character with no
+ * closing one after it is kept. The same result as replacing `/\[[^\]]*\]/g` (or the parenthesis
+ * form) with the empty pair, in time linear in the text's length.
+ */
+function blankGroups(text: string, open: string, close: string): string {
+  const nextClose = new Int32Array(text.length + 1);
+  nextClose[text.length] = -1;
+  for (let i = text.length - 1; i >= 0; i -= 1) nextClose[i] = text[i] === close ? i : nextClose[i + 1];
+  const parts: string[] = [];
+  let i = 0;
+  while (i < text.length) {
+    const end = text[i] === open ? nextClose[i + 1] : -1;
+    if (end === -1) {
+      parts.push(text[i]);
+      i += 1;
+    } else {
+      parts.push(open + close);
+      i = end + 1;
+    }
+  }
+  return parts.join('');
+}
+
 export function isWholePageSelector(selector: string): boolean {
   const normalised = selector.trim().toLowerCase();
   if (normalised === '') return true;
   if (WHOLE_PAGE_XPATH.test(normalised.replace(/\s+/g, ''))) return true;
   // Blank out bracket and paren contents so commas or combinators inside
-  // [attr] or :not(...) are not read as structure.
-  const structural = normalised.replace(/\[[^\]]*\]/g, '[]').replace(/\([^)]*\)/g, '()');
+  // [attr] or :not(...) are not read as structure: brackets first, then
+  // parentheses on the result.
+  const structural = blankGroups(blankGroups(normalised, '[', ']'), '(', ')');
   return structural.split(',').some(targetsRootElement);
 }
 
@@ -82,11 +117,14 @@ function codeRefusal(raw: unknown): 'code-missing' | 'code-too-long' | null {
   return null;
 }
 
-/** The one classification of a selector: the validator and the refusal reason both read it. */
+/**
+ * The one classification of a selector: the validator and the refusal reason both read it. The
+ * length decides first, so a selector over the limit is never read for its shape.
+ */
 function selectorRefusal(raw: unknown): 'no-element' | 'selector-too-long' | null {
-  if (typeof raw !== 'string' || isWholePageSelector(raw)) return 'no-element';
+  if (typeof raw !== 'string') return 'no-element';
   if (raw.length > DISMISSAL_SELECTOR_MAX_LENGTH) return 'selector-too-long';
-  return null;
+  return isWholePageSelector(raw) ? 'no-element' : null;
 }
 
 export function validateDismissalCode(raw: unknown): ValidationResult<string> {

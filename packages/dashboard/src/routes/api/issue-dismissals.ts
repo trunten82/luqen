@@ -34,7 +34,6 @@ import {
 import {
   dismissalRefusalReason,
   validateDismissalCode,
-  validateDismissalSelector,
   validateMarkInput,
   validateRevokeComment,
 } from '../../services/issue-dismissals/validate-input.js';
@@ -309,13 +308,14 @@ export async function issueDismissalRoutes(
 
       // A selector the mark route would refuse can never be dismissed (FP-04, HARD-01): answer
       // before loading the report, with a machine reason only; the UI translates it. 'selector'
-      // is a whole-page or missing element, 'selector-too-long' one over the length limit.
-      const selector = validateDismissalSelector(request.query.selector);
-      if (!selector.ok) {
-        const refusal = dismissalRefusalReason(request.query.selector, code.value);
+      // is a whole-page or missing element, 'selector-too-long' one over the length limit. The
+      // selector is classified once (its length first), and an accepted one is used unchanged.
+      const refusal = dismissalRefusalReason(request.query.selector, code.value);
+      if (refusal !== null) {
         const reason = refusal === 'selector-too-long' ? 'selector-too-long' : 'selector';
         return reply.code(200).send({ occurrences: 0, pages: 0, refused: true, reason });
       }
+      const selector = request.query.selector;
 
       if (scan.status !== 'completed') {
         return reply.code(422).send({ error: 'Scan has no completed report' });
@@ -332,7 +332,7 @@ export async function issueDismissalRoutes(
       const siteKey = toSiteKey(scan.siteUrl);
       const { dismissed } = applyDismissals(
         loaded.report,
-        [{ id: 'preview', code: code.value, selector: selector.value, siteKey }],
+        [{ id: 'preview', code: code.value, selector, siteKey }],
         siteKey,
       );
       // The counts are over the RAW report, so a key that is already dismissed previews non-zero
@@ -340,7 +340,7 @@ export async function issueDismissalRoutes(
       // Same key the mark conflict uses: this org, this site, exact code + selector, active only.
       const active = await dismissals.listActiveForSite(scan.orgId, siteKey);
       const alreadyDismissed = active.some(
-        (d) => d.code === code.value && d.selector === selector.value,
+        (d) => d.code === code.value && d.selector === selector,
       );
       return reply.code(200).send({
         occurrences: dismissed.length,

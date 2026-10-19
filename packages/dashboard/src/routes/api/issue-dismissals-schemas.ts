@@ -12,6 +12,7 @@ import type {
 import {
   DISMISSAL_CODE_MAX_LENGTH,
   DISMISSAL_COMMENT_MAX_LENGTH,
+  DISMISSAL_PREVIEW_SELECTOR_MAX_LENGTH,
   DISMISSAL_REASON_MAX_LENGTH,
   DISMISSAL_SELECTOR_MAX_LENGTH,
 } from '../../services/issue-dismissals/validate-input.js';
@@ -97,13 +98,14 @@ export const RevokeBody = Type.Object(
  * Phase 89 (D-04): the read-only coverage preview behind the mark dialog. `refused` answers a
  * selector the mark route would refuse, with its `reason`: 'selector' for a selector that matches
  * the whole page or names no element (FP-04), 'selector-too-long' for one over
- * DISMISSAL_SELECTOR_MAX_LENGTH (HARD-01). The UI translates the reason. The selector therefore has
- * no schema length cap here: the handler refuses an over-long one with its reason instead of a 400.
+ * DISMISSAL_SELECTOR_MAX_LENGTH (HARD-01). The UI translates the reason. The schema bounds the
+ * request at DISMISSAL_PREVIEW_SELECTOR_MAX_LENGTH (a 400 above it), well above the refusal limit,
+ * so a selector between the two limits is answered with its reason.
  */
 export const PreviewQuery = Type.Object(
   {
     code: Type.String({ maxLength: DISMISSAL_CODE_MAX_LENGTH }),
-    selector: Type.String(),
+    selector: Type.String({ maxLength: DISMISSAL_PREVIEW_SELECTOR_MAX_LENGTH }),
   },
   { additionalProperties: false },
 );
