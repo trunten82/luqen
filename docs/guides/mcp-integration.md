@@ -174,6 +174,16 @@ refuses to issue a code unless the consenting user has `mcp.use` in the
 active org (or `admin.system`). Org admins grant `mcp.use` from the role
 editor at `/admin/roles`.
 
+**The stored user answers every request.** Each request to `/api/v1/mcp` is
+answered for the stored, active user the token was issued to: the tools and
+permissions follow that user's current stored roles in the token's
+organization (a role claim inside a token is not read). A token whose user
+has been deactivated or removed is refused with `401` `invalid_token`
+(`error_description` `inactive_user` or `unknown_user`) on its next use, and
+a user holding no permission in the token's organization is refused with
+`403` `insufficient_scope` (`error_description` `no_permission`). The
+dashboard's built-in agent resolves its tools from the same stored user.
+
 **Dynamic Client Registration via `POST /oauth/register`:** open endpoint,
 rate-limited per IP. The client posts `client_metadata`:
 
@@ -232,8 +242,10 @@ MCP call (no waiting for the token TTL).
 |---|---|---|
 | `401 Bearer token required` | Missing or empty `Authorization` header | Ensure the bridge / IDE actually attached a token; re-run the OAuth flow |
 | `401 invalid_token` | Token expired, signature mismatch, or wrong issuer | Refresh; verify `DASHBOARD_PUBLIC_URL` matches the host the client used |
+| `401 invalid_token` with `inactive_user` or `unknown_user` | The user the token was issued to has been deactivated or removed | Reactivate the user at `/admin/users`, or sign in as an active user and authorize the client again |
 | `401 client_revoked` | OAuth client was revoked at `/admin/clients` | Register a fresh client (DCR re-runs automatically on bridge restart) |
 | `403 Insufficient scope` | Token issued with `read` but tool requires `write` | Re-consent with `scope=read+write` at `/oauth/authorize` |
+| `403 insufficient_scope` with `no_permission` | The user holds no permission in the token's organization | Grant the user a role in that organization (at `/admin/teams` or `/admin/roles`), or authorize against an organization where they hold one |
 | Empty tools list | Caller has no `mcp.use` permission in the active org, or RBAC filters every tool | Grant `mcp.use` at `/admin/roles`; verify role permissions |
 | `Transport not supported` / SSE-only error | Client speaks pure SSE (deprecated transport) | Upgrade client; use Streamable HTTP — Luqen will not negotiate SSE-only |
 | Consent screen says "MCP access not enabled for your org" | Active org lacks `mcp.use` for your role | Org admin must grant `mcp.use` |

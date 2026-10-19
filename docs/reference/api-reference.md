@@ -415,6 +415,7 @@ Dismissals mark a finding (rule code plus selector) as not applicable on a site.
 ## Dashboard roles, teams and the MCP user tools
 
 - **Global-only permissions.** `admin.system` and `admin.users` come from the global `admin` role only. Creating or editing an organization role that carries either answers `422` naming the refused permission, and neither a team's role nor another global role grants them.
+- **MCP permissions.** `POST /api/v1/mcp` resolves the caller's permissions on every request from the stored, active user the token was issued to (that user's global role and team roles in the token's organization); a deactivated or removed user's token answers `401` `invalid_token`, and a user holding no permission in the token's organization answers `403` `insufficient_scope`.
 - **Team role bindings.** Binding a team to a built-in role (`POST /admin/teams`, `POST /admin/teams/:id/role`) needs a global administrator; anyone else receives `403` `Built-in roles are bound to teams by global administrators`. Organization administrators bind their organization's roles and global custom roles.
 - **Team organization.** `POST /admin/teams` and `POST /admin/teams/:id/org` place a team only in the organization the caller administers (their current organization); global administrators place teams in any organization. Any other target answers `403` `Teams are created in and moved to the organization you administer`, and nothing is written.
 - **MCP user tools.** `dashboard_create_user` and `dashboard_update_user` follow the dashboard's user rules:

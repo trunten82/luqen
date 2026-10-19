@@ -10,6 +10,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- MCP requests are answered for the stored, active user of the token: tools
+  and permissions follow the user's current roles, a role claim in a token is
+  not read, and tokens of deactivated or removed users and of revoked OAuth
+  clients are refused on their next use. A user holding no permission in the
+  token's organization is refused with `403 insufficient_scope`, and the
+  built-in agent resolves its tools from the same stored user.
 - Scheduled scans, schedule creation, report retry and startup recovery use the
   same start-URL validation as the scan form: a schedule's URL is checked when
   it is created and at every run, and a refused run records a failed scan.
