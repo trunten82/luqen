@@ -5,16 +5,16 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: Completed 91-20-PLAN.md (PR4 plan 2: MCP requests, refresh and code exchange follow one MCP rule including mcp.use; consent acts in the organization the dashboard shows for a stored dashboard user; 10 breaks MATCH; not pushed)
-last_updated: "2026-10-19T22:32:00.000Z"
+stopped_at: Completed 91-21-PLAN.md (PR4 plan 3: assistant context hints follow the stored user's permissions; stored tool calls redacted, a paused action kept as given until it is resolved; 11 breaks MATCH; UAT GREEN 238; not pushed)
+last_updated: "2026-10-19T23:25:00.000Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
-state_head: c851ee3ff808955b0fba5b6c3f534e836c441f4d
+state_head: d5012eb695959c6d560d073eb6de34f788e1d760
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 39
-  completed_plans: 36
+  completed_plans: 37
   percent: 33
 ---
 
@@ -128,7 +128,7 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 ## Current Position
 
 Phase: 91 (Dismissal and permission hardening) — EXECUTING
-Plan: 20 of 23
+Plan: 21 of 23
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 91 execution started
 
@@ -219,10 +219,10 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-19T22:32:00.000Z
-Stopped at: Completed 91-20-PLAN.md (PR4 plan 2: MCP requests, refresh and code exchange follow one MCP rule including mcp.use; consent acts in the organization the dashboard shows for a stored dashboard user; 10 breaks MATCH; not pushed)
+Last session: 2026-10-19T23:25:00.000Z
+Stopped at: Completed 91-21-PLAN.md (PR4 plan 3: assistant context hints follow the stored user's permissions; stored tool calls redacted, a paused action kept as given until it is resolved; 11 breaks MATCH; UAT GREEN 238; not pushed)
 Resume file: None
-Next action: Phase 91 PR4 continues with 91-21 (branch fix/v3.9.0-phase-91-session-freshness).
+Next action: Phase 91 PR4 continues with 91-22 (review of 12cddce7..HEAD; branch fix/v3.9.0-phase-91-session-freshness).
 
 ## Operator Next Steps
 
@@ -292,6 +292,7 @@ Next action: Phase 91 PR4 continues with 91-21 (branch fix/v3.9.0-phase-91-sessi
 | Phase 91 P18 | ~33min | 2 tasks | 0 files |
 | Phase 91 P19 | ~70min | 3 tasks | 8 files |
 | Phase 91 P20 | ~45min | 3 tasks | 25 files |
+| Phase 91 P21 | ~46min | 3 tasks | 15 files |
 
 ## Decisions
 
@@ -354,6 +355,7 @@ Next action: Phase 91 PR4 continues with 91-21 (branch fix/v3.9.0-phase-91-sessi
 - [Phase 91]: Phase 91 P18: PR3 shipped as PR 11 with a merge commit after every pre-merge production gate passed (migration 092 dry-run on a replay of the production schema and ledger, permission read-back with the scoped UAT persona exemption, stored report paths all inside the reports directory, agent forensics unchanged, preflight, no scans in flight); migration 092 is applied on production with every existing dismissal row NULL
 - [Phase 91]: Phase 91 P19: a signed-in session answers every request for its stored principal: the stored dashboard user (an inactive or deleted user's session is cleared and answered as unauthenticated; the stored role and username answer, so a role change applies on the next request), the API key a key session names (checked by id with the sign-in predicate, read without writing), or, for a compliance-service or SSO session without a stored user, the values given at sign-in; any other session is refused, and each refused request writes one session.ended audit row with the reason code; the session organization must be one of the user's organizations on every request (otherwise the first organization, or none); one primary-key read per session request, no cache
 - [Phase 91]: Phase 91 P20: one MCP rule (resolveMcpCaller: the stored-caller rule, then no permission, then no mcp.use) is asked by /api/v1/mcp on every request (403 insufficient_scope, no_mcp_use), by the refresh grant before the chain rotates and by the code exchange before minting (400 invalid_grant; a refused refresh writes nothing and its refresh token works again once access is restored); OAuth consent acts in and names the organization the request acts in ('system' when none), offers to switch only to the user's organizations with the stored role, and needs a stored dashboard user (403 dashboard_user_required); the in-dashboard assistant does not require mcp.use (its tools follow the stored user's permissions), pinned in behaviour and in the server wiring
+- [Phase 91]: Phase 91 P21: the assistant's context hints are read with the stored user's permissions in the conversation's organization, resolved once for the turn (no hints without a permission there; recent scans need reports.view and an organization; brand guideline names need branding.view); conversation tool calls store secret-named arguments as [redacted], except that a paused action keeps its arguments as given until the write that confirms or declines it stores them redacted, and a confirmation the dispatcher refuses returns the action to pending with its arguments; destructive tools that may carry a secret argument are pinned by a test
 
 ### Blockers
 
