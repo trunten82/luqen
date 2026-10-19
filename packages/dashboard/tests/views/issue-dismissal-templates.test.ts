@@ -10,9 +10,19 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Handlebars from 'handlebars';
-import { collectPartials, dismissalRefused } from '../../src/server.js';
+import { JSDOM } from 'jsdom';
+import { collectPartials, dismissalRefused, dismissalRefusedKey } from '../../src/server.js';
 import { loadTranslations, t, type Locale } from '../../src/i18n/index.js';
-import { DISMISSAL_REASON_MAX_LENGTH } from '../../src/services/issue-dismissals/validate-input.js';
+import {
+  DISMISSAL_CODE_MAX_LENGTH,
+  DISMISSAL_REASON_MAX_LENGTH,
+  DISMISSAL_SELECTOR_MAX_LENGTH,
+} from '../../src/services/issue-dismissals/validate-input.js';
+import { DISMISSAL_REFUSAL_CASES } from '../fixtures/dismissal-refusal-cases.js';
+import { buildDismissalsView } from '../../src/services/issue-dismissals/dismissals-view.js';
+import type { IssueDismissal } from '../../src/db/interfaces/issue-dismissal-repository.js';
+
+process.env['TZ'] ??= 'UTC';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const VIEWS_DIR = join(HERE, '..', '..', 'src', 'views');
@@ -34,6 +44,7 @@ beforeAll(() => {
   hb.registerHelper('issueAssignStatus', () => '');
   hb.registerHelper('fixSuggestion', () => '');
   hb.registerHelper('dismissalRefused', dismissalRefused);
+  hb.registerHelper('dismissalRefusedKey', dismissalRefusedKey);
   hb.registerHelper(
     't',
     function (key: string, options: { hash?: Record<string, unknown>; data?: { root?: { locale?: string } } }) {
@@ -63,9 +74,14 @@ function issue(selector: unknown, extra: Record<string, unknown> = {}): Record<s
   };
 }
 
-function reportData(pageSelectors: readonly unknown[]): Record<string, unknown> {
+function reportData(
+  pageSelectors: readonly unknown[],
+  templateSelector: unknown = SEL_TEMPLATE,
+  tabSelector: unknown = SEL_TAB,
+  code: unknown = CODE,
+): Record<string, unknown> {
   const templateItem = {
-    ...issue(SEL_TEMPLATE),
+    ...issue(templateSelector, { code }),
     componentName: 'Navigation',
     affectedCount: 4,
     affectedPages: ['https://fabrikam.example/a'],
@@ -84,7 +100,7 @@ function reportData(pageSelectors: readonly unknown[]): Record<string, unknown> 
         pageCount: 2,
         totalCount: 3,
         templateItems: [templateItem],
-        issues: pageSelectors.map((s) => issue(s)),
+        issues: pageSelectors.map((s) => issue(s, { code })),
         regulations: [],
         components: [],
       },
@@ -94,7 +110,7 @@ function reportData(pageSelectors: readonly unknown[]): Record<string, unknown> 
         componentName: 'Footer',
         issueCount: 1,
         maxAffectedPages: 3,
-        issues: [{ ...issue(SEL_TAB), affectedCount: 3, affectedPages: ['https://fabrikam.example/a'] }],
+        issues: [{ ...issue(tabSelector, { code }), affectedCount: 3, affectedPages: ['https://fabrikam.example/a'] }],
       },
     ],
   };
@@ -103,9 +119,13 @@ function reportData(pageSelectors: readonly unknown[]): Record<string, unknown> 
 interface RenderOptions {
   readonly controls?: { reasonMax: number; commentMax: number } | null;
   readonly technical?: boolean;
+  readonly assign?: boolean;
   readonly selectors?: readonly unknown[];
+  readonly templateSelector?: unknown;
+  readonly tabSelector?: unknown;
   readonly locale?: string;
   readonly dismissals?: Record<string, unknown>;
+  readonly code?: unknown;
 }
 
 function dismissalRow(id: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
@@ -146,9 +166,14 @@ function render(opts: RenderOptions = {}): string {
   const template = hb.compile(reportSource);
   return template({
     scan: { id: 'scan-fabrikam-1', siteUrl: 'https://fabrikam.example', status: 'completed' },
-    reportData: reportData(opts.selectors ?? [SEL_PAGE]),
+    reportData: reportData(
+      opts.selectors ?? [SEL_PAGE],
+      opts.templateSelector ?? SEL_TEMPLATE,
+      opts.tabSelector ?? SEL_TAB,
+      opts.code ?? CODE,
+    ),
     locale: opts.locale ?? 'en',
-    perm: { reportsViewTechnical: opts.technical ?? true },
+    perm: { reportsViewTechnical: opts.technical ?? true, issuesAssign: opts.assign ?? false },
     brandingGuidelineActive: false,
     llmEnabled: false,
     assignedMap: {},
@@ -217,6 +242,23 @@ describe('mark control — gating and sites', () => {
     // Positive control: the same findings ARE on the page, so the absence is the gate.
     expect(html).toContain(SEL_PAGE);
     expect(html).toContain('data-issue-group');
+  });
+});
+
+describe('per-issue assign button', () => {
+  const assignButtons = (html: string): string[] =>
+    [...html.matchAll(/<button[^>]*data-action="rptAssignIssue"[^>]*>/g)].map((m) => m[0]);
+
+  it('HARD-02 assign button needs technical details permission', () => {
+    // The per-issue Assign button carries the raw selector, so it needs technical-details access.
+    const plain = render({ technical: false, assign: true });
+    expect(assignButtons(plain)).toHaveLength(0);
+    // Control: with both permissions the template item and the page issue each have one.
+    const technical = render({ technical: true, assign: true });
+    const buttons = assignButtons(technical);
+    expect(buttons).toHaveLength(2);
+    expect(buttons.filter((b) => b.includes(`data-selector="${SEL_PAGE}"`))).toHaveLength(1);
+    expect(buttons.filter((b) => b.includes(`data-selector="${SEL_TEMPLATE}"`))).toHaveLength(1);
   });
 });
 
@@ -320,19 +362,108 @@ describe('source discipline', () => {
 });
 
 describe('dismissalRefused', () => {
+  // Always TWO explicit arguments: in a template a missing second argument becomes Handlebars'
+  // options object, which is not a rule code.
   it.each(['html', 'HTML', ' body ', ':root', '', '   ', 'html > body', '/html/body'])(
     'refuses the whole-page selector %j',
     (selector) => {
-      expect(dismissalRefused(selector)).toBe(true);
+      expect(dismissalRefused(selector, CODE)).toBe(true);
     },
   );
 
   it.each([undefined, null, 5, {}])('refuses a non-string selector %j', (selector) => {
-    expect(dismissalRefused(selector)).toBe(true);
+    expect(dismissalRefused(selector, CODE)).toBe(true);
   });
 
   it.each(['#hero > p', '.site-nav a', 'body > div', 'body *'])('allows the specific selector %j', (selector) => {
-    expect(dismissalRefused(selector)).toBe(false);
+    expect(dismissalRefused(selector, CODE)).toBe(false);
+  });
+});
+
+describe('the Dismiss button refuses what the server validator refuses', () => {
+  const LONG_SELECTOR = `#${'a'.repeat(DISMISSAL_SELECTOR_MAX_LENGTH)}`;
+
+  it('HARD-01 helper and validator agree on every shared refusal case', () => {
+    const disagree = DISMISSAL_REFUSAL_CASES.filter((c) => dismissalRefused(c.selector, c.code) !== c.refused).map(
+      (c) => c.why,
+    );
+    expect(disagree).toEqual([]);
+  });
+
+  it('HARD-01 helper refuses a selector over the length limit', () => {
+    expect(LONG_SELECTOR).toHaveLength(DISMISSAL_SELECTOR_MAX_LENGTH + 1);
+    expect(dismissalRefused(LONG_SELECTOR, CODE)).toBe(true);
+    // Control: the same selector shape at the limit is allowed.
+    expect(dismissalRefused(LONG_SELECTOR.slice(0, DISMISSAL_SELECTOR_MAX_LENGTH), CODE)).toBe(false);
+  });
+
+  it('HARD-01 helper refuses a rule code over the length limit', () => {
+    const longCode = `R.${'x'.repeat(DISMISSAL_CODE_MAX_LENGTH - 1)}`;
+    expect(longCode).toHaveLength(DISMISSAL_CODE_MAX_LENGTH + 1);
+    expect(dismissalRefused(SEL_PAGE, longCode)).toBe(true);
+    expect(dismissalRefused(SEL_PAGE, longCode.slice(0, DISMISSAL_CODE_MAX_LENGTH))).toBe(false);
+  });
+
+  it('HARD-01 report page renders a disabled Dismiss button for an over long selector at every issue site', () => {
+    const html = render({ selectors: [LONG_SELECTOR], templateSelector: LONG_SELECTOR, tabSelector: LONG_SELECTOR });
+    const buttons = dismissButtons(html);
+    // Page issue, template item and Templates-tab item: three buttons, every one disabled.
+    expect(buttons).toHaveLength(3);
+    for (const button of buttons) {
+      expect(button).toContain('aria-disabled="true"');
+      expect(button).not.toContain('data-action');
+      expect(button).not.toContain('data-selector');
+    }
+  });
+
+  it('HARD-01 report page renders an enabled Dismiss button for a valid finding at every issue site', () => {
+    // Each site must hand the helper its rule code: a site that does not would disable its button.
+    const buttons = dismissButtons(render());
+    expect(buttons).toHaveLength(3);
+    for (const selector of [SEL_TEMPLATE, SEL_PAGE, SEL_TAB]) {
+      const own = buttons.filter((b) => b.includes(`data-selector="${selector}"`));
+      expect(own, selector).toHaveLength(1);
+      expect(own[0]).toContain('data-action="rptDismissIssue"');
+      expect(own[0]).not.toContain('aria-disabled');
+    }
+  });
+});
+
+describe('a disabled Dismiss button names its reason', () => {
+  // The English copy per reason. The other locales are checked by the i18n refusal-copy test.
+  const NO_ELEMENT = 'This finding has no specific element and cannot be dismissed.';
+  const SELECTOR_TOO_LONG = "This finding's element selector is too long to be dismissed.";
+  const CODE_TOO_LONG = "This finding's rule code is too long to be dismissed.";
+  const CODE_MISSING = 'This finding has no rule code and cannot be dismissed.';
+  const LONG_SELECTOR = `#${'a'.repeat(DISMISSAL_SELECTOR_MAX_LENGTH)}`;
+  const LONG_CODE = `R.${'x'.repeat(DISMISSAL_CODE_MAX_LENGTH - 1)}`;
+
+  it('HARD-01 a disabled Dismiss button names the reason the server refuses at every issue site', () => {
+    const cases = [
+      { why: 'a whole-page selector', selector: 'html', code: CODE, copy: NO_ELEMENT },
+      { why: 'a selector over the length limit', selector: LONG_SELECTOR, code: CODE, copy: SELECTOR_TOO_LONG },
+      { why: 'a rule code over the length limit', selector: SEL_PAGE, code: LONG_CODE, copy: CODE_TOO_LONG },
+      { why: 'a blank rule code', selector: SEL_PAGE, code: '   ', copy: CODE_MISSING },
+    ];
+    expect(LONG_SELECTOR).toHaveLength(DISMISSAL_SELECTOR_MAX_LENGTH + 1);
+    expect(LONG_CODE).toHaveLength(DISMISSAL_CODE_MAX_LENGTH + 1);
+    // The four sentences differ, so a button showing the wrong one cannot pass.
+    expect(new Set(cases.map((c) => c.copy)).size).toBe(4);
+    for (const c of cases) {
+      const html = render({ selectors: [c.selector], templateSelector: c.selector, tabSelector: c.selector, code: c.code });
+      const buttons = dismissButtons(html);
+      const doc = new JSDOM(html).window.document;
+      // Page issue, template item and Templates-tab item: three buttons, every one disabled.
+      expect(buttons, c.why).toHaveLength(3);
+      for (const button of buttons) {
+        expect(button, c.why).toContain('aria-disabled="true"');
+        expect(button, c.why).toContain(`title="${Handlebars.escapeExpression(c.copy)}"`);
+        const describedBy = /aria-describedby="([^"]+)"/.exec(button);
+        expect(describedBy, c.why).not.toBeNull();
+        const span = doc.getElementById(describedBy![1]);
+        expect(span?.textContent, c.why).toBe(c.copy);
+      }
+    }
   });
 });
 
@@ -521,6 +652,60 @@ describe('Revoke button', () => {
       const html = render({ locale, dismissals: TWO_ACTIVE_ONE_REVOKED });
       const m = /<button[^>]*data-action="rptRevokeIssue"[^>]*>([^<]*)<\/button>/.exec(html)!;
       expect(m[1]!.trim(), locale).toBe(word);
+    }
+  });
+});
+
+describe('HARD-08 the key tag in the Dismissed section', () => {
+  it('HARD-08 the dismissed section renders the key label with its creation time', () => {
+    const keyCreatedAt = '2026-03-01T10:00:00.000Z';
+    const stored: IssueDismissal = {
+      id: 'd-key-1', orgId: 'org-fabrikam', siteUrl: 'https://fabrikam.example', siteKey: 'https://fabrikam.example',
+      code: CODE, selector: SEL_PAGE, reason: 'Decorative', status: 'active',
+      createdBy: 'api-key:k-fabrikam-ci', createdById: 'api-key:k-fabrikam-ci', createdAt: '2026-10-01T08:00:00.000Z',
+      revokedBy: null, revokedById: null, revokedAt: null, revokeComment: null,
+      createdByKeySnapshot: { label: 'CI deploy', keyCreatedAt },
+    };
+    const dismissals = buildDismissalsView([stored], { showKeyNames: true });
+    const html = render({ dismissals: dismissals as unknown as Record<string, unknown> });
+    const start = html.indexOf('id="rpt-dismissed"');
+    expect(start).toBeGreaterThan(-1); // positive control: the section rendered
+    const section = html.slice(start, html.indexOf('</details>', start));
+    const text = section.replace(/<[^>]+>/g, '');
+    expect(text).toContain(`API key: CI deploy (Created ${new Date(keyCreatedAt).toLocaleString()})`);
+    expect(section).toContain(`<time datetime="${keyCreatedAt}">`);
+    expect(section).not.toContain('api-key:');
+    expect(section).not.toContain('k-fabrikam-ci');
+  });
+
+  it('HARD-08 a named key label and its creation tag form one element in the actor cell', () => {
+    // On a phone each cell is a flex row (label, then value): every text run and element directly in
+    // the cell becomes its own flex item, so the sentence must sit in ONE element or it is split into
+    // columns ("API key: CI deploy (Created" | "<date>" | ")").
+    const keyCreatedAt = '2026-03-01T10:00:00.000Z';
+    const base: IssueDismissal = {
+      id: 'd-key-1', orgId: 'org-fabrikam', siteUrl: 'https://fabrikam.example', siteKey: 'https://fabrikam.example',
+      code: CODE, selector: SEL_PAGE, reason: 'Decorative', status: 'active',
+      createdBy: 'api-key:k-fabrikam-ci', createdById: 'api-key:k-fabrikam-ci', createdAt: '2026-10-01T08:00:00.000Z',
+      revokedBy: null, revokedById: null, revokedAt: null, revokeComment: null,
+      createdByKeySnapshot: { label: 'CI deploy', keyCreatedAt },
+    };
+    const revoked: IssueDismissal = {
+      ...base, id: 'd-key-2', status: 'revoked', revokedBy: 'api-key:k-live', revokedById: 'api-key:k-live',
+      revokedAt: '2026-10-02T08:00:00.000Z',
+    };
+    const dismissals = buildDismissalsView([base, revoked], {
+      showKeyNames: true, keys: new Map([['k-live', { label: 'Ops key', createdAt: keyCreatedAt }]]),
+    });
+    const doc = new JSDOM(render({ dismissals: dismissals as unknown as Record<string, unknown> }), { url: 'https://fabrikam.example/' }).window.document;
+    const cells = [...doc.querySelectorAll('#rpt-dismissed td')].filter((td) => (td.textContent ?? '').includes('API key:'));
+    expect(cells).toHaveLength(3); // positive control: active marker, revoked marker, revoker
+    for (const td of cells) {
+      const items = [...td.childNodes].filter((n) => n.nodeType === 1 || (n.textContent ?? '').trim() !== '');
+      expect(items, td.outerHTML).toHaveLength(1);
+      expect(items[0]!.nodeType, td.outerHTML).toBe(1);
+      expect((items[0] as Element).querySelector('time')).not.toBeNull();
+      expect((items[0]!.textContent ?? '').trim()).toMatch(/^API key: (CI deploy|Ops key) \(Created .+\)$/);
     }
   });
 });

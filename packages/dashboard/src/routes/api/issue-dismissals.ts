@@ -18,7 +18,10 @@
  */
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { StorageAdapter } from '../../db/index.js';
-import type { IssueDismissalRepository } from '../../db/interfaces/issue-dismissal-repository.js';
+import type {
+  DismissalKeySnapshot,
+  IssueDismissalRepository,
+} from '../../db/interfaces/issue-dismissal-repository.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { mayTouchDismissalOrg, mayViewScanReport } from '../../services/issue-dismissals/scan-access.js';
 import { toSiteKey } from '../../services/issue-dismissals/site-key.js';
@@ -29,8 +32,8 @@ import {
   type RecomputeResult,
 } from '../../services/issue-dismissals/recompute-site-counts.js';
 import {
+  dismissalRefusalReason,
   validateDismissalCode,
-  validateDismissalSelector,
   validateMarkInput,
   validateRevokeComment,
 } from '../../services/issue-dismissals/validate-input.js';
@@ -99,6 +102,34 @@ function actorOf(request: FastifyRequest): { actor: string; actorId?: string } {
   };
 }
 
+/**
+ * HARD-08 (D-91-10): the marking API key's label and creation time, kept with the dismissal so the
+ * Dismissed section can still name the key after it is deleted. Only for a real key id (not the
+ * legacy `api-key:session`) whose row belongs to the scan's own org — the same rule as the report
+ * page's live label map. A failed read logs the error NAME only and the mark goes ahead without one.
+ */
+async function markingKeySnapshot(
+  request: FastifyRequest,
+  storage: StorageAdapter,
+  scanOrgId: string,
+): Promise<DismissalKeySnapshot | null> {
+  const user = request.user;
+  const keyId = user?.id === 'api-key' ? user.apiKeyId : undefined;
+  if (keyId === undefined || keyId === '' || keyId === 'session') return null;
+  try {
+    const key = (await storage.apiKeys.listKeys(scanOrgId)).find(
+      (k) => k.id === keyId && k.orgId === scanOrgId,
+    );
+    return key === undefined ? null : { label: key.label, keyCreatedAt: key.createdAt };
+  } catch (err) {
+    request.log.warn(
+      { errorName: err instanceof Error ? err.name : 'UnknownError' },
+      'Dismissal mark: key label not readable',
+    );
+    return null;
+  }
+}
+
 export async function issueDismissalRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
@@ -164,6 +195,7 @@ export async function issueDismissalRoutes(
         return reply.code(422).send({ error: 'No finding with this rule code and selector in this scan' });
       }
 
+      const actorKeySnapshot = await markingKeySnapshot(request, storage, scan.orgId);
       const result = await dismissals.mark({
         orgId: scan.orgId,
         siteUrl: scan.siteUrl,
@@ -173,6 +205,7 @@ export async function issueDismissalRoutes(
         reason: input.value.reason,
         ...actorOf(request),
         ipAddress: request.ip,
+        actorKeySnapshot,
       });
       if (result.kind === 'conflict') {
         return reply.code(409).send({
@@ -273,12 +306,16 @@ export async function issueDismissalRoutes(
       const code = validateDismissalCode(request.query.code);
       if (!code.ok) return reply.code(400).send({ error: code.error });
 
-      // A whole-page selector can never be dismissed (FP-04): answer before loading the report,
-      // with a machine reason only; the UI translates it.
-      const selector = validateDismissalSelector(request.query.selector);
-      if (!selector.ok) {
-        return reply.code(200).send({ occurrences: 0, pages: 0, refused: true, reason: 'selector' });
+      // A selector the mark route would refuse can never be dismissed (FP-04, HARD-01): answer
+      // before loading the report, with a machine reason only; the UI translates it. 'selector'
+      // is a whole-page or missing element, 'selector-too-long' one over the length limit. The
+      // selector is classified once (its length first), and an accepted one is used unchanged.
+      const refusal = dismissalRefusalReason(request.query.selector, code.value);
+      if (refusal !== null) {
+        const reason = refusal === 'selector-too-long' ? 'selector-too-long' : 'selector';
+        return reply.code(200).send({ occurrences: 0, pages: 0, refused: true, reason });
       }
+      const selector = request.query.selector;
 
       if (scan.status !== 'completed') {
         return reply.code(422).send({ error: 'Scan has no completed report' });
@@ -295,7 +332,7 @@ export async function issueDismissalRoutes(
       const siteKey = toSiteKey(scan.siteUrl);
       const { dismissed } = applyDismissals(
         loaded.report,
-        [{ id: 'preview', code: code.value, selector: selector.value, siteKey }],
+        [{ id: 'preview', code: code.value, selector, siteKey }],
         siteKey,
       );
       // The counts are over the RAW report, so a key that is already dismissed previews non-zero
@@ -303,7 +340,7 @@ export async function issueDismissalRoutes(
       // Same key the mark conflict uses: this org, this site, exact code + selector, active only.
       const active = await dismissals.listActiveForSite(scan.orgId, siteKey);
       const alreadyDismissed = active.some(
-        (d) => d.code === code.value && d.selector === selector.value,
+        (d) => d.code === code.value && d.selector === selector,
       );
       return reply.code(200).send({
         occurrences: dismissed.length,

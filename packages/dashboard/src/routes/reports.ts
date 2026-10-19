@@ -1,11 +1,12 @@
 import { bypassesOrgScope, hasPermission } from '../permissions.js';
 import { mayTouchDismissalOrg, mayViewScanReport } from '../services/issue-dismissals/scan-access.js';
 import { mayControlScan, SCAN_CREATE_PERMISSION } from '../services/scan-lifecycle.js';
+import { deleteScanAndFiles, scanDeleteRefusal } from '../services/scan-delete-access.js';
 import { toSiteKey } from '../services/issue-dismissals/site-key.js';
 import {
   buildDismissalsView,
   hasApiKeyActor,
-  type ApiKeyLabels,
+  type ScanOrgKeys,
   type DismissalsView,
 } from '../services/issue-dismissals/dismissals-view.js';
 import type { IssueDismissal } from '../db/interfaces/issue-dismissal-repository.js';
@@ -16,7 +17,7 @@ import {
 import type { FastifyBaseLogger, FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { requirePermission } from '../auth/middleware.js';
 import { Type } from '@sinclair/typebox';
-import { readFile, unlink } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -198,22 +199,35 @@ interface ReportsQuery {
 
 const PAGE_SIZE = 20;
 
+/** The viewer's UI language from the secure session (validated by resolveLocale), else 'en'. */
+function sessionLocale(request: FastifyRequest): string {
+  const session = request.session as { get?(key: string): unknown } | undefined;
+  return resolveLocale(
+    typeof session?.get === 'function' ? (session.get('locale') as string | undefined) : undefined,
+  );
+}
+
 /**
- * 89-11 (D-15 Q1, D-12): the label of each API key the Dismissed section may NAME. Only the
+ * 89-11 (D-15 Q1, D-12): the label and creation time of each API key the Dismissed section may
+ * NAME (HARD-08 adds the creation time as the tag that tells same-label keys apart). Only the
  * SCAN org's own key rows are read, so a system key or another org's key is never named on
  * this org's report (it falls back to the generic "API key"). Read once, and only when a row
  * carries an API-key actor; a failed read degrades to generic labels, never drops the section.
  */
-async function scanOrgKeyLabels(
+async function scanOrgKeys(
   storage: StorageAdapter,
   scan: { readonly id: string; readonly orgId: string },
   rows: readonly IssueDismissal[],
   log: FastifyBaseLogger,
-): Promise<ApiKeyLabels> {
+): Promise<ScanOrgKeys> {
   if (!hasApiKeyActor(rows)) return new Map();
   try {
     const keys = await storage.apiKeys.listKeys(scan.orgId);
-    return new Map(keys.filter((k) => k.orgId === scan.orgId).map((k) => [k.id, k.label] as const));
+    return new Map(
+      keys
+        .filter((k) => k.orgId === scan.orgId)
+        .map((k) => [k.id, { label: k.label, createdAt: k.createdAt }] as const),
+    );
   } catch (err) {
     // Scan id and error NAME only: driver messages can quote their input.
     log.warn(
@@ -237,9 +251,10 @@ export async function reportRoutes(
   /**
    * Dashboard config. `selfScanId` back-compats the dogfood login badge through
    * the public-share gate; `uploadsRoot` resolves manual-test evidence images to
-   * data URIs for the shared-template ACR render.
+   * data URIs for the shared-template ACR render; `reportsDir` is the only
+   * directory a report delete removes stored report files from.
    */
-  config: { selfScanId?: string; uploadsRoot?: string } = {},
+  config: { selfScanId?: string; uploadsRoot?: string; reportsDir?: string } = {},
 ): Promise<void> {
   const uploadsRoot = config.uploadsRoot ?? './uploads';
   // GET /reports — list with pagination and search
@@ -623,8 +638,12 @@ export async function reportRoutes(
       // global perm flag, because the gate also depends on the scan's org. The key is absent
       // unless the viewer holds the permission AND mayTouchDismissalOrg allows this scan's org
       // (the predicate the mark route enforces), so nothing renders that the API would refuse.
+      // HARD-02: the controls carry each finding's raw selector, so they also need
+      // reports.view_technical, the permission that shows selectors anywhere on this page.
       const dismissalControls =
-        hasPermission(request, 'issues.dismiss') && mayTouchDismissalOrg(request.user, scan.orgId)
+        hasPermission(request, 'issues.dismiss') &&
+        hasPermission(request, 'reports.view_technical') &&
+        mayTouchDismissalOrg(request.user, scan.orgId)
           ? { reasonMax: DISMISSAL_REASON_MAX_LENGTH, commentMax: DISMISSAL_COMMENT_MAX_LENGTH }
           : undefined;
 
@@ -644,12 +663,14 @@ export async function reportRoutes(
       if (mayViewScanReport(request.user, scan.orgId) && storage.issueDismissals !== undefined) {
         try {
           const rows = await storage.issueDismissals.listForSite(scan.orgId, toSiteKey(scan.siteUrl));
-          // Key LABELS only for viewers who may touch the scan's org: report access alone (an org
-          // user on a 'system' scan) shows the generic "API key", never another tenant's key names.
-          const keyLabels = mayTouchDismissalOrg(request.user, scan.orgId)
-            ? await scanOrgKeyLabels(storage, scan, rows, request.log)
-            : new Map<string, string>();
-          dismissals = buildDismissalsView(rows, keyLabels);
+          // Key NAMES (stored snapshot or live label, with the creation-time tag) only for viewers who
+          // may touch the scan's org: report access alone (an org user on a 'system' scan) shows the
+          // generic "API key", never another tenant's key names. showKeyNames is the switch; the
+          // live rows are not even read for a viewer who may not see them.
+          const showKeyNames = mayTouchDismissalOrg(request.user, scan.orgId);
+          const keys = showKeyNames ? await scanOrgKeys(storage, scan, rows, request.log) : new Map();
+          // HARD-05: the section's dates read in the viewer's session UI language.
+          dismissals = buildDismissalsView(rows, { keys, showKeyNames, locale: sessionLocale(request) });
         } catch (err) {
           // Scan id and error NAME only: driver messages can quote their input.
           request.log.warn(
@@ -800,10 +821,7 @@ export async function reportRoutes(
       }
 
       // Locale: secure-session UI language (validated) → 'en'.
-      const session = request.session as { get?(key: string): unknown } | undefined;
-      const locale = resolveLocale(
-        typeof session?.get === 'function' ? (session.get('locale') as string | undefined) : undefined,
-      );
+      const locale = sessionLocale(request);
 
       // Secure-share management surface: only users who can export may create
       // share links; expose the existing ACTIVE links for the panel.
@@ -1167,20 +1185,20 @@ export async function reportRoutes(
         return reply.code(404).send({ error: 'Report not found' });
       }
 
-      // Only users with reports.delete permission can delete (or the creator)
-      const user = request.user;
+      // The one scan delete rule (services/scan-delete-access.ts), as the API and GraphQL ask it.
       const permsSet = (request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined;
-      const canDelete = permsSet?.has('reports.delete') === true || scan.createdBy === user?.username;
-      if (!canDelete) {
+      const refusal = scanDeleteRefusal({ user: request.user, permissions: permsSet ?? new Set<string>() }, scan);
+      if (refusal === 'org') {
+        return reply.code(403).send({
+          error: 'Only a global administrator or a user outside every organization can delete a report shared with every organization',
+        });
+      }
+      if (refusal === 'permission') {
         return reply.code(403).send({ error: 'You can only delete your own reports' });
       }
 
-      // Delete report files
-      if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
-        await unlink(scan.jsonReportPath).catch(() => undefined);
-      }
-
-      await storage.scans.deleteScan(id);
+      // The row and the stored report file, through the one delete function.
+      await deleteScanAndFiles(storage, scan, { reportsDir: config.reportsDir, log: request.log });
 
       // HTMX request — return empty fragment for swap
       if (request.headers['hx-request'] === 'true') {

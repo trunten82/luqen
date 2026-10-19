@@ -1,10 +1,41 @@
 // Scenarios: tracer, revoke (Plans 04-05, contract unchanged) plus permissions, dialog, refused.
 // Each scenario receives { page, browser, world, expect } and uses check() from lib.mjs.
+// HARD-02 (permissions): a custom role without reports.view_technical gets no Dismiss, no Assign and no
+// selector in the page. HARD-01 (refused): a selector over the 4000-character limit shows a disabled
+// Dismiss at every issue site.
 import {
   check, login, WAIT, newPersonaPage, openReport, showTab, pageFetch, jsonOf, shot, dismissButton,
   expandGroupOf, openMarkDialog, confirmMark, openDismissedSection, issueListText, sleep, contrastOf, log, scrollToInstant,
+  localeString,
 } from './lib.mjs';
-import { HERO, NAV, PROMO, WHOLE, REASON } from './fixture.mjs';
+import { HERO, NAV, PROMO, WHOLE, LONG, REASON } from './fixture.mjs';
+
+/** Per-scenario world options for bootLocal (the default world is unchanged). */
+export const CORE_WORLD = {
+  permissions: { reviewer: true },
+  refused: { overlongScan: true },
+};
+
+/**
+ * The seeded selectors a viewer without technical details must not receive, as they can appear in the
+ * page source: verbatim (attribute values) and HTML-escaped (text). WHOLE ('html') is left out: the
+ * word occurs in every page for other reasons.
+ */
+const SEEDED_SELECTORS = [NAV, HERO, PROMO, LONG].map((f) => f.selector);
+const escapeHtml = (v) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const selectorsIn = (source) => SEEDED_SELECTORS.filter((sel) => source.includes(sel) || source.includes(escapeHtml(sel)));
+
+/**
+ * The fix hints on the open page: how many there are, and how many carry element markup (the
+ * `htmlContext` parameter of the hint's request).
+ */
+async function fixHintSurvey(page) {
+  return page.evaluate(() => {
+    const hints = [...document.querySelectorAll('details.rpt-fix-hint')];
+    const contexts = hints.map((d) => new URL(d.getAttribute('hx-get') ?? '', location.origin).searchParams.get('htmlContext') ?? '');
+    return { hints: hints.length, withMarkup: contexts.filter((c) => c !== '').length };
+  });
+}
 
 const MARK_PATH = (scanId) => `/api/v1/scans/${scanId}/dismissals`;
 const PREVIEW_PATH = (scanId, f) => `${MARK_PATH(scanId)}/preview?code=${encodeURIComponent(f.code)}&selector=${encodeURIComponent(f.selector)}`;
@@ -23,6 +54,7 @@ export async function controlSurvey(page) {
       markDialog: document.getElementById('issue-dismiss-dialog') !== null,
       revokeDialog: document.getElementById('issue-revoke-dialog') !== null,
       revokeButtons: document.querySelectorAll('[data-action="rptRevokeIssue"]').length,
+      assign: document.querySelectorAll('.rpt-assign-btn').length,
       section: document.getElementById('rpt-dismissed') !== null,
       elementHeader: [...document.querySelectorAll('#rpt-dismissed thead th')].some((th) => (th.textContent || '').trim() === 'Element'),
     };
@@ -179,6 +211,13 @@ export const coreScenarios = {
     await showTab(admin.page, 'templates');
     check(S, 'admin: Dismiss is offered on a Templates-tab item', (await controlSurvey(admin.page)).templatesTab > 0);
     check(S, 'admin: both dialogs are in the page', a.markDialog && a.revokeDialog, JSON.stringify(a));
+    // Positive controls for the reviewer checks below: the admin DOES get Assign buttons and the selectors.
+    check(S, 'admin: an Assign button is offered on the issues (so its absence below is meaningful)', a.assign > 0, JSON.stringify(a));
+    check(S, 'admin: the page source carries every seeded selector (so their absence below is meaningful)',
+      selectorsIn(await admin.page.content()).length === SEEDED_SELECTORS.length);
+    // Positive control for the fixer checks below: the admin's fix hints DO carry element markup.
+    const ah = await fixHintSurvey(admin.page);
+    check(S, 'admin: fix hints carry element markup (so its absence below is meaningful)', ah.hints > 0 && ah.withMarkup === ah.hints, JSON.stringify(ah));
     // One existing dismissal so the non-admin personas have a Dismissed section to look at.
     const seeded = await pageFetch(admin.page, 'POST', MARK_PATH(scanId), { code: PROMO.code, selector: PROMO.selector, reason: REASON });
     check(S, 'admin: the seeding mark is accepted (201)', seeded.status === 201, String(seeded.status));
@@ -235,6 +274,39 @@ export const coreScenarios = {
     await probe403(S, 'reports.view-only', ro.page, scanId, { writeBody: body });
     await ro.context.close();
 
+    // HARD-02: a custom org role holding issues.dismiss, issues.assign and reports.view but NOT
+    // reports.view_technical. The controls carry the raw selector, so none of them is offered.
+    if (world.reviewerSeeded) {
+      const rv = await newPersonaPage(browser, base, personas.reviewer);
+      check(S, 'login as the custom-role reviewer (dismiss and assign, no technical details)', rv.ok);
+      await openReport(rv.page, base, scanId, 'issues');
+      const v = await controlSurvey(rv.page);
+      check(S, 'reviewer: no Dismiss control, no dialog and no Revoke button', v.any === 0 && !v.markDialog && !v.revokeDialog && v.revokeButtons === 0, JSON.stringify(v));
+      check(S, 'reviewer: no Assign button on any issue', v.assign === 0, JSON.stringify(v));
+      check(S, 'reviewer: the Dismissed section is visible without the Element column', v.section === true && v.elementHeader === false, JSON.stringify(v));
+      const leaked = selectorsIn(await rv.page.content());
+      check(S, 'reviewer: the page source contains none of the seeded selectors', leaked.length === 0, `${leaked.length} of ${SEEDED_SELECTORS.length}`);
+      await rv.page.click('#panel-issues .rpt-group__header');
+      await rv.page.evaluate(() => document.querySelector('#panel-issues .rpt-group:not(.rpt-group--collapsed) .rpt-group__header').scrollIntoView({ block: 'start', behavior: 'instant' }));
+      await rv.page.evaluate(() => window.scrollBy(0, -80));
+      await shot(rv.page, 'permissions-reviewer-issues');
+      await rv.context.close();
+
+      // HARD-02: a custom org role holding issues.fix and reports.view but NOT reports.view_technical
+      // gets the fix hint, and no hint's request carries the flagged element's markup.
+      const fx = await newPersonaPage(browser, base, personas.fixer);
+      check(S, 'login as the custom-role fixer (fix hints, no technical details)', fx.ok);
+      await openReport(fx.page, base, scanId, 'issues');
+      const fh = await fixHintSurvey(fx.page);
+      check(S, 'fixer: the report page shows the fix hint', fh.hints > 0, JSON.stringify(fh));
+      check(S, 'fixer: no fix hint request carries element markup', fh.withMarkup === 0, JSON.stringify(fh));
+      check(S, 'fixer: the page source contains none of the seeded selectors', selectorsIn(await fx.page.content()).length === 0);
+      await fx.page.click('#panel-issues .rpt-group__header');
+      await fx.page.evaluate(() => document.querySelector('#panel-issues .rpt-group:not(.rpt-group--collapsed) .rpt-fix-hint')?.scrollIntoView({ block: 'center', behavior: 'instant' }));
+      await shot(fx.page, 'permissions-fixer-hint');
+      await fx.context.close();
+    }
+
     if (granted) {
       for (const name of ['member', 'viewer']) {
         const m = await newPersonaPage(browser, base, personas[name]);
@@ -289,10 +361,74 @@ export const coreScenarios = {
     await expandGroupOf(page, refused);
     const attrs = await page.evaluate((b) => ({ title: b.getAttribute('title') || '', describedby: b.getAttribute('aria-describedby') || '', described: document.getElementById(b.getAttribute('aria-describedby') || '__none__') !== null, action: b.getAttribute('data-action') }), refused);
     check(S, 'it has a translated title and a description element, and no action', attrs.title.length > 10 && attrs.described && attrs.action === null, JSON.stringify(attrs));
+    // HARD-01: the copy names WHY: a whole-page finding has no specific element.
+    const noElement = localeString('en', 'issueDismissals.action.refusedTitle');
+    const wholeCopy = await page.evaluate((b) => ({ title: b.getAttribute('title') || '', sr: (document.getElementById(b.getAttribute('aria-describedby') || '__none__') || { textContent: '' }).textContent.trim() }), refused);
+    check(S, 'whole-page selector: the disabled Dismiss names the no-element reason (title and description)',
+      typeof noElement === 'string' && wholeCopy.title === noElement && wholeCopy.sr === noElement, JSON.stringify(wholeCopy).slice(0, 200));
     await refused.click();
     await sleep(600);
     const opened = await page.evaluate(() => document.querySelector('dialog[open]') !== null);
     check(S, 'clicking it opens nothing', opened === false);
     await shot(page, 'refused-button');
+
+    // HARD-01: findings whose selector is one character over the 4000-character limit. The server would
+    // refuse the mark, so the button is disabled at the template item, the page issue and the Templates
+    // tab; PROMO on the same report keeps an enabled button (control).
+    if (world.overlongScanId) {
+      await openReport(page, base, world.overlongScanId, 'issues');
+      const sites = await page.evaluate(() => {
+        const state = (b) => ({
+          disabled: b.getAttribute('aria-disabled') === 'true', action: b.getAttribute('data-action'),
+          selector: b.getAttribute('data-selector'), title: b.getAttribute('title') || '',
+          described: document.getElementById(b.getAttribute('aria-describedby') || '__none__') !== null,
+          sr: (document.getElementById(b.getAttribute('aria-describedby') || '__none__') || { textContent: '' }).textContent.trim(),
+        });
+        const issues = [...document.querySelectorAll('#panel-issues .rpt-dismiss-btn')];
+        return {
+          templateItem: issues.filter((b) => b.closest('.rpt-template-block')).map(state),
+          pageIssue: issues.filter((b) => !b.closest('.rpt-template-block')).map(state),
+          templatesTab: [...document.querySelectorAll('#panel-templates .rpt-dismiss-btn')].map(state),
+        };
+      });
+      const refusedOk = (b) => b.disabled && b.action === null && b.selector === null && b.described && b.title.length > 10;
+      check(S, 'over-long selector: the template item shows a disabled Dismiss with its description and no action',
+        sites.templateItem.length === 1 && sites.templateItem.every(refusedOk), JSON.stringify(sites.templateItem));
+      check(S, 'over-long selector: the page issue shows a disabled Dismiss with its description and no action',
+        sites.pageIssue.filter((b) => b.disabled).length === 1 && sites.pageIssue.filter((b) => b.disabled).every(refusedOk), JSON.stringify(sites.pageIssue));
+      check(S, 'over-long selector: the Templates-tab item shows a disabled Dismiss with its description and no action',
+        sites.templatesTab.length === 1 && sites.templatesTab.every(refusedOk), JSON.stringify(sites.templatesTab));
+      // HARD-01: every disabled button names the selector-too-long reason, not the no-element one.
+      const tooLong = localeString('en', 'issueDismissals.action.refusedSelectorTooLong');
+      const disabledAll = [...sites.templateItem, ...sites.pageIssue, ...sites.templatesTab].filter((b) => b.disabled);
+      check(S, 'over-long selector: every disabled Dismiss names the selector-too-long reason (title and description) at all three sites',
+        typeof tooLong === 'string' && tooLong !== noElement && disabledAll.length === 3 && disabledAll.every((b) => b.title === tooLong && b.sr === tooLong),
+        JSON.stringify(disabledAll.map((b) => b.title)).slice(0, 240));
+      check(S, 'positive control: the valid finding on the same report keeps an enabled Dismiss',
+        sites.pageIssue.filter((b) => !b.disabled).length === 1 && sites.pageIssue.some((b) => !b.disabled && b.selector === PROMO.selector && b.action === 'rptDismissIssue'),
+        JSON.stringify(sites.pageIssue));
+      const pageRefused = (await page.evaluateHandle(() => [...document.querySelectorAll('#panel-issues .rpt-dismiss-btn')]
+        .find((b) => !b.closest('.rpt-template-block') && b.getAttribute('aria-disabled') === 'true') || null)).asElement();
+      // A missing disabled button is a FAIL line, never a thrown error (break-tests run with --keep-going).
+      if (pageRefused !== null) {
+        await expandGroupOf(page, pageRefused);
+        await pageRefused.click();
+        await sleep(600);
+      }
+      check(S, 'over-long selector: clicking the disabled button opens nothing',
+        pageRefused !== null && (await page.evaluate(() => document.querySelector('dialog[open]') !== null)) === false);
+      const templateRefused = (await page.evaluateHandle(() => document.querySelector('#panel-issues .rpt-template-block .rpt-dismiss-btn'))).asElement();
+      if (templateRefused !== null) await expandGroupOf(page, templateRefused);
+      // Frame each disabled button with its finding's head line (the selector text below it is 4001 characters).
+      const frame = (sel) => page.evaluate((q) => { const b = document.querySelector(q); if (b) { b.scrollIntoView({ block: 'start', behavior: 'instant' }); window.scrollBy(0, -140); } }, sel);
+      await frame('#panel-issues .rpt-template-block .rpt-dismiss-btn');
+      await shot(page, 'refused-overlong-template-item');
+      await frame('#panel-issues .rpt-issue-item:not(.rpt-template-block .rpt-issue-item) .rpt-dismiss-btn[aria-disabled="true"]');
+      await shot(page, 'refused-overlong-page-issue');
+      await showTab(page, 'templates');
+      const tabRefused = (await page.evaluateHandle(() => document.querySelector('#panel-templates .rpt-dismiss-btn'))).asElement();
+      if (tabRefused !== null) await expandGroupOf(page, tabRefused);
+      await shot(page, 'refused-overlong-templates');
+    }
   },
 };

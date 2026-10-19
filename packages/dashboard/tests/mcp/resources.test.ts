@@ -35,6 +35,7 @@ import { DASHBOARD_RESOURCE_METADATA } from '../../src/mcp/resources.js';
 import type { McpTokenPayload, McpTokenVerifier } from '../../src/mcp/middleware.js';
 import type { StorageAdapter } from '../../src/db/index.js';
 import type { ScanService } from '../../src/services/scan-service.js';
+import { storedCallerOrgs, storedCallerUsers } from '../helpers/stored-caller-stub.js';
 
 // ---------------------------------------------------------------------------
 // Stub scaffolding (self-contained — no cross-imports from other test files)
@@ -75,8 +76,9 @@ function makeStubStorage(o: StubOverrides = {}): StorageAdapter {
       getLatestForScan: o.getLatestForScan ?? (async () => null),
       getHistoryForSite: o.getHistoryForSite ?? (async () => []),
     } as unknown as StorageAdapter['brandScores'],
-    users: empty as StorageAdapter['users'],
-    organizations: empty as StorageAdapter['organizations'],
+    users: storedCallerUsers('user') as unknown as StorageAdapter['users'],
+    // The token's subject belongs to the token organizations used in this file.
+    organizations: storedCallerOrgs('org-1') as unknown as StorageAdapter['organizations'],
     roles: {
       getEffectivePermissions: o.getEffectivePermissions ?? (async () => perms),
     } as unknown as StorageAdapter['roles'],
@@ -258,55 +260,6 @@ describe('Phase 30 resources — resources/list RBAC filtering', () => {
   it('both perms caller sees both families', async () => {
     app = await buildAppWithResources({
       permissions: ['reports.view', 'branding.view'],
-      listScans: async () =>
-        [
-          {
-            id: 'a',
-            siteUrl: 'https://a.com',
-            orgId: 'org-1',
-            status: 'completed',
-          },
-        ] as never,
-      getLatestPerSite: async () =>
-        [
-          {
-            id: 's1',
-            siteUrl: 'https://x.com',
-            orgId: 'org-1',
-            status: 'completed',
-          },
-        ] as never,
-      getLatestForScan: async () => ({ kind: 'score', composite: 80 }) as never,
-    });
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/v1/mcp',
-      headers: POST_HEADERS,
-      payload: rpc('resources/list'),
-    });
-    const result = parseSseOrJson(response.body)['result'] as {
-      resources: Array<{ uri: string }>;
-    };
-    expect(result.resources.length).toBe(2);
-    expect(result.resources.some((r) => r.uri.startsWith('scan://'))).toBe(true);
-    expect(result.resources.some((r) => r.uri.startsWith('brand://'))).toBe(true);
-  });
-
-  it('no perms but read scope — scope-fallback shows both families (read scope allows view-tier resources)', async () => {
-    // Documenting actual behavior of the @luqen/core/mcp 30-01 override:
-    // when ctx.permissions is empty, the override falls back to
-    // filterResourcesByScope (see http-plugin.ts ~line 215). A caller with
-    // 'read' scope satisfies the scope hierarchy for all view-tier permissions
-    // (reports.view, branding.view both fall through hasRead == true), so
-    // both scheme families remain visible. This is intentional — service-to-service
-    // callers (OAuth client credentials with no per-user RBAC perms) need a
-    // way to enumerate read-tier resources. The 30-04-PLAN.md draft asserted
-    // resources.length === 0 here, which would only be true if both perms AND
-    // scopes were empty — but the route's coarse scope gate (requiredScope: 'read')
-    // rejects scope-less callers with 403 before reaching this handler. The
-    // assertion below reflects the system's actual behavior end-to-end.
-    app = await buildAppWithResources({
-      permissions: [],
       listScans: async () =>
         [
           {

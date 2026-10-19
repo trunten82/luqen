@@ -50,3 +50,25 @@ export function buildSmallReport(site) {
 }
 
 export const REASON = 'The alternative text is supplied by a script after load.';
+
+/**
+ * A second scan of the refused scenario: two findings whose selector is one character over the server's
+ * 4000-character dismissal limit, so their Dismiss button must render disabled at every issue site.
+ * OVERLONG_TEMPLATE repeats on all four pages with identical context (a template item: the Issues tab's
+ * shared-components block AND the Templates tab); OVERLONG_PAGE is a single page issue. PROMO on the
+ * same report is the enabled control.
+ */
+export const SELECTOR_LIMIT = 4000;
+const overlong = (prefix) => `${prefix}${'x'.repeat(SELECTOR_LIMIT + 1 - prefix.length)}`;
+export const OVERLONG_TEMPLATE = { code: NAV.code, selector: overlong('#fabrikam-footer-'), message: NAV.message };
+export const OVERLONG_PAGE = { code: HERO.code, selector: overlong('#fabrikam-hero-'), message: HERO.message };
+export const OVERLONG_SITE = 'https://overlong-uat.example.test';
+
+export function buildOverlongReport(site) {
+  const pages = PAGES.map((p, i) => ({
+    url: `${site}${p}`,
+    issues: [issueOf(OVERLONG_TEMPLATE), ...(i === 0 ? [issueOf(OVERLONG_PAGE)] : []), ...(i === 3 ? [issueOf(PROMO)] : [])],
+  })).map((p) => ({ ...p, issueCount: p.issues.length }));
+  const total = pages.reduce((n, p) => n + p.issueCount, 0);
+  return { summary: { pagesScanned: pages.length, totalIssues: total, byLevel: { error: total, warning: 0, notice: 0 } }, pages };
+}

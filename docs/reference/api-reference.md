@@ -400,12 +400,12 @@ Dismissals mark a finding (rule code plus selector) as not applicable on a site.
 | Endpoint | Permissions | Notes |
 |----------|-------------|-------|
 | `POST /api/v1/scans/:scanId/dismissals` (mark) | `issues.dismiss` and `reports.view` | Body `{ code, selector, reason }`; `201` with the dismissal |
-| `GET /api/v1/scans/:scanId/dismissals/preview` (preview) | `issues.dismiss` and `reports.view` | Query `code`, `selector` |
+| `GET /api/v1/scans/:scanId/dismissals/preview` (preview) | `issues.dismiss` and `reports.view` | Query `code`, `selector`; a selector that cannot be dismissed answers `200` with `refused: true` and `reason` `selector` (whole page or no element) or `selector-too-long` (over 4000 characters, checked before the selector's shape); a selector over 8192 characters answers `400`. The selector travels in the URL: a request whose URL is over the server's 16 KB header limit after URL encoding is refused with `431` before validation, and a reverse proxy in front of the dashboard may set a lower URL limit of its own |
 | `POST /api/v1/dismissals/:id/revoke` (revoke) | `issues.dismiss` and `reports.view` | Body `{ comment? }` |
-| `GET /api/v1/scans/:scanId/dismissals` (list) | `reports.view` | Returns the rows the report's Dismissed section shows |
+| `GET /api/v1/scans/:scanId/dismissals` (list) | `reports.view` | Returns the rows the report's Dismissed section shows, each with its `selector` (the section shows the selector only to viewers holding `reports.view_technical`) |
 
 - Mark, preview and revoke need both permissions; holding only one answers `403`. They act only on scans of the caller's current organization (a global admin on any); any other scan answers `404`.
-- The list follows the report page: a caller who may open the report receives exactly the rows its Dismissed section shows. A caller who may open the report but is not in the scan's organization (an organization user viewing a `system` scan) receives those rows with actor ids set to `null` and API-key actors named `api-key`, as the page shows them; a scan of another organization answers `404`.
+- The list follows the report page: a caller who may open the report receives exactly the rows its Dismissed section shows. Each row carries its `selector` for every `reports.view` holder; on the report page the selector is a technical detail shown only with `reports.view_technical`. A caller who may open the report but is not in the scan's organization (an organization user viewing a `system` scan) receives those rows with actor ids set to `null` and API-key actors named `api-key`, as the page shows them; a scan of another organization answers `404`.
 - The name `api-key` is also the actor carried by dismissal rows recorded before per-key actors (`api-key:<key row id>`) were introduced. In both cases it means "an API key" and names no particular key.
 - `issues.dismiss` can be held only through an organization role; global roles cannot carry it, and a global role never grants it.
 - Mark and revoke made with the session cookie need the CSRF token (see above); API-key callers do not.
@@ -415,6 +415,7 @@ Dismissals mark a finding (rule code plus selector) as not applicable on a site.
 ## Dashboard roles, teams and the MCP user tools
 
 - **Global-only permissions.** `admin.system` and `admin.users` come from the global `admin` role only. Creating or editing an organization role that carries either answers `422` naming the refused permission, and neither a team's role nor another global role grants them.
+- **MCP permissions.** `POST /api/v1/mcp` resolves the caller's permissions on every request from the stored, active user the token was issued to (that user's global role and team roles in the token's organization); a deactivated or removed user's token answers `401` `invalid_token`, so does the token of a user who no longer belongs to the token's organization (global administrators excepted), and a user holding no permission in the token's organization answers `403` `insufficient_scope`.
 - **Team role bindings.** Binding a team to a built-in role (`POST /admin/teams`, `POST /admin/teams/:id/role`) needs a global administrator; anyone else receives `403` `Built-in roles are bound to teams by global administrators`. Organization administrators bind their organization's roles and global custom roles.
 - **Team organization.** `POST /admin/teams` and `POST /admin/teams/:id/org` place a team only in the organization the caller administers (their current organization); global administrators place teams in any organization. Any other target answers `403` `Teams are created in and moved to the organization you administer`, and nothing is written.
 - **MCP user tools.** `dashboard_create_user` and `dashboard_update_user` follow the dashboard's user rules:
@@ -778,9 +779,9 @@ curl -H "X-API-Key: $LUQEN_API_KEY" \
 
 ### `DELETE /api/v1/scans/:id`
 
-Delete a scan record and its associated report files.
+Delete a scan record and its stored report file. The file is removed first, and only from the configured reports directory; a stored path outside it is never removed.
 
-**Authentication:** Requires admin role or API key. Non-admin users can only delete scans belonging to their organization.
+**Authentication:** Requires `reports.delete`, or being the signed-in user who started the scan. Outside global administrators, only scans of the caller's current organization can be deleted; a caller outside every organization can delete only `system` scans. API keys need `reports.delete`: admin keys hold it (an organization admin key within its organization), read-only and scan-only keys cannot delete. The same rule applies to GraphQL `deleteScan` and to the report page delete (`DELETE /reports/:id`).
 
 **Example request:**
 
@@ -800,8 +801,10 @@ curl -X DELETE -H "X-API-Key: $LUQEN_API_KEY" \
 | Code | Description |
 |------|-------------|
 | 404 | Scan not found |
-| 403 | Forbidden — not admin and scan belongs to different org |
+| 403 | `Forbidden` — the scan belongs to another organization |
+| 403 | `Forbidden: requires reports.delete` — the caller neither holds `reports.delete` nor started the scan |
 | 403 | A session-cookie request without the CSRF token (see [Dashboard `/api` writes and the CSRF token](#dashboard-api-writes-and-the-csrf-token)) |
+| 500 | `The scan could not be deleted` — the stored report file could not be removed, or a file exists at a stored path outside the reports directory. The scan is kept, so the delete can be retried. GraphQL `deleteScan` answers the same message as an error, and the report page answers `500` |
 
 ---
 

@@ -388,12 +388,12 @@ export class ScanService {
   }
 
   /**
-   * The entry for callers whose permission is enforced elsewhere (the MCP site
-   * tool: tool metadata, D-90-02). It checks and spends the caller's start
-   * budget, then behaves exactly as {@link ScanService.initiateScan}. No
-   * permission check: the in-app agent bridge stamps an empty permission set
-   * for org users, who must still be able to start scans. The three metered
-   * entries (this one, the authorized one, retry) share one limiter path.
+   * The entry for callers whose permission is enforced before they get here
+   * (the MCP site tool: scans.create is checked by the endpoint's tools/call
+   * guard over HTTP and by the assistant's dispatcher in process). It checks
+   * and spends the caller's start budget, then behaves exactly as
+   * {@link ScanService.initiateScan}. The three metered entries (this one,
+   * the authorized one, retry) share one limiter path.
    */
   async initiateScanRateLimited(
     input: InitiateScanInput,

@@ -1,7 +1,7 @@
-import { bypassesOrgScope } from '../../permissions.js';
+import { deleteScanAndFiles, scanDeleteRefusal, SCAN_DELETE_PERMISSION } from '../../services/scan-delete-access.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
-import { readFile, unlink } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import type { StorageAdapter, ScanRecord } from '../../db/index.js';
 import { SqliteStorageAdapter } from '../../db/sqlite/index.js';
@@ -210,6 +210,12 @@ function getOrgId(request: FastifyRequest): string {
   return request.user?.currentOrgId ?? 'system';
 }
 
+/** The permission set the auth layer resolved for this request (empty when none was attached). */
+function permissionsOf(request: FastifyRequest): ReadonlySet<string> {
+  const granted = (request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined;
+  return granted ?? new Set<string>();
+}
+
 async function readReport(reportPath: string | undefined): Promise<JsonReport | null> {
   if (reportPath === undefined || !existsSync(reportPath)) {
     return null;
@@ -256,6 +262,8 @@ const rateLimitConfig = {
 export async function dataApiRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
+  /** `reportsDir`: the only directory a scan delete removes stored report files from. */
+  options: { readonly reportsDir?: string } = {},
 ): Promise<void> {
   const rawDb = (storage as SqliteStorageAdapter).getRawDatabase();
 
@@ -714,17 +722,15 @@ export async function dataApiRoutes(
         return reply.code(404).send({ error: 'Scan not found' });
       }
 
-      // Admin-only: API key users are treated as admin
-      const orgId = getOrgId(request);
-      if (!bypassesOrgScope(request.user) && scan.orgId !== orgId) {
+      const refusal = scanDeleteRefusal({ user: request.user, permissions: permissionsOf(request) }, scan);
+      if (refusal === 'org') {
         return reply.code(403).send({ error: 'Forbidden' });
       }
-
-      if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
-        await unlink(scan.jsonReportPath).catch(() => undefined);
+      if (refusal === 'permission') {
+        return reply.code(403).send({ error: `Forbidden: requires ${SCAN_DELETE_PERMISSION}` });
       }
 
-      await storage.scans.deleteScan(request.params.id);
+      await deleteScanAndFiles(storage, scan, { reportsDir: options.reportsDir, log: request.log });
       return reply.code(200).send({ success: true });
     },
   );

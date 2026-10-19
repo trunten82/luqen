@@ -27,9 +27,17 @@ interface RunResult {
   readonly json: any;
 }
 
-function run(dbPath: string, args: readonly string[] = ['--expect', 'dark'], withDb = true): RunResult {
+/** Variables a run sees: the test's environment, with each override set, or removed when undefined. */
+type EnvOverrides = Readonly<Record<string, string | undefined>>;
+
+function run(dbPath: string, args: readonly string[] = ['--expect', 'dark'], withDb = true, env: EnvOverrides = {}): RunResult {
   const argv = [SCRIPT, ...(withDb ? ['--db', dbPath] : []), '--require-root', PKG_JSON, ...args];
-  const res = spawnSync(process.execPath, argv, { encoding: 'utf8', timeout: 60_000 });
+  const childEnv: Record<string, string | undefined> = { ...process.env };
+  for (const [name, value] of Object.entries(env)) {
+    if (value === undefined) delete childEnv[name];
+    else childEnv[name] = value;
+  }
+  const res = spawnSync(process.execPath, argv, { encoding: 'utf8', timeout: 60_000, env: childEnv });
   let json: unknown = null;
   try {
     json = JSON.parse(res.stdout);
@@ -535,6 +543,154 @@ describe('dismissal-permission-readback: arguments and failures', () => {
     } finally {
       src.close();
       for (const d of dirs) rmSync(d, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('dismissal-permission-readback: the UAT admin persona exemption', () => {
+  // The dedicated UAT admin persona (a global admin) is a member of the UAT org's Owner team by the
+  // owner's ruling. --exempt-uat-admin-team true exempts exactly that persona in exactly that org,
+  // named by the HARD-07 harness variables; everything else stays a violation.
+  const USER_VAR = 'LUQEN_UAT_ADMIN_USER';
+  const ORG_VAR = 'LUQEN_UAT_EXPECT_ORG';
+  const PERSONA = `${SENTINEL}-user-uat-admin`;
+  const UAT_ORG = `${SENTINEL}-org-org-a`;
+  const VARS = { [USER_VAR]: PERSONA, [ORG_VAR]: UAT_ORG };
+  const FLAG = ['--exempt-uat-admin-team', 'true'];
+  const GRANTED = ['--expect', 'granted', '--allow-custom-roles', 'true'];
+  const CHECK = 'global-admin-in-customer-org-team';
+  const outputs: string[] = [];
+
+  /** The UAT org (org-a) granted, its Owner team holding the persona. */
+  function uatWorld(f: Fixture = fx): void {
+    f.baseline('org-a');
+    f.grantOwnerAdmin('org-a');
+    f.user('uat-admin', 'admin');
+    f.member('team-org-a', 'uat-admin');
+  }
+
+  function runExempt(f: Fixture, args: readonly string[], env: EnvOverrides): RunResult {
+    const res = run(f.path, args, true, env);
+    outputs.push(res.stdout + res.stderr);
+    return res;
+  }
+
+  it('dismissal-permission-readback: the UAT admin persona in the UAT org is reported on an INFO line and the run passes', () => {
+    uatWorld();
+    fx.db.close();
+    const res = runExempt(fx, [...GRANTED, ...FLAG], VARS);
+    expect(res.status, res.stderr).toBe(0);
+    expect(res.json.violations).toEqual([]);
+    // The raw counts are kept: the exemption is reported, never hidden.
+    expect(res.json.globalAdmins).toEqual({ total: 1, inCustomerOrgTeam: 1 });
+    expect(res.json.exemptions).toEqual([{ check: CHECK, applied: true, count: 1, variables: [USER_VAR, ORG_VAR] }]);
+    expect(res.stderr).toContain(`INFO exempted ${CHECK}: 1`);
+  });
+
+  it('dismissal-permission-readback: another global admin in a team of the UAT org still exits 4', () => {
+    uatWorld();
+    fx.user('root-2', 'admin');
+    fx.member('team-org-a', 'root-2');
+    fx.db.close();
+    const res = runExempt(fx, [...GRANTED, ...FLAG], VARS);
+    expect(res.status).toBe(4);
+    expect(res.json.violations).toContain(CHECK);
+    expect(res.json.globalAdmins).toEqual({ total: 2, inCustomerOrgTeam: 2 });
+    expect(res.json.exemptions).toEqual([{ check: CHECK, applied: true, count: 1, variables: [USER_VAR, ORG_VAR] }]);
+  });
+
+  it('dismissal-permission-readback: the UAT admin persona in a team of another customer org still exits 4', () => {
+    // (a) the persona is also a member of another customer org's team.
+    uatWorld();
+    fx.baseline('org-b');
+    fx.grantOwnerAdmin('org-b');
+    fx.member('team-org-b', 'uat-admin');
+    fx.db.close();
+    const a = runExempt(fx, [...GRANTED, ...FLAG], VARS);
+    expect(a.status).toBe(4);
+    expect(a.json.violations).toContain(CHECK);
+    expect(a.json.exemptions).toEqual([{ check: CHECK, applied: true, count: 0, variables: [USER_VAR, ORG_VAR] }]);
+    expect(a.stderr).toContain(`INFO exempted ${CHECK}: 0`);
+    // (b) the persona's UAT-org team is also linked to another customer org.
+    const g = new Fixture();
+    try {
+      uatWorld(g);
+      g.baseline('org-b');
+      g.grantOwnerAdmin('org-b');
+      g.link('team-org-a', 'org-b');
+      g.db.close();
+      const b = runExempt(g, [...GRANTED, ...FLAG], VARS);
+      expect(b.status).toBe(4);
+      expect(b.json.violations).toContain(CHECK);
+      expect(b.json.exemptions[0].count).toBe(0);
+    } finally {
+      g.close();
+    }
+  });
+
+  it('dismissal-permission-readback: without the exemption flag the UAT admin persona still exits 4', () => {
+    uatWorld();
+    fx.db.close();
+    const res = runExempt(fx, GRANTED, VARS);
+    expect(res.status).toBe(4);
+    expect(res.json.violations).toContain(CHECK);
+    expect(res.json.exemptions ?? []).toEqual([]);
+    expect(res.stderr).not.toContain('INFO exempted');
+  });
+
+  it('dismissal-permission-readback: an exemption whose org name matches more than one org is not applied', () => {
+    uatWorld();
+    // A second org carrying the same name (organization names are not unique; slugs are).
+    fx.db
+      .prepare('INSERT INTO organizations (id, name, slug, created_at) VALUES (?, ?, ?, ?)')
+      .run('org-twin', UAT_ORG, `${SENTINEL}-slug-twin`, new Date().toISOString());
+    fx.db.close();
+    const res = runExempt(fx, [...GRANTED, ...FLAG], VARS);
+    expect(res.status).toBe(4);
+    expect(res.json.violations).toContain(CHECK);
+    expect(res.json.exemptions).toEqual([
+      { check: CHECK, applied: false, count: 0, reason: 'org-not-unique', variables: [USER_VAR, ORG_VAR] },
+    ]);
+    expect(res.stderr).toContain('INFO exemption not applied: org-not-unique');
+  });
+
+  it('dismissal-permission-readback: the exemption flag without both variables is refused naming them', () => {
+    uatWorld();
+    fx.db.close();
+    for (const env of [
+      { [USER_VAR]: undefined, [ORG_VAR]: UAT_ORG },
+      { [USER_VAR]: PERSONA, [ORG_VAR]: undefined },
+      { [USER_VAR]: '', [ORG_VAR]: UAT_ORG },
+      { [USER_VAR]: PERSONA, [ORG_VAR]: '   ' },
+      { [USER_VAR]: undefined, [ORG_VAR]: undefined },
+    ]) {
+      const res = runExempt(fx, [...GRANTED, ...FLAG], env);
+      const label = JSON.stringify(Object.keys(env).filter((k) => !env[k]?.trim()));
+      expect(res.status, label).toBe(2);
+      expect(res.stderr, label).toContain(USER_VAR);
+      expect(res.stderr, label).toContain(ORG_VAR);
+      expect(res.stdout, label).toBe('');
+    }
+    // A value other than true is refused too.
+    expect(runExempt(fx, [...GRANTED, '--exempt-uat-admin-team', 'yes'], VARS).status).toBe(2);
+  });
+
+  it('dismissal-permission-readback: the exemption output never holds the persona or the org value', () => {
+    // Runs every exemption shape again on this test's own database, then checks every output of
+    // this describe block. Values are built from the sentinel, so any echo of either is caught.
+    uatWorld();
+    fx.user('root-2', 'admin');
+    fx.member('team-org-a', 'root-2');
+    fx.db.close();
+    runExempt(fx, [...GRANTED, ...FLAG], VARS);
+    runExempt(fx, GRANTED, VARS);
+    runExempt(fx, [...GRANTED, ...FLAG], { [USER_VAR]: PERSONA, [ORG_VAR]: undefined });
+    runExempt(fx, [...GRANTED, ...FLAG], { [USER_VAR]: `${SENTINEL}-nobody`, [ORG_VAR]: `${SENTINEL}-no-org` });
+    expect(outputs.length).toBeGreaterThanOrEqual(4);
+    for (const out of outputs) {
+      expect(out).not.toContain(PERSONA);
+      expect(out).not.toContain(UAT_ORG);
+      expect(out).not.toContain(SENTINEL);
     }
   });
 });

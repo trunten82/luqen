@@ -8,24 +8,36 @@
 //   - writes at most ONE mark, ONE revoke, and with --leave-active ONE re-mark of the same finding;
 //   - every persona write probe uses a request that cannot create a dismissal even if its permission
 //     gate were broken (the whole-page selector `html` is refused by the handler with 400/422), so a
-//     missing 403 shows up as a FAIL, never as a stray row.
+//     missing 403 shows up as a FAIL, never as a stray row;
+//   - it writes only into the dedicated UAT org and site: right after the admin login, and before any
+//     persona login or write, the target scan's org name and site host are read as the admin and
+//     checked against LUQEN_UAT_EXPECT_ORG / LUQEN_UAT_EXPECT_SITE_HOST (target-guard.mjs, no
+//     defaults); anything else prints a names-only REFUSED line and the run exits 2.
 import {
   check, WAIT, newPersonaPage, openReport, showTab, pageFetch, jsonOf, openMarkDialog, confirmMark, openDismissedSection,
   setWithholdDetail,
 } from './lib.mjs';
 import { controlSurvey } from './scenarios-core.mjs';
+import { uatTargetRefusal, TARGET_VARS, TARGET_PASS_LINE } from './target-guard.mjs';
 
-export const REMOTE_VARS = [
+/** What --check-target-only needs: the admin login and the two expected target values. */
+export const TARGET_CHECK_VARS = [
   'LUQEN_UAT_BASE_URL', 'LUQEN_UAT_SCAN_ID',
   'LUQEN_UAT_ADMIN_USER', 'LUQEN_UAT_ADMIN_PASS',
+  ...TARGET_VARS,
+];
+
+export const REMOTE_VARS = [
+  ...TARGET_CHECK_VARS,
   'LUQEN_UAT_OWNER_USER', 'LUQEN_UAT_OWNER_PASS',
   'LUQEN_UAT_MEMBER_USER', 'LUQEN_UAT_MEMBER_PASS',
   'LUQEN_UAT_VIEWER_USER', 'LUQEN_UAT_VIEWER_PASS',
 ];
 
 /** Names (never values) of the variables that are absent or empty. */
-export function missingVars(env) {
-  return REMOTE_VARS.filter((name) => typeof env[name] !== 'string' || env[name].trim() === '');
+export function missingVars(env, { checkTargetOnly = false } = {}) {
+  const names = checkTargetOnly ? TARGET_CHECK_VARS : REMOTE_VARS;
+  return names.filter((name) => typeof env[name] !== 'string' || env[name].trim() === '');
 }
 
 const creds = (env, who) => ({ user: env[`LUQEN_UAT_${who}_USER`], pass: env[`LUQEN_UAT_${who}_PASS`] });
@@ -58,11 +70,37 @@ async function pickFinding(page) {
 const hasButtonFor = (page, f) => page.evaluate((code, sel) => [...document.querySelectorAll('#panel-issues .rpt-dismiss-btn[data-action]')]
   .some((b) => b.getAttribute('data-code') === code && b.getAttribute('data-selector') === sel), f.code, f.selector);
 
-async function adminCycle({ browser, env, base, scanId, leaveActive, whileActive }) {
+/**
+ * The target scan's org name and site URL, read as the logged-in admin. GraphQL `scan` answers only for
+ * a scan of the org the session is in (null for any other org), and returns that scan's own orgId; the
+ * name is then taken from the admin's org memberships (`/orgs/current` userOrgs) by that id. A scan the
+ * admin cannot read in its session org, or an org it is not a member of, leaves the name null and the
+ * guard refuses. The scan's own orgId is used, not `/orgs/current`'s currentOrgId, because the rule is
+ * about the org the TARGET SCAN belongs to; a GraphQL read answers only in the session org, so whenever
+ * it answers, that orgId is also the org the request acts in. Read-only: one GET and one GraphQL query,
+ * no session change. Nothing here is printed.
+ */
+async function observeTarget(page, scanId) {
+  try {
+    const current = jsonOf(await pageFetch(page, 'GET', '/orgs/current'));
+    const res = await pageFetch(page, 'POST', '/graphql', {
+      query: 'query UatTarget($id: ID!) { scan(id: $id) { orgId siteUrl } }',
+      variables: { id: scanId },
+    });
+    const scan = res.status === 200 ? (jsonOf(res)?.data?.scan ?? null) : null;
+    const orgs = Array.isArray(current?.userOrgs) ? current.userOrgs : [];
+    const org = scan !== null && typeof scan.orgId === 'string' ? orgs.find((o) => o?.id === scan.orgId) : undefined;
+    return {
+      orgName: org !== undefined && typeof org.name === 'string' ? org.name : null,
+      siteUrl: scan !== null && typeof scan.siteUrl === 'string' ? scan.siteUrl : null,
+    };
+  } catch {
+    return { orgName: null, siteUrl: null };
+  }
+}
+
+async function adminCycle({ page, base, scanId, leaveActive, whileActive }) {
   const S = 'remote-admin';
-  const admin = await newPersonaPage(browser, base, creds(env, 'ADMIN'));
-  check(S, 'login as the admin persona', admin.ok);
-  const page = admin.page;
   await openReport(page, base, scanId, 'issues');
   const finding = await pickFinding(page);
   check(S, 'the scan has a finding that can be dismissed', finding !== null);
@@ -116,7 +154,6 @@ async function adminCycle({ browser, env, base, scanId, leaveActive, whileActive
     await showTab(page, 'issues');
     check(S, 'left active: the finding is dismissed again and stays so', !(await hasButtonFor(page, finding)));
   }
-  await admin.context.close();
 }
 
 /** Read-only and cannot-write probes per persona. The write probe targets the refused selector `html`. */
@@ -148,9 +185,28 @@ async function personaChecks({ browser, env, base, scanId, expect }) {
   }
 }
 
-export async function runRemote({ browser, env, expect, leaveActive }) {
+/**
+ * Returns 'refused' (nothing written, no persona logged in), 'target-ok' (checkTargetOnly: the target
+ * check passed, nothing written) or 'done' (the full mark / persona / revoke cycle ran).
+ */
+export async function runRemote({ browser, env, expect, leaveActive, checkTargetOnly = false }) {
   setWithholdDetail(true);
   const base = env.LUQEN_UAT_BASE_URL.replace(/\/+$/, '');
   const scanId = env.LUQEN_UAT_SCAN_ID;
-  await adminCycle({ browser, env, base, scanId, leaveActive, whileActive: () => personaChecks({ browser, env, base, scanId, expect }) });
+  const admin = await newPersonaPage(browser, base, creds(env, 'ADMIN'));
+  try {
+    check('remote-admin', 'login as the admin persona', admin.ok);
+    // The target rule runs here: after the admin login, before any persona login and before any write.
+    const refusal = uatTargetRefusal(env, await observeTarget(admin.page, scanId));
+    if (refusal !== null) {
+      console.log(refusal.message);
+      return 'refused';
+    }
+    console.log(TARGET_PASS_LINE);
+    if (checkTargetOnly) return 'target-ok';
+    await adminCycle({ page: admin.page, base, scanId, leaveActive, whileActive: () => personaChecks({ browser, env, base, scanId, expect }) });
+    return 'done';
+  } finally {
+    await admin.context.close();
+  }
 }

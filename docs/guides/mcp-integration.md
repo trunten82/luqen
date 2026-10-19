@@ -174,6 +174,27 @@ refuses to issue a code unless the consenting user has `mcp.use` in the
 active org (or `admin.system`). Org admins grant `mcp.use` from the role
 editor at `/admin/roles`.
 
+**The stored user answers every request.** Each request to `/api/v1/mcp` is
+answered for the stored, active user the token was issued to: the tools and
+permissions follow that user's current stored roles in the token's
+organization (a role claim inside a token is not read). A token whose user
+has been deactivated or removed is refused with `401` `invalid_token`
+(`error_description` `inactive_user` or `unknown_user`) on its next use. The
+user must also still belong to the token's organization (a member of the
+organization or of one of its teams; global administrators are served in
+every organization): otherwise the token is refused with `401`
+`invalid_token` (`error_description` `not_member`). A user holding no
+permission in the token's organization is refused with `403`
+`insufficient_scope` (`error_description` `no_permission`). The
+dashboard's built-in assistant applies the same rule: it offers and runs only
+the tools the stored user may use in the conversation's organization, and
+each tool runs with that user's permissions.
+
+MCP clients and the assistant act for a dashboard user account. To
+authorize a client or use the assistant, sign in with a dashboard user
+account (managed at `/admin/dashboard-users`); a sign-in answered by the
+compliance service acts for no dashboard user account and can do neither.
+
 **Dynamic Client Registration via `POST /oauth/register`:** open endpoint,
 rate-limited per IP. The client posts `client_metadata`:
 
@@ -220,8 +241,11 @@ client-credentials surface used by sibling services (compliance →
 dashboard, etc.). MCP-via-DCR clients also surface here for visibility,
 revocation, and audit.
 
-**Audit log coverage:** every MCP request is logged. The dashboard surface
-is `/admin/audit` — filter by `actor.type = oauth_client` for MCP traffic.
+**Audit log coverage:** MCP requests are not written to an audit log one
+by one. Some tools record their own entries: queueing a bulk fix writes one
+to the audit log (`/admin/audit-log`). The agent audit (`/admin/audit`)
+records the dashboard assistant's tool calls, refresh-token reuse (the
+token chain is revoked) and refused cross-organization client revocations.
 Revoking a client at `/admin/clients` triggers an immediate
 `error="invalid_token", error_description="client_revoked"` on the next
 MCP call (no waiting for the token TTL).
@@ -232,8 +256,11 @@ MCP call (no waiting for the token TTL).
 |---|---|---|
 | `401 Bearer token required` | Missing or empty `Authorization` header | Ensure the bridge / IDE actually attached a token; re-run the OAuth flow |
 | `401 invalid_token` | Token expired, signature mismatch, or wrong issuer | Refresh; verify `DASHBOARD_PUBLIC_URL` matches the host the client used |
+| `401 invalid_token` with `inactive_user` or `unknown_user` | The user the token was issued to has been deactivated or removed | Reactivate the user at `/admin/dashboard-users`, or sign in as an active user and authorize the client again |
+| `401 invalid_token` with `not_member` | The user the token was issued to no longer belongs to the token's organization | Add the user back to the organization (or to one of its teams), or authorize the client again from an organization the user belongs to |
 | `401 client_revoked` | OAuth client was revoked at `/admin/clients` | Register a fresh client (DCR re-runs automatically on bridge restart) |
 | `403 Insufficient scope` | Token issued with `read` but tool requires `write` | Re-consent with `scope=read+write` at `/oauth/authorize` |
+| `403 insufficient_scope` with `no_permission` | The user holds no permission in the token's organization | Grant the user a role in that organization (at `/admin/teams` or `/admin/roles`), or authorize against an organization where they hold one |
 | Empty tools list | Caller has no `mcp.use` permission in the active org, or RBAC filters every tool | Grant `mcp.use` at `/admin/roles`; verify role permissions |
 | `Transport not supported` / SSE-only error | Client speaks pure SSE (deprecated transport) | Upgrade client; use Streamable HTTP — Luqen will not negotiate SSE-only |
 | Consent screen says "MCP access not enabled for your org" | Active org lacks `mcp.use` for your role | Org admin must grant `mcp.use` |

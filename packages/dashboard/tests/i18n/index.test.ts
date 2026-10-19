@@ -225,6 +225,63 @@ describe('i18n', () => {
   });
 
   // -------------------------------------------------------------------------
+  // HARD-04: substitution is literal and single-pass
+  // -------------------------------------------------------------------------
+  describe('HARD-04 placeholder substitution', () => {
+    // The real en.json (read through the actual fs), plus two test-only keys: no shipped string repeats a
+    // placeholder or carries two that could feed each other.
+    async function setupRealEnglish() {
+      const actualFs = await vi.importActual<typeof import('node:fs')>('node:fs');
+      mockedReadFileSync.mockImplementation((filePath: any) => {
+        const p = String(filePath);
+        if (p.endsWith('en.json')) {
+          const real = JSON.parse(actualFs.readFileSync(p, 'utf-8')) as Record<string, unknown>;
+          return JSON.stringify({
+            ...real,
+            hard04: { two: 'X {{first}} and {{second}}', repeat: 'Hi {{name}}, bye {{name}}' },
+          });
+        }
+        throw new Error('File not found');
+      });
+      const mod = await import('../../src/i18n/index.js');
+      mod.loadTranslations();
+      return mod;
+    }
+
+    it('HARD-04 a value containing dollar ampersand renders unchanged', async () => {
+      const mod = await setupRealEnglish();
+      expect(mod.t('issueDismissals.actor.apiKeyNamed', 'en', { name: 'CI $& deploy' })).toBe('API key: CI $& deploy');
+    });
+
+    it('HARD-04 a value containing dollar backtick renders unchanged', async () => {
+      const mod = await setupRealEnglish();
+      expect(mod.t('issueDismissals.actor.apiKeyNamed', 'en', { name: 'CI $` deploy' })).toBe('API key: CI $` deploy');
+    });
+
+    it('HARD-04 a value containing dollar quote renders unchanged', async () => {
+      const mod = await setupRealEnglish();
+      expect(mod.t('issueDismissals.actor.apiKeyNamed', 'en', { name: "CI $' deploy" })).toBe("API key: CI $' deploy");
+      // The numbered and named group forms are literal too.
+      expect(mod.t('issueDismissals.actor.apiKeyNamed', 'en', { name: 'CI $1 $$ $<x> deploy' })).toBe('API key: CI $1 $$ $<x> deploy');
+    });
+
+    it('HARD-04 a value containing another placeholder is not expanded', async () => {
+      const mod = await setupRealEnglish();
+      expect(mod.t('hard04.two', 'en', { first: '{{second}}', second: 'Z' })).toBe('X {{second}} and Z');
+      // Parameter order does not matter.
+      expect(mod.t('hard04.two', 'en', { second: 'Z', first: '{{second}}' })).toBe('X {{second}} and Z');
+      expect(mod.t('issueDismissals.actor.apiKeyNamed', 'en', { name: '{{name}}' })).toBe('API key: {{name}}');
+    });
+
+    it('HARD-04 every occurrence of a placeholder is replaced', async () => {
+      const mod = await setupRealEnglish();
+      expect(mod.t('hard04.repeat', 'en', { name: 'Ada' })).toBe('Hi Ada, bye Ada');
+      // A placeholder without a value stays as written, every time.
+      expect(mod.t('hard04.repeat', 'en', { other: 'x' })).toBe('Hi {{name}}, bye {{name}}');
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // getLocaleData
   // -------------------------------------------------------------------------
   describe('getLocaleData', () => {

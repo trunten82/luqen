@@ -3,11 +3,13 @@ import { buildFixSuggestionHint } from '../src/fix-suggestions.js';
 
 describe('buildFixSuggestionHint', () => {
   it('includes the issue HTML context as htmlContext in the hx-get URL', () => {
+    // The fifth argument: the viewer holds reports.view_technical.
     const html = buildFixSuggestionHint(
       '1.1.1',
       'Img element missing an alt attribute',
       'scan-123',
       '<img src="/logo.png">',
+      true,
     );
     expect(html).toContain('hx-get="/reports/scan-123/fix-suggestion?');
     expect(html).toContain(encodeURIComponent('<img src="/logo.png">').replace(/%20/g, '+'));
@@ -23,7 +25,8 @@ describe('buildFixSuggestionHint', () => {
 
   it('truncates very long contexts so the GET URL stays bounded', () => {
     const longContext = '<div>' + 'x'.repeat(5000) + '</div>';
-    const html = buildFixSuggestionHint('1.1.1', 'Some issue', 'scan-123', longContext);
+    const html = buildFixSuggestionHint('1.1.1', 'Some issue', 'scan-123', longContext, true);
+    expect(html).toContain('htmlContext=%3Cdiv%3Exxx');
     const m = html.match(/htmlContext=([^"&]*)/);
     expect(m).not.toBeNull();
     expect(decodeURIComponent((m as RegExpMatchArray)[1].replace(/\+/g, ' ')).length).toBeLessThanOrEqual(1500);

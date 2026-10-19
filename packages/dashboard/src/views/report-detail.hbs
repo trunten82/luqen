@@ -374,13 +374,15 @@
               {{#if ../../perm.issuesAssign}}
               {{{issueAssignStatus ../../assignedMap code selector message wcagCriterion}}}
               {{#unless (issueAssignStatus ../../assignedMap code selector message wcagCriterion)}}
+              {{#if ../../perm.reportsViewTechnical}}
               <button type="button" class="rpt-assign-btn" data-action="rptAssignIssue" data-code="{{code}}" data-selector="{{selector}}" data-message="{{message}}" data-severity="{{type}}" data-wcag-criterion="{{wcagCriterion}}" data-wcag-title="{{wcagTitle}}" title="Assign this issue">{{t "reportDetail.assign"}}</button>
+              {{/if}}
               {{/unless}}
               {{/if}}
               {{#if @root.dismissalControls}}
-              {{#if (dismissalRefused selector)}}
-              <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" aria-disabled="true" title="{{t 'issueDismissals.action.refusedTitle'}}" aria-describedby="dismiss-refused-ti-{{@../index}}-{{@index}}">{{t "issueDismissals.action.dismiss"}}</button>
-              <span class="sr-only" id="dismiss-refused-ti-{{@../index}}-{{@index}}">{{t "issueDismissals.action.refusedTitle"}}</span>
+              {{#if (dismissalRefused selector code)}}
+              <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" aria-disabled="true" title="{{t (dismissalRefusedKey selector code)}}" aria-describedby="dismiss-refused-ti-{{@../index}}-{{@index}}">{{t "issueDismissals.action.dismiss"}}</button>
+              <span class="sr-only" id="dismiss-refused-ti-{{@../index}}-{{@index}}">{{t (dismissalRefusedKey selector code)}}</span>
               {{else}}
               <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" data-action="rptDismissIssue" data-code="{{code}}" data-selector="{{selector}}" data-message="{{message}}" data-criterion="{{../criterion}}" aria-label="{{t 'issueDismissals.action.dismissAria' code=code}}" title="{{t 'issueDismissals.action.dismissTitle'}}">{{t "issueDismissals.action.dismiss"}}</button>
               {{/if}}
@@ -398,7 +400,7 @@
             </details>
             {{/if}}
             {{#if ../../perm.issuesFix}}
-            {{{fixSuggestion wcagCriterion message @root.scan.id context}}}
+            {{{fixSuggestion wcagCriterion message @root.scan.id context @root.perm.reportsViewTechnical}}}
             {{/if}}
           </div>
           {{/each}}
@@ -418,13 +420,15 @@
             {{#if ../../perm.issuesAssign}}
             {{{issueAssignStatus ../../assignedMap code selector message wcagCriterion}}}
             {{#unless (issueAssignStatus ../../assignedMap code selector message wcagCriterion)}}
+            {{#if ../../perm.reportsViewTechnical}}
             <button type="button" class="rpt-assign-btn" data-action="rptAssignIssue" data-code="{{code}}" data-selector="{{selector}}" data-message="{{message}}" data-severity="{{type}}" data-wcag-criterion="{{wcagCriterion}}" data-wcag-title="{{wcagTitle}}" title="Assign this issue">{{t "reportDetail.assign"}}</button>
+            {{/if}}
             {{/unless}}
             {{/if}}
             {{#if @root.dismissalControls}}
-            {{#if (dismissalRefused selector)}}
-            <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" aria-disabled="true" title="{{t 'issueDismissals.action.refusedTitle'}}" aria-describedby="dismiss-refused-pi-{{@../index}}-{{@index}}">{{t "issueDismissals.action.dismiss"}}</button>
-            <span class="sr-only" id="dismiss-refused-pi-{{@../index}}-{{@index}}">{{t "issueDismissals.action.refusedTitle"}}</span>
+            {{#if (dismissalRefused selector code)}}
+            <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" aria-disabled="true" title="{{t (dismissalRefusedKey selector code)}}" aria-describedby="dismiss-refused-pi-{{@../index}}-{{@index}}">{{t "issueDismissals.action.dismiss"}}</button>
+            <span class="sr-only" id="dismiss-refused-pi-{{@../index}}-{{@index}}">{{t (dismissalRefusedKey selector code)}}</span>
             {{else}}
             <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" data-action="rptDismissIssue" data-code="{{code}}" data-selector="{{selector}}" data-message="{{message}}" data-criterion="{{../criterion}}" aria-label="{{t 'issueDismissals.action.dismissAria' code=code}}" title="{{t 'issueDismissals.action.dismissTitle'}}">{{t "issueDismissals.action.dismiss"}}</button>
             {{/if}}
@@ -438,7 +442,7 @@
           <span class="issue__brand-detail">{{this.brandMatch.matchDetail}}</span>
           {{/if}}
           {{#if ../../perm.issuesFix}}
-          {{{fixSuggestion wcagCriterion message @root.scan.id context}}}
+          {{{fixSuggestion wcagCriterion message @root.scan.id context @root.perm.reportsViewTechnical}}}
           {{/if}}
         </div>
         {{/each}}
@@ -484,7 +488,7 @@
             <td data-label="{{t 'issueDismissals.col.rule'}}"><span class="rpt-code">{{code}}</span></td>
             {{#if @root.perm.reportsViewTechnical}}<td class="cell--url" data-label="{{t 'issueDismissals.col.element'}}" title="{{selector}}"><span class="rpt-code">{{selector}}</span></td>{{/if}}
             <td class="cell--wrap" data-label="{{t 'issueDismissals.col.reason'}}">{{reason}}</td>
-            {{#if actorIsApiKey}}<td data-label="{{t 'issueDismissals.col.dismissedBy'}}">{{#if actorKeyName}}{{t "issueDismissals.actor.apiKeyNamed" name=actorKeyName}}{{else}}{{t "issueDismissals.actor.apiKey"}}{{/if}}</td>{{else}}<td data-label="{{t 'issueDismissals.col.dismissedBy'}}" title="{{actor}}">{{actor}}</td>{{/if}}
+            {{#if actorIsApiKey}}<td data-label="{{t 'issueDismissals.col.dismissedBy'}}">{{#if actorKeyName}}<span>{{t "issueDismissals.actor.apiKeyNamed" name=actorKeyName}} ({{t "admin.apiKeys.created"}} <time datetime="{{actorKeyCreatedIso}}">{{actorKeyCreatedDisplay}}</time>)</span>{{else}}{{t "issueDismissals.actor.apiKey"}}{{/if}}</td>{{else}}<td data-label="{{t 'issueDismissals.col.dismissedBy'}}" title="{{actor}}">{{actor}}</td>{{/if}}
             <td data-label="{{t 'issueDismissals.col.dismissedOn'}}"><time datetime="{{createdAtIso}}">{{createdAtDisplay}}</time></td>
             {{#if @root.dismissalControls}}<td><button type="button" class="btn btn--ghost btn--sm" data-action="rptRevokeIssue" data-id="{{id}}" data-code="{{code}}" aria-label="{{t 'issueDismissals.action.revokeAria' code=code}}" title="{{t 'issueDismissals.dialog.revoke.title'}}">{{t "common.revoke"}}</button></td>{{/if}}
           </tr>
@@ -516,9 +520,9 @@
             <td class="rpt-text--muted" data-label="{{t 'issueDismissals.col.rule'}}"><span class="rpt-code">{{code}}</span></td>
             {{#if @root.perm.reportsViewTechnical}}<td class="cell--url rpt-text--muted" data-label="{{t 'issueDismissals.col.element'}}" title="{{selector}}"><span class="rpt-code">{{selector}}</span></td>{{/if}}
             <td class="cell--wrap rpt-text--muted" data-label="{{t 'issueDismissals.col.reason'}}">{{reason}}</td>
-            {{#if actorIsApiKey}}<td class="rpt-text--muted" data-label="{{t 'issueDismissals.col.dismissedBy'}}">{{#if actorKeyName}}{{t "issueDismissals.actor.apiKeyNamed" name=actorKeyName}}{{else}}{{t "issueDismissals.actor.apiKey"}}{{/if}}</td>{{else}}<td class="rpt-text--muted" data-label="{{t 'issueDismissals.col.dismissedBy'}}" title="{{actor}}">{{actor}}</td>{{/if}}
+            {{#if actorIsApiKey}}<td class="rpt-text--muted" data-label="{{t 'issueDismissals.col.dismissedBy'}}">{{#if actorKeyName}}<span>{{t "issueDismissals.actor.apiKeyNamed" name=actorKeyName}} ({{t "admin.apiKeys.created"}} <time datetime="{{actorKeyCreatedIso}}">{{actorKeyCreatedDisplay}}</time>)</span>{{else}}{{t "issueDismissals.actor.apiKey"}}{{/if}}</td>{{else}}<td class="rpt-text--muted" data-label="{{t 'issueDismissals.col.dismissedBy'}}" title="{{actor}}">{{actor}}</td>{{/if}}
             <td class="rpt-text--muted" data-label="{{t 'issueDismissals.col.dismissedOn'}}"><time datetime="{{createdAtIso}}">{{createdAtDisplay}}</time></td>
-            {{#if revokedByIsApiKey}}<td class="rpt-text--muted" data-label="{{t 'issueDismissals.col.revokedBy'}}">{{#if revokedByKeyName}}{{t "issueDismissals.actor.apiKeyNamed" name=revokedByKeyName}}{{else}}{{t "issueDismissals.actor.apiKey"}}{{/if}}</td>{{else}}<td class="rpt-text--muted" data-label="{{t 'issueDismissals.col.revokedBy'}}" title="{{revokedBy}}">{{revokedBy}}</td>{{/if}}
+            {{#if revokedByIsApiKey}}<td class="rpt-text--muted" data-label="{{t 'issueDismissals.col.revokedBy'}}">{{#if revokedByKeyName}}<span>{{t "issueDismissals.actor.apiKeyNamed" name=revokedByKeyName}} ({{t "admin.apiKeys.created"}} <time datetime="{{revokedByKeyCreatedIso}}">{{revokedByKeyCreatedDisplay}}</time>)</span>{{else}}{{t "issueDismissals.actor.apiKey"}}{{/if}}</td>{{else}}<td class="rpt-text--muted" data-label="{{t 'issueDismissals.col.revokedBy'}}" title="{{revokedBy}}">{{revokedBy}}</td>{{/if}}
             <td class="rpt-text--muted" data-label="{{t 'issueDismissals.col.revokedOn'}}"><time datetime="{{revokedAtIso}}">{{revokedAtDisplay}}</time></td>
             <td class="cell--wrap rpt-text--muted" data-label="{{t 'issueDismissals.col.comment'}}">{{revokeComment}}</td>
           </tr>
@@ -563,9 +567,9 @@
             {{/if}}
             <span class="rpt-text--muted">({{affectedCount}} pages)</span>
             {{#if @root.dismissalControls}}
-            {{#if (dismissalRefused selector)}}
-            <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" aria-disabled="true" title="{{t 'issueDismissals.action.refusedTitle'}}" aria-describedby="dismiss-refused-tt-{{@../index}}-{{@index}}">{{t "issueDismissals.action.dismiss"}}</button>
-            <span class="sr-only" id="dismiss-refused-tt-{{@../index}}-{{@index}}">{{t "issueDismissals.action.refusedTitle"}}</span>
+            {{#if (dismissalRefused selector code)}}
+            <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" aria-disabled="true" title="{{t (dismissalRefusedKey selector code)}}" aria-describedby="dismiss-refused-tt-{{@../index}}-{{@index}}">{{t "issueDismissals.action.dismiss"}}</button>
+            <span class="sr-only" id="dismiss-refused-tt-{{@../index}}-{{@index}}">{{t (dismissalRefusedKey selector code)}}</span>
             {{else}}
             <button type="button" class="btn btn--ghost btn--sm rpt-dismiss-btn" data-action="rptDismissIssue" data-code="{{code}}" data-selector="{{selector}}" data-message="{{message}}" aria-label="{{t 'issueDismissals.action.dismissAria' code=code}}" title="{{t 'issueDismissals.action.dismissTitle'}}">{{t "issueDismissals.action.dismiss"}}</button>
             {{/if}}
@@ -594,7 +598,7 @@
           </details>
           {{/if}}
           {{#if ../../perm.issuesFix}}
-          {{{fixSuggestion wcagCriterion message @root.scan.id context}}}
+          {{{fixSuggestion wcagCriterion message @root.scan.id context @root.perm.reportsViewTechnical}}}
           {{/if}}
         </div>
         {{/each}}
@@ -672,7 +676,7 @@
                   </div>
                   {{/if}}
                   {{#if ../../perm.issuesFix}}
-                  {{{fixSuggestion wcagCriterion message @root.scan.id context}}}
+                  {{{fixSuggestion wcagCriterion message @root.scan.id context @root.perm.reportsViewTechnical}}}
                   {{/if}}
                 </td>
                 <td>

@@ -9,6 +9,10 @@
  *     at the TOP of every loop iteration so a mid-turn role revoke is
  *     reflected in the manifest sent to the LLM on the very next call
  *     (AI-SPEC §3 Pitfall 6 / §6.1 Guardrail 1).
+ *   - Offered tools only: a tool call whose name is not in the manifest
+ *     offered to the model in that iteration is answered `{error:'denied'}`
+ *     without reaching the dispatcher or the confirmation pause, and leaves
+ *     one tool row and one audit row (outcome 'denied').
  *   - destructiveHint pause — any tool in the current `tool_calls` batch
  *     with `destructive: true` halts the ENTIRE batch. The pending row is
  *     persisted BEFORE the SSE `pending_confirmation` frame is emitted so
@@ -375,14 +379,10 @@ export class AgentService {
     const agentDisplayName = await this.resolveDisplayName(orgId);
 
     // Plan 33-02 (AGENT-04): collect context hints once per runTurn so every
-    // iteration shares the same snapshot. orgId may be a synthetic admin
-    // namespace (__admin__:<userId>) — unwrap to '' (cross-org) for the
-    // hints read so dashboard admins get meaningful data, not zero rows
-    // under their synthetic org.
-    const hintsOrgId = orgId.startsWith('__admin__:') ? '' : orgId;
+    // iteration shares the same snapshot, read in the conversation's org.
     let contextHintsBlock = '';
     try {
-      const hints = await collectContextHints(this.storage, { userId, orgId: hintsOrgId });
+      const hints = await collectContextHints(this.storage, { userId, orgId });
       contextHintsBlock = formatContextHints(hints);
     } catch {
       contextHintsBlock = '';
@@ -423,6 +423,9 @@ export class AgentService {
         // (1) Re-resolve permissions every iteration (D-07, Guardrail 1).
         const perms = await this.resolvePermissions(userId, orgId);
         const manifest = buildManifest(this.allTools, perms, this.toolCatalog);
+        // Only a tool offered to the model in THIS iteration may run.
+        const offeredNames = new Set(manifest.map((t) => t.name));
+        const isOffered = (name: string): boolean => offeredNames.has(name);
 
         // (2) Fresh rolling-window read — the previous iteration's tool row
         //     is already visible because appendMessage flipped `in_window=1`
@@ -522,12 +525,27 @@ export class AgentService {
           return;
         }
 
-        // (4) Destructive-batch pause — scan the WHOLE batch first.
+        // (4) Destructive-batch pause — scan the WHOLE batch first. Only an
+        //     offered call can pause the batch for confirmation; a call that
+        //     was not offered is answered 'denied' and recorded first.
         const destructive = turn.toolCalls.find((c) => {
           const meta = this.allTools.find((t) => t.name === c.name);
-          return meta?.destructive === true;
+          return isOffered(c.name) && meta?.destructive === true;
         });
         if (destructive !== undefined) {
+          const notOffered = turn.toolCalls.filter((c) => !isOffered(c.name));
+          if (notOffered.length > 0) {
+            await this.dispatchBatchAndPersist({
+              turn: { ...turn, toolCalls: notOffered },
+              conversationId,
+              userId,
+              orgId,
+              signal,
+              emit,
+              retryBudget,
+              isOffered,
+            });
+          }
           const meta = this.allTools.find((t) => t.name === destructive.name);
           const confirmationText = meta?.confirmationTemplate?.(destructive.args);
           // Persist BEFORE emit so reload recovery has the row regardless of
@@ -571,6 +589,7 @@ export class AgentService {
           signal,
           emit,
           retryBudget,
+          isOffered,
           ...(input.groupId !== undefined ? { groupId: input.groupId } : {}),
         });
         // Fall through to next iteration.
@@ -870,10 +889,12 @@ export class AgentService {
     readonly signal: AbortSignal;
     readonly emit: (frame: SseFrame) => void;
     readonly retryBudget: { remaining: number };
+    /** Whether a tool name was offered to the model in this iteration; any other call is denied. */
+    readonly isOffered: (name: string) => boolean;
     /** Phase 62.4 — forwarded to dispatch so fleet tools default group_id. */
     readonly groupId?: string;
   }): Promise<void> {
-    const { turn, conversationId, userId, orgId, signal, emit, retryBudget, groupId } = args;
+    const { turn, conversationId, userId, orgId, signal, emit, retryBudget, isOffered, groupId } = args;
     const calls = turn.toolCalls;
 
     // (a) Capture rationale BEFORE dispatching — same string applied to every
@@ -904,12 +925,14 @@ export class AgentService {
         let outcomeDetail: string | undefined;
         let resultToStore: unknown;
         try {
-          const result = await this.dispatcher.dispatch(call, {
-            userId,
-            orgId,
-            signal,
-            ...(groupId !== undefined ? { groupId } : {}),
-          });
+          const result: ToolDispatchResult = isOffered(call.name)
+            ? await this.dispatcher.dispatch(call, {
+                userId,
+                orgId,
+                signal,
+                ...(groupId !== undefined ? { groupId } : {}),
+              })
+            : { error: 'denied' };
           resultToStore = result;
           if (result !== null && typeof result === 'object' && 'error' in result) {
             const err = (result as { error: string }).error;

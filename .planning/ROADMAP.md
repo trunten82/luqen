@@ -87,11 +87,11 @@ Plans:
 - [x] 91-10-PLAN.md — PR2: MCP user tools validate role names, usernames, passwords and duplicates like the dashboard
 - [x] 91-11-PLAN.md — PR2: cookie sessions send the CSRF token on every /api write; route inventory test; read-back probe
 - [x] 91-12-PLAN.md — PR2: gates (incl. the dismissal browser UAT) and break every new guard
-- [ ] 91-13-PLAN.md — PR2 ship: outgoing-content scan, PR, permission read-back on a prod DB copy, merge, deploy, prod read-back
-- [ ] 91-14-PLAN.md — PR3: Dismiss/Assign need technical-details access; the Dismiss button refuses what the server validator refuses
-- [ ] 91-15-PLAN.md — PR3: API-key dismissals keep the key's label and creation time (migration 092); dismissal dates in the viewer's locale
-- [ ] 91-16-PLAN.md — PR3: the remote UAT harness requires a dedicated target; i18n values render literally
-- [ ] 91-17-PLAN.md — PR3: gates, break every new guard, real-browser UAT read by eye
+- [x] 91-13-PLAN.md — PR2 ship: outgoing-content scan, PR, permission read-back on a prod DB copy, merge, deploy, prod read-back
+- [x] 91-14-PLAN.md — PR3: Dismiss/Assign need technical-details access; the Dismiss button refuses what the server validator refuses
+- [x] 91-15-PLAN.md — PR3: API-key dismissals keep the key's label and creation time (migration 092); dismissal dates in the viewer's locale
+- [x] 91-16-PLAN.md — PR3: the remote UAT harness requires a dedicated target; i18n values render literally
+- [x] 91-17-PLAN.md — PR3: gates, break every new guard, real-browser UAT read by eye
 - [ ] 91-18-PLAN.md — PR3 ship: migration dry-run on prod, outgoing-content scan, PR, merge, deploy, schema and harness read-back
 
 **UI hint**: yes

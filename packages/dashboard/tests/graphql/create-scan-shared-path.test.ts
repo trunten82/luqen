@@ -262,8 +262,8 @@ describe('graphql createScan shares the scan form path', () => {
    *     between storages; it does not start scans).
    * The MCP dashboard_scan_site tool creates its row through initiateScan
    * (validation shared) but deliberately NOT through initiateScanAuthorized:
-   * the in-app agent bridge stamps an empty permission set for org users and
-   * the tool is gated by tool metadata instead.
+   * its permission is enforced before the handler runs (the endpoint's
+   * tools/call guard over HTTP, the assistant's dispatcher in process).
    * Any new creator must be added here consciously.
    */
   it('SCAN-02 no source file outside the shared path creates a scan row', () => {
@@ -313,8 +313,9 @@ describe('graphql createScan shares the scan form path', () => {
    * through one of them: only services/scan-service.ts calls initiateScan
    * itself. The scan form route and the GraphQL resolver call
    * initiateScanAuthorized; the MCP site tool calls initiateScanRateLimited
-   * (its permission is enforced by tool metadata, D-90-02: the in-app agent
-   * bridge stamps an empty permission set for org users). The POST /scan/new
+   * (its permission is enforced before the handler runs: the endpoint's
+   * tools/call guard over HTTP, the assistant's dispatcher in process). The
+   * handler draws from the shared start limit. The POST /scan/new
    * registration carries no route-level permission guard that would refuse
    * before the shared function runs (it would hide a broken shared check).
    */

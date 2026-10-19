@@ -77,7 +77,7 @@ import { apiKeyRoutes } from './routes/admin/api-keys.js';
 import { organizationRoutes } from './routes/admin/organizations.js';
 import { VERSION } from './version.js';
 import { buildFixSuggestionHint } from './fix-suggestions.js';
-import { isWholePageSelector } from './services/issue-dismissals/validate-input.js';
+import { dismissalRefusalReason, type DismissalRefusalReason } from './services/issue-dismissals/validate-input.js';
 import { ALL_PERMISSION_IDS, resolveEffectivePermissions } from './permissions.js';
 import { roleRoutes } from './routes/admin/roles.js';
 import { teamRoutes } from './routes/admin/teams.js';
@@ -131,6 +131,7 @@ import { isBearerOnlyPath } from './mcp/paths.js';
 import { registerOauthRoutes } from './routes/oauth/index.js';
 import { ensureInitialSigningKey } from './auth/oauth-key-bootstrap.js';
 import { createDashboardSigner } from './auth/oauth-signer.js';
+import { storedPermissionsOrNone } from './auth/stored-caller.js';
 // Phase 32 Plan 04: AgentService + /agent/* routes.
 import { AgentService } from './agent/agent-service.js';
 import { ToolDispatcher } from './agent/tool-dispatch.js';
@@ -173,13 +174,34 @@ export function collectPartials(viewsDir: string): Record<string, string> {
 }
 
 /**
- * Template predicate behind the disabled Dismiss button (Phase 89 D-05, UD-04). It mirrors
- * validateDismissalSelector's refusal: a non-string selector, or one isWholePageSelector says
- * targets the whole page, can never be dismissed. Exported so the template tests run the
- * registered predicate itself rather than a copy.
+ * Template predicate behind the disabled Dismiss button (Phase 89 D-05, UD-04; HARD-01). It is
+ * the server validators' own classification (dismissalRefusalReason), for BOTH inputs: a finding
+ * whose selector or rule code the mark route would refuse (whole-page or non-string selector,
+ * either value over its length limit, a missing rule code) renders the disabled button. Templates must pass both arguments, as
+ * `(dismissalRefused selector code)`: a missing second argument would be Handlebars' options
+ * object, which is not a rule code, and would disable the button. Exported so the template tests
+ * run the registered predicate itself rather than a copy.
  */
-export function dismissalRefused(selector: unknown): boolean {
-  return typeof selector !== 'string' || isWholePageSelector(selector);
+export function dismissalRefused(selector: unknown, code: unknown): boolean {
+  return dismissalRefusalReason(selector, code) !== null;
+}
+
+/** The disabled Dismiss button's copy per refusal reason (HARD-01). */
+const DISMISSAL_REFUSED_KEYS: Readonly<Record<DismissalRefusalReason, string>> = {
+  'no-element': 'issueDismissals.action.refusedTitle',
+  'selector-too-long': 'issueDismissals.action.refusedSelectorTooLong',
+  'code-missing': 'issueDismissals.action.refusedCodeMissing',
+  'code-too-long': 'issueDismissals.action.refusedCodeTooLong',
+};
+
+/**
+ * Template helper: the i18n key of the sentence a disabled Dismiss button shows, for the reason
+ * the server refuses this finding (`{{t (dismissalRefusedKey selector code)}}`, both arguments, as
+ * for dismissalRefused). Only rendered inside `(dismissalRefused selector code)`; a pair the server
+ * accepts answers the whole-page key rather than an empty title.
+ */
+export function dismissalRefusedKey(selector: unknown, code: unknown): string {
+  return DISMISSAL_REFUSED_KEYS[dismissalRefusalReason(selector, code) ?? 'no-element'];
 }
 
 function wantsHtml(request: FastifyRequest): boolean {
@@ -803,11 +825,14 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   handlebars.registerHelper('dismissalRefused', dismissalRefused);
+  handlebars.registerHelper('dismissalRefusedKey', dismissalRefusedKey);
 
-  // 4th arg is the issue's flagged-HTML snippet; handlebars appends its options
-  // object as the trailing argument, which buildFixSuggestionHint ignores.
-  handlebars.registerHelper('fixSuggestion', (criterion: string, message: string, scanId: string, context?: unknown) => {
-    return new handlebars.SafeString(buildFixSuggestionHint(criterion, message, scanId, context));
+  // 4th arg is the issue's flagged-HTML snippet, 5th the viewer's reports.view_technical flag
+  // (`@root.perm.reportsViewTechnical`): the snippet goes into the hint's request only when that flag
+  // is exactly true. Handlebars appends its options object as the trailing argument; a call without
+  // the flag passes that object, which is not `true`, so the snippet is left out.
+  handlebars.registerHelper('fixSuggestion', (criterion: string, message: string, scanId: string, context?: unknown, viewTechnical?: unknown) => {
+    return new handlebars.SafeString(buildFixSuggestionHint(criterion, message, scanId, context, viewTechnical));
   });
 
   // Auto-discover Handlebars partials. Drop a .hbs into views/partials/ or
@@ -1135,7 +1160,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // LLM client is owned by serviceClientRegistry (constructed above).
   // Routes receive getLLMClient and resolve the current live instance per
   // request so a runtime reload is picked up without a restart.
-  await reportRoutes(server, storage, getLLMClient, { selfScanId: config.selfScanId, uploadsRoot });
+  await reportRoutes(server, storage, getLLMClient, { selfScanId: config.selfScanId, uploadsRoot, reportsDir: config.reportsDir });
   await accessibilityStatementRoutes(server, storage);
   await reportIdentityRoutes(server, storage);
   await acrWordingRoutes(server, storage);
@@ -1239,7 +1264,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   );
 
   // ── Data API routes (Power BI / external integrations) ──────────────────
-  await dataApiRoutes(server, storage);
+  await dataApiRoutes(server, storage, { reportsDir: config.reportsDir });
 
   // ── Branding API routes ──────────────────────────────────────────────────
   await brandingApiRoutes(server, storage);
@@ -1396,20 +1421,12 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     signer: dashboardSigner,
     dashboardMcpAudience,
     resolveScopes: async (userId, orgId) => {
-      // Look up the user's real role per-dispatch so the admin all-permissions
-      // bypass in resolveEffectivePermissions fires for global admins. Hardcoding
-      // 'viewer' here would silently strip scan/admin tools from the dispatcher's
-      // mintAgentToken scopes — manifesting downstream as the LLM hallucinating
-      // tool results because no real tool was callable.
-      const dbUser = await storage.users.getUserById(userId);
-      const userRole = dbUser?.role ?? 'viewer';
-      const perms = await resolveEffectivePermissions(
-        storage.roles,
-        userId,
-        userRole,
-        orgId,
-      );
-      return [...perms];
+      // HARD-19: per dispatch, from the stored-caller rule (src/auth/stored-caller.ts): the
+      // stored, active user's role decides, so a global admin (stored role 'admin') resolves
+      // every permission; a missing or deactivated user resolves none. The dispatcher refuses
+      // a tool whose required permission is outside this set, and hands this set to the tool
+      // handler as the caller's permissions.
+      return [...(await storedPermissionsOrNone(storage, userId, orgId))];
     },
   });
   const agentService = new AgentService({
@@ -1433,12 +1450,11 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     resolvePermissions: async (userId, orgId) => {
       // Called at the HEAD of every AgentService.runTurn iteration — the
       // single source of truth for per-user permissions. See D-07 / Pitfall 6.
-      // Look up the real role so the admin bypass in resolveEffectivePermissions
-      // fires for global admins (otherwise buildManifest filters scan/admin
-      // tools out of the LLM manifest and the model hallucinates results).
-      const dbUser = await storage.users.getUserById(userId);
-      const userRole = dbUser?.role ?? 'viewer';
-      return resolveEffectivePermissions(storage.roles, userId, userRole, orgId);
+      // HARD-19: the stored-caller rule decides — a global admin (stored role
+      // 'admin') resolves every permission; a missing or deactivated user
+      // resolves none, so the manifest offers no tool. AgentService runs only
+      // the tools offered in that iteration.
+      return storedPermissionsOrNone(storage, userId, orgId);
     },
     config: { agentDisplayNameDefault: 'Luqen Assistant' },
   });
@@ -1468,6 +1484,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
       scanService: sharedScanService,
       complianceToken: getToken(request),
       clientIp: request.ip,
+      reportsDir: config.reportsDir,
+      log: request.log,
     }),
   });
 

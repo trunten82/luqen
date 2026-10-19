@@ -48,21 +48,31 @@ scans, and (for admins) the same admin tools surfaced via MCP. The exact
 catalogue you see depends on your role — see the
 [RBAC matrix](../reference/rbac-matrix.md) for the full mapping.
 
+The agent runs only the tools your role allows in the current organisation,
+and each tool runs with your permissions — the same rule the MCP endpoint
+applies to you. A tool call outside that set is refused and recorded in the
+agent audit.
+
 When the agent decides to call a tool, you see a chip appear in the
 transcript naming the tool, its arguments, and (when the call returns) a
 collapsed result panel. You can expand any chip to see the raw JSON the
 agent received.
 
-For tools flagged as **destructive** (e.g. starting a scan, creating a
-user, updating an org), the agent must clear a native confirmation dialog
-before the call runs. The dialog shows:
+For tools flagged as **destructive** (starting a site scan, queueing a
+bulk fix), the agent must clear a native confirmation dialog before the
+call runs. The dialog shows:
 
 - The tool name and a one-line summary of what it will do
 - The full JSON arguments
 - **Approve** / **Cancel** buttons
 
 Cancel is always safe — the conversation continues with the agent told
-that you declined. Approve runs the tool and resumes streaming.
+that you declined. Approve runs the tool and resumes streaming. Only you
+can approve or cancel an action paused in your conversation, and Approve
+checks again that your role still allows the tool: if it no longer does,
+nothing runs and the dialog reports the error. Every approval is recorded
+in the agent audit. If the approved tool fails to run, the action is closed
+as failed and recorded in the agent audit as an error.
 
 ### Multi-step tool transparency
 
@@ -141,29 +151,31 @@ happened.
 
 ## For admins
 
-### Enabling and disabling per org
+### Who can use the agent
 
-Agent access is gated by the `mcp.use` RBAC permission. To turn the agent
-on for an org, grant `mcp.use` to the relevant role at `/admin/roles`.
-Removing the permission immediately hides the agent launch button and
-rejects new turns; in-flight streams are allowed to finish.
+The agent is available to every signed-in user; there is no separate
+"agent on/off" toggle, and the `mcp.use` permission governs connecting
+external MCP clients (the OAuth consent screen), not the in-dashboard
+agent. What the agent can do follows the user's permissions in the
+organisation: tools are offered and run only when the user's role holds
+the tool's permission, re-checked at every step, so removing a permission
+removes the tools that need it from the agent's next step.
 
-There is no separate "agent on/off" toggle — the agent is the dashboard's
-front-end on top of the MCP catalogue, so the same permission gate
-applies.
+The agent acts for the signed-in dashboard user account. A person who signs
+in through the compliance service needs a dashboard user account (managed
+at `/admin/dashboard-users`) and signs in with it to use the agent.
 
 ### RBAC permissions
 
-The agent's tool catalogue is the **intersection** of:
-
-- The user's effective permissions in the active org, and
-- The OAuth scope of the in-process token (always full scope for the
-  internal agent, so this is rarely the bottleneck).
-
-A user with `reports.view` but not `reports.write` cannot drive the agent
-to delete a report — the destructive tool is filtered out of the
-catalogue entirely. See the [RBAC matrix](../reference/rbac-matrix.md)
-for the complete mapping.
+The agent's tool catalogue is the set of tools whose required permission
+the user holds in the active org, resolved from the user's stored roles at
+every step (a deactivated user, or a user who no longer belongs to the
+organisation, is offered none; global administrators are served in every
+organisation). A tool that is not in the
+catalogue does not run, even if the model names it, and the tool that runs
+receives the user's permissions, so a global administrator's agent works
+across organisations where an organisation user's works in its own. See the
+[RBAC matrix](../reference/rbac-matrix.md) for the complete mapping.
 
 ### Token cost considerations
 
@@ -184,8 +196,10 @@ Every agent turn produces audit entries:
 
 - The user prompt and the model response (truncated to a configurable
   preview length)
-- Each tool call, with arguments, result envelope, and outcome
-  (`approved`, `denied`, `failed`)
+- Each tool call, with arguments and outcome (`success`, `error`,
+  `denied`, `timeout`). An argument named like a password, secret, token,
+  API key, authorization value or credential is stored as `[redacted]`,
+  at any depth
 - Token-budget compaction events
 - Soft-delete and share-link operations on conversations
 

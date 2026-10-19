@@ -31,6 +31,7 @@ import {
 } from '../../src/services/scan-service.js';
 import { runInToolContext, type ToolContext } from '@luqen/core/mcp';
 import type { ServiceConnectionsRepository } from '../../src/db/service-connections-repository.js';
+import { storedCallerOrgs, storedCallerUsers } from '../helpers/stored-caller-stub.js';
 
 // ---------------------------------------------------------------------------
 // Shared stub factories (copied verbatim from compliance-tools.test.ts pattern)
@@ -506,8 +507,9 @@ function makeIntegrationStubStorage(perms: readonly string[] = []): StorageAdapt
   return {
     scans: empty as StorageAdapter['scans'],
     brandScores: empty as StorageAdapter['brandScores'],
-    users: empty as StorageAdapter['users'],
-    organizations: empty as StorageAdapter['organizations'],
+    users: storedCallerUsers('user') as unknown as StorageAdapter['users'],
+    // The token's subject belongs to the token organizations used in this file.
+    organizations: storedCallerOrgs('org-1', 'org-fabrikam') as unknown as StorageAdapter['organizations'],
     roles: {
       getEffectivePermissions: async () => permSet,
     } as unknown as StorageAdapter['roles'],
@@ -1023,8 +1025,9 @@ describe('dashboard_scan_page scan start limit', () => {
     const context: ToolContext = {
       orgId: 'org-fabrikam',
       userId: CALLER,
-      scopes: ['read'],
-      permissions: new Set<string>(),
+      // The state a caller holding scans.create reaches over HTTP (a write-tier permission needs the write scope).
+      scopes: ['read', 'write'],
+      permissions: new Set<string>(['scans.create']),
       authType: 'jwt',
     };
     const call = (args: Record<string, unknown>) =>

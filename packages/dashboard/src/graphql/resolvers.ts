@@ -17,10 +17,11 @@ import { applyActiveDismissals } from '../services/issue-dismissals/load-dismiss
 import type { BrandingOrchestrator } from '../services/branding/branding-orchestrator.js';
 import { bypassesOrgScope } from '../permissions.js';
 import {
-  getScanInOrg, getScanForDelete, getScanForAssignment, getAssignmentInOrg, getTeamInOrg,
+  getScanInOrg, getScanForAssignment, getAssignmentInOrg, getTeamInOrg,
   getGuidelineInOrg, requireGuidelineInOrg, requireBrandChildInOrg, requireCanManageUser, listOrgsInScope,
 } from './org-scope.js';
 import { isLastActiveAdmin } from '../services/user-scope.js';
+import { deleteScanAndFiles, scanDeleteRefusal, SCAN_DELETE_PERMISSION } from '../services/scan-delete-access.js';
 
 // ---------------------------------------------------------------------------
 // Context typing
@@ -44,11 +45,18 @@ export interface GraphQLContext {
   readonly complianceToken: string;
   /** Caller address, the scan-start limit's last-resort key. */
   readonly clientIp?: string;
+  /** The only directory a scan delete removes stored report files from. */
+  readonly reportsDir?: string;
+  /** The request logger; a scan delete warns here about a report file it did not remove. */
+  readonly log?: { warn(fields: Record<string, unknown>, message: string): void };
 }
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/** Used when a context carries no logger (tests); the delete still refuses, only the warning is dropped. */
+const NO_LOG = { warn: (): void => undefined };
 
 function requireAuth(ctx: GraphQLContext): void {
   if (ctx.user === undefined) {
@@ -478,10 +486,13 @@ export const resolvers = {
       args: { id: string },
       ctx: GraphQLContext,
     ) => {
-      requirePerm(ctx, 'reports.delete');
-
-      await getScanForDelete(ctx, args.id);
-      await ctx.storage.scans.deleteScan(args.id);
+      requireAuth(ctx);
+      const scan = await ctx.storage.scans.getScan(args.id);
+      if (scan === null || scan === undefined) throw new Error(`Scan not found: ${args.id}`);
+      const refusal = scanDeleteRefusal({ user: ctx.user, permissions: ctx.permissions }, scan);
+      if (refusal === 'org') throw new Error('Forbidden');
+      if (refusal === 'permission') throw new Error(`Forbidden: requires ${SCAN_DELETE_PERMISSION}`);
+      await deleteScanAndFiles(ctx.storage, scan, { reportsDir: ctx.reportsDir, log: ctx.log ?? NO_LOG });
       return true;
     },
 

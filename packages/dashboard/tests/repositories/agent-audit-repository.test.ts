@@ -44,6 +44,43 @@ afterEach(async () => {
 });
 
 // ---------------------------------------------------------------------------
+// HARD-19 — secret arguments are stored as [redacted]
+// ---------------------------------------------------------------------------
+
+describe('HARD-19 agent audit arguments', () => {
+  it('HARD-19 the agent audit replaces secret argument values at any depth', async () => {
+    const args = {
+      siteUrl: 'https://example.com',
+      Password: 'placeholder-1',
+      nested: { clientSecret: 'placeholder-2', list: [{ api_key: 'placeholder-3' }, { refreshToken: 'placeholder-4' }] },
+      headers: { Authorization: 'placeholder-5', 'x-api-key': 'placeholder-6' },
+      credentials: { username: 'placeholder-7', pass: 'placeholder-8' },
+    };
+    const entry = await storage.agentAudit.append({
+      userId: 'u1', orgId: orgA, toolName: 'dashboard_scan_site', argsJson: JSON.stringify(args), outcome: 'success', latencyMs: 1,
+    });
+    const raw = storage.getRawDatabase().prepare('SELECT args_json FROM agent_audit_log WHERE id = ?').get(entry.id) as { args_json: string };
+    expect(raw.args_json).not.toMatch(/placeholder-/);
+    expect(JSON.parse(raw.args_json)).toEqual({
+      siteUrl: 'https://example.com',
+      Password: '[redacted]',
+      nested: { clientSecret: '[redacted]', list: [{ api_key: '[redacted]' }, { refreshToken: '[redacted]' }] },
+      headers: { Authorization: '[redacted]', 'x-api-key': '[redacted]' },
+      credentials: '[redacted]',
+    });
+    expect(entry.argsJson).toBe(raw.args_json);
+  });
+
+  it('HARD-19 the agent audit keeps arguments without a secret name exactly as given', async () => {
+    const argsJson = '{ "siteUrl": "https://example.com", "depth": 2, "tags": ["a", "b"], "opts": { "user": "x" } }';
+    const entry = await storage.agentAudit.append({
+      userId: 'u1', orgId: orgA, toolName: 'dashboard_scan_site', argsJson, outcome: 'success', latencyMs: 1,
+    });
+    expect(entry.argsJson).toBe(argsJson);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Group A — append + getEntry round-trip (APER-03 / SC-3)
 // ---------------------------------------------------------------------------
 

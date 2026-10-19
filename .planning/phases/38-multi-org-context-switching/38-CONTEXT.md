@@ -114,7 +114,7 @@ Out of scope (deferred):
 <specifics>
 ## Specific Ideas
 
-- Today there are 3 orgs in production (Concorsando, Alessandro Lanna, Litware). Native `<select>` is fine.
+- Today there are 3 orgs in production. Native `<select>` is fine.
 - The current `resolveAgentOrgId` returns `__admin__:userId` for global admins with no `currentOrgId`. This synthetic value will go away — global admins now resolve to a real org.
 - `dashboard_list_users` was updated in Phase 37 to expose `user.orgs[].orgRole`. The org switcher dropdown should source from `storage.organizations.listOrgs()` ordered alphabetically by name (matches the default rule).
 - Force-new-conversation on switch keeps audit clean: every conversation row has a single `org_id`, every audit row has the org of the turn's active context.

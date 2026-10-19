@@ -30,7 +30,7 @@ The dashboard depends on two external services:
 | `DASHBOARD_COMPLIANCE_API_KEY` | No | — | API key for solo-mode compliance access |
 | `DASHBOARD_WEBSERVICE_URL` | No | `http://localhost:3000` | pa11y webservice URL |
 | `DASHBOARD_DB_PATH` | No | `./dashboard.db` | SQLite database file path |
-| `DASHBOARD_REPORTS_DIR` | No | `./reports` | Directory for JSON report files |
+| `DASHBOARD_REPORTS_DIR` | No | `./reports` | Directory for JSON report files. A scan delete removes stored report files only inside this directory |
 | `DASHBOARD_MAX_CONCURRENT_SCANS` | No | `2` | Default concurrency for scans |
 | `DASHBOARD_COMPLIANCE_CLIENT_ID` | No | — | OAuth client ID for compliance service |
 | `DASHBOARD_COMPLIANCE_CLIENT_SECRET` | No | — | OAuth client secret for compliance service |

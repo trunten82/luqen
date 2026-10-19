@@ -230,12 +230,18 @@ const MAX_HINT_CONTEXT_CHARS = 1500;
  * first toggle. `context` is the flagged HTML snippet from the scanner issue —
  * without it the LLM has nothing to fix and returns an empty suggestion, so
  * callers should pass it whenever the issue carries one.
+ *
+ * The snippet is the flagged element's markup, a technical detail: it goes into
+ * the hint's request only when `viewTechnical` is exactly `true` (the viewer
+ * holds reports.view_technical). Any other value, including a missing argument,
+ * leaves it out, so every place that renders a hint follows the same rule.
  */
 export function buildFixSuggestionHint(
   criterion: string,
   message: string,
   scanId: string,
   context?: unknown,
+  viewTechnical?: unknown,
 ): string {
   if (!criterion || !message || !scanId) return '';
 
@@ -247,7 +253,7 @@ export function buildFixSuggestionHint(
       .replace(/"/g, '&quot;');
 
   const htmlContext =
-    typeof context === 'string' ? context.slice(0, MAX_HINT_CONTEXT_CHARS) : '';
+    viewTechnical === true && typeof context === 'string' ? context.slice(0, MAX_HINT_CONTEXT_CHARS) : '';
   const params = new URLSearchParams({ criterion, message, htmlContext });
 
   const loadingHtml =

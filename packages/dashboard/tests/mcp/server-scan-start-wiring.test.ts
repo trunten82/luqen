@@ -44,8 +44,9 @@ async function build() {
   const context: ToolContext = {
     orgId: 'org-fabrikam',
     userId: CALLER,
-    scopes: ['read'],
-    permissions: new Set<string>(),
+    // The state a caller holding scans.create reaches over HTTP (a write-tier permission needs the write scope).
+    scopes: ['read', 'write'],
+    permissions: new Set<string>(['scans.create']),
     authType: 'jwt',
   };
   const call = () =>

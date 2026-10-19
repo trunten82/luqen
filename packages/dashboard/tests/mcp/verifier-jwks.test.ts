@@ -217,4 +217,19 @@ describe('createDashboardJwtVerifier — JWKS + audience (Phase 31.1 Plan 03)', 
       warnSpy.mockRestore();
     }
   });
+
+  it('HARD-19 the verifier keeps the oauth client of the token', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
+      /* the legacy path warns once */
+    });
+    try {
+      const verify = await createDashboardJwtVerifier({ expectedAudience: EXPECTED_AUD, legacyPem: currentKey.publicPem });
+      const withClient = await verify(await signToken(currentKey, { client_id: 'fabrikam-mcp-client' }, EXPECTED_AUD));
+      expect(withClient.client_id).toBe('fabrikam-mcp-client');
+      const withoutClient = await verify(await signToken(currentKey, {}, EXPECTED_AUD));
+      expect(withoutClient.client_id).toBeUndefined();
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
 });

@@ -10,9 +10,37 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- MCP requests are answered for the stored, active user of the token: tools
+  and permissions follow the user's current roles, a role claim in a token is
+  not read, and tokens of deactivated or removed users and of revoked OAuth
+  clients are refused on their next use. A user holding no permission in the
+  token's organization is refused with `403 insufficient_scope`. Tokens of a
+  user who no longer belongs to the token's organization are refused on their
+  next use (`401 invalid_token`, `not_member`), and the assistant offers no
+  tool in such an organization; global administrators are served in every
+  organization.
+- The dashboard assistant offers and runs only the tools the stored user may
+  use in the conversation's organization, and hands each tool that user's
+  permissions. A tool call outside that set is refused and recorded in the
+  agent audit. Confirming or declining a paused action is limited to the
+  conversation's user, every confirmation is recorded in the agent audit, and
+  a confirmation checks again that the user may still run the tool (`403`
+  otherwise, leaving the action pending). A confirmation whose tool fails to
+  run closes the action as failed, is recorded in the agent audit as an
+  error, and answers `500` with a generic message.
+- The agent audit stores tool arguments named like a password, secret, token,
+  API key, authorization value or credential as `[redacted]`, at any depth,
+  for every tool call the assistant runs, refuses or confirms.
 - Scheduled scans, schedule creation, report retry and startup recovery use the
   same start-URL validation as the scan form: a schedule's URL is checked when
   it is created and at every run, and a refused run records a failed scan.
+- Deleting a scan follows one rule through the API, GraphQL and the report
+  page: `reports.delete` or having started the scan, for scans of the caller's
+  organization (`system` scans by global administrators and users outside every
+  organization); read-only and scan-only API keys cannot delete. Every path
+  removes the scan's stored report file first, and only from the reports
+  directory. When the file cannot be removed, the scan is kept and the delete
+  answers a server error, so it can be retried.
 - Report retry and cancel require `scans.create` and act on scans of the
   caller's organization. The report page shows Retry and Cancel only to viewers
   who may use them, and the RBAC matrix lists both routes.
@@ -55,6 +83,40 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   connections) are not offered to them.
 - MCP `tools/list` publishes each tool's input schema as JSON Schema, including
   the parameter descriptions.
+- The report page offers Dismiss, Revoke and the per-issue Assign buttons only
+  to viewers who may see technical details (`reports.view_technical`), because
+  these controls carry the finding's element selector.
+- The report page's fix hint carries the flagged element's markup only for
+  viewers holding `reports.view_technical`.
+- The report page disables Dismiss for every finding the server would refuse
+  to dismiss, including a selector or rule code over its length limit, and the
+  disabled button says why (no specific element, element selector too long,
+  rule code missing, rule code too long) in the viewer's interface language. A
+  dismissal preview the server refuses says why in the viewer's language
+  instead of offering Try again; timeouts, rate limits and server errors still
+  offer Try again. The preview refuses a selector over 4000 characters by its
+  length, before any other check, with reason `selector-too-long`, and answers
+  `400` for a selector over 8192 characters. The selector travels in the URL:
+  a request whose encoded URL is over the server's 16 KB header limit is
+  refused with `431` before it is checked.
+- The LLM prompt reset and compare dialog titles show the capability name as
+  written, for example "Reset generate-fix to default?".
+- `GET /orgs/current` reports the organization the request acts in, including
+  right after sign-in.
+- Translated text inserts each value exactly as given (`$&`, `` $` `` and `$'`
+  in a value such as an API key label are kept as typed) and replaces every
+  occurrence of a placeholder.
+- Dismissal dates in the report's Dismissed section follow the viewer's
+  interface language.
+- A dismissal marked with an API key of the scan's organization keeps that
+  key's label and creation time. The Dismissed section reads
+  `API key: <label> (Created <date>)`, also after the key is deleted, and keys
+  with the same label read differently. Migration 092 adds one nullable column
+  for this; existing dismissals are unchanged.
+- The remote dismissal browser UAT runs only against the dedicated UAT
+  organization and site named by `LUQEN_UAT_EXPECT_ORG` and
+  `LUQEN_UAT_EXPECT_SITE_HOST`; `--check-target-only` checks that rule without
+  writing anything.
 - Tests: each dark-permission filter is covered by its own test.
 
 ### Added

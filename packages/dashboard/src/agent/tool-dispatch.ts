@@ -10,18 +10,24 @@
  *   1. Looks the tool up in the manifest — unknown name returns
  *      `{error:'unknown_tool'}`. The model sees this as a role='tool'
  *      content on the next turn and self-corrects (AI-SPEC §6.1 Guardrail 1).
- *   2. zod.safeParse's the call args against the tool's inputSchema. Failure
+ *   2. Resolves the permission set of the stored user ONCE for this call
+ *      (`resolveScopes`, wired in server.ts to the stored-caller rule). A tool
+ *      whose required permission is not in that set returns
+ *      `{error:'denied'}`: no argument parsing, no token, no handler. A tool
+ *      without a required permission is admitted (the metadata drift guard
+ *      keeps every dashboard tool declaring one).
+ *   3. zod.safeParse's the call args against the tool's inputSchema. Failure
  *      returns `{error:'invalid_args', issues:[...]}` WITHOUT invoking the
  *      handler (AI-SPEC §4b.1 Boundary 2 / §6.1 Guardrail 6). Feeds the zod
  *      issue list back as the tool-result content so the LLM can self-correct
  *      the arg shape on the next iteration.
- *   3. Resolves the caller's current scopes (AI-SPEC §6.1 Guardrail 7) and
- *      mints a fresh RS256 JWT via jwt-minter (AI-SPEC §3 Pitfall 5). Token
- *      audit trail carried through `signer.mintAccessToken` → existing
- *      oauth-signer instrumentation.
- *   4. Invokes the handler under a timeout (D-24 = 30s). Timeout returns
- *      `{error:'timeout'}`; any other throw returns `{error:'internal',
- *      message:String(err)}`.
+ *   4. Mints a fresh RS256 JWT carrying that set via jwt-minter (AI-SPEC §3
+ *      Pitfall 5). Token audit trail carried through `signer.mintAccessToken`
+ *      → existing oauth-signer instrumentation.
+ *   5. Invokes the handler under a timeout (D-24 = 30s) with that same set on
+ *      `context.permissions`, so the handler decides as the stored user.
+ *      Timeout returns `{error:'timeout'}`; any other throw returns
+ *      `{error:'internal', message:String(err)}`.
  *
  * Not responsible for persistence, audit writes, or emit() calls — those are
  * AgentService concerns (single-responsibility per PATTERNS.md).
@@ -40,6 +46,8 @@ export interface ToolManifestEntry {
   readonly name: string;
   readonly inputSchema: z.ZodTypeAny;
   readonly handler: ToolHandler;
+  /** The permission id a caller must hold to run this tool (from the tool's metadata). */
+  readonly requiredPermission?: string;
 }
 
 export interface ToolDispatchContext {
@@ -52,6 +60,8 @@ export interface ToolDispatchContext {
    * user's identity without re-minting.
    */
   readonly authToken: string;
+  /** The permission ids of the stored caller, resolved once for this dispatch. */
+  readonly permissions: ReadonlySet<string>;
   /**
    * Phase 62.4 — user-selected agent group (team) id. Set on the
    * conversation/cookie via the drawer's group switcher. Fleet tools
@@ -70,6 +80,7 @@ export interface ToolCallInput {
 
 export type ToolDispatchResult =
   | { readonly error: 'unknown_tool' }
+  | { readonly error: 'denied' }
   | { readonly error: 'invalid_args'; readonly issues: readonly z.core.$ZodIssue[] }
   | { readonly error: 'timeout' }
   | { readonly error: 'internal'; readonly message: string }
@@ -89,6 +100,11 @@ export interface ToolDispatcherOptions {
   readonly tools: readonly ToolManifestEntry[];
   readonly signer: SignerLike;
   readonly dashboardMcpAudience: string;
+  /**
+   * The permission ids of the stored user in `orgId`, resolved once per
+   * dispatch. It decides whether the tool runs and is the set the handler
+   * receives.
+   */
   readonly resolveScopes: (
     userId: string,
     orgId: string,
@@ -134,7 +150,7 @@ export class ToolDispatcher {
    */
   async dispatchAll(
     calls: readonly ToolCallInput[],
-    ctx: Omit<ToolDispatchContext, 'authToken'>,
+    ctx: Omit<ToolDispatchContext, 'authToken' | 'permissions'>,
   ): Promise<readonly ToolDispatchResult[]> {
     if (calls.length === 0) return [];
     return Promise.all(calls.map((c) => this.dispatch(c, ctx)));
@@ -142,7 +158,7 @@ export class ToolDispatcher {
 
   async dispatch(
     call: ToolCallInput,
-    ctx: Omit<ToolDispatchContext, 'authToken'>,
+    ctx: Omit<ToolDispatchContext, 'authToken' | 'permissions'>,
   ): Promise<ToolDispatchResult> {
     // 1. Manifest lookup — refuse unknown names (model hallucinated a tool).
     const tool = this.tools.find((t) => t.name === call.name);
@@ -150,22 +166,27 @@ export class ToolDispatcher {
       return { error: 'unknown_tool' };
     }
 
-    // 2. zod validate args BEFORE dispatch (Guardrail 6). Never reach handler
+    // 2. The stored user's permission set, resolved once per dispatch so a
+    //    mid-turn role change applies to the very next tool call (Guardrail 7).
+    //    A tool whose required permission is outside the set is refused here.
+    const permissions: ReadonlySet<string> = new Set(await this.resolveScopes(ctx.userId, ctx.orgId));
+    if (tool.requiredPermission !== undefined && !permissions.has(tool.requiredPermission)) {
+      return { error: 'denied' };
+    }
+
+    // 3. zod validate args BEFORE dispatch (Guardrail 6). Never reach handler
     //    with an unvalidated payload.
     const parsed = tool.inputSchema.safeParse(call.args);
     if (!parsed.success) {
       return { error: 'invalid_args', issues: parsed.error.issues };
     }
 
-    // 3. Resolve current scopes + mint a fresh JWT for THIS dispatch.
-    //    resolveScopes is called per-dispatch so a mid-turn role revoke is
-    //    reflected in the very next tool call (Guardrail 7).
-    const scopes = await this.resolveScopes(ctx.userId, ctx.orgId);
+    // 4. Mint a fresh JWT for THIS dispatch, carrying the same set.
     const authToken = await mintAgentToken(
       this.signer as DashboardSigner,
       ctx.userId,
       ctx.orgId,
-      scopes,
+      [...permissions],
       this.dashboardMcpAudience,
     );
 
@@ -175,9 +196,10 @@ export class ToolDispatcher {
       ...(ctx.signal !== undefined ? { signal: ctx.signal } : {}),
       ...(ctx.groupId !== undefined ? { groupId: ctx.groupId } : {}),
       authToken,
+      permissions,
     };
 
-    // 4. Invoke handler with a race-based timeout. Never throws to caller —
+    // 5. Invoke handler with a race-based timeout. Never throws to caller —
     //    the model consumes this result as the next tool message content.
     let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
     try {

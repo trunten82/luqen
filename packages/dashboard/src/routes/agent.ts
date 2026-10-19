@@ -28,7 +28,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyBaseLogger, FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import rateLimit from '@fastify/rate-limit';
 import Handlebars from 'handlebars';
 import { Type, type Static, type TSchema } from '@sinclair/typebox';
@@ -663,6 +663,11 @@ export async function registerAgentRoutes(
         if (pending === null) {
           return reply.code(404).send({ error: 'pending_not_found' });
         }
+        // Only the conversation's own user may confirm its pending action (same answer as a
+        // missing one, so another user learns nothing about it).
+        if (pending.userId !== user.id) {
+          return reply.code(404).send({ error: 'pending_not_found' });
+        }
         if (pending.status !== 'pending_confirmation') {
           // Idempotent: replay-confirm on a resolved row is a no-op 409.
           return reply.code(409).send({ error: 'not_pending' });
@@ -674,11 +679,50 @@ export async function registerAgentRoutes(
 
         await storage.conversations.updateMessageStatus(messageId, 'sent');
         const agentGroupId = readAgentGroupCookie(request.headers.cookie);
-        const result = await dispatcher.dispatch(call, {
+        const startedAt = Date.now();
+        let result: Awaited<ReturnType<typeof dispatcher.dispatch>>;
+        try {
+          result = await dispatcher.dispatch(call, {
+            userId: user.id,
+            orgId,
+            ...(agentGroupId !== '' ? { groupId: agentGroupId } : {}),
+          });
+        } catch (err) {
+          // The tool run failed before it answered (for example a storage fault while the
+          // confirming user's permissions are read): the action is closed as failed, one audit row
+          // records the error, and the caller gets a generic server error.
+          request.log.error({ err, messageId, toolName: call.name }, 'agent confirm: the tool run failed');
+          await closeFailedConfirm(storage, request.log, {
+            messageId,
+            userId: user.id,
+            orgId,
+            conversationId: pending.conversationId,
+            toolName: call.name,
+            argsJson: JSON.stringify(call.args),
+            latencyMs: Date.now() - startedAt,
+          });
+          return reply.code(500).send({ error: 'internal' });
+        }
+        // One agent audit row per confirm attempt that reaches the permission decision, with the
+        // outcome classified as the assistant loop classifies a dispatch result.
+        const audited = classifyDispatchOutcome(result);
+        await storage.agentAudit.append({
           userId: user.id,
           orgId,
-          ...(agentGroupId !== '' ? { groupId: agentGroupId } : {}),
+          conversationId: pending.conversationId,
+          toolName: call.name,
+          argsJson: JSON.stringify(call.args),
+          outcome: audited.outcome,
+          ...(audited.outcomeDetail !== undefined ? { outcomeDetail: audited.outcomeDetail } : {}),
+          latencyMs: Date.now() - startedAt,
         });
+        // The dispatcher resolves the confirming user's permissions now: a user who may no
+        // longer use the tool gets 403, nothing runs, and the action stays pending (it can
+        // still be declined).
+        if (audited.outcome === 'denied') {
+          await storage.conversations.updateMessageStatus(messageId, 'pending_confirmation');
+          return reply.code(403).send({ error: 'denied' });
+        }
         // Persist the dispatched tool result as a NEW tool row so the loop
         // can resume on the next SSE turn. Truncation mirrors AgentService.
         await storage.conversations.appendMessage({
@@ -708,6 +752,10 @@ export async function registerAgentRoutes(
 
         const pending = await findPendingMessage(storage, messageId, orgId);
         if (pending === null) {
+          return reply.code(404).send({ error: 'pending_not_found' });
+        }
+        // Only the conversation's own user may decline its pending action.
+        if (pending.userId !== user.id) {
           return reply.code(404).send({ error: 'pending_not_found' });
         }
         if (pending.status !== 'pending_confirmation') {
@@ -1611,11 +1659,65 @@ async function loadConversationAnyOrg(
   };
 }
 
+/**
+ * The agent audit outcome of a dispatch result, as the assistant loop classifies it: an `error`
+ * sentinel of 'timeout' or 'denied' keeps its name, any other sentinel is 'error', anything else
+ * is 'success'.
+ */
+/**
+ * Close a confirm whose tool run threw: mark the pending action failed and write one agent audit row
+ * with outcome error. A failure of either write is logged, never thrown, so the caller still answers
+ * its generic server error.
+ */
+async function closeFailedConfirm(
+  storage: StorageAdapter,
+  log: FastifyBaseLogger,
+  failed: {
+    readonly messageId: string;
+    readonly userId: string;
+    readonly orgId: string;
+    readonly conversationId: string;
+    readonly toolName: string;
+    readonly argsJson: string;
+    readonly latencyMs: number;
+  },
+): Promise<void> {
+  try {
+    await storage.conversations.updateMessageStatus(failed.messageId, 'failed');
+  } catch (err) {
+    log.error({ err, messageId: failed.messageId }, 'agent confirm: the failed action could not be marked failed');
+  }
+  try {
+    await storage.agentAudit.append({
+      userId: failed.userId,
+      orgId: failed.orgId,
+      conversationId: failed.conversationId,
+      toolName: failed.toolName,
+      argsJson: failed.argsJson,
+      outcome: 'error',
+      outcomeDetail: 'internal',
+      latencyMs: failed.latencyMs,
+    });
+  } catch (err) {
+    log.error({ err, messageId: failed.messageId }, 'agent confirm: the failed action could not be audited');
+  }
+}
+
+function classifyDispatchOutcome(result: unknown): {
+  readonly outcome: 'success' | 'error' | 'timeout' | 'denied';
+  readonly outcomeDetail?: string;
+} {
+  if (typeof result !== 'object' || result === null || !('error' in result)) return { outcome: 'success' };
+  const detail = String((result as { error: unknown }).error);
+  if (detail === 'timeout' || detail === 'denied') return { outcome: detail, outcomeDetail: detail };
+  return { outcome: 'error', outcomeDetail: detail };
+}
+
 async function findPendingMessage(
   storage: StorageAdapter,
   messageId: string,
   orgId: string,
-): Promise<{ id: string; conversationId: string; status: string; toolCallJson: string | null } | null> {
+): Promise<{ id: string; conversationId: string; userId: string; status: string; toolCallJson: string | null } | null> {
   // ConversationRepository has no direct-by-id lookup; walk the user's
   // conversations and check full history. Small price in exchange for no
   // new query surface in Phase 31's repo. If this becomes hot, extract a
@@ -1630,18 +1732,19 @@ async function findPendingMessage(
   if (raw === undefined) return null;
   const row = raw
     .prepare(
-      `SELECT m.id, m.conversation_id, m.status, m.tool_call_json
+      `SELECT m.id, m.conversation_id, c.user_id, m.status, m.tool_call_json
          FROM agent_messages m
          INNER JOIN agent_conversations c ON c.id = m.conversation_id
          WHERE m.id = ? AND c.org_id = ?`,
     )
     .get(messageId, orgId) as
-      | { id: string; conversation_id: string; status: string; tool_call_json: string | null }
+      | { id: string; conversation_id: string; user_id: string; status: string; tool_call_json: string | null }
       | undefined;
   if (row === undefined) return null;
   return {
     id: row.id,
     conversationId: row.conversation_id,
+    userId: row.user_id,
     status: row.status,
     toolCallJson: row.tool_call_json,
   };

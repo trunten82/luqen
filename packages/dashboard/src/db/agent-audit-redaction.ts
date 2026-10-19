@@ -1,0 +1,46 @@
+/**
+ * Secret arguments never reach the agent audit log.
+ *
+ * Tool arguments come from the model and are stored with every agent audit row (the assistant loop,
+ * a refused call and a confirmed action all write one). Any object key whose name matches
+ * {@link SECRET_ARGUMENT_KEY}, at any depth and inside arrays, has its value stored as
+ * {@link REDACTED}, whatever that value is. Arguments without such a key are stored exactly as given.
+ *
+ * The repository applies this on write, so every writer is covered by the one place that stores a row.
+ */
+
+/** Argument names whose values the agent audit never stores. */
+export const SECRET_ARGUMENT_KEY = /pass(word)?|secret|token|api[_-]?key|authorization|credential/i;
+
+/** What a secret argument's value is stored as. */
+export const REDACTED = '[redacted]';
+
+/** Does `value` hold a secret-named key anywhere? */
+function holdsSecret(value: unknown): boolean {
+  if (Array.isArray(value)) return value.some(holdsSecret);
+  if (value === null || typeof value !== 'object') return false;
+  return Object.entries(value).some(([key, child]) => SECRET_ARGUMENT_KEY.test(key) || holdsSecret(child));
+}
+
+/** A copy of `value` with every secret-named key's value replaced by {@link REDACTED}. */
+export function redactSecretArguments(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(redactSecretArguments);
+  if (value === null || typeof value !== 'object') return value;
+  return Object.fromEntries(
+    Object.entries(value).map(([key, child]) => [key, SECRET_ARGUMENT_KEY.test(key) ? REDACTED : redactSecretArguments(child)]),
+  );
+}
+
+/**
+ * The stored form of an audit row's arguments: unchanged when no key has a secret name (or when the
+ * text is not JSON, which no writer produces), otherwise the redacted copy as JSON.
+ */
+export function redactArgumentsJson(argsJson: string): string {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(argsJson);
+  } catch {
+    return argsJson;
+  }
+  return holdsSecret(parsed) ? JSON.stringify(redactSecretArguments(parsed)) : argsJson;
+}

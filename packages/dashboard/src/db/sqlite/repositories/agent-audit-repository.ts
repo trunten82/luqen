@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
+import { redactArgumentsJson } from '../../agent-audit-redaction.js';
 import type {
   AgentAuditEntry,
   AgentAuditFilters,
@@ -134,7 +135,8 @@ export class SqliteAgentAuditRepository implements AgentAuditRepository {
         orgId: input.orgId,
         conversationId: input.conversationId ?? null,
         toolName: input.toolName,
-        argsJson: input.argsJson,
+        // HARD-19: secret-named arguments are stored as [redacted], for every writer.
+        argsJson: redactArgumentsJson(input.argsJson),
         outcome: input.outcome,
         outcomeDetail: input.outcomeDetail ?? null,
         // Phase 36 (ATOOL-04): undefined or null both persist as NULL.

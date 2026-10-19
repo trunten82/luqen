@@ -30,6 +30,7 @@ import type {
   ServiceConnection,
   ServiceConnectionsRepository,
 } from '../../src/db/service-connections-repository.js';
+import { storedCallerOrgs, storedCallerUsers } from '../helpers/stored-caller-stub.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -42,7 +43,7 @@ function makeFakeVerifier(validPayload: McpTokenPayload, acceptedToken = 'valid-
   };
 }
 
-function makeStubStorage(perms: readonly string[] = []): StorageAdapter {
+function makeStubStorage(perms: readonly string[] = [], storedRole = 'user'): StorageAdapter {
   const empty = {} as unknown;
   return {
     // Only `roles.getEffectivePermissions` is touched on the Phase 28 flows
@@ -51,8 +52,9 @@ function makeStubStorage(perms: readonly string[] = []): StorageAdapter {
     // covered in the dedicated data-tools.test.ts — here we only need a
     // shape-compatible stub that satisfies TypeScript for registerMcpRoutes.
     scans: empty as StorageAdapter['scans'],
-    users: empty as StorageAdapter['users'],
-    organizations: empty as StorageAdapter['organizations'],
+    users: storedCallerUsers(storedRole) as unknown as StorageAdapter['users'],
+    // The token's subject belongs to the token organizations used in this file.
+    organizations: storedCallerOrgs('org-1', 'org-3', 'org-4', 'org-any', 'org-prompts') as unknown as StorageAdapter['organizations'],
     schedules: empty as StorageAdapter['schedules'],
     assignments: empty as StorageAdapter['assignments'],
     repos: empty as StorageAdapter['repos'],
@@ -336,7 +338,7 @@ describe('POST /api/v1/mcp (dashboard)', () => {
     // The stub roles repo would return empty, but resolveEffectivePermissions
     // short-circuits for role='admin' → full permission set. We just prove the
     // initialize flow still works (no errors thrown from permission resolution).
-    app = await buildApp({ verifyToken: verify, storage: makeStubStorage([]) });
+    app = await buildApp({ verifyToken: verify, storage: makeStubStorage([], 'admin') });
 
     const response = await app.inject({
       method: 'POST',
@@ -356,14 +358,14 @@ describe('POST /api/v1/mcp (dashboard)', () => {
     // Belt-and-braces alongside the dedicated prompts.test.ts file: the
     // dashboard MCP must always surface exactly the three prompts locked by
     // 30-CONTEXT.md D-13. Permissions don't gate prompts (they're global
-    // templates), so an empty-permission caller should still see all three.
+    // templates), so a caller holding any one permission sees all three.
     const verify = makeFakeVerifier({
       sub: 'user-prompts',
       scopes: ['read'],
       orgId: 'org-prompts',
       role: 'member',
     });
-    app = await buildApp({ verifyToken: verify, storage: makeStubStorage([]) });
+    app = await buildApp({ verifyToken: verify, storage: makeStubStorage(['reports.view']) });
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/mcp',

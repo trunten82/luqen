@@ -31,7 +31,7 @@ Luqen uses a **database-driven RBAC** (Role-Based Access Control) model. Permiss
 | **Scans** | `scans.create` | Create and run accessibility scans |
 | | `scans.schedule` | Create, edit, and delete scan schedules |
 | **Reports** | `reports.view` | View scan reports |
-| | `reports.view_technical` | View selectors, DOM context, and technical details |
+| | `reports.view_technical` | View selectors, element markup and technical details on the report page (API responses carry selectors for `reports.view` holders) |
 | | `reports.export` | Export reports as CSV and PDF |
 | | `reports.delete` | Delete scan reports |
 | | `reports.compare` | Compare two scan reports side by side |

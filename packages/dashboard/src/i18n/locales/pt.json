@@ -1730,6 +1730,9 @@
       "dismissTitle": "Descartar como falso positivo",
       "dismissAria": "Descartar como falso positivo: regra {{code}}",
       "refusedTitle": "Esta constatação não tem um elemento específico e não pode ser descartada.",
+      "refusedSelectorTooLong": "O seletor de elemento desta constatação é longo demais, então ela não pode ser descartada.",
+      "refusedCodeTooLong": "O código de regra desta constatação é longo demais, então ela não pode ser descartada.",
+      "refusedCodeMissing": "Esta constatação não tem código de regra e não pode ser descartada.",
       "revokeAria": "Revogar o descarte da regra {{code}}"
     },
     "dialog": {
@@ -1753,6 +1756,10 @@
         "error": "Não foi possível verificar o que isto abrange. Tente novamente.",
         "retry": "Tentar novamente",
         "refused": "Esta constatação não tem um elemento específico e não pode ser descartada.",
+        "refusedSelectorTooLong": "O seletor de elemento desta constatação é longo demais, então ela não pode ser descartada.",
+        "refusedInvalid": "Esta constatação não pode ser descartada: a solicitação foi recusada.",
+        "reportUnavailable": "O relatório desta varredura não está disponível, então não há nada a descartar.",
+        "refusedGeneric": "Esta constatação não pode ser descartada.",
         "alreadyDismissed": "Esta regra já foi descartada para este elemento deste site, então não há nada a descartar. Recarregue a página para vê-la em Constatações descartadas.",
         "together": "Todas as ocorrências contadas acima são descartadas juntas, incluindo as que aparecem listadas separadamente neste relatório."
       },

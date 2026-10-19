@@ -43,6 +43,7 @@ import type {
   ServiceConnection,
   ServiceConnectionsRepository,
 } from '../../src/db/service-connections-repository.js';
+import { storedCallerOrgs, storedCallerUsers } from '../helpers/stored-caller-stub.js';
 
 // Hermetic DNS for the start-URL check: every host resolves to a public documentation address.
 vi.mock('../../src/services/host-resolver.js', () => ({
@@ -91,8 +92,9 @@ function makeStubStorage(o: StubOverrides = {}): StorageAdapter {
       getLatestForScan: o.getLatestForScan ?? (async () => null),
       getHistoryForSite: o.getHistoryForSite ?? (async () => []),
     } as unknown as StorageAdapter['brandScores'],
-    users: empty as StorageAdapter['users'],
-    organizations: empty as StorageAdapter['organizations'],
+    users: storedCallerUsers('user') as unknown as StorageAdapter['users'],
+    // The token's subject belongs to the token organizations used in this file.
+    organizations: storedCallerOrgs('org-1') as unknown as StorageAdapter['organizations'],
     roles: {
       getEffectivePermissions: o.getEffectivePermissions ?? (async () => perms),
     } as unknown as StorageAdapter['roles'],
@@ -1116,12 +1118,5 @@ describe('dashboard_scan_site scan start limit', () => {
     expect(refused.isError).toBe(true);
     expect(textOf(refused)).toContain(SCAN_RATE_LIMIT_ERROR);
     expect(h.createScan).toHaveBeenCalledTimes(30);
-  });
-
-  it('HARD-15 mcp scan site still starts for a caller with an empty permission set', async () => {
-    const h = await build([]);
-    const started = await h.call();
-    expect(started.isError).toBeFalsy();
-    expect(h.createScan).toHaveBeenCalledTimes(1);
   });
 });

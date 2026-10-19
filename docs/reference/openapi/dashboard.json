@@ -39074,7 +39074,7 @@
           },
           {
             "schema": {
-              "maxLength": 4000,
+              "maxLength": 8192,
               "type": "string"
             },
             "in": "query",
@@ -39114,9 +39114,19 @@
                       "type": "boolean"
                     },
                     "reason": {
-                      "type": "string",
-                      "enum": [
-                        "selector"
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "selector"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "selector-too-long"
+                          ]
+                        }
                       ]
                     },
                     "alreadyDismissed": {

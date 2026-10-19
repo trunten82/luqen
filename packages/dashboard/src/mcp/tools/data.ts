@@ -303,8 +303,9 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
         ...(args.headers !== undefined ? { headers: { ...args.headers } } : {}),
         ...(args.actions !== undefined ? { actions: [...args.actions] } : {}),
       };
-      // No permission check here (D-90-02: the in-app agent bridge stamps an
-      // empty permission set for org users); the start draws from the shared
+      // The tool's permission (scans.create) is enforced before this handler
+      // runs: by the endpoint's tools/call guard over HTTP and by the
+      // assistant's dispatcher in process. The start draws from the shared
       // scan-start limit, keyed by the tool context's user id.
       const result = await scanService.initiateScanRateLimited(initiateInput, {
         orgId,

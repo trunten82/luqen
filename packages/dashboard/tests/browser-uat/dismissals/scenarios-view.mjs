@@ -8,6 +8,11 @@ import { HERO, NAV, PROMO, LONG, REASON } from './fixture.mjs';
 
 const MARK_PATH = (scanId) => `/api/v1/scans/${scanId}/dismissals`;
 
+/** Per-scenario world options for bootLocal (merged with CORE_WORLD and GAP_WORLD by name). */
+export const VIEW_WORLD = {
+  locales: { overlongScan: true },
+};
+
 async function markApi(page, scanId, f, reason = REASON) {
   const res = await pageFetch(page, 'POST', MARK_PATH(scanId), { code: f.code, selector: f.selector, reason });
   return jsonOf(res);
@@ -72,6 +77,60 @@ async function revokeInvalidCopy(page, S, locale) {
   }));
   check(S, `${locale}: an intercepted 400 on revoke shows the revoke wording, keeps the dialog open and the comment`,
     seen.revokePosts === 1 && after.error === want && after.open && after.comment === comment, JSON.stringify({ ...after, posts: seen.revokePosts }).slice(0, 240));
+}
+
+/**
+ * HARD-01, on the over-long-selector report in this locale: the disabled Dismiss names the
+ * selector-too-long reason in this language, and a preview the server refuses with 403 (answered by
+ * request interception: the GET never reaches the server) shows this locale's "no permission" text,
+ * not the no-element sentence, with no Try again. One screenshot of that dialog.
+ */
+async function refusalCopy(page, S, locale, base, scanId) {
+  await openReport(page, base, scanId, 'issues');
+  const want = localeString(locale, 'issueDismissals.action.refusedSelectorTooLong');
+  const english = localeString('en', 'issueDismissals.action.refusedSelectorTooLong');
+  const titles = await page.evaluate(() => [...document.querySelectorAll('.rpt-dismiss-btn[aria-disabled="true"]')].map((b) => b.getAttribute('title') || ''));
+  check(S, `${locale}: an over-long selector's disabled Dismiss names that reason in ${locale}, not in English`,
+    typeof want === 'string' && want !== english && titles.length > 0 && titles.every((x) => x === want), JSON.stringify(titles).slice(0, 200));
+  const forbidden = localeString(locale, 'issueDismissals.error.forbidden');
+  const noElement = localeString(locale, 'issueDismissals.dialog.preview.refused');
+  const seen = { previews: 0 };
+  const onRequest = (req) => {
+    if (req.method() === 'GET' && /\/dismissals\/preview$/.test(new URL(req.url()).pathname)) {
+      seen.previews += 1;
+      req.respond({ status: 403, contentType: 'application/json', body: JSON.stringify({ error: 'SERVER-DETAIL-NOT-SHOWN' }) });
+    } else req.continue();
+  };
+  await page.setRequestInterception(true);
+  page.on('request', onRequest);
+  try {
+    await openMarkDialog(page, 'panel-issues', PROMO.selector);
+  } finally {
+    page.off('request', onRequest);
+    await page.setRequestInterception(false);
+  }
+  const after = await page.evaluate(() => ({
+    status: (document.querySelector('#issue-dismiss-dialog [data-preview="status"]') || { textContent: '' }).textContent.trim(),
+    retryHidden: document.querySelector('#issue-dismiss-dialog [data-action="rptDismissRetryPreview"]').classList.contains('is-hidden'),
+    body: document.getElementById('issue-dismiss-dialog').innerText,
+  }));
+  check(S, `${locale}: a preview refused with 403 shows the ${locale} no-permission text, not the no-element text, and no Try again`,
+    seen.previews === 1 && typeof forbidden === 'string' && after.status === forbidden && after.status !== noElement && after.retryHidden && !after.body.includes('SERVER-DETAIL-NOT-SHOWN'),
+    JSON.stringify({ status: after.status, retryHidden: after.retryHidden, previews: seen.previews }).slice(0, 240));
+  await shot(page, `locale-${locale}-preview-refused`);
+  await page.click('[data-action="rptDismissCancel"]');
+}
+
+/**
+ * HARD-05: every date in the Dismissed section (the <time> elements) in the session locale, compared
+ * with this process's own formatting of the same ISO value (the local dashboard runs on this machine,
+ * with the same time zone and ICU data).
+ */
+async function sectionDates(page, S, locale) {
+  const dates = await page.$$eval('#rpt-dismissed time[datetime]', (ts) => ts.map((t) => ({ iso: t.getAttribute('datetime'), text: (t.textContent || '').trim() })));
+  const ok = dates.length >= 2 && dates.every((d) => d.text === new Date(d.iso).toLocaleString(locale));
+  const differs = locale === 'en' || dates.every((d) => d.text !== new Date(d.iso).toLocaleString('en'));
+  check(S, `${locale}: the Dismissed section's dates are formatted in ${locale}${locale === 'en' ? ' (control)' : ', not in English'}`, ok && differs, JSON.stringify(dates));
 }
 
 async function setPhone(page) { await page.setViewport(PHONE); }
@@ -184,7 +243,7 @@ export const viewScenarios = {
     await shot(page, 'longtext-revoked-1280');
   },
 
-  /** Item 10: de and it render the dialog and section with the real translations and no raw key. */
+  /** Item 10: de and it render the dialog and section with the real translations and no raw key; HARD-05: dates. */
   async locales({ page, world }) {
     const S = 'locales';
     const { base, scanId, personas } = world;
@@ -195,6 +254,7 @@ export const viewScenarios = {
     // 89-11 item 1 in English first (the session starts in en).
     await openReport(page, base, scanId, 'issues');
     await openDismissedSection(page);
+    await sectionDates(page, S, 'en');
     await page.click('#rpt-dismissed [data-action="rptRevokeIssue"]');
     await page.waitForSelector('#issue-revoke-dialog[open]', { timeout: WAIT });
     await revokeInvalidCopy(page, S, 'en');
@@ -220,6 +280,7 @@ export const viewScenarios = {
       check(S, `${locale}: no raw issueDismissals key is visible or in a dialog`, seen.key === false);
       check(S, `${locale}: the section summary is the translation`, seen.summary === want.summary, seen.summary);
       check(S, `${locale}: the Dismiss button label is the translation`, seen.button === want.dismiss, seen.button);
+      await sectionDates(page, S, locale);
       await openMarkDialog(page, 'panel-issues', NAV.selector);
       const dlg = await page.evaluate(() => ({ title: document.querySelector('#issue-dismiss-dialog .modal__title').textContent.trim(), confirm: document.querySelector('[data-action="rptDismissConfirm"]').textContent.trim(), body: document.getElementById('issue-dismiss-dialog').innerText }));
       check(S, `${locale}: the mark dialog title and Confirm label are the translations`, dlg.title === want.title && dlg.confirm === want.confirm, JSON.stringify(dlg).slice(0, 200));
@@ -236,6 +297,8 @@ export const viewScenarios = {
       await page.click('[data-action="rptRevokeCancel"]');
       await scrollToInstant(page, '#rpt-dismissed');
       await shot(page, `locale-${locale}-section`);
+      if (world.overlongScanId) await refusalCopy(page, S, locale, base, world.overlongScanId);
+      else check(S, `${locale}: the over-long-selector report exists for the refusal copy checks`, false);
     }
     void m;
   },

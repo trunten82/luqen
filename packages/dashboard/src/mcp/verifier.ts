@@ -81,6 +81,7 @@ function extractPayload(payload: Record<string, unknown>): McpTokenPayload {
     : [];
   const rawOrgId = payload['orgId'];
   const rawRole = payload['role'];
+  const rawClientId = payload['client_id'];
   return {
     sub: payload['sub'],
     scopes,
@@ -88,5 +89,7 @@ function extractPayload(payload: Record<string, unknown>): McpTokenPayload {
     role: typeof rawRole === 'string' ? rawRole : undefined,
     iat: typeof payload['iat'] === 'number' ? payload['iat'] : undefined,
     exp: typeof payload['exp'] === 'number' ? payload['exp'] : undefined,
+    // The OAuth client of the token: the middleware refuses a token whose client was revoked.
+    ...(typeof rawClientId === 'string' ? { client_id: rawClientId } : {}),
   };
 }

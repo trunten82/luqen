@@ -2,9 +2,11 @@
  * Phase 89 Plan 04 — GET /reports/:id supplies dismissalControls only to a viewer the mark
  * API would accept (D-01, recorded deviation: route-computed, not a global perm flag).
  *
- * The gate is `issues.dismiss` AND mayTouchDismissalOrg(user, scan.orgId). The report page
- * itself lets org users onto 'system' scans; the mark route does not, so the control must not
- * render there. The JSON view stub returns the view data the handler passed to reply.view.
+ * The gate is `issues.dismiss` AND `reports.view_technical` AND mayTouchDismissalOrg(user,
+ * scan.orgId). The report page itself lets org users onto 'system' scans; the mark route does not,
+ * so the control must not render there. The controls carry the finding's raw selector, so a viewer
+ * without technical-details access gets none (HARD-02). The JSON view stub returns the view data
+ * the handler passed to reply.view.
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
@@ -62,7 +64,8 @@ async function reportPage(
 }
 
 const VIEW = ['reports.view'];
-const VIEW_AND_DISMISS = ['reports.view', 'issues.dismiss'];
+const VIEW_AND_DISMISS = ['reports.view', 'reports.view_technical', 'issues.dismiss'];
+const DISMISS_WITHOUT_TECHNICAL = ['reports.view', 'issues.dismiss'];
 
 describe('GET /reports/:id — dismissalControls', () => {
   it('a permitted global admin gets dismissal controls on the report page', async () => {
@@ -102,6 +105,22 @@ describe('GET /reports/:id — dismissalControls', () => {
     expect(status).toBe(200);
     expect(data['reportData']).toBeTruthy();
     expect('dismissalControls' in data).toBe(false);
+  });
+
+  it('HARD-02 dismiss controls need technical details permission', async () => {
+    const org = await seedOrg(store.storage, 'org_a');
+    const scan = await seedScan(store.storage, { orgId: org });
+    const without = await reportPage({ role: 'user', currentOrgId: org }, DISMISS_WITHOUT_TECHNICAL, scan);
+    // Positive control: the page itself is open to this viewer, so the absence is the gate.
+    expect(without.status).toBe(200);
+    expect(without.data['reportData']).toBeTruthy();
+    expect('dismissalControls' in without.data).toBe(false);
+    await server!.close();
+    server = undefined;
+
+    const withBoth = await reportPage({ role: 'user', currentOrgId: org }, VIEW_AND_DISMISS, scan);
+    expect(withBoth.status).toBe(200);
+    expect(withBoth.data['dismissalControls']).toBeDefined();
   });
 
   it('a viewer with no current org on a system scan gets no dismissal controls', async () => {

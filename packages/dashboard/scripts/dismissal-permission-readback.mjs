@@ -33,6 +33,20 @@
  *   Plan 07, before the grant:  --expect dark
  *   Plan 10, after the grant:   --expect granted --allow-custom-roles <true|false>
  *                               (the value is the owner's D-15 answer on custom roles)
+ *
+ * UAT admin persona exemption (--exempt-uat-admin-team true): the dedicated UAT admin persona, a
+ * global admin, is a member of the dedicated UAT org's team by the owner's ruling. With the flag,
+ * that one membership does not count toward global-admin-in-customer-org-team. The persona and the
+ * org are named by the environment variables LUQEN_UAT_ADMIN_USER (username) and
+ * LUQEN_UAT_EXPECT_ORG (organization name), the same two the dismissal browser UAT's target rule
+ * reads; the flag without both (non-empty) exits 2 naming them. It applies only when exactly one
+ * organization has that name and exactly one active global admin has that username, and only if
+ * every team of that admin reaching a customer org belongs to that org and is linked to no other
+ * customer org. Any other global admin in a customer-org team is still a violation. The raw
+ * globalAdmins counts are unchanged; the JSON gains `exemptions`, and stderr carries
+ * `INFO exempted global-admin-in-customer-org-team: <n>` (or `INFO exemption not applied: <reason>`,
+ * reason org-not-found, org-not-unique, persona-not-found or persona-not-unique). Neither variable's
+ * value is ever printed. It exists for the dedicated UAT persona and org only.
  * Copy, run and remove procedure: the 87-05 plan, Task 1 (porcelain count, config keys only,
  * mktemp, copy, run, remove, confirm REMOVED). --db is the copied file; --require-root is a
  * package.json whose node_modules provide better-sqlite3.
@@ -42,7 +56,17 @@ import { resolve } from 'node:path';
 
 const USAGE =
   'usage: dismissal-permission-readback.mjs --db <path> --require-root <package.json> ' +
-  '--expect dark|granted [--allow-custom-roles true|false] [--label <text>]';
+  '--expect dark|granted [--allow-custom-roles true|false] [--label <text>] [--exempt-uat-admin-team true]';
+
+// The UAT admin persona exemption (header comment). Variable NAMES only; values are never printed.
+const EXEMPT_CHECK = 'global-admin-in-customer-org-team';
+const EXEMPT_USER_VAR = 'LUQEN_UAT_ADMIN_USER';
+const EXEMPT_ORG_VAR = 'LUQEN_UAT_EXPECT_ORG';
+const EXEMPT_VARIABLES = [EXEMPT_USER_VAR, EXEMPT_ORG_VAR];
+const EXEMPT_SCHEMA = [
+  ['organizations', ['id', 'name']],
+  ['dashboard_users', ['username']],
+];
 
 const PROPOSITION =
   'every identity path that yields or would yield issues.dismiss, and whether any customer ' +
@@ -98,7 +122,7 @@ function parseArgs(argv) {
     if (!key || !key.startsWith('--') || value === undefined || value.startsWith('--')) return null;
     out[key.slice(2)] = value;
   }
-  const allowed = new Set(['db', 'require-root', 'expect', 'allow-custom-roles', 'label']);
+  const allowed = new Set(['db', 'require-root', 'expect', 'allow-custom-roles', 'label', 'exempt-uat-admin-team']);
   for (const k of Object.keys(out)) if (!allowed.has(k)) return null;
   if (!out.db || !out['require-root']) return null;
   if (out.expect !== 'dark' && out.expect !== 'granted') return null;
@@ -106,6 +130,8 @@ function parseArgs(argv) {
   if (allow !== undefined && allow !== 'true' && allow !== 'false') return null;
   // An inert flag is worse than none: it would read as configured confinement that does nothing.
   if (allow === 'true' && out.expect === 'dark') return null;
+  const exempt = out['exempt-uat-admin-team'];
+  if (exempt !== undefined && exempt !== 'true') return null;
   return out;
 }
 
@@ -117,8 +143,8 @@ class SchemaGap extends Error {
   }
 }
 
-function assertSchema(db) {
-  for (const [table, columns] of REQUIRED_SCHEMA) {
+function assertSchema(db, schema = REQUIRED_SCHEMA) {
+  for (const [table, columns] of schema) {
     const present = new Set(db.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name));
     for (const column of columns) {
       if (!present.has(column)) throw new SchemaGap(`${table}.${column}`);
@@ -252,7 +278,47 @@ function countGlobalRoleShadowing(db) {
   };
 }
 
-function violationsFor(expectMode, allowCustomRoles, roleRows, globalAdmins, ownerAdminRoles, shadowing) {
+/**
+ * The UAT admin persona exemption (header comment): how many of the inCustomerOrgTeam admins it
+ * covers (0 or 1), or why it was not applied. Reads the two values; returns names and counts only.
+ */
+function uatAdminExemption(db, username, orgName) {
+  const base = { check: EXEMPT_CHECK, variables: [...EXEMPT_VARIABLES] };
+  const notApplied = (reason) => ({ ...base, applied: false, count: 0, reason });
+  const orgs = db.prepare('SELECT id FROM organizations WHERE name = ?').all(orgName);
+  if (orgs.length === 0) return notApplied('org-not-found');
+  if (orgs.length > 1) return notApplied('org-not-unique');
+  const admins = db
+    .prepare("SELECT id FROM dashboard_users WHERE username = ? AND role = 'admin' AND active = 1")
+    .all(username);
+  if (admins.length === 0) return notApplied('persona-not-found');
+  if (admins.length > 1) return notApplied('persona-not-unique');
+  const orgId = orgs[0].id;
+  const userId = admins[0].id;
+  const inCustomerTeam = count(
+    db,
+    `SELECT COUNT(*) AS n FROM team_members tm JOIN teams t ON t.id = tm.team_id
+      WHERE tm.user_id = ?
+        AND (t.org_id != 'system'
+             OR EXISTS (SELECT 1 FROM team_org_links tol WHERE tol.team_id = t.id AND tol.org_id != 'system'))`,
+    userId,
+  );
+  // Every team of the persona that reaches a customer org must reach the UAT org and no other.
+  const outsideUatOrg = count(
+    db,
+    `SELECT COUNT(*) AS n FROM team_members tm JOIN teams t ON t.id = tm.team_id
+      WHERE tm.user_id = ?
+        AND ((t.org_id != 'system' AND t.org_id != ?)
+             OR EXISTS (SELECT 1 FROM team_org_links tol
+                         WHERE tol.team_id = t.id AND tol.org_id != 'system' AND tol.org_id != ?))`,
+    userId,
+    orgId,
+    orgId,
+  );
+  return { ...base, applied: true, count: inCustomerTeam > 0 && outsideUatOrg === 0 ? 1 : 0 };
+}
+
+function violationsFor(expectMode, allowCustomRoles, roleRows, globalAdmins, ownerAdminRoles, shadowing, exempted = 0) {
   const violations = [];
   if (expectMode === 'dark') {
     if (roleRows.systemOther > 0) violations.push('latent-system-role');
@@ -265,7 +331,7 @@ function violationsFor(expectMode, allowCustomRoles, roleRows, globalAdmins, own
     if (roleRows.systemOther > 0) violations.push('granted-to-system-role');
     if (roleRows.orgCustom > 0 && !allowCustomRoles) violations.push('granted-to-custom-role');
   }
-  if (globalAdmins.inCustomerOrgTeam > 0) violations.push('global-admin-in-customer-org-team');
+  if (globalAdmins.inCustomerOrgTeam - exempted > 0) violations.push('global-admin-in-customer-org-team');
   // Mode-independent and NOT switched off by --allow-custom-roles (WR-03).
   if (shadowing.orgRolesNamedLikeGlobalRole > 0) violations.push('org-role-shadows-global-role');
   if (shadowing.orgRolesHoldingAdminSystem > 0) violations.push('org-role-holds-admin-system');
@@ -273,11 +339,14 @@ function violationsFor(expectMode, allowCustomRoles, roleRows, globalAdmins, own
   return violations;
 }
 
-function measure(db, args) {
+function measure(db, args, exemptValues) {
   assertSchema(db);
+  if (exemptValues !== null) assertSchema(db, EXEMPT_SCHEMA);
   const allowCustomRoles = args['allow-custom-roles'] === 'true';
   const roleRows = countRoleRows(db);
   const globalAdmins = countGlobalAdmins(db);
+  const exemptions = exemptValues === null ? [] : [uatAdminExemption(db, exemptValues.username, exemptValues.orgName)];
+  const exempted = exemptions.reduce((n, e) => n + e.count, 0);
   const ownerAdminRoles = countOwnerAdminRoles(db);
   const apiKeys = countApiKeys(db, new Date().toISOString());
   const globalRoleShadowing = countGlobalRoleShadowing(db);
@@ -301,7 +370,8 @@ function measure(db, args) {
     unmeasurableReasons: UNMEASURABLE_REASONS,
     needsHumanConfirmation: ['globalAdminIdentities'],
     notes: NOTES,
-    violations: violationsFor(args.expect, allowCustomRoles, roleRows, globalAdmins, ownerAdminRoles, globalRoleShadowing),
+    exemptions,
+    violations: violationsFor(args.expect, allowCustomRoles, roleRows, globalAdmins, ownerAdminRoles, globalRoleShadowing, exempted),
   };
 }
 
@@ -317,6 +387,19 @@ function main() {
     console.error(USAGE);
     process.exit(2);
   }
+  // An inert flag is worse than none: the exemption without both variables is refused, by name.
+  let exemptValues = null;
+  if (args['exempt-uat-admin-team'] === 'true') {
+    const username = process.env[EXEMPT_USER_VAR];
+    const orgName = process.env[EXEMPT_ORG_VAR];
+    const present = (v) => typeof v === 'string' && v.trim() !== '';
+    if (!present(username) || !present(orgName)) {
+      console.error(`--exempt-uat-admin-team true needs both ${EXEMPT_USER_VAR} and ${EXEMPT_ORG_VAR} set (non-empty)`);
+      console.error(USAGE);
+      process.exit(2);
+    }
+    exemptValues = { username, orgName };
+  }
 
   const require = createRequire(resolve(args['require-root']));
   const Database = require('better-sqlite3');
@@ -324,12 +407,15 @@ function main() {
 
   let result;
   try {
-    result = measure(db, args);
+    result = measure(db, args, exemptValues);
   } finally {
     db.close();
   }
 
   const code = exitCodeFor(result);
+  for (const e of result.exemptions) {
+    console.error(e.applied ? `INFO exempted ${e.check}: ${e.count}` : `INFO exemption not applied: ${e.reason}`);
+  }
   if (code === 3) console.error('measured nothing');
   console.log(JSON.stringify(result, null, 2));
   process.exit(code);

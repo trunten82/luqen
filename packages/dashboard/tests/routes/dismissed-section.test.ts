@@ -103,6 +103,10 @@ async function page(
         currentOrgId: viewer.currentOrgId,
       } as never;
       (request as unknown as { permissions: Set<string> }).permissions = new Set(viewer.permissions);
+      // The real secure session carries the UI language under 'locale' (HARD-05 reads it).
+      (request as unknown as { session: { get(key: string): unknown } }).session = {
+        get: (key: string) => (key === 'locale' ? viewer.locale : undefined),
+      };
     });
     await reportRoutes(s, ctx.storage, () => null);
   });
@@ -245,7 +249,8 @@ describe('the Dismissed section — tracer', () => {
 
 
 // ── Task 3: the complete section ─────────────────────────────────────────────────────────────
-const CONTROLS = ['reports.view', 'issues.dismiss'] as const;
+// The dismissal controls (Dismiss, Revoke) need technical-details access too (HARD-02).
+const CONTROLS = ['reports.view', 'reports.view_technical', 'issues.dismiss'] as const;
 const MARKUP = '<img src=x onerror="window.__pwned=1">';
 
 interface RawMark {
@@ -254,6 +259,7 @@ interface RawMark {
   readonly reason?: string;
   readonly actor?: string;
   readonly actorId?: string;
+  readonly actorKeySnapshot?: { readonly label: string; readonly keyCreatedAt: string } | null;
 }
 
 /** Mark through the repository (the route-level refusals are covered by the API tests). */
@@ -267,6 +273,7 @@ async function markRaw(input: RawMark = {}) {
     reason: input.reason ?? REASON_TOKEN,
     actor: input.actor ?? 'fabrikam-admin',
     ...(input.actorId !== undefined ? { actorId: input.actorId } : {}),
+    ...(input.actorKeySnapshot !== undefined ? { actorKeySnapshot: input.actorKeySnapshot } : {}),
   });
   if (result.kind !== 'created') throw new Error('markRaw: key already active');
   return result.dismissal;
@@ -404,6 +411,16 @@ async function storeKeyIn(label: string, orgId?: string): Promise<string> {
   return ctx.storage.apiKeys.storeKey(`placeholder-${label.replace(/\W/g, '')}-${Math.random()}`, label, orgId);
 }
 
+/**
+ * HARD-08: the creation-time tag a named key carries, " (Created <the key row's creation time>)",
+ * with the word and the time in the viewer's locale (HARD-05).
+ */
+async function keyTag(keyId: string, orgId: string, locale: Locale = 'en'): Promise<string> {
+  const key = (await ctx.storage.apiKeys.listKeys(orgId)).find((k) => k.id === keyId);
+  if (key === undefined) throw new Error('keyTag: key not found');
+  return ` (${t('admin.apiKeys.created', locale)} ${new Date(key.createdAt).toLocaleString(locale)})`;
+}
+
 function actorCells(doc: Document, locale: Locale = 'en'): Map<string, { by: string; byTitle: string | null; revokedBy?: string; revokedTitle?: string | null }> {
   const out = new Map<string, { by: string; byTitle: string | null; revokedBy?: string; revokedTitle?: string | null }>();
   for (const tr of doc.querySelectorAll('#rpt-dismissed tbody tr')) {
@@ -428,9 +445,11 @@ describe('actor label', () => {
     const cells = actorCells((await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId))).doc);
 
     // Text only: that no attribute carries the stored identifier is its own test below.
-    expect(cells.get(CODE_CONTRAST)!.by).toBe('API key: Fabrikam CI');
-    expect(cells.get(CODE_ALT)!.by).toBe('API key: Fabrikam CI');
-    expect(cells.get(CODE_ALT)!.revokedBy).toBe('API key: Fabrikam CI');
+    // HARD-08: a named key carries its creation time as a tag.
+    const tag = await keyTag(keyId, ctx.orgs.fabrikamOrgId);
+    expect(cells.get(CODE_CONTRAST)!.by).toBe(`API key: Fabrikam CI${tag}`);
+    expect(cells.get(CODE_ALT)!.by).toBe(`API key: Fabrikam CI${tag}`);
+    expect(cells.get(CODE_ALT)!.revokedBy).toBe(`API key: Fabrikam CI${tag}`);
   });
 
   it("the named label is translated: the German prefix of a key that belongs to the scan's org", async () => {
@@ -438,9 +457,26 @@ describe('actor label', () => {
     await markRaw({ actor: `api-key:${keyId}` });
     const { doc } = await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId, { locale: 'de' }));
     const text = actorCells(doc, 'de').get(CODE_CONTRAST)!.by;
-    expect(text).toBe(`${t('issueDismissals.actor.apiKey', 'de')}: Fabrikam CI`);
+    expect(text).toBe(`${t('issueDismissals.actor.apiKey', 'de')}: Fabrikam CI${await keyTag(keyId, ctx.orgs.fabrikamOrgId, 'de')}`);
     expect(text).not.toContain('API key');
     expect(text).not.toContain('issueDismissals');
+  });
+
+  it('HARD-08 the Dismissed section names no api key of another organization when the key list answers for every organization', async () => {
+    const keyId = await storeKeyIn('Northwind CI', ctx.orgs.northwindOrgId);
+    const otherKey = (await ctx.storage.apiKeys.listKeys(ctx.orgs.northwindOrgId)).find((k) => k.id === keyId);
+    expect(otherKey).toBeDefined();
+    await markRaw({ actor: `api-key:${keyId}` });
+    // A key list that answers for every organization: it returns the other organization's key row.
+    const spy = vi.spyOn(ctx.storage.apiKeys, 'listKeys').mockResolvedValue([otherKey!]);
+    try {
+      const { doc, html } = await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId));
+      expect(spy).toHaveBeenCalledTimes(1); // positive control: the key list was read
+      expect(actorCells(doc).get(CODE_CONTRAST)!.by).toBe('API key');
+      expect(html).not.toContain('Northwind CI');
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it('a system key, another org key, a deleted key, api-key:session and the legacy bare api-key show the generic API key label', async () => {
@@ -499,7 +535,9 @@ describe('actor label', () => {
     const keyId = await storeKeyIn('<b>ops</b><img src=x>', ctx.orgs.fabrikamOrgId);
     await markRaw({ actor: `api-key:${keyId}` });
     const { doc, html } = await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId));
-    expect(actorCells(doc).get(CODE_CONTRAST)!.by).toBe('API key: <b>ops</b><img src=x>');
+    expect(actorCells(doc).get(CODE_CONTRAST)!.by).toBe(
+      `API key: <b>ops</b><img src=x>${await keyTag(keyId, ctx.orgs.fabrikamOrgId)}`,
+    );
     expect(html).toContain('&lt;b&gt;ops&lt;/b&gt;');
     expect(html).not.toContain('<b>ops</b>');
     expect(html).not.toContain('<img src=x>');
@@ -558,6 +596,86 @@ describe('actor label', () => {
     expect(doc.getElementById('rpt-dismissed')).not.toBeNull();
     expect(actorCells(doc).get(CODE_CONTRAST)!.by).toBe('API key');
     spy.mockRestore();
+  });
+});
+
+// HARD-08 (D-91-10): a marking key is named from the snapshot stored with the dismissal (label plus
+// the key's creation time), so the name survives the key's deletion; visibility is unchanged.
+describe('HARD-08 key snapshot on the report page', () => {
+  const KEY_AT = '2026-03-01T10:00:00.000Z';
+
+  it('HARD-08 report page names a deleted key from its snapshot with its creation time', async () => {
+    const keyId = await storeKeyIn('Fabrikam CI', ctx.orgs.fabrikamOrgId);
+    await markRaw({
+      actor: `api-key:${keyId}`, actorId: `api-key:${keyId}`,
+      actorKeySnapshot: { label: 'Fabrikam CI', keyCreatedAt: KEY_AT },
+    });
+    // The product deletes a key only after revoking it (deleteKey removes inactive rows only).
+    await ctx.storage.apiKeys.revokeKey(keyId, ctx.orgs.fabrikamOrgId);
+    expect(await ctx.storage.apiKeys.deleteKey(keyId, ctx.orgs.fabrikamOrgId)).toBe(true);
+    expect((await ctx.storage.apiKeys.listKeys(ctx.orgs.fabrikamOrgId)).some((k) => k.id === keyId)).toBe(false);
+
+    const { doc, html } = await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId));
+    const by = actorCells(doc).get(CODE_CONTRAST)!.by;
+    expect(by).toBe(`API key: Fabrikam CI (Created ${new Date(KEY_AT).toLocaleString()})`);
+    const section = doc.getElementById('rpt-dismissed')!.outerHTML;
+    expect(section).not.toContain(keyId);
+    expect(html).not.toContain('api-key:');
+  });
+
+  it('HARD-08 report page shows a snapshot label only to a viewer who may touch the scan org', async () => {
+    const systemScan = await seedSurfaceScan(ctx.storage, { orgId: 'system', location: 'db', id: 'scan-system-x3' });
+    const r = await ctx.storage.issueDismissals!.mark({
+      orgId: 'system', siteUrl: FABRIKAM_SITE, siteKey: toSiteKey(FABRIKAM_SITE),
+      code: CODE_CONTRAST, selector: SEL_DISMISSED, reason: REASON_TOKEN,
+      actor: 'api-key:k-system-ops', actorId: 'api-key:k-system-ops',
+      actorKeySnapshot: { label: 'Platform Ops Key 7f3a', keyCreatedAt: KEY_AT },
+    });
+    if (r.kind !== 'created') throw new Error('seed');
+
+    const orgUser = await page(systemScan, {
+      role: 'user', currentOrgId: ctx.orgs.northwindOrgId, permissions: CONTROLS,
+    });
+    expect(actorCells(orgUser.doc).get(CODE_CONTRAST)!.by).toBe('API key');
+    expect(orgUser.html).not.toContain('Platform Ops Key 7f3a');
+
+    // Control: a global admin may touch the 'system' org and reads the snapshot's name and tag.
+    const admin = await page(systemScan, adminOf(ctx.orgs.northwindOrgId));
+    expect(actorCells(admin.doc).get(CODE_CONTRAST)!.by).toBe(
+      `API key: Platform Ops Key 7f3a (Created ${new Date(KEY_AT).toLocaleString()})`,
+    );
+  });
+
+  it('HARD-08 a legacy session actor renders the generic api key label', async () => {
+    const row = await markRaw({ actor: 'api-key:session', actorId: 'api-key:session' });
+    // A session actor never gets a snapshot from the mark route; a hand-written one is still not read.
+    ctx.storage
+      .getRawDatabase()
+      .prepare('UPDATE issue_dismissals SET created_by_key_snapshot = ? WHERE id = ?')
+      .run(JSON.stringify({ label: 'Fabrikam CI', keyCreatedAt: KEY_AT }), row.id);
+    await storeKeyIn('Fabrikam CI', ctx.orgs.fabrikamOrgId);
+
+    const { doc, html } = await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId));
+    expect(actorCells(doc).get(CODE_CONTRAST)!.by).toBe('API key');
+    expect(html).not.toContain('Fabrikam CI');
+  });
+});
+
+describe('HARD-05 dismissal dates follow the session locale', () => {
+  it('HARD-05 report page passes the session locale to the dismissed section', async () => {
+    const live = await markRaw();
+    const gone = await markRaw({ code: CODE_ALT, selector: SEL_ALT });
+    const revoked = await revokeRaw(gone.id);
+    const { data } = await page(ctx.scanId, adminOf(ctx.orgs.fabrikamOrgId, { locale: 'de' }));
+    const view = data['dismissals'] as {
+      active: Array<{ createdAtDisplay: string }>;
+      revoked: Array<{ createdAtDisplay: string; revokedAtDisplay: string }>;
+    };
+    const de = (iso: string) => new Date(iso).toLocaleString('de');
+    expect(de(live.createdAt)).not.toBe(new Date(live.createdAt).toLocaleString('en'));
+    expect(view.active[0]!.createdAtDisplay).toBe(de(live.createdAt));
+    expect(view.revoked[0]!.createdAtDisplay).toBe(de(gone.createdAt));
+    expect(view.revoked[0]!.revokedAtDisplay).toBe(de(revoked.revokedAt!));
   });
 });
 
@@ -835,7 +953,7 @@ describe('cross-tenant: the widened section never shows another org its data', (
     expect(orgUser.html).not.toContain('Platform Ops Key 7f3a');
 
     const admin = await page(systemScan, adminOf(ctx.orgs.northwindOrgId)); // control: a global admin may
-    expect(actorCells(admin.doc).get(CODE_CONTRAST)!.by).toBe('API key: Platform Ops Key 7f3a');
+    expect(actorCells(admin.doc).get(CODE_CONTRAST)!.by).toBe(`API key: Platform Ops Key 7f3a${await keyTag(keyId, 'system')}`);
   });
 });
 

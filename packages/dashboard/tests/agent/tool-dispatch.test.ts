@@ -312,3 +312,42 @@ describe('ToolDispatcher.dispatchAll', () => {
     }
   });
 });
+
+describe('HARD-19 ToolDispatcher decides from the stored user permission set', () => {
+  it('HARD-19 the tool dispatcher refuses a tool the stored user may not use', async () => {
+    const handler = vi.fn().mockResolvedValue({ ok: true });
+    const signer = makeSigner();
+    const dispatcher = new ToolDispatcher({
+      tools: [{ name: 'dashboard_list_users', inputSchema: z.object({}).strict(), handler, requiredPermission: 'admin.users' }],
+      signer,
+      dashboardMcpAudience: 'https://dashboard/mcp',
+      resolveScopes: async () => ['reports.view'],
+    });
+
+    const result = await dispatcher.dispatch(
+      { id: 'c1', name: 'dashboard_list_users', args: {} },
+      { userId: 'u1', orgId: 'o1' },
+    );
+    expect(result).toEqual({ error: 'denied' });
+    expect(handler).not.toHaveBeenCalled();
+    expect(signer.mintAccessToken).not.toHaveBeenCalled();
+  });
+
+  it('HARD-19 the tool dispatcher hands the handler the permissions of the stored user', async () => {
+    const seen: Array<ReadonlySet<string>> = [];
+    const handler: ToolHandler = async (_args, ctx) => {
+      seen.push(ctx.permissions);
+      return { ok: true };
+    };
+    const dispatcher = new ToolDispatcher({
+      tools: [{ name: 'dashboard_list_reports', inputSchema: z.object({}).strict(), handler, requiredPermission: 'reports.view' }],
+      signer: makeSigner(),
+      dashboardMcpAudience: 'https://dashboard/mcp',
+      resolveScopes: async () => ['reports.view', 'trends.view'],
+    });
+
+    await dispatcher.dispatch({ id: 'c1', name: 'dashboard_list_reports', args: {} }, { userId: 'u1', orgId: 'o1' });
+    expect(seen).toHaveLength(1);
+    expect([...(seen[0] ?? [])].sort()).toEqual(['reports.view', 'trends.view']);
+  });
+});

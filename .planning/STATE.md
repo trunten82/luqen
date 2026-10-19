@@ -5,16 +5,16 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: "Completed 91-12e-PLAN.md (PR2: docs for the role, team and MCP tool rules; every gate green on the final tree; layered CR-01 breaks and the 91-12 re-runs all matched their declared sets)"
-last_updated: "2026-10-18T21:14:53.417Z"
+stopped_at: Completed 91-17g-PLAN.md (PR3 re-review fix: scan deletes remove the report file first and only from the reports directory, keeping the scan when it is not removed; the preview selector bound is 8192; a confirm whose tool run fails is closed and audited; agent audit rows store secret arguments as [redacted])
+last_updated: "2026-10-19T19:28:00.000Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
-state_head: f307d2fa84ecf556cbffa315c08e937f279e7fb7
+state_head: 371367d5481073906f3ab845b825ddebfb08abf1
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 28
-  completed_plans: 22
+  total_plans: 34
+  completed_plans: 33
   percent: 33
 ---
 
@@ -128,7 +128,7 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 ## Current Position
 
 Phase: 91 (Dismissal and permission hardening) — EXECUTING
-Plan: 9 of 18
+Plan: 18 of 18
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 91 execution started
 
@@ -219,8 +219,8 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-18T21:14:53.355Z
-Stopped at: Completed 91-12e-PLAN.md (PR2: docs for the role, team and MCP tool rules; every gate green on the final tree; layered CR-01 breaks and the 91-12 re-runs all matched their declared sets)
+Last session: 2026-10-19T19:28:00.000Z
+Stopped at: Completed 91-17g-PLAN.md (PR3 re-review fix: scan deletes remove the report file first and only from the reports directory, keeping the scan when it is not removed; the preview selector bound is 8192; a confirm whose tool run fails is closed and audited; agent audit rows store secret arguments as [redacted])
 Resume file: None
 Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
 
@@ -278,6 +278,17 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 91 P12c | ~68min | 3 tasks | 7 files |
 | Phase 91 P12d | ~67min | 3 tasks | 8 files |
 | Phase 91 P12e | ~63min | 2 tasks | 2 files |
+| Phase 91 P13 | 35min | 2 tasks | 0 files |
+| Phase 91 P14 | 25min | 3 tasks | 11 files |
+| Phase 91 P15 | 27min | 3 tasks | 14 files |
+| Phase 91 P16 | 23min | 3 tasks | 8 files |
+| Phase 91 P17 | 126min | 3 tasks | 10 files |
+| Phase 91 P17b | ~57min | 3 tasks | 15 files |
+| Phase 91 P17c | ~48min | 3 tasks | 26 files |
+| Phase 91 P17d | ~89min | 3 tasks | 35 files |
+| Phase 91 P17e | ~42min | 3 tasks | 21 files |
+| Phase 91 P17f | ~146min | 3 tasks | 46 files |
+| Phase 91 P17g | ~71min | 3 tasks | 28 files |
 
 ## Decisions
 
@@ -325,6 +336,18 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 91]: Phase 91 P12c: admin.system and admin.users are granted by global roles only (organization role writes answer 422, the organization role form omits them, the repository drops them from team-bound and non-admin global roles, and the resolver drops them when the caller names a non-admin global role); only a global administrator binds a team to a built-in role row; a global role row grants issues.dismiss to nobody, filtered at resolution with no data migration
 - [Phase 91]: Phase 91 P12d: a team is created in, and moved to, only the organization its caller administers (a global administrator places teams anywhere; a caller with no current organization places none); the shared MCP plugin runs a tool through tools/call only when the token scope admits it, by the rule tools/list applies, for end-user and service tokens alike, and publishes each input schema as JSON Schema; the cookie CSRF preHandler is named and the /api write inventory reads it on every route's hook list, with no route adding an early lifecycle hook
 - [Phase 91]: Phase 91 P12e: PR2 docs state the role, team and MCP tool rules as behaviour only; every PR2 gate is green on the final tree at the expected counts; the CR-01 fix is layered (either MCP admin rule removed alone leaves the end-to-end tests green, all seven layers removed together redden them)
+- [Phase 91]: PR2 shipped as PR 10 (merge b3d7a2ae) after the pre-merge production gates; the permission read-back's single finding, the UAT admin persona's team membership in the UAT organization, was accepted by the owner as a known test fixture
+- [Phase 91]: Phase 91 P14: the report page offers the dismissal controls (Dismiss, Revoke and both dialogs) and the per-issue Assign buttons only to viewers with technical-details access; the disabled Dismiss button is decided by the mark validator for both the selector and the rule code, pinned by one shared case list; a preview answered with a 4xx other than 408/429 shows the refused hint
+- [Phase 91]: Phase 91 P15: a dismissal marked by an API key of the scan's own organization keeps that key's label and creation time in one nullable column (migration 092); the Dismissed section names a marking key from that record first and a revoking key from live key rows, each with the key's creation time as a tag, only for viewers who may touch the scan's organization; dismissal dates read in the viewer's session language
+- [Phase 91]: Phase 91 P16: the remote dismissal UAT writes only into the declared UAT organization and site: two required variables with no defaults are checked after the admin login and before any persona login or write, a mismatch exits 2 naming variables only, and --check-target-only reads the rule back without writing; translated strings insert placeholder values literally, in one pass, replacing every occurrence
+- [Phase 91]: 91-17: a named API key's label and creation tag render as one element in each Dismissed-section actor cell (phone card layout keeps the sentence whole)
+- [Phase 91]: 91-17: the dismissal browser UAT seeds API-key dismissals through the real mark API, so the stored key label and time are the route's own
+- [Phase 91]: Phase 91 P17b: deleting a scan follows one rule (services/scan-delete-access.ts) on the API, GraphQL and the report page: reports.delete or being the signed-in user who started the scan (never an API key), for scans of the caller's current organization ('system' scans for global administrators and callers outside every organization); a cross-path agreement test and a source inventory keep every delete path on the rule; the RBAC matrix lists reports.delete for both HTTP delete routes
+- [Phase 91]: Phase 91 P17c: every MCP request is answered for the stored, active user of the token (src/auth/stored-caller.ts): a removed or deactivated user's token is refused 401 invalid_token, a user with no permission in the token organization is refused 403 insufficient_scope, a role claim is not read, and the verifier keeps client_id so a revoked client's token is refused 401 client_revoked; the agent resolves its tools through the same rule; admin.system and admin.users come from the global admin role on every path
+- [Phase 91]: Phase 91 P17d: a disabled Dismiss button and a refused preview name the reason the server refuses the finding (no specific element, element selector too long, rule code missing, rule code too long) from one classification shared with the mark validators, in all six locales; the preview answers an over-long selector as refused with reason selector-too-long; the read-back script exempts only the dedicated UAT admin persona in the UAT org (--exempt-uat-admin-team true with LUQEN_UAT_ADMIN_USER and LUQEN_UAT_EXPECT_ORG) and reports it on an INFO line; the LLM prompt titles use double-brace placeholders; GET /orgs/current reports the organization the request acts in
+- [Phase 91]: Phase 91 P17e: the dashboard assistant runs only the tools offered to the model in that iteration, and its in-process dispatcher resolves the stored user's permissions once per call, refuses a tool whose permission that user does not hold before it runs, and hands that set to the handler in the conversation's organization; confirming or declining a paused action is limited to the conversation's user, a confirmation checks again that the user may still run the tool (403 otherwise, the action stays pending), and every confirm attempt that reaches that check is recorded in the agent audit
+- [Phase 91]: Phase 91 P17f: an MCP token and the assistant act in an organization only while the stored user belongs to it (a member of the organization or of one of its teams; global administrators everywhere; a token without an organization answers from the global role), refused 401 invalid_token not_member otherwise; a dismissal selector is classified by its length before its shape, once per preview, with a linear whole-page check and a 16384-character request bound; every scan delete path removes the stored report file through one function; the report page's fix hint carries element markup only for reports.view_technical holders; MCP clients and the assistant act for a dashboard user account
+- [Phase 91]: Phase 91 P17g: a scan delete removes the stored report file first and the row second; only an already removed file is ignored, and any other failure keeps the scan, writes one warning without the path and answers a server error so the delete can be retried; a stored report file is removed only when its resolved path is inside the configured reports directory (an outside path is never removed; the scan is kept when a file exists there); the dismissal preview bounds the selector at 8192 characters, inside the 16 KiB request header limit (431 above that limit after encoding); a confirm whose tool run fails is closed as failed, recorded in the agent audit as an error and answered 500; agent audit rows store arguments named like a password, secret, token, API key, authorization or credential as [redacted] at any depth, in the repository write
 
 ### Blockers
 

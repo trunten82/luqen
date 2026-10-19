@@ -2340,4 +2340,19 @@ SELECT id, 'issues.dismiss' FROM roles
 WHERE org_id != 'system' AND name IN ('Owner', 'Admin');
     `,
   },
+  {
+    id: '092',
+    name: 'add-dismissal-key-snapshot',
+    sql: `
+-- Phase 91 (HARD-08) — which API key marked a finding, kept with the dismissal.
+-- Nullable. When an API key of the scan's own organization marks a finding, the
+-- column holds a JSON object { label, keyCreatedAt }: that key's label and its
+-- creation time, written at mark time, so the Dismissed section can still name
+-- the key after it is deleted and can tell two keys with the same label apart.
+-- It never holds the api_keys row id or the secret. NULL for every other actor
+-- (password users, keys of another organization, the legacy session form) and
+-- for every row written before this migration; no backfill.
+ALTER TABLE issue_dismissals ADD COLUMN created_by_key_snapshot TEXT;
+    `,
+  },
 ];

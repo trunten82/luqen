@@ -61,11 +61,13 @@ export async function orgRoutes(
       return;
     }
 
-    const session = request.session as {
-      get(key: string): unknown;
-    };
-
-    const currentOrgId = (session.get('currentOrgId') as string | undefined) ?? '';
+    // The organization this request acts in: the request middleware's resolution (the stored
+    // session org, or the user's first organization when the session stores none, as right after
+    // sign-in). The stored session org is read only when the request carries no resolved org,
+    // which the middleware never leaves unset while the session stores one.
+    const session = request.session as { get(key: string): unknown } | undefined;
+    const sessionOrgId = typeof session?.get === 'function' ? (session.get('currentOrgId') as string | undefined) : undefined;
+    const currentOrgId = user.currentOrgId ?? sessionOrgId ?? '';
     const currentOrg = currentOrgId !== '' ? await storage.organizations.getOrg(currentOrgId) : null;
     const userOrgs = await storage.organizations.getUserOrgs(user.id);
 
