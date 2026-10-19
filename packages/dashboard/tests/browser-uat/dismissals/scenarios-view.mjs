@@ -74,6 +74,18 @@ async function revokeInvalidCopy(page, S, locale) {
     seen.revokePosts === 1 && after.error === want && after.open && after.comment === comment, JSON.stringify({ ...after, posts: seen.revokePosts }).slice(0, 240));
 }
 
+/**
+ * HARD-05: every date in the Dismissed section (the <time> elements) in the session locale, compared
+ * with this process's own formatting of the same ISO value (the local dashboard runs on this machine,
+ * with the same time zone and ICU data).
+ */
+async function sectionDates(page, S, locale) {
+  const dates = await page.$$eval('#rpt-dismissed time[datetime]', (ts) => ts.map((t) => ({ iso: t.getAttribute('datetime'), text: (t.textContent || '').trim() })));
+  const ok = dates.length >= 2 && dates.every((d) => d.text === new Date(d.iso).toLocaleString(locale));
+  const differs = locale === 'en' || dates.every((d) => d.text !== new Date(d.iso).toLocaleString('en'));
+  check(S, `${locale}: the Dismissed section's dates are formatted in ${locale}${locale === 'en' ? ' (control)' : ', not in English'}`, ok && differs, JSON.stringify(dates));
+}
+
 async function setPhone(page) { await page.setViewport(PHONE); }
 async function setDesktop(page) { await page.setViewport(DESKTOP); }
 
@@ -184,7 +196,7 @@ export const viewScenarios = {
     await shot(page, 'longtext-revoked-1280');
   },
 
-  /** Item 10: de and it render the dialog and section with the real translations and no raw key. */
+  /** Item 10: de and it render the dialog and section with the real translations and no raw key; HARD-05: dates. */
   async locales({ page, world }) {
     const S = 'locales';
     const { base, scanId, personas } = world;
@@ -195,6 +207,7 @@ export const viewScenarios = {
     // 89-11 item 1 in English first (the session starts in en).
     await openReport(page, base, scanId, 'issues');
     await openDismissedSection(page);
+    await sectionDates(page, S, 'en');
     await page.click('#rpt-dismissed [data-action="rptRevokeIssue"]');
     await page.waitForSelector('#issue-revoke-dialog[open]', { timeout: WAIT });
     await revokeInvalidCopy(page, S, 'en');
@@ -220,6 +233,7 @@ export const viewScenarios = {
       check(S, `${locale}: no raw issueDismissals key is visible or in a dialog`, seen.key === false);
       check(S, `${locale}: the section summary is the translation`, seen.summary === want.summary, seen.summary);
       check(S, `${locale}: the Dismiss button label is the translation`, seen.button === want.dismiss, seen.button);
+      await sectionDates(page, S, locale);
       await openMarkDialog(page, 'panel-issues', NAV.selector);
       const dlg = await page.evaluate(() => ({ title: document.querySelector('#issue-dismiss-dialog .modal__title').textContent.trim(), confirm: document.querySelector('[data-action="rptDismissConfirm"]').textContent.trim(), body: document.getElementById('issue-dismiss-dialog').innerText }));
       check(S, `${locale}: the mark dialog title and Confirm label are the translations`, dlg.title === want.title && dlg.confirm === want.confirm, JSON.stringify(dlg).slice(0, 200));

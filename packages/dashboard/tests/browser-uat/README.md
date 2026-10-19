@@ -110,15 +110,20 @@ from a direct mark, preview and revoke request, and `/admin/roles/new` offers no
 
 ### Local scenarios (`--scenario`)
 
-`tracer`, `permissions`, `dialog`, `refused`, `mark`, `surfaces`, `revoke`, `conflict`, `public`, `mobile`
+`tracer`, `permissions` (its world adds a custom-role reviewer holding `issues.dismiss`, `issues.assign`
+and `reports.view` but not `reports.view_technical`: no Dismiss, no Assign and no seeded selector in the
+page source), `dialog`, `refused` (the whole-page selector, and a second scan whose findings have a
+4001-character selector: a disabled Dismiss at the template item, the page issue and the Templates tab),
+`mark`, `surfaces`, `revoke`, `conflict`, `public`, `mobile`
 (375x812), `longtext` (1000-char reason, 600-char selector, 1000-char comment at 375 and 1280),
-`locales` (de, it; plus the revoke dialog's 400 copy in en/de/it through an intercepted request),
+`locales` (de, it, with the Dismissed section's dates in the session language; plus the revoke dialog's
+400 copy in en/de/it through an intercepted request),
 `theme` (dark), `keyboard` (real key presses, real Escape), `overflow` (150 rows), and the 89-11 gap
 scenarios (`dismissals/scenarios-gap.mjs`):
 
 | Scenario | What it proves |
 |----------|----------------|
-| `attribution` | Own seeded world: an org API key and a system key as dismissal actors. The org key reads `API key: <label>`, the system key reads `API key`, and the section HTML holds no `api-key:` identifier or key id. |
+| `attribution` | Own seeded world: four API keys each mark one finding through the mark API (two org keys with the same label and different creation times, an org key that is then revoked and deleted, and a system key). The org keys read `API key: <label> (Created <date>)`, the deleted key still reads its label and creation time, the two same-label keys read differently, the system key reads `API key`, and the section HTML holds no `api-key:` identifier or key id. |
 | `twins` | Two page issues with the same rule and selector have two Dismiss buttons and are one dismissal; a dialog counting more than one occurrence (twins, a template item) says they are dismissed together; a single occurrence does not. |
 | `layout` | Both dialogs show Cancel and Confirm inside the viewport and the dialog, uncovered, measured right after opening with NO scroll call (1280x800 en/de/it, the 600-char selector, 375x812); the footer is opaque in light and dark; the Dismissed tables fit 1280 with the rule code on at most 2 lines; the assistant launcher covers nothing at the page bottom (1280 and 375). |
 

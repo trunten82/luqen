@@ -1,6 +1,7 @@
 // Scenarios added by the 89-11 gap closure (the owner's D-15 Q1 review items):
-//   attribution  item 2: an API-key actor reads "API key: <label>" only for the scan org's own key,
-//                and the stored `api-key:<id>` identifier never reaches the page.
+//   attribution  item 2 and HARD-08: an API-key actor reads "API key: <label> (Created <date>)" only for
+//                the scan org's own keys, also after the key is deleted, and two keys with the same
+//                label read differently; the stored `api-key:<id>` identifier never reaches the page.
 //   twins        item 6: two page issues with the same rule and selector are one dismissal, and the
 //                dialog says so before Confirm.
 //   layout       items 3-5: both dialogs show Cancel and Confirm at open with NO scroll call; the
@@ -13,6 +14,7 @@ import {
 } from './lib.mjs';
 import { HERO, NAV, PROMO, LONG } from './fixture.mjs';
 import { setLocale } from './scenarios-view.mjs';
+import { KEY_TIMES } from './world.mjs';
 
 /** Per-scenario world options for bootLocal (the default world is unchanged). */
 export const GAP_WORLD = {
@@ -138,25 +140,54 @@ async function clearance(S, page, base, scanId, width, { withDismissals }) {
 }
 
 export const gapScenarios = {
-  /** Item 2 (D-12; D-15 Q1 reverses the UD-16 title clause). */
+  /** Item 2 (D-12; D-15 Q1 reverses the UD-16 title clause) and HARD-08 (key label and creation time). */
   async attribution({ page, world }) {
     const S = 'attribution';
     const { base, scanId, personas, keyActors } = world;
-    check(S, 'fixture: the world seeded an org key and a system key as dismissal actors', Boolean(keyActors && keyActors.fabrikamKeyId && keyActors.systemKeyId));
+    check(S, 'fixture: four keys marked a finding each through the mark API, and the deleted key is gone',
+      Boolean(keyActors && keyActors.keyIds && keyActors.deletedGone), JSON.stringify(keyActors && { deletedGone: keyActors.deletedGone }));
     check(S, 'login as global admin', await login(page, base, personas.admin), page.url());
     await openReport(page, base, scanId, 'issues');
     await openDismissedSection(page);
     const by = await dismissedByTexts(page);
-    check(S, 'positive control: both API-key dismissals are listed', Boolean(by[keyActors.fabrikamCode] && by[keyActors.systemCode]), JSON.stringify(by));
+    const text = (name) => (by[keyActors.codes[name]] || { text: '' }).text;
+    check(S, 'positive control: all four API-key dismissals are listed',
+      ['ci', 'twin', 'deleted', 'system'].every((n) => by[keyActors.codes[n]]), JSON.stringify(by));
     // HARD-08: a named key carries its creation time as a tag, "API key: <label> (Created <time>)".
     check(S, 'the org-key dismissal reads API key: Fabrikam CI with its creation-time tag',
-      /^API key: Fabrikam CI \(Created \S.*\)$/.test(by[keyActors.fabrikamCode].text), JSON.stringify(by[keyActors.fabrikamCode]));
-    check(S, 'the system-key dismissal reads API key', by[keyActors.systemCode].text === 'API key', JSON.stringify(by[keyActors.systemCode]));
+      /^API key: Fabrikam CI \(Created \S.*\)$/.test(text('ci')), text('ci'));
+    const twinWant = `API key: Fabrikam CI (Created ${new Date(KEY_TIMES.twin).toLocaleString('en')})`;
+    check(S, 'a second key with the same label reads API key: Fabrikam CI with its own, different creation time',
+      text('twin') === twinWant && text('twin') !== text('ci'), JSON.stringify({ twin: text('twin'), ci: text('ci') }));
+    const deletedWant = `API key: Fabrikam Deploy (Created ${new Date(KEY_TIMES.deleted).toLocaleString('en')})`;
+    check(S, 'the dismissal whose key was then deleted still reads API key: Fabrikam Deploy with its creation time',
+      text('deleted') === deletedWant, text('deleted'));
+    check(S, 'the system-key dismissal reads API key', text('system') === 'API key', text('system'));
     const html = await page.$eval('#rpt-dismissed', (d) => d.outerHTML);
     check(S, 'the section HTML contains no api-key: identifier and no key id',
-      !html.includes('api-key:') && !html.includes(keyActors.fabrikamKeyId) && !html.includes(keyActors.systemKeyId));
+      !html.includes('api-key:') && Object.values(keyActors.keyIds).every((id) => !html.includes(id)));
     await scrollToInstant(page, '#rpt-dismissed');
     await shot(page, 'gap-attribution-1280');
+
+    // The longest dismissed-by text (label plus tag) as a phone card and in the dark theme.
+    await page.setViewport(PHONE);
+    await openReport(page, base, scanId, 'issues');
+    await openDismissedSection(page);
+    const ov = await horizontalOverflow(page);
+    check(S, '375px: the section with the key labels and creation tags has no horizontal page scroll', ov.scrollW <= ov.innerW + 2, JSON.stringify(ov));
+    // A card cell is a flex row: the label-and-tag sentence must be ONE flex item, or it splits into columns.
+    const pieces = await page.$$eval('#rpt-dismissed td', (tds) => tds.filter((td) => (td.textContent || '').includes('API key:'))
+      .map((td) => [...td.childNodes].filter((n) => n.nodeType === 1 || (n.textContent || '').trim() !== '').length));
+    check(S, '375px: each named key label and its creation tag form one block in its card cell', pieces.length === 3 && pieces.every((n) => n === 1), JSON.stringify(pieces));
+    await scrollToInstant(page, '#rpt-dismissed');
+    await shot(page, 'gap-attribution-375');
+    await page.setViewport(DESKTOP);
+    await page.evaluate(() => localStorage.setItem('luqen-theme', 'dark'));
+    await openReport(page, base, scanId, 'issues');
+    await openDismissedSection(page);
+    await scrollToInstant(page, '#rpt-dismissed');
+    await shot(page, 'gap-attribution-dark-1280');
+    await page.evaluate(() => localStorage.setItem('luqen-theme', 'light'));
   },
 
   /** Item 6 (D-04, D-10, UD-05): one key, several occurrences, one dismissal; the dialog says so. */

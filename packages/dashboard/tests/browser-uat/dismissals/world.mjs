@@ -9,7 +9,9 @@ import path from 'node:path';
 import {
   DASHBOARD_DIR, BROWSER_UAT_DIR, TMP, SHOTS, track, log, waitFor, discoverChromium, requireFromRepo,
 } from './lib.mjs';
-import { SITE, BACKFILL_SITE, buildReport, buildSmallReport, REASON, HERO, PROMO } from './fixture.mjs';
+import {
+  SITE, BACKFILL_SITE, OVERLONG_SITE, buildReport, buildSmallReport, buildOverlongReport, REASON, HERO, PROMO, NAV, LONG,
+} from './fixture.mjs';
 
 const config = JSON.parse(fs.readFileSync(path.join(BROWSER_UAT_DIR, 'uat.config.json'), 'utf8'));
 export const PORT = config.port;
@@ -22,6 +24,9 @@ export const PERSONAS = {
   member: { user: 'uat-member', pass: PASS },
   viewer: { user: 'uat-viewer', pass: PASS },
   reportsOnly: { user: 'uat-reports-only', pass: PASS },
+  // Seeded only in the permissions world: a custom org role with issues.dismiss, issues.assign and
+  // reports.view but NOT reports.view_technical (HARD-02).
+  reviewer: { user: 'uat-reviewer', pass: PASS },
 };
 
 /** Remove everything under .tmp except the tracked .gitignore and the screenshot directory. */
@@ -75,26 +80,62 @@ function insertUser(raw, bcrypt, creds, role, orgId, now) {
   return id;
 }
 
+/** Creation times given to two of the seeded keys, so their tags differ by date (placeholders). */
+export const KEY_TIMES = { twin: '2026-03-01T10:00:00.000Z', deleted: '2026-05-17T16:30:00.000Z' };
+
 /**
- * 89-11 attribution world: two API keys (one of the Fabrikam org, one system key) and two active
- * dismissals whose actor is `api-key:<id>`. They are written through the storage adapter because
- * the dark build lets no org key mark through the API (issues.dismiss is global-admin only).
- * Placeholder labels only.
+ * Attribution world (89-11, HARD-08). Every dismissal is marked THROUGH THE MARK API with the key's
+ * Bearer secret, so the route stores the key snapshot exactly as production does:
+ *   PROMO  org key 'Fabrikam CI' (live)
+ *   LONG   a second org key with the SAME label 'Fabrikam CI' and an older creation time (live)
+ *   NAV    org key 'Fabrikam Deploy', revoked and then DELETED after its mark
+ *   HERO   a system key 'Northwind Ops' (not the scan org's key: never named on this report)
+ * The key rows themselves are seeded through the storage adapter. Placeholder labels only.
  */
-async function seedApiKeyActors(storage, orgId, toSiteKey) {
-  const fabrikamKeyId = await storage.apiKeys.storeKey(`uat-${randomUUID()}`, 'Fabrikam CI', orgId);
-  const systemKeyId = await storage.apiKeys.storeKey(`uat-${randomUUID()}`, 'Northwind Ops');
-  for (const [f, keyId] of [[PROMO, fabrikamKeyId], [HERO, systemKeyId]]) {
-    const res = await storage.issueDismissals.mark({
-      orgId, siteUrl: SITE, siteKey: toSiteKey(SITE), code: f.code, selector: f.selector,
-      reason: 'Marked by an API key (seeded).', actor: `api-key:${keyId}`,
+async function seedApiKeyActors(storage, orgId, scanId) {
+  const raw = storage.getRawDatabase();
+  const make = async (label, org, createdAt) => {
+    const secret = `uat-${randomUUID()}`;
+    const id = await storage.apiKeys.storeKey(secret, label, org, 'admin');
+    if (createdAt) raw.prepare('UPDATE api_keys SET created_at = ? WHERE id = ?').run(createdAt, id);
+    return { id, secret };
+  };
+  const keys = {
+    ci: await make('Fabrikam CI', orgId, null),
+    twin: await make('Fabrikam CI', orgId, KEY_TIMES.twin),
+    deleted: await make('Fabrikam Deploy', orgId, KEY_TIMES.deleted),
+    system: await make('Northwind Ops', undefined, null),
+  };
+  const findings = { ci: PROMO, twin: LONG, deleted: NAV, system: HERO };
+  for (const [name, f] of Object.entries(findings)) {
+    const res = await fetch(`${LOCAL_BASE}/api/v1/scans/${scanId}/dismissals`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${keys[name].secret}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ code: f.code, selector: f.selector, reason: 'Marked by an API key through the API (seeded).' }),
     });
-    if (res.kind !== 'created') throw new Error('api-key actor mark did not create a row');
+    if (res.status !== 201) throw new Error(`api-key mark (${name}) answered ${res.status}, not 201`);
   }
-  return { fabrikamKeyId, systemKeyId, fabrikamCode: PROMO.code, systemCode: HERO.code };
+  // The product deletes a key only after revoking it (deleteKey removes inactive rows only).
+  await storage.apiKeys.revokeKey(keys.deleted.id, orgId);
+  if (!(await storage.apiKeys.deleteKey(keys.deleted.id, orgId))) throw new Error('the deleted key was not deleted');
+  const deletedGone = !(await storage.apiKeys.listKeys(orgId)).some((k) => k.id === keys.deleted.id);
+  return {
+    keyIds: Object.fromEntries(Object.entries(keys).map(([n, k]) => [n, k.id])),
+    codes: Object.fromEntries(Object.entries(findings).map(([n, f]) => [n, f.code])),
+    deletedGone,
+  };
 }
 
-export async function bootLocal({ keepShots = true, apiKeyActors = false } = {}) {
+/** The custom-role reviewer (HARD-02): may dismiss and assign, may not see technical details. */
+async function seedReviewer(storage, raw, bcrypt, orgId, now) {
+  const role = await storage.roles.createRole({
+    name: 'Reviewer', description: 'dismiss and assign without technical details',
+    permissions: ['reports.view', 'issues.dismiss', 'issues.assign'], orgId,
+  });
+  return [insertUser(raw, bcrypt, PERSONAS.reviewer, 'uat-none', orgId, now), role.id];
+}
+
+export async function bootLocal({ keepShots = true, apiKeyActors = false, reviewer = false, overlongScan = false } = {}) {
   log('resetting .tmp workspace');
   resetWorkspace({ keepShots });
   const dbPath = await startDashboard();
@@ -128,6 +169,7 @@ export async function bootLocal({ keepShots = true, apiKeyActors = false } = {})
     member: [insertUser(raw, bcrypt, PERSONAS.member, 'uat-none', orgId, now), roleId('Member')],
     viewer: [insertUser(raw, bcrypt, PERSONAS.viewer, 'uat-none', orgId, now), roleId('Viewer')],
     reportsOnly: [insertUser(raw, bcrypt, PERSONAS.reportsOnly, 'uat-none', orgId, now), reportsOnlyRole.id],
+    ...(reviewer ? { reviewer: await seedReviewer(storage, raw, bcrypt, orgId, now) } : {}),
   };
   raw.close();
   for (const [name, [userId, rid]] of Object.entries(people)) {
@@ -153,9 +195,20 @@ export async function bootLocal({ keepShots = true, apiKeyActors = false } = {})
     });
     if (res.kind !== 'created') throw new Error('backfill mark did not create a row');
   }
-  const keyActors = apiKeyActors ? await seedApiKeyActors(storage, orgId, toSiteKey) : null;
+  // The refused scenario's second scan: findings whose selector is over the dismissal limit.
+  let overlongScanId = null;
+  if (overlongScan) {
+    overlongScanId = randomUUID();
+    await storage.scans.createScan({ id: overlongScanId, siteUrl: OVERLONG_SITE, standard: 'WCAG2AA', jurisdictions: [], createdBy: PERSONAS.admin.user, createdAt: now, orgId });
+    const over = buildOverlongReport(OVERLONG_SITE);
+    await storage.scans.updateScan(overlongScanId, { status: 'completed', completedAt: now, totalIssues: over.summary.totalIssues, errors: over.summary.totalIssues, pagesScanned: over.pages.length, jsonReport: JSON.stringify(over) });
+  }
+  const keyActors = apiKeyActors ? await seedApiKeyActors(storage, orgId, scanId) : null;
   await storage.disconnect();
-  return { base: LOCAL_BASE, scanId, bigScanId, orgId, orgName: org.name, siteUrl: SITE, personas: PERSONAS, ...(keyActors ? { keyActors } : {}) };
+  return {
+    base: LOCAL_BASE, scanId, bigScanId, orgId, orgName: org.name, siteUrl: SITE, personas: PERSONAS,
+    ...(keyActors ? { keyActors } : {}), ...(overlongScanId ? { overlongScanId } : {}), reviewerSeeded: reviewer,
+  };
 }
 
 /** The env object the remote code path reads, built in-process from a booted local world. */

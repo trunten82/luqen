@@ -33,7 +33,7 @@ import {
   sleep, setKeepGoing, failureCount,
 } from './dismissals/lib.mjs';
 import { bootLocal, envFromWorld, resetShots } from './dismissals/world.mjs';
-import { coreScenarios } from './dismissals/scenarios-core.mjs';
+import { coreScenarios, CORE_WORLD } from './dismissals/scenarios-core.mjs';
 import { flowScenarios } from './dismissals/scenarios-flow.mjs';
 import { viewScenarios } from './dismissals/scenarios-view.mjs';
 import { gapScenarios, GAP_WORLD } from './dismissals/scenarios-gap.mjs';
@@ -100,7 +100,7 @@ async function runLocal(browser) {
   // Only a full run clears the screenshots; a single scenario adds to (and overwrites) its own files.
   if (args.scenario === 'all') resetShots();
   for (const n of names) {
-    const world = await bootLocal(GAP_WORLD[n] ?? {});
+    const world = await bootLocal({ ...(CORE_WORLD[n] ?? {}), ...(GAP_WORLD[n] ?? {}) });
     const { context, page } = await newPersonaPage(browser, world.base, null);
     try {
       await SCENARIOS[n]({ page, browser, world, expect: args.expect });
