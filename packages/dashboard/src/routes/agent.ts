@@ -1280,10 +1280,15 @@ export async function registerAgentRoutes(
     );
     // ── Phase 37 Plan 03 Task 2 — retry / edit-resend / share ─────────
     //
+    // Every route under /agent/conversations/:id answers only the user who started the conversation:
+    // open, rename, delete, read a message, open the edit form, retry, edit and resend, share.
+    // Another member of the organization, and a global administrator, get 404 conversation_not_found
+    // before any message is read and before anything is written (ownConversation).
+    //
     // All three endpoints share the same auth + org-resolve + conversation
     // -guard preamble used above. Pattern:
     //   1. resolveAgentOrgId or 401/400
-    //   2. getConversation or 404
+    //   2. ownConversation or 404
     //   3. Load active-branch messages (excludes superseded by default)
     //   4. Validate the target is the most-recent of its role
     //   5. Apply markMessagesSuperseded / appendMessage / createShareLink
@@ -1632,7 +1637,12 @@ async function fetchMessageCounts(
 // ---------------------------------------------------------------------------
 
 /**
- * The conversation a conversation route acts on, for its requester.
+ * The conversation a conversation route acts on, for its requester: the row exists, is not deleted
+ * and was started by `lookup.userId`. This is the one owner comparison of the conversation routes;
+ * another member of the organization and a missing conversation get the same answer (null), so the
+ * existence of someone else's conversation is not revealed. The lookup is in the organization the
+ * request acts in, and, when `anyOrg` is set (a global administrator on the two routes that offer
+ * it), in any organization; either way the row must be the requester's own.
  */
 async function ownConversation(
   storage: StorageAdapter,
@@ -1640,7 +1650,7 @@ async function ownConversation(
 ): Promise<import('../db/interfaces/conversation-repository.js').Conversation | null> {
   let conv = await storage.conversations.getConversation(lookup.id, lookup.orgId);
   if (conv === null && lookup.anyOrg) conv = await loadConversationAnyOrg(storage, lookup.id);
-  return conv === null || conv.isDeleted ? null : conv;
+  return conv === null || conv.isDeleted || conv.userId !== lookup.userId ? null : conv;
 }
 
 /**

@@ -231,9 +231,10 @@ export interface ConversationRepository {
   ): Promise<ConversationSearchHit[]>;
 
   /**
-   * Phase 35 Plan 01 (AHIST-03): Update conversation title. Org-guarded:
-   * mismatched orgId returns null and does not write. Soft-deleted
-   * conversations cannot be renamed.
+   * Phase 35 Plan 01 (AHIST-03): Update conversation title. Only the owner's
+   * `userId` renames: a mismatched orgId or a userId that did not start the
+   * conversation returns null and does not write. Soft-deleted conversations
+   * cannot be renamed.
    */
   renameConversation(
     id: string,
@@ -244,8 +245,9 @@ export interface ConversationRepository {
 
   /**
    * Phase 35 Plan 01 (AHIST-04): Soft-delete a conversation. Sets
-   * is_deleted=1, deleted_at=now(). Returns true on success, false if
-   * already deleted, not found, or wrong org. The conversation's paused
+   * is_deleted=1, deleted_at=now(). Only the owner's `userId` deletes. Returns
+   * true on success, false if already deleted, not found, wrong org, or
+   * `userId` did not start the conversation. The conversation's paused
    * actions are declined in the same transaction, through the claim, so
    * their stored arguments are redacted.
    */

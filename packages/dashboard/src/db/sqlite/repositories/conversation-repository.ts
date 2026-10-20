@@ -481,31 +481,29 @@ export class SqliteConversationRepository implements ConversationRepository {
     title: string,
     userId: string,
   ): Promise<Conversation | null> {
-    void userId;
     const now = new Date().toISOString();
     const result = this.db
       .prepare(
         `UPDATE agent_conversations
          SET title = @title, updated_at = @now
-         WHERE id = @id AND org_id = @orgId AND is_deleted = 0`,
+         WHERE id = @id AND org_id = @orgId AND user_id = @userId AND is_deleted = 0`,
       )
-      .run({ id, orgId, title, now });
+      .run({ id, orgId, userId, title, now });
 
     if (result.changes === 0) return null;
     return this.getConversation(id, orgId);
   }
 
   async softDeleteConversation(id: string, orgId: string, userId: string): Promise<boolean> {
-    void userId;
     const now = new Date().toISOString();
     return this.db.transaction(() => {
       const result = this.db
         .prepare(
           `UPDATE agent_conversations
            SET is_deleted = 1, deleted_at = @now, updated_at = @now
-           WHERE id = @id AND org_id = @orgId AND is_deleted = 0`,
+           WHERE id = @id AND org_id = @orgId AND user_id = @userId AND is_deleted = 0`,
         )
-        .run({ id, orgId, now });
+        .run({ id, orgId, userId, now });
       if (result.changes === 0) return false;
       // The conversation is gone: its paused actions are declined, through the same claim that a
       // decline takes, so their stored arguments are redacted.
