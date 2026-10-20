@@ -40,7 +40,7 @@ export interface RouteHarness {
     path: string,
     userId: string,
     options?: { headers?: Record<string, string> },
-  ): Promise<{ status: number; text: string }>;
+  ): Promise<{ status: number; text: string; headers: Record<string, unknown> }>;
   row(messageId: string): StoredRow | undefined;
   /** Every message row of a conversation, oldest first. */
   rows(conversationId: string): StoredRow[];
@@ -102,7 +102,7 @@ export async function buildRouteHarness(orgName: string): Promise<RouteHarness> 
         url: path,
         headers: { 'x-test-user': userId, ...(options?.headers ?? {}) },
       });
-      return { status: res.statusCode, text: res.body };
+      return { status: res.statusCode, text: res.body, headers: { ...res.headers } };
     },
     row(messageId) {
       const r = raw.prepare('SELECT id, role, status, tool_call_json, tool_result_json FROM agent_messages WHERE id = ?')

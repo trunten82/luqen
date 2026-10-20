@@ -8,9 +8,15 @@
  * only the model is scripted. Member A owns the conversation, member B is a colleague in the same
  * organization.
  */
+import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import Handlebars from 'handlebars';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { buildRouteHarness, type RouteHarness, type StoredRow } from '../helpers/agent-route-chain.js';
 
+const HERE = dirname(fileURLToPath(import.meta.url));
 const QUESTION = 'What is the contrast ratio for large text on the Fabrikam pricing page?';
 const ANSWER = 'Large text needs a ratio of at least 3 to 1.';
 const INJECTED = 'INJECTED-BY-COLLEAGUE';
@@ -220,5 +226,47 @@ describe('HARD-21 conversation owner', () => {
     expect(read.text).toContain(QUESTION);
     expect(del.status).toBe(200);
     expect(isDeleted(own.id)).toBe(1);
+  });
+
+  /**
+   * The response headers whose names start with x-, as a name -> value map. The rate limiter's
+   * remaining-requests count is the requester's own tally and falls with every request they make,
+   * so it is listed by name only.
+   */
+  function xHeaders(headers: Record<string, unknown>): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const [name, value] of Object.entries(headers)) {
+      const lower = name.toLowerCase();
+      if (lower.startsWith('x-')) out[lower] = lower === 'x-ratelimit-remaining' ? '(count)' : String(value);
+    }
+    return out;
+  }
+
+  it('HARD-21 the assistant panel answers a conversation of another member like a missing one', async () => {
+    const { colleagueId, conversationId } = await ownedConversation();
+
+    const foreign = await h.get(`/agent/panel?conversationId=${conversationId}`, colleagueId);
+    const missing = await h.get(`/agent/panel?conversationId=${randomUUID()}`, colleagueId);
+
+    expect(foreign.status).toBe(missing.status);
+    expect(foreign.text).toBe(missing.text);
+    expect(xHeaders(foreign.headers)).toEqual(xHeaders(missing.headers));
+    expect(foreign.headers['x-conversation-id']).toBe('');
+    expect(missing.headers['x-conversation-id']).toBe('');
+    expect(foreign.text).not.toContain(QUESTION);
+  });
+
+  it('HARD-21 the assistant panel shows the owner their own conversation', async () => {
+    const { ownerId, conversationId } = await ownedConversation();
+    // This bare server has no view engine; the message partials the panel nests are registered here.
+    for (const partial of ['agent-msg-actions', 'agent-msg-stopped-chip']) {
+      Handlebars.registerPartial(partial, readFileSync(join(HERE, '../../src/views/partials', `${partial}.hbs`), 'utf-8'));
+    }
+
+    const own = await h.get(`/agent/panel?conversationId=${conversationId}`, ownerId);
+
+    expect(own.status).toBe(200);
+    expect(own.text).toContain(QUESTION);
+    expect(own.headers['x-conversation-id']).toBeUndefined();
   });
 });
