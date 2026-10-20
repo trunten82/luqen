@@ -47,7 +47,31 @@ export function redactArgumentsJson(argsJson: string): string {
   return holdsSecret(parsed) ? JSON.stringify(redactSecretArguments(parsed)) : argsJson;
 }
 
-/** The key paths in `args` whose secret-named value holds {@link REDACTED}. */
-export function redactedArgumentPaths(_args: unknown): readonly string[] {
-  return [];
+/**
+ * The key paths in `args` whose value holds {@link REDACTED} under a secret-named key, at any depth and
+ * inside arrays (`headers.Authorization`, `items[0].token`). A string under a secret-named key counts
+ * wherever it sits below that key. The marker in a key whose name is not secret is ordinary text and is
+ * not reported. Paths only: the function never returns a value.
+ *
+ * Stored conversations show the model its own earlier calls with secret values redacted, so a call the
+ * model copies from that history carries the marker where a value belongs; the dispatcher refuses it.
+ */
+export function redactedArgumentPaths(args: unknown): readonly string[] {
+  const found: string[] = [];
+  const walk = (value: unknown, path: string, underSecretKey: boolean): void => {
+    if (typeof value === 'string') {
+      if (underSecretKey && value.includes(REDACTED)) found.push(path);
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((child, index) => walk(child, `${path}[${index}]`, underSecretKey));
+      return;
+    }
+    if (value === null || typeof value !== 'object') return;
+    for (const [key, child] of Object.entries(value)) {
+      walk(child, path === '' ? key : `${path}.${key}`, underSecretKey || SECRET_ARGUMENT_KEY.test(key));
+    }
+  };
+  walk(args, '', false);
+  return found;
 }

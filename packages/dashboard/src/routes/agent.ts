@@ -36,6 +36,7 @@ import { Value } from '@sinclair/typebox/value';
 import { LuqenResponse, ErrorEnvelope } from '../api/schemas/envelope.js';
 
 import type { StorageAdapter } from '../db/index.js';
+import { redactArgumentsJson } from '../db/agent-audit-redaction.js';
 import { writeFrame, type SseFrame } from '../agent/sse-frames.js';
 import type { AgentService } from '../agent/agent-service.js';
 import type {
@@ -1482,7 +1483,9 @@ export async function registerAgentRoutes(
         const { cid, mid } = request.params as { cid: string; mid: string };
 
         const conv = await storage.conversations.getConversation(cid, orgId);
-        if (conv === null || conv.isDeleted) {
+        // Only the conversation's owner can share it. Another member of the organization gets the
+        // answer a missing conversation gets, so the conversation's existence is not revealed.
+        if (conv === null || conv.isDeleted || conv.userId !== user.id) {
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
         // Default getFullHistory excludes superseded — superseded targets
@@ -1524,6 +1527,10 @@ export async function registerAgentRoutes(
     // (T-37-12). Three failure modes:
     //   401 unauthenticated, 400 no_org, 404 unknown/revoked, 403
     //   foreign-org, 404 conversation soft-deleted.
+    //
+    // The page is shown to members of the organization other than the conversation's owner, so
+    // every stored tool call it renders (a paused action's included) has its secret-named
+    // argument values replaced by the redaction marker first; the stored rows are not changed.
     scope.get(
       '/share/:shareId',
       async (request: FastifyRequest, reply: FastifyReply) => {
@@ -1545,7 +1552,9 @@ export async function registerAgentRoutes(
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
         // Active branch only — superseded rows excluded by default.
-        const messages = await storage.conversations.getFullHistory(link.conversationId);
+        const messages = (await storage.conversations.getFullHistory(link.conversationId)).map((m) => (
+          m.toolCallJson === null ? m : { ...m, toolCallJson: redactArgumentsJson(m.toolCallJson) }
+        ));
         const creator = await storage.users.getUserById(link.createdByUserId);
         const createdByDisplayName = creator?.username ?? 'unknown';
         const org = await storage.organizations.getOrg(link.orgId);

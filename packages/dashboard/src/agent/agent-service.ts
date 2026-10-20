@@ -51,6 +51,7 @@ import {
   DEFAULT_MODEL_MAX_TOKENS,
 } from './token-budget.js';
 import { prewarmTokenizer } from './tokenizer/index.js';
+import { redactedArgumentResult } from './tool-dispatch.js';
 import type {
   ToolDispatcher,
   ToolCallInput,
@@ -535,10 +536,13 @@ export class AgentService {
 
         // (4) Destructive-batch pause — scan the WHOLE batch first. Only an
         //     offered call can pause the batch for confirmation; a call that
-        //     was not offered is answered 'denied' and recorded first.
+        //     was not offered is answered 'denied' and recorded first. A
+        //     destructive call whose secret-named argument holds the redaction
+        //     marker is never paused (a confirmation would run it): it is
+        //     answered with the redacted_argument result in the batch below.
         const destructive = turn.toolCalls.find((c) => {
           const meta = this.allTools.find((t) => t.name === c.name);
-          return isOffered(c.name) && meta?.destructive === true;
+          return isOffered(c.name) && meta?.destructive === true && redactedArgumentResult(c.args) === null;
         });
         if (destructive !== undefined) {
           const notOffered = turn.toolCalls.filter((c) => !isOffered(c.name));
@@ -933,14 +937,21 @@ export class AgentService {
         let outcomeDetail: string | undefined;
         let resultToStore: unknown;
         try {
-          const result: ToolDispatchResult = isOffered(call.name)
-            ? await this.dispatcher.dispatch(call, {
-                userId,
-                orgId,
-                signal,
-                ...(groupId !== undefined ? { groupId } : {}),
-              })
-            : { error: 'denied' };
+          // A destructive call holding the redaction marker is answered here and never reaches the
+          // dispatcher: nothing about it can run or pause, whatever the dispatcher's own check does.
+          const markedDestructive = this.allTools.find((t) => t.name === call.name)?.destructive === true
+            ? redactedArgumentResult(call.args)
+            : null;
+          const result: ToolDispatchResult = !isOffered(call.name)
+            ? { error: 'denied' }
+            : markedDestructive !== null
+              ? markedDestructive
+              : await this.dispatcher.dispatch(call, {
+                  userId,
+                  orgId,
+                  signal,
+                  ...(groupId !== undefined ? { groupId } : {}),
+                });
           resultToStore = result;
           if (result !== null && typeof result === 'object' && 'error' in result) {
             const err = (result as { error: string }).error;

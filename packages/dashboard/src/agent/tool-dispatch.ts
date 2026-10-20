@@ -16,15 +16,24 @@
  *      `{error:'denied'}`: no argument parsing, no token, no handler. A tool
  *      without a required permission is admitted (the metadata drift guard
  *      keeps every dashboard tool declaring one).
- *   3. zod.safeParse's the call args against the tool's inputSchema. Failure
+ *   3. Refuses a call whose secret-named argument holds the redaction marker
+ *      (`redactedArgumentPaths`): stored conversations show the model its own
+ *      earlier calls with secret values redacted, so a call copied from that
+ *      history carries the marker where a value belongs. The answer is
+ *      `{error:'redacted_argument', message}` naming the key paths (never a
+ *      value) and telling the model to ask the user for the value again; no
+ *      argument parsing, no token, no handler. The assistant loop and the
+ *      confirmation route both dispatch through here, so this is the one
+ *      choke point for a model-produced call.
+ *   4. zod.safeParse's the call args against the tool's inputSchema. Failure
  *      returns `{error:'invalid_args', issues:[...]}` WITHOUT invoking the
  *      handler (AI-SPEC §4b.1 Boundary 2 / §6.1 Guardrail 6). Feeds the zod
  *      issue list back as the tool-result content so the LLM can self-correct
  *      the arg shape on the next iteration.
- *   4. Mints a fresh RS256 JWT carrying that set via jwt-minter (AI-SPEC §3
+ *   5. Mints a fresh RS256 JWT carrying that set via jwt-minter (AI-SPEC §3
  *      Pitfall 5). Token audit trail carried through `signer.mintAccessToken`
  *      → existing oauth-signer instrumentation.
- *   5. Invokes the handler under a timeout (D-24 = 30s) with that same set on
+ *   6. Invokes the handler under a timeout (D-24 = 30s) with that same set on
  *      `context.permissions`, so the handler decides as the stored user.
  *      Timeout returns `{error:'timeout'}`; any other throw returns
  *      `{error:'internal', message:String(err)}`.
@@ -36,6 +45,7 @@
 import { z } from 'zod';
 import type { DashboardSigner } from '../auth/oauth-signer.js';
 import { mintAgentToken } from './jwt-minter.js';
+import { redactedArgumentPaths } from '../db/agent-audit-redaction.js';
 
 export type ToolHandler = (
   args: Record<string, unknown>,
@@ -81,6 +91,7 @@ export interface ToolCallInput {
 export type ToolDispatchResult =
   | { readonly error: 'unknown_tool' }
   | { readonly error: 'denied' }
+  | { readonly error: 'redacted_argument'; readonly message: string }
   | { readonly error: 'invalid_args'; readonly issues: readonly z.core.$ZodIssue[] }
   | { readonly error: 'timeout' }
   | { readonly error: 'internal'; readonly message: string }
@@ -117,6 +128,22 @@ export interface ToolDispatcherOptions {
 }
 
 const DEFAULT_TIMEOUT_MS = 30_000;
+
+/** At most this many key paths are named in a redacted_argument answer. */
+const MAX_REDACTED_PATHS_NAMED = 10;
+
+/**
+ * The answer for a call whose secret-named argument holds the redaction marker: the key paths, never
+ * a value, and the instruction to ask the user for the value again.
+ */
+export function redactedArgumentResult(args: Record<string, unknown>): ToolDispatchResult | null {
+  const paths = redactedArgumentPaths(args);
+  if (paths.length === 0) return null;
+  return {
+    error: 'redacted_argument',
+    message: `The value for ${paths.slice(0, MAX_REDACTED_PATHS_NAMED).join(', ')} is not available. Ask the user to provide it again.`,
+  };
+}
 
 export class ToolDispatcher {
   private readonly tools: readonly ToolManifestEntry[];
@@ -174,14 +201,19 @@ export class ToolDispatcher {
       return { error: 'denied' };
     }
 
-    // 3. zod validate args BEFORE dispatch (Guardrail 6). Never reach handler
+    // 3. A secret-named argument holding the redaction marker is not a value: refuse before
+    //    parsing, naming the key paths only.
+    const redacted = redactedArgumentResult(call.args);
+    if (redacted !== null) return redacted;
+
+    // 4. zod validate args BEFORE dispatch (Guardrail 6). Never reach handler
     //    with an unvalidated payload.
     const parsed = tool.inputSchema.safeParse(call.args);
     if (!parsed.success) {
       return { error: 'invalid_args', issues: parsed.error.issues };
     }
 
-    // 4. Mint a fresh JWT for THIS dispatch, carrying the same set.
+    // 5. Mint a fresh JWT for THIS dispatch, carrying the same set.
     const authToken = await mintAgentToken(
       this.signer as DashboardSigner,
       ctx.userId,
@@ -199,7 +231,7 @@ export class ToolDispatcher {
       permissions,
     };
 
-    // 5. Invoke handler with a race-based timeout. Never throws to caller —
+    // 6. Invoke handler with a race-based timeout. Never throws to caller —
     //    the model consumes this result as the next tool message content.
     let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
     try {
