@@ -71,6 +71,9 @@ devices (`@media (hover: none)`) it is always visible underneath the bubble.
   Tool call details in it show the values of secret-named arguments (password,
   secret, token, API key, authorization, credential) as `[redacted]`, including
   those of an action still awaiting confirmation.
+- The snapshot ends with the answer the link was created from, which it
+  includes: messages written after that answer are not shown. Retrying that
+  answer or editing its question ends the link, which then answers not found.
 
 ### Permalink expiry
 

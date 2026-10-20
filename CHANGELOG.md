@@ -21,7 +21,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   the user's first organization (or none) is used. Each ended session records
   one `session.ended` audit entry, however often its cookie is sent again. A
   sign-in starts a new session: nothing from an earlier sign-in in the same
-  browser carries over.
+  browser carries over. A sign-in sent from a sign-in page opened before
+  another sign-in is answered with a fresh sign-in page, or with the requested
+  page when the browser is already signed in; the page token changes at every
+  sign-in.
 - The client address behind the sign-in limit, the per-address request
   limits, the scan-start limit, client registration and the address recorded
   in audit entries is read from `X-Forwarded-For` only through trusted
@@ -29,15 +32,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `trustedProxies` / `DASHBOARD_TRUSTED_PROXIES` list (addresses, CIDR ranges,
   `loopback`, `linklocal`, `uniquelocal`, or `none`), which replaces the
   default. A client that is not behind a trusted proxy is its socket address.
-  Trusting every address is refused at startup, including a list whose
-  entries together trust every IPv4 or every IPv6 address (named ranges count
-  as the addresses they hold). Deployments behind a CDN or a proxy outside the
-  private ranges list its addresses.
+  A list is refused at startup when it trusts every address, or when its
+  entries together trust more than one /8 of public IPv4 addresses or more
+  than one /16 of global IPv6 addresses (inside `2000::/3`); loopback,
+  link-local, private-use, shared, this-network, multicast and reserved
+  addresses do not count, and an IPv6 range that holds IPv4-mapped addresses
+  counts for IPv4. A provider's published ranges are far below the limits;
+  deployments behind a CDN or a proxy outside the private ranges list its
+  addresses, narrowly.
 - The cookie a sign-in returns expires after `SESSION_EXPIRY_MINUTES`
   (default 60) without a request, like every later cookie, and a signed-in
-  session that carries no activity time is expired. Only requests to pages the
-  session is checked on count as activity: the sign-in page, static files,
-  health and public reports do not.
+  session that carries no activity time is expired. Only requests answered
+  from the session count as activity: the sign-in page, static files, health
+  and public reports do not, and neither does a request authenticated by an
+  API key header.
 - `/orgs/current` reports the organization the request acts in. `X-Org-Id`
   names the organization of a request authenticated by an admin API key
   header; a cookie session, including an API-key sign-in session, acts through
@@ -77,7 +85,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   error, and answers `500` with a generic message. A paused action runs once
   (another confirmation or decline of it answers `409`), is declined when it
   is neither confirmed nor declined within 24 hours (a confirmation after 24
-  hours declines it and answers `409` `expired`), and is declined when its
+  hours declines it and answers `409` `expired`; the assistant then says the
+  action expired instead of offering to retry, and the audit entry names the
+  user and the action), and is declined when its
   conversation is deleted. Only the user who started a conversation can open,
   change, delete or share it; another member of the organization gets `404`.
 - The agent audit stores tool arguments named like a password, secret, token,
@@ -88,8 +98,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   given until it is confirmed or declined, then they are stored redacted; a
   confirmation that is refused leaves the action awaiting confirmation. A
   tool call that carries `[redacted]` in place of a secret value is not run:
-  the assistant asks for the value again. A shared conversation shows stored
-  tool call arguments redacted, and only a conversation's owner can share it.
+  the assistant asks for the value again. A shared conversation shows the
+  conversation up to and including the answer it was shared from, with stored
+  tool call arguments redacted; retrying that answer or editing its question
+  ends the link. Only a conversation's owner can share it.
 - The assistant's context hints are read with the user's permissions in the
   conversation's organization: recent scans need `reports.view`, brand
   guideline names need `branding.view`, and a user holding no permission there

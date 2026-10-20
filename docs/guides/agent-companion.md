@@ -77,7 +77,9 @@ once: a second confirmation of it, or a confirmation after a decline, is
 answered with a conflict and nothing runs. An action you neither approve nor
 cancel within 24 hours is declined, and deleting its conversation declines it
 too. Approving an action after those 24 hours declines it instead of running
-it, and the dialog reports the error.
+it, and the assistant tells you it expired so you can ask for it again; an
+approval for an action that was already approved or declined says so too.
+Neither shows a Retry button.
 
 ### Multi-step tool transparency
 
@@ -108,8 +110,10 @@ short window — see [agent-history.md](./agent-history.md).
 
 Every conversation has a **Share** action that produces a permalink.
 Anyone with the link who has access to your org can open the read-only
-transcript at `/agent/share/<id>`. Permalinks are revocable from the
-conversation menu.
+transcript at `/agent/share/<id>`. The page shows the conversation up to and
+including the answer you shared; later messages are not shown. A link stops
+resolving when it expires, when you retry that answer or edit its question, or
+when the conversation is deleted.
 
 For the share semantics and revocation model see
 [streaming-share-links.md](./streaming-share-links.md).
