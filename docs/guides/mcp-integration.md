@@ -188,6 +188,16 @@ user account: a session without one, such as a sign-in with an API key, is
 answered `403` `access_denied` (`error_description`
 `dashboard_user_required`).
 
+**The approval is checked against the organization the screen named.** The
+screen carries a signed binding of your account and the organization it
+names. If the organization you act in has changed when you press Allow (for
+example you switched in another tab), the approval is refused with `400`
+`invalid_request` (`error_description` `organization_changed`) and nothing is
+recorded; open the consent screen again. An approval is remembered for the
+organization it was given in and covers only that organization: authorizing
+the same client in another organization shows the consent screen again, and
+an approval recorded without an organization covers none.
+
 **The stored user answers every request.** Each request to `/api/v1/mcp` is
 answered for the stored, active user the token was issued to: the tools and
 permissions follow that user's current stored roles in the token's
@@ -237,7 +247,12 @@ organization, or who no longer holds a permission there (`mcp.use`, or any
 permission at all) is answered `400` `invalid_grant`, the same answer as any
 other refused grant. A refused refresh changes nothing: the same refresh
 token works again once the user's access is restored, within the refresh
-chain's 30-day limit.
+chain's 30-day limit. A deleted user's refresh tokens are removed with the
+user, so that client must be authorized again. A refresh token is answered
+only for the client it was issued to: presented by any other client it is
+refused with `400` `invalid_grant` and nothing changes, so the issuing
+client's refresh chain keeps working. An authorization code is single-use: a
+code whose exchange is refused cannot be exchanged again.
 
 ### Server-side configuration
 
@@ -284,7 +299,8 @@ MCP call (no waiting for the token TTL).
 | `403 Insufficient scope` | Token issued with `read` but tool requires `write` | Re-consent with `scope=read+write` at `/oauth/authorize` |
 | `403 insufficient_scope` with `no_permission` | The user holds no permission in the token's organization | Grant the user a role in that organization (at `/admin/teams` or `/admin/roles`), or authorize against an organization where they hold one |
 | `403 insufficient_scope` with `no_mcp_use` | The user does not hold `mcp.use` in the token's organization | Grant `mcp.use` on the user's role in that organization at `/admin/roles` |
-| `400 invalid_grant` on refresh | The user was deactivated or removed, left the token's organization, or no longer holds `mcp.use` (or any permission) there | Restore the user's access, then refresh again with the same refresh token; or authorize the client again |
+| `400 invalid_grant` on refresh | The user was deactivated, left the token's organization, or no longer holds `mcp.use` (or any permission) there; or the user was deleted; or the refresh token was presented by a client it was not issued to | For a deactivated user or one who left the organization or lost a permission: restore the access, then refresh again with the same refresh token. For a deleted user (its refresh tokens are removed with it): authorize the client again. A client presents only the refresh token it received |
+| `400 invalid_request` with `organization_changed` at `/oauth/authorize/consent` | The organization the dashboard acts in changed between opening the consent screen and pressing Allow | Open the consent screen again at `/oauth/authorize` and approve there |
 | `403 access_denied` with `dashboard_user_required` at `/oauth/authorize` | The session has no dashboard user account (for example an API-key sign-in) | Sign in with a dashboard user account (managed at `/admin/dashboard-users`) |
 | Empty tools list | The role's permissions in the token's organization match none of the tools | Verify the role's permissions at `/admin/roles` against the [RBAC matrix](../reference/rbac-matrix.md) |
 | `Transport not supported` / SSE-only error | Client speaks pure SSE (deprecated transport) | Upgrade client; use Streamable HTTP — Luqen will not negotiate SSE-only |

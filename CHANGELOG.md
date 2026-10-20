@@ -40,11 +40,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   request (`403 insufficient_scope`, `no_mcp_use`). The token endpoint answers
   a refresh or an authorization-code exchange with `400 invalid_grant` for a
   user the MCP endpoint would refuse, and a refused refresh leaves its refresh
-  token usable once the user's access is restored.
+  token usable once the user's access is restored. A refresh token is answered
+  only for the client it was issued to: another client's presentation is
+  refused with `400 invalid_grant` and leaves the issuing client's chain
+  unchanged. A deleted user's refresh tokens are removed with the user.
 - OAuth consent acts in, and names, the organization the dashboard shows,
   and offers to switch only to organizations the user belongs to. Consent
   needs a dashboard user account (`403 access_denied`,
-  `dashboard_user_required`).
+  `dashboard_user_required`). An approval is checked against the organization
+  its screen named (`400 invalid_request`, `organization_changed`, when it
+  changed) and is remembered for that organization only; an approval recorded
+  without an organization covers none.
 - MCP requests are answered for the stored, active user of the token: tools
   and permissions follow the user's current roles, a role claim in a token is
   not read, and tokens of deactivated or removed users and of revoked OAuth
