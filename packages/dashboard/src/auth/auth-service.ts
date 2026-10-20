@@ -133,15 +133,19 @@ export class AuthService {
   }
 
   /**
-   * The one writer of a signed-in session: every sign-in route calls it. Besides the identity it
-   * records the activity time (so the cookie the sign-in returns idle-expires like every later
-   * one), a random session id (the key that records the session's end once), and, for a session
-   * signed in through an external identity service, whether a stored dashboard user answers for
-   * the identity at sign-in (see sessionPrincipal).
+   * The one writer of a signed-in session: every sign-in route calls it. A sign-in starts from an
+   * empty session: nothing an earlier sign-in in the same browser left (the identity, the API key,
+   * the identity provider's groups, the active organization, the stored-user marker, the page
+   * token secret) carries over. Besides the identity it records the activity time (so the cookie
+   * the sign-in returns idle-expires like every later one), a random session id (the key that
+   * records the session's end once), and, for a session signed in through an external identity
+   * service, whether a stored dashboard user answers for the identity at sign-in (see
+   * sessionPrincipal).
    */
   async beginSession(session: SessionWriter, input: SessionStart): Promise<void> {
     const external = input.authMethod === 'oauth' || input.authMethod === 'sso';
     const hasStoredUser = external && (await this.storage.users.getUserById(input.userId)) !== null;
+    session.regenerate();
     session.set('userId', input.userId);
     session.set('username', input.username);
     session.set('role', input.role);
@@ -218,11 +222,6 @@ export class AuthService {
   }
 
   /**
-   * Will this request authenticate by API key (rather than the session cookie)?
-   * True only when the presented key actually validates — a bogus header does
-   * not count, because authenticateRequest then falls through to the cookie.
-   */
-  /**
    * Did this request authenticate by an API key header (Bearer or X-API-Key)? Recorded by
    * authenticateRequest on the request it authenticates, without a second key validation. A
    * request answered by a session cookie, including a /login API-key session, is not.
@@ -231,6 +230,11 @@ export class AuthService {
     return this.keyHeaderRequests.has(request);
   }
 
+  /**
+   * Will this request authenticate by API key (rather than the session cookie)?
+   * True only when the presented key actually validates — a bogus header does
+   * not count, because authenticateRequest then falls through to the cookie.
+   */
   hasValidApiCredential(request: FastifyRequest): boolean {
     const token = this.apiKeyTokenFrom(request);
     return token !== undefined && token !== '' && validateApiKey(this.db, token).valid;

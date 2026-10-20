@@ -303,7 +303,10 @@ export async function registerAuthorizeRoutes(
       requestedResources,
     });
 
-    if (coverage.covered) {
+    // The route compares the organization itself: a remembered consent answers without a page only
+    // when it names the organization this request acts in, so a storage adapter that does not apply
+    // the organization rule to its coverage answer cannot issue a code in another organization.
+    if (coverage.covered && coverage.existingConsent !== null && coverage.existingConsent.orgId === orgId) {
       const code = randomBytes(32).toString('base64url');
       const expiresAt = new Date(Date.now() + 60_000).toISOString();
       await storage.oauthCodes.createCode({

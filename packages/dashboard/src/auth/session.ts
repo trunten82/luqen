@@ -95,11 +95,15 @@ export function isSessionExpired(
 
 /**
  * Create a preHandler hook that:
- * 1. Checks session expiry and invalidates expired sessions
- * 2. Updates lastActivity timestamp on each request
+ * 1. Checks session expiry and invalidates expired sessions, on every path
+ * 2. Updates the lastActivity timestamp, on the paths `recordsActivity` accepts
+ *
+ * `recordsActivity` is the predicate of the requests the session guard checks (the server passes
+ * guardChecksSession): the guard clears a session it refuses on the same request, so a refused
+ * session never gains activity, and a request to a page the guard does not check (the sign-in page,
+ * static files, health, public reports) cannot keep a session alive.
  */
 export function createSessionExpiryHook(expiryMs: number, recordsActivity: (path: string) => boolean) {
-  void recordsActivity;
   return async function sessionExpiryHook(
     request: FastifyRequest,
     reply: FastifyReply,
@@ -137,8 +141,8 @@ export function createSessionExpiryHook(expiryMs: number, recordsActivity: (path
       return;
     }
 
-    // Update last activity timestamp
-    if (typeof session.set === 'function') {
+    // Update last activity timestamp, only where the guard checks the session
+    if (typeof session.set === 'function' && recordsActivity(request.url.split('?')[0] as string)) {
       session.set('lastActivity', Date.now());
     }
   };

@@ -190,8 +190,9 @@ export async function startMcpOauthHarness(
       headers: { 'x-csrf-token': first.csrf }, payload: { username, password },
     });
     const loggedIn = stepOf('login', res, first);
-    // A page token issued for the authenticated session (the login page token belongs to the anonymous one).
-    const home = await server.inject({ method: 'GET', url: '/admin/teams', cookies: { session: loggedIn.session.cookie } });
+    // A page token issued for the authenticated session (the login page token belongs to the anonymous one,
+    // and a sign-in starts a new session). The account page renders for every signed-in user.
+    const home = await server.inject({ method: 'GET', url: '/account', cookies: { session: loggedIn.session.cookie } });
     return { ...loggedIn, session: nextSession(home, loggedIn.session) };
   };
 

@@ -1,11 +1,13 @@
 /**
  * pending-expiry.ts
  *
- * A paused assistant action (a destructive tool call waiting for the user's confirmation) that is
- * neither confirmed nor declined within {@link PENDING_CONFIRMATION_TTL_MS} (24 hours) is declined,
- * so its arguments do not stay stored as given indefinitely. The sweep runs when the server starts
- * and then every {@link PENDING_SWEEP_INTERVAL_MS} (one hour), started by one call from createServer
- * ({@link startPendingExpirySweep}); an action therefore lives at most 25 hours.
+ * A paused assistant action (a destructive tool call waiting for the user's confirmation) never runs
+ * after {@link PENDING_CONFIRMATION_TTL_MS} (24 hours). One that is neither confirmed nor declined
+ * within that time is declined, so its arguments do not stay stored as given indefinitely: by the
+ * sweep, which runs when the server starts and then every {@link PENDING_SWEEP_INTERVAL_MS} (one
+ * hour), started by one call from createServer ({@link startPendingExpirySweep}), or by the
+ * confirmation that finds it expired (POST /agent/confirm), which declines it through the same
+ * functions below and answers 409 expired instead of running it.
  *
  * Each row leaves pending through `claimPendingMessage`, the same conditional write a confirmation
  * or a decline takes: a row the user resolved a moment earlier is not touched twice, and the write

@@ -47,9 +47,18 @@ export function redactArgumentsJson(argsJson: string): string {
   return holdsSecret(parsed) ? JSON.stringify(redactSecretArguments(parsed)) : argsJson;
 }
 
-/** Does `value` hold the redaction marker, in the stored form? */
+/** The word `redacted` in one pair of square, angle, round or curly brackets, spaces inside allowed. */
+const BRACKETED_MARKER = /\[\s*redacted\s*\]|<\s*redacted\s*>|\(\s*redacted\s*\)|\{\s*redacted\s*\}/i;
+
+/**
+ * Does `value` hold the redaction marker? The stored form is {@link REDACTED}; a model that copies a
+ * call from its history may write it in another letter case, with surrounding space, or in another
+ * bracket form (`[REDACTED]`, ` [ redacted ] `, `<redacted>`, `(redacted)`, `{redacted}`,
+ * `Bearer <REDACTED>`), or as the bare word on its own. A value that merely contains the word
+ * (`unredacted-placeholder`) is ordinary text.
+ */
 export function holdsRedactionMarker(value: string): boolean {
-  return value.includes(REDACTED);
+  return BRACKETED_MARKER.test(value) || value.trim().toLowerCase() === 'redacted';
 }
 
 /**

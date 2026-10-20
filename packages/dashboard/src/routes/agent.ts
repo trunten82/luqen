@@ -37,6 +37,7 @@ import { LuqenResponse, ErrorEnvelope } from '../api/schemas/envelope.js';
 
 import type { StorageAdapter } from '../db/index.js';
 import { redactArgumentsJson } from '../db/agent-audit-redaction.js';
+import { expirePendingAction, pendingConfirmationCutoff, recordPendingExpired } from '../agent/pending-expiry.js';
 import { writeFrame, type SseFrame } from '../agent/sse-frames.js';
 import type { AgentService } from '../agent/agent-service.js';
 import type {
@@ -673,6 +674,18 @@ export async function registerAgentRoutes(
           // Idempotent: replay-confirm on a resolved row is a no-op 409.
           return reply.code(409).send({ error: 'not_pending' });
         }
+        // A paused action older than 24 hours never runs: the confirmation declines it exactly as the
+        // hourly sweep does (the same claim, the same expired result row, a summary audit row) and
+        // answers 409 expired. Losing the claim means it was resolved a moment earlier.
+        const confirmedAt = new Date();
+        if (pending.createdAt < pendingConfirmationCutoff(confirmedAt)) {
+          if (!(await expirePendingAction(storage, request.log, pending))) {
+            return reply.code(409).send({ error: 'not_pending' });
+          }
+          await recordPendingExpired(storage, request.log, 1, 'confirm', confirmedAt);
+          return reply.code(409).send({ error: 'expired' });
+        }
+
         const call = safeParseCall(pending.toolCallJson);
         if (call === null) {
           return reply.code(400).send({ error: 'malformed_tool_call' });
