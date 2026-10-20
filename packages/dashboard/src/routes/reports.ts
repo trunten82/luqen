@@ -1209,12 +1209,16 @@ export async function reportRoutes(
     },
   );
 
-  // GET /reports/:id/fix-suggestion — HTMX partial: AI fix or hardcoded fallback
+  // GET /reports/:id/fix-suggestion — HTMX partial: AI fix or hardcoded fallback.
+  // The "How to fix" expander is rendered for issues.fix holders, so the route
+  // admits issues.fix. The pattern-based suggestion serves them; the AI path
+  // (per-org LLM client + generateFix) needs llm.view, as it always did.
   server.get(
     '/reports/:id/fix-suggestion',
     {
-      preHandler: requirePermission('llm.view'), schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
+      preHandler: requirePermission('issues.fix', 'llm.view'), schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      const mayUseAi = hasPermission(request, 'llm.view');
       const llmClient = getLLMClient();
       const query = request.query as {
         criterion?: string;
@@ -1239,9 +1243,10 @@ export async function reportRoutes(
         `<button type="button" class="btn btn--sm btn--ghost rpt-fix-hint__copy-btn" aria-label="Copy fix suggestion to clipboard" `
         + `data-copy-text="${esc(html)}">Copy</button>`;
 
-      // Try LLM first
+      // Try LLM first — only for callers entitled to AI (llm.view). A caller
+      // without it never resolves per-org LLM credentials or spends LLM budget.
       let llmFailed = false;
-      if (llmClient) {
+      if (mayUseAi && llmClient) {
         const orgId = request.user?.currentOrgId ?? undefined;
         const { client: effectiveLlm, isPerOrg } = await resolveOrgLLMClient(
           llmClient, storage.organizations, orgId,
@@ -1276,7 +1281,8 @@ export async function reportRoutes(
       // Fallback: hardcoded pattern from fix-suggestions.ts
       const fix = getFixSuggestion(criterion, message);
       if (fix) {
-        const unavailableNote = (!llmClient || llmFailed)
+        // The AI is only "unavailable" to a caller who is entitled to it.
+        const unavailableNote = (mayUseAi && (!llmClient || llmFailed))
           ? `<p class="rpt-fix-hint__desc text-muted" style="font-size:var(--font-size-xs);margin-top:var(--space-xs);">`
             + `${t('reportDetail.fixLlmUnavailable')}</p>`
           : '';
@@ -1290,8 +1296,9 @@ export async function reportRoutes(
         return reply.header('content-type', 'text/html').send(html);
       }
 
-      // No hardcoded pattern matched (and the LLM either failed or wasn't
-      // configured) — never swap the loading skeleton out for nothing.
+      // No hardcoded pattern matched (and the LLM either failed, wasn't
+      // configured, or the caller lacks llm.view so the AI path was skipped;
+      // the pattern fallback serves issues.fix) — never swap the loading skeleton out for nothing.
       const noSuggestionHtml =
         `<p class="rpt-fix-hint__desc text-muted">${esc(t('reportDetail.fixNoSuggestion'))}</p>`;
       return reply.header('content-type', 'text/html').send(noSuggestionHtml);
