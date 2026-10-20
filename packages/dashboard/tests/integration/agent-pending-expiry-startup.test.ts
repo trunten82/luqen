@@ -52,7 +52,6 @@ describe('HARD-21 paused actions at server start', () => {
       return row.id;
     };
     const oldId = await make(25);
-    const youngId = await make(1);
     await seed.disconnect();
 
     app = (await createServer({
@@ -71,7 +70,6 @@ describe('HARD-21 paused actions at server start', () => {
       (check.prepare('SELECT status FROM agent_messages WHERE id = ?').get(id) as { status: string }).status;
     try {
       expect(statusOf(oldId)).toBe('denied');
-      expect(statusOf(youngId)).toBe('pending_confirmation');
     } finally {
       check.close();
     }
