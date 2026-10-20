@@ -76,7 +76,8 @@ as failed and recorded in the agent audit as an error. A paused action runs
 once: a second confirmation of it, or a confirmation after a decline, is
 answered with a conflict and nothing runs. An action you neither approve nor
 cancel within 24 hours is declined, and deleting its conversation declines it
-too.
+too. Approving an action after those 24 hours declines it instead of running
+it, and the dialog reports the error.
 
 ### Multi-step tool transparency
 
@@ -94,6 +95,10 @@ The drawer's **History** tab lists prior conversations. Each entry shows
 the first user prompt, the conversation start time, and a turn count.
 Click an entry to resume the conversation in place — the transcript
 re-renders from the database and the agent picks up where you left off.
+
+Only the user who started a conversation can open, rename, retry, edit and
+resend, delete or share it: another member of the organization, and a global
+administrator who did not start it, get a "not found" answer.
 
 You can search conversation titles and soft-delete conversations you
 don't want to keep. Soft-deleted conversations are recoverable for a

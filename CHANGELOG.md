@@ -19,7 +19,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   it. A session opened with an API key ends when the key is revoked or
   expires. A session acts only in one of its user's organizations; otherwise
   the user's first organization (or none) is used. Each ended session records
-  one `session.ended` audit entry, however often its cookie is sent again.
+  one `session.ended` audit entry, however often its cookie is sent again. A
+  sign-in starts a new session: nothing from an earlier sign-in in the same
+  browser carries over.
 - The client address behind the sign-in limit, the per-address request
   limits, the scan-start limit, client registration and the address recorded
   in audit entries is read from `X-Forwarded-For` only through trusted
@@ -27,11 +29,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `trustedProxies` / `DASHBOARD_TRUSTED_PROXIES` list (addresses, CIDR ranges,
   `loopback`, `linklocal`, `uniquelocal`, or `none`), which replaces the
   default. A client that is not behind a trusted proxy is its socket address.
-  Trusting every address is refused at startup. Deployments behind a CDN or a
-  proxy outside the private ranges list its addresses.
+  Trusting every address is refused at startup, including a list whose
+  entries together trust every IPv4 or every IPv6 address (named ranges count
+  as the addresses they hold). Deployments behind a CDN or a proxy outside the
+  private ranges list its addresses.
 - The cookie a sign-in returns expires after `SESSION_EXPIRY_MINUTES`
   (default 60) without a request, like every later cookie, and a signed-in
-  session that carries no activity time is expired.
+  session that carries no activity time is expired. Only requests to pages the
+  session is checked on count as activity: the sign-in page, static files,
+  health and public reports do not.
 - `/orgs/current` reports the organization the request acts in. `X-Org-Id`
   names the organization of a request authenticated by an admin API key
   header; a cookie session, including an API-key sign-in session, acts through
@@ -70,8 +76,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   run closes the action as failed, is recorded in the agent audit as an
   error, and answers `500` with a generic message. A paused action runs once
   (another confirmation or decline of it answers `409`), is declined when it
-  is neither confirmed nor declined within 24 hours, and is declined when its
-  conversation is deleted.
+  is neither confirmed nor declined within 24 hours (a confirmation after 24
+  hours declines it and answers `409` `expired`), and is declined when its
+  conversation is deleted. Only the user who started a conversation can open,
+  change, delete or share it; another member of the organization gets `404`.
 - The agent audit stores tool arguments named like a password, secret, token,
   API key, authorization value or credential as `[redacted]`, at any depth,
   for every tool call the assistant runs, refuses or confirms.

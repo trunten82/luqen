@@ -54,7 +54,7 @@ Place in the working directory where you run `luqen-dashboard serve`. All fields
 | `llmClientSecret` | `string` | — | OAuth2 client secret paired with `llmClientId`. Store securely; use `DASHBOARD_LLM_CLIENT_SECRET` env var in production. |
 | `catalogueUrl` | `string` | `https://github.com/trunten82/luqen-plugins` | Base URL of the remote plugin catalogue GitHub repository. The dashboard fetches `catalogue.json` from GitHub releases at this URL. |
 | `catalogueCacheTtl` | `number` | `3600` | Time-to-live in seconds for the cached plugin catalogue. The dashboard re-fetches `catalogue.json` from GitHub after this interval. Set to `0` to disable caching. |
-| `trustedProxies` | `string[]` | `["loopback", "linklocal", "uniquelocal"]` | Proxies whose `X-Forwarded-For` entries are believed: addresses, CIDR ranges (`address/length`), the names `loopback`, `linklocal`, `uniquelocal`, or the single entry `none` to trust no proxy. A configured list replaces the default, so list the addresses of a CDN or of a proxy outside the private ranges next to the default names. `true`, `*`, `0.0.0.0/0`, `::/0`, hop counts and malformed entries are refused at startup. See [Session security](../guides/security-administration.md#session-security). |
+| `trustedProxies` | `string[]` | `["loopback", "linklocal", "uniquelocal"]` | Proxies whose `X-Forwarded-For` entries are believed: addresses, CIDR ranges (`address/length`), the names `loopback`, `linklocal`, `uniquelocal`, or the single entry `none` to trust no proxy. A configured list replaces the default, so list the addresses of a CDN or of a proxy outside the private ranges next to the default names. `true`, `*`, `0.0.0.0/0`, `::/0`, hop counts and malformed entries are refused at startup, and so is a list whose entries together trust every IPv4 or every IPv6 address (an IPv6 range that holds the IPv4-mapped addresses counts for IPv4; the named ranges count as the addresses they hold). See [Session security](../guides/security-administration.md#session-security). |
 
 ---
 
@@ -102,7 +102,7 @@ On startup the dashboard validates:
 - `reportsDir` exists and is writable (created if missing)
 - `pluginsDir` exists (created if missing)
 - `dbPath` parent directory exists and is writable
-- `trustedProxies` does not trust every address and every entry is an address, a CIDR range, a named range or `none`
+- `trustedProxies` does not trust every address, alone or together (a list whose entries cover every IPv4 or every IPv6 address is refused, named ranges counting as the addresses they hold), and every entry is an address, a CIDR range, a named range or `none`
 
 Any failure exits immediately with a descriptive error message.
 
