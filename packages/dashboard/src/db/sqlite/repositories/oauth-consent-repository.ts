@@ -106,8 +106,12 @@ export class SqliteOauthConsentRepository implements OauthConsentRepository {
       (r) => !consentedResources.has(r),
     );
 
+    // A consent covers only the organization it was given in; one recorded without an
+    // organization (org_id NULL) covers none.
+    const sameOrganization = existing.orgId !== null && existing.orgId === input.orgId;
+
     return {
-      covered: missingScopes.length === 0 && missingResources.length === 0,
+      covered: sameOrganization && missingScopes.length === 0 && missingResources.length === 0,
       missingScopes,
       missingResources,
       existingConsent: existing,

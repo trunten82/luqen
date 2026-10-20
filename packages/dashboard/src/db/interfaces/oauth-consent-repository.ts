@@ -14,6 +14,11 @@
  * `requestedResources ⊄ consentedResources`, `covered=false` and the
  * /oauth/authorize handler re-shows the consent screen highlighting the
  * new permissions.
+ *
+ * Organization: a consent covers only the organization it was given in
+ * (`orgId`, stored by `recordConsent`). `checkCoverage` is `covered=false` for
+ * any other organization, and for a consent whose `orgId` is null. Re-consenting
+ * in another organization moves the (user, client) row to it.
  */
 
 export interface Consent {
