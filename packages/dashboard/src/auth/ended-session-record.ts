@@ -4,8 +4,9 @@
  * A refused session is cleared on the request that finds it refused, but its cookie is stateless:
  * the same cookie can be sent again. The record holds one key per ended session for the idle
  * window, so the audit log gets one row per session however often the cookie comes back. Activity
- * is recorded only on requests the session guard checks, and the guard clears a session it refuses
- * on the same request, so a refused session gains no activity. A cookie can therefore only reach
+ * is recorded only on requests the session guard checks and answers from the session (a request
+ * authenticated by an API key header records none), and the guard clears a session it refuses on the
+ * same request, so a refused session gains no activity. A cookie can therefore only reach
  * the refusal within one idle window of its last activity (past that the idle limit ends it
  * first), so one window covers every cookie of the session. The record holds at most
  * `maxKeys` keys; when full the oldest key is dropped. It is process-local, like the sessions it

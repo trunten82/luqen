@@ -8,7 +8,7 @@ import { DashboardConfig, withEncryptionKeyDefault, serverPluginsDir } from './c
 import { registerSession, getSessionExpiryMs, createSessionExpiryHook } from './auth/session.js';
 import { createAuthGuard } from './auth/middleware.js';
 import { AuthService } from './auth/auth-service.js';
-import { authRoutes } from './routes/auth.js';
+import { authRoutes, staleSignInTarget } from './routes/auth.js';
 import { homeRoutes } from './routes/home.js';
 import { glossaryRoutes } from './routes/glossary.js';
 import { badgeRoutes } from './routes/badge.js';
@@ -313,6 +313,16 @@ export function requiresCookieCsrf(method: string, path: string, hasApiCredentia
   if (!path.startsWith('/api/')) return !isCsrfExempt(path);
   if (COOKIE_CSRF_EXEMPT_API_PATHS.has(path) || isBearerOnlyPath(path)) return false;
   return !hasApiCredential;
+}
+
+/** A reply whose send() hands the refusal csrfProtection would send to `reject` instead. */
+function refusalAsRejection(reply: FastifyReply, reject: (refusal: unknown) => void): FastifyReply {
+  return Object.assign(Object.create(reply) as FastifyReply, {
+    send: (refusal?: unknown): FastifyReply => {
+      reject(refusal);
+      return reply;
+    },
+  });
 }
 
 export async function createServer(config: DashboardConfig): Promise<FastifyInstance> {
@@ -884,7 +894,11 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── Session expiry ──────────────────────────────────────────────────────
   const sessionExpiryMs = getSessionExpiryMs();
-  server.addHook('preHandler', createSessionExpiryHook(sessionExpiryMs, guardChecksSession));
+  // Activity is recorded on requests the session guard checks and the session answers: a request
+  // authenticated by an API key header (Bearer or X-API-Key) is answered by the key, not the cookie.
+  const recordsSessionActivity = (path: string, request: FastifyRequest): boolean =>
+    guardChecksSession(path) && !authService.hasValidApiCredential(request);
+  server.addHook('preHandler', createSessionExpiryHook(sessionExpiryMs, recordsSessionActivity));
 
   // ── Global auth guard ─────────────────────────────────────────────────────
   const authGuard = createAuthGuard(authService);
@@ -1154,12 +1168,28 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     if (!CSRF_METHODS.has(request.method)) return;
     const path = request.url.split('?')[0];
     if (!requiresCookieCsrf(request.method, path, authService.hasValidApiCredential(request))) return;
-    await new Promise<void>((resolve, reject) => {
-      server.csrfProtection(request, reply, (err?: Error) => {
-        if (err) reject(err);
-        else resolve();
+    try {
+      await new Promise<void>((resolve, reject) => {
+        // csrfProtection answers a refusal itself, through reply.send(error), and calls next only when
+        // the token holds. On the sign-in path the refusal is taken as a rejection instead, so it can
+        // be answered below; every other path is answered by csrfProtection as before.
+        const answering = path === '/login' ? refusalAsRejection(reply, reject) : reply;
+        server.csrfProtection(request, answering, () => resolve());
       });
-    });
+    } catch (err) {
+      // A sign-in sent from a page that is no longer current (its token belongs to a session that has
+      // since changed, or there is no session) is answered with a page, never with JSON and never
+      // with a sign-in: the route does not run. Any other refusal is sent as csrfProtection would.
+      const code = (err as { code?: unknown }).code;
+      if (request.method === 'POST' && path === '/login' && (code === 'FST_CSRF_INVALID_TOKEN' || code === 'FST_CSRF_MISSING_SECRET')) {
+        const session = request.session as { get?(key: string): unknown } | undefined;
+        const signedIn = typeof session?.get === 'function' && session.get('userId') !== undefined;
+        const returnTo = (request.body as { returnTo?: unknown } | undefined)?.returnTo;
+        await reply.redirect(staleSignInTarget(signedIn, returnTo));
+        return reply;
+      }
+      return reply.send(err);
+    }
   });
 
   // (Org context + permissions already loaded in earlier preHandler hook)

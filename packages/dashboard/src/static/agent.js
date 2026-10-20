@@ -854,6 +854,10 @@
           setStatus('Tool approved — running now.');
           // Reopen the stream so the agent loop can resume.
           openStream(getConversationId());
+        } else if (r.status === 409) {
+          // The server refused because the action is no longer pending (it expired, or it was
+          // already approved or declined): a retry cannot succeed, so no Retry is offered.
+          return showNoLongerPending(r, approveBtn);
         } else {
           // Re-open dialog with a retry affordance.
           if (approveBtn) approveBtn.removeAttribute('disabled');
@@ -864,6 +868,29 @@
         if (approveBtn) approveBtn.removeAttribute('disabled');
         renderApprovalError(messageId);
       });
+  }
+
+  // A 409 answer to an approval: the dialog stays closed, the status line says why (the expired text
+  // for { error: 'expired' }, otherwise the already-resolved text; both come from the dialog's
+  // data attributes, filled by the server in the user's language) and the panel is fetched again so
+  // the row shows its new state. A body that does not parse counts as already resolved.
+  function showNoLongerPending(response, approveBtn) {
+    var dialog = byId(DIALOG_ID);
+    return response.json().then(
+      function (body) { return body && body.error === 'expired' ? 'expired' : 'not_pending'; },
+      function () { return 'not_pending'; }
+    ).then(function (reason) {
+      if (approveBtn) approveBtn.removeAttribute('disabled');
+      var body = dialog ? dialog.querySelector('.modal__body') : null;
+      var stale = body ? body.querySelector('.alert--error') : null;
+      if (stale) stale.parentNode.removeChild(stale);
+      var attr = dialog ? dialog.getAttribute(reason === 'expired' ? 'data-expired-text' : 'data-not-pending-text') : null;
+      var fallback = reason === 'expired'
+        ? 'This action was not approved within 24 hours, so it was declined.'
+        : 'This action was already approved or declined, so it cannot be approved here.';
+      setStatus(attr && attr.length > 0 ? attr : fallback);
+      loadPanel();
+    });
   }
 
   function handleCancelClick() {

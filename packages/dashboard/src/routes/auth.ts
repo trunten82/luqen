@@ -36,6 +36,17 @@ function safeReturnTo(raw: unknown): string {
   return raw;
 }
 
+/**
+ * Where a sign-in whose page token was refused goes. A browser that is already signed in goes to the
+ * page it asked for (safeReturnTo of its returnTo); one that is not goes to a fresh sign-in page with
+ * the notice that the page it used had expired, which keeps the page asked for.
+ */
+export function staleSignInTarget(signedIn: boolean, returnTo: unknown): string {
+  const target = safeReturnTo(returnTo);
+  if (signedIn) return target;
+  return target === '/' ? '/login?stale=1' : `/login?stale=1&returnTo=${encodeURIComponent(target)}`;
+}
+
 interface SsoParams {
   pluginId: string;
 }
@@ -68,6 +79,8 @@ export async function authRoutes(
 
     // Show session expired message if redirected from expiry hook
     const sessionExpired = query['expired'] === '1';
+    // A sign-in sent from a page that was no longer current lands here (staleSignInTarget).
+    const staleSignIn = query['stale'] === '1';
 
     // Phase 64.2: the login badge tracks the latest completed dogfood scan
     // dynamically. We auto-resolve (and idempotently seed) a site_badges
@@ -96,6 +109,7 @@ export async function authRoutes(
       mode,
       loginMethods,
       returnTo,
+      staleSignIn,
       selfScanId: config.selfScanId,
       selfLiveBadgeId,
       ...(sessionExpired ? { error: 'Your session has expired. Please log in again.' } : {}),

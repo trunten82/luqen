@@ -98,12 +98,17 @@ export function isSessionExpired(
  * 1. Checks session expiry and invalidates expired sessions, on every path
  * 2. Updates the lastActivity timestamp, on the paths `recordsActivity` accepts
  *
- * `recordsActivity` is the predicate of the requests the session guard checks (the server passes
- * guardChecksSession): the guard clears a session it refuses on the same request, so a refused
- * session never gains activity, and a request to a page the guard does not check (the sign-in page,
- * static files, health, public reports) cannot keep a session alive.
+ * `recordsActivity` is the predicate of the requests the session answers: the requests the session
+ * guard checks (the server passes guardChecksSession) that no API key header authenticates. The guard
+ * clears a session it refuses on the same request, so a refused session never gains activity; a
+ * request to a page the guard does not check (the sign-in page, static files, health, public
+ * reports) and a request answered by an API key header (Bearer or X-API-Key) cannot keep a session
+ * alive.
  */
-export function createSessionExpiryHook(expiryMs: number, recordsActivity: (path: string) => boolean) {
+export function createSessionExpiryHook(
+  expiryMs: number,
+  recordsActivity: (path: string, request: FastifyRequest) => boolean,
+) {
   return async function sessionExpiryHook(
     request: FastifyRequest,
     reply: FastifyReply,
@@ -141,8 +146,8 @@ export function createSessionExpiryHook(expiryMs: number, recordsActivity: (path
       return;
     }
 
-    // Update last activity timestamp, only where the guard checks the session
-    if (typeof session.set === 'function' && recordsActivity(request.url.split('?')[0] as string)) {
+    // Update last activity timestamp, only on requests the session answers
+    if (typeof session.set === 'function' && recordsActivity(request.url.split('?')[0] as string, request)) {
       session.set('lastActivity', Date.now());
     }
   };

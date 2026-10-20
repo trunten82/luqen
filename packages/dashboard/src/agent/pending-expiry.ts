@@ -7,7 +7,8 @@
  * sweep, which runs when the server starts and then every {@link PENDING_SWEEP_INTERVAL_MS} (one
  * hour), started by one call from createServer ({@link startPendingExpirySweep}), or by the
  * confirmation that finds it expired (POST /agent/confirm), which declines it through the same
- * functions below and answers 409 expired instead of running it.
+ * functions below, answers 409 expired instead of running it, and writes an audit row that names the
+ * user who confirmed and the message.
  *
  * Each row leaves pending through `claimPendingMessage`, the same conditional write a confirmation
  * or a decline takes: a row the user resolved a moment earlier is not touched twice, and the write
@@ -67,13 +68,26 @@ export async function expirePendingAction(
   return true;
 }
 
-/** One log line and one summary audit row (action agent.pending_expired) for `count` declined actions. */
+/** Who and what an expiry audit row names; a sweep row names the system and the sweep. */
+export interface PendingExpirySubject {
+  readonly actor: string;
+  readonly actorId: string;
+  readonly resourceId: string;
+  readonly orgId: string;
+}
+
+/**
+ * One log line and one summary audit row (action agent.pending_expired) for `count` declined actions.
+ * The sweep's row names the system (actor `system`, resource `sweep`); the row of a confirmation that
+ * found its action expired passes `subject` and names the user who confirmed and the message.
+ */
 export async function recordPendingExpired(
   storage: StorageAdapter,
   log: FastifyBaseLogger,
   count: number,
   trigger: PendingSweepTrigger,
   now: Date,
+  subject?: PendingExpirySubject,
 ): Promise<void> {
   log.info(
     { event: 'agent.pending_expired', count, at: now.toISOString(), trigger },
@@ -81,10 +95,11 @@ export async function recordPendingExpired(
   );
   try {
     await storage.audit.log({
-      actor: 'system',
+      actor: subject?.actor ?? 'system',
+      ...(subject !== undefined ? { actorId: subject.actorId, orgId: subject.orgId } : {}),
       action: 'agent.pending_expired',
       resourceType: 'agent_message',
-      resourceId: 'sweep',
+      resourceId: subject?.resourceId ?? 'sweep',
       details: { count, trigger },
     });
   } catch (err) {

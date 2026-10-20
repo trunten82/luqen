@@ -12,14 +12,21 @@
  * A setting that would trust every address (true, *, a /0 range), a hop count and a malformed
  * entry are refused with a message naming the entry.
  *
- * A list is also refused when its entries TOGETHER trust every IPv4 address or every IPv6 address.
- * That is decided on the addresses the entries cover, never on how an entry is spelled: an IPv4
- * address is matched against an IPv6 range as its IPv4-mapped form (::ffff:a.b.c.d), so an IPv6
- * range that holds the mapped block counts for IPv4, and two IPv4 halves count as the whole. The
- * named ranges are counted as the addresses they hold: a family is refused when what the explicit
- * entries leave untrusted is no more than the named entries of the list could hold (their size is
- * computed from the blocks proxy-addr documents for them, one block of each size, not from written
- * ranges). With no named entry that is exactly "the entries together trust every address".
+ * A list is also refused when its entries TOGETHER trust more public address space than one /8 of
+ * public IPv4 addresses (2^24 addresses) or one /16 of global IPv6 addresses (2^112 addresses, counted
+ * inside 2000::/3). Behind a proxy that is trusted, the X-Forwarded-For value is believed, so a list
+ * that trusts most of the internet lets those clients choose the address the sign-in limit, the rate
+ * buckets and the audit trail record. Exactly one /8 or one /16 is accepted, and a provider's published
+ * ranges (a large CDN's list is about 1.5 million IPv4 addresses and 14 x 2^96 IPv6 addresses) are far
+ * below it. An operator whose provider is larger lists its ranges narrowly.
+ *
+ * The count is made on the addresses the entries cover, never on how an entry is spelled: an IPv6 range
+ * that holds the IPv4-mapped block (::ffff:a.b.c.d) also trusts the matching IPv4 addresses, and
+ * overlapping entries count once. The addresses that do not count are the this-network, private-use,
+ * shared, loopback, link-local and multicast-and-reserved IPv4 blocks and everything outside 2000::/3
+ * in IPv6; the named ranges hold only such addresses, so they add nothing. Any list that trusts a whole
+ * family covers far more than the limit and is refused. The refusals of single entries (a hop count, a
+ * malformed address, a range of length 0, true, *) stay.
  */
 import { isIP } from 'node:net';
 
@@ -44,22 +51,50 @@ function refuse(entry: string, reason: string): never {
 type Interval = readonly [bigint, bigint];
 
 const V4_SIZE = 1n << 32n;
-const V6_SIZE = 1n << 128n;
 /** Where IPv4 address 0.0.0.0 sits inside the IPv6 space: the base of the IPv4-mapped block. */
 const MAPPED_BASE = 0xffffn << 32n;
 const MAPPED_END = MAPPED_BASE + V4_SIZE - 1n;
 
-/** How many addresses each named range holds, from the sizes of the blocks proxy-addr gives it. */
-const NAMED_SIZE_V4: Readonly<Record<string, bigint>> = {
-  loopback: 1n << 24n, // one /8 block
-  linklocal: 1n << 16n, // one /16 block
-  uniquelocal: (1n << 24n) + (1n << 20n) + (1n << 16n), // one /8, one /12 and one /16 block
-};
-const NAMED_SIZE_V6: Readonly<Record<string, bigint>> = {
-  loopback: 1n, // one address
-  linklocal: 1n << 118n, // one /10 block
-  uniquelocal: 1n << 121n, // one /7 block
-};
+/** Public IPv4 addresses a list may trust together: one /8. */
+const PUBLIC_V4_LIMIT = 1n << 24n;
+/** Global IPv6 addresses a list may trust together: one /16. */
+const GLOBAL_V6_LIMIT = 1n << 112n;
+/** The global unicast block of IPv6, 2000::/3: where every public IPv6 address is. */
+const GLOBAL_V6: Interval = [0x2000n << 112n, (0x4000n << 112n) - 1n];
+
+/**
+ * The IPv4 blocks that are not public addresses, as [first octet, second octet, prefix length]:
+ * this-network, private-use, shared, loopback, link-local, private-use, private-use, and the
+ * multicast and reserved space.
+ */
+const NON_PUBLIC_V4_BLOCKS: ReadonlyArray<readonly [number, number, number]> = [
+  [0, 0, 8],
+  [10, 0, 8],
+  [100, 64, 10],
+  [127, 0, 8],
+  [169, 254, 16],
+  [172, 16, 12],
+  [192, 168, 16],
+  [224, 0, 3],
+];
+
+function blockInterval([first, second, prefix]: readonly [number, number, number]): Interval {
+  const base = (BigInt(first) << 24n) + (BigInt(second) << 16n);
+  return [base, base + (1n << BigInt(32 - prefix)) - 1n];
+}
+
+/** The public IPv4 addresses as intervals: the whole space minus the non-public blocks. */
+function publicV4Intervals(): Interval[] {
+  const blocks = NON_PUBLIC_V4_BLOCKS.map(blockInterval).sort((a, b) => (a[0] < b[0] ? -1 : 1));
+  const gaps: Interval[] = [];
+  let next = 0n;
+  for (const [from, to] of blocks) {
+    if (from > next) gaps.push([next, from - 1n]);
+    next = to + 1n;
+  }
+  if (next < V4_SIZE) gaps.push([next, V4_SIZE - 1n]);
+  return gaps;
+}
 
 function parseIpv4(text: string): bigint {
   return text.split('.').reduce((acc, octet) => (acc << 8n) + BigInt(octet), 0n);
@@ -109,24 +144,32 @@ function unionSize(intervals: readonly Interval[]): bigint {
   return total;
 }
 
+/** The parts of `intervals` that lie inside any of `within`. */
+function clipTo(intervals: readonly Interval[], within: readonly Interval[]): Interval[] {
+  const clipped: Interval[] = [];
+  for (const [from, to] of intervals) {
+    for (const [lo, hi] of within) {
+      const start = from > lo ? from : lo;
+      const end = to < hi ? to : hi;
+      if (start <= end) clipped.push([start, end]);
+    }
+  }
+  return clipped;
+}
+
 /**
- * The families whose every address the checked entries could trust. An IPv4 entry also trusts its
- * IPv4-mapped addresses in the IPv6 family, and the part of an IPv6 entry inside the mapped block
- * also trusts the matching IPv4 addresses.
+ * The address space of each family that the explicit entries trust: public IPv4 addresses and global
+ * IPv6 addresses. The part of an IPv6 entry inside the IPv4-mapped block also trusts the matching
+ * IPv4 addresses; the named ranges hold none of either.
  */
-function coveredFamilies(entries: readonly string[]): Array<'IPv4' | 'IPv6'> {
+function publicCoverage(entries: readonly string[]): { readonly v4: bigint; readonly v6: bigint } {
   const v4: Interval[] = [];
   const v6: Interval[] = [];
-  const named = new Set<string>();
   for (const entry of entries) {
-    if (NAMED_RANGES.has(entry)) {
-      named.add(entry);
-      continue;
-    }
+    if (NAMED_RANGES.has(entry)) continue;
     const { family, interval } = entryInterval(entry);
     if (family === 4) {
       v4.push(interval);
-      v6.push([MAPPED_BASE + interval[0], MAPPED_BASE + interval[1]]);
     } else {
       v6.push(interval);
       const from = interval[0] > MAPPED_BASE ? interval[0] : MAPPED_BASE;
@@ -134,23 +177,21 @@ function coveredFamilies(entries: readonly string[]): Array<'IPv4' | 'IPv6'> {
       if (from <= to) v4.push([from - MAPPED_BASE, to - MAPPED_BASE]);
     }
   }
-  const sum = (sizes: Readonly<Record<string, bigint>>): bigint =>
-    [...named].reduce((acc, name) => acc + (sizes[name] ?? 0n), 0n);
-  const named4 = sum(NAMED_SIZE_V4);
-  const named6 = sum(NAMED_SIZE_V6) + named4;
-  const covered: Array<'IPv4' | 'IPv6'> = [];
-  if (V4_SIZE - unionSize(v4) <= named4) covered.push('IPv4');
-  if (V6_SIZE - unionSize(v6) <= named6) covered.push('IPv6');
-  return covered;
+  return {
+    v4: unionSize(clipTo(v4, publicV4Intervals())),
+    v6: unionSize(clipTo(v6, [GLOBAL_V6])),
+  };
 }
 
-/** Throws, naming the entries, for a list that together trusts every address of an IP family. */
-function refuseCoveringList(entries: readonly string[], configured: readonly string[]): void {
-  const covered = coveredFamilies(entries);
-  if (covered.length === 0) return;
-  const every = covered.map((family) => `every ${family} address`).join(' and ');
+/** Throws, naming the entries, for a list that together trusts more public address space than the limits allow. */
+function refuseWideList(entries: readonly string[], configured: readonly string[]): void {
+  const { v4, v6 } = publicCoverage(entries);
+  const wide: string[] = [];
+  if (v4 > PUBLIC_V4_LIMIT) wide.push('more than one /8 of public IPv4 addresses');
+  if (v6 > GLOBAL_V6_LIMIT) wide.push('more than one /16 of global IPv6 addresses');
+  if (wide.length === 0) return;
   throw new Error(
-    `Invalid trustedProxies list "${configured.join(', ')}": together these entries could trust ${every}. ${GUIDANCE}`,
+    `Invalid trustedProxies list "${configured.join(', ')}": together these entries trust ${wide.join(' and ')}. ${GUIDANCE}`,
   );
 }
 
@@ -191,6 +232,6 @@ export function resolveTrustedProxies(configured?: readonly string[]): readonly 
     return refuse(NO_PROXY_WORD, `${NO_PROXY_WORD} cannot be combined with other entries`);
   }
   const checked = configured.map(checkEntry);
-  refuseCoveringList(checked, configured);
+  refuseWideList(checked, configured);
   return checked;
 }

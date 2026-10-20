@@ -51,11 +51,15 @@ export function redactArgumentsJson(argsJson: string): string {
 const BRACKETED_MARKER = /\[\s*redacted\s*\]|<\s*redacted\s*>|\(\s*redacted\s*\)|\{\s*redacted\s*\}/i;
 
 /**
- * Does `value` hold the redaction marker? The stored form is {@link REDACTED}; a model that copies a
- * call from its history may write it in another letter case, with surrounding space, or in another
- * bracket form (`[REDACTED]`, ` [ redacted ] `, `<redacted>`, `(redacted)`, `{redacted}`,
- * `Bearer <REDACTED>`), or as the bare word on its own. A value that merely contains the word
- * (`unredacted-placeholder`) is ordinary text.
+ * Does `value` hold the redaction marker? The refusal this serves keeps the model from handing back
+ * the marker this module writes, as if it were a value: stored conversations show the model its own
+ * earlier calls with {@link REDACTED} where a secret was, so a call it copies from that history
+ * carries the marker. The stored form is {@link REDACTED}; a copy may differ in letter case, with
+ * surrounding space, or in another bracket form (`[REDACTED]`, ` [ redacted ] `, `<redacted>`,
+ * `(redacted)`, `{redacted}`, `Bearer <REDACTED>`), or be the bare word on its own, so those forms
+ * are recognised. Any other spelling was never written by this module and is an ordinary value,
+ * which a destructive action's confirmation meets like any other wrong value. A value that merely
+ * contains the word (`unredacted-placeholder`) is ordinary text.
  */
 export function holdsRedactionMarker(value: string): boolean {
   return BRACKETED_MARKER.test(value) || value.trim().toLowerCase() === 'redacted';

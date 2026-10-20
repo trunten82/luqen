@@ -682,7 +682,12 @@ export async function registerAgentRoutes(
           if (!(await expirePendingAction(storage, request.log, pending))) {
             return reply.code(409).send({ error: 'not_pending' });
           }
-          await recordPendingExpired(storage, request.log, 1, 'confirm', confirmedAt);
+          await recordPendingExpired(storage, request.log, 1, 'confirm', confirmedAt, {
+            actor: user.username,
+            actorId: user.id,
+            resourceId: messageId,
+            orgId,
+          });
           return reply.code(409).send({ error: 'expired' });
         }
 
