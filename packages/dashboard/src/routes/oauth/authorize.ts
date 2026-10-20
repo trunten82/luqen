@@ -22,6 +22,14 @@
  * principal without a dashboard_users row is answered 403 access_denied
  * (dashboard_user_required) before anything is rendered or written.
  *
+ * The consent page binds the approval to the organization it names: it carries a hidden
+ * `consent_binding`, an HMAC (per-process random key) over the signed-in user's id and the named
+ * organization. The approval recomputes it from the request's own user and organization and compares
+ * it; a missing or different value (the organization changed in another tab, the user left the named
+ * organization, an altered field) is answered 400 invalid_request / organization_changed before
+ * anything is written. The posted value is only compared; the organization is never read from the form.
+ * The key lives in this process only, so a restart invalidates open consent pages.
+ *
  * Invariant: NEVER insert into `oauth_authorization_codes` without having
  * passed every check first. The Allow branch is the only code path that
  * writes to that table — the Deny, CSRF-fail, scope-fail, redirect-uri-fail,
@@ -30,7 +38,7 @@
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { Type } from '@sinclair/typebox';
-import { randomBytes } from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { ErrorEnvelope } from '../../api/schemas/envelope.js';
 import type { StorageAdapter } from '../../db/adapter.js';
 import { resolveEffectivePermissions } from '../../permissions.js';
@@ -136,6 +144,21 @@ function requestOrgId(request: FastifyRequest): string {
   return typeof orgId === 'string' && orgId.length > 0 ? orgId : 'system';
 }
 
+/** The binding of (user, named organization) under `key`, base64url. */
+function consentBinding(key: Buffer, userId: string, orgId: string): string {
+  return createHmac('sha256', key).update(`${userId}\0${orgId}`).digest('base64url');
+}
+
+/** True when `posted` is the binding of (user, organization) under `key` (constant-time comparison). */
+function bindingMatches(key: Buffer, userId: string, orgId: string, posted: string | undefined): boolean {
+  if (typeof posted !== 'string' || posted.length === 0) return false;
+  const expected = Buffer.from(consentBinding(key, userId, orgId));
+  const received = Buffer.from(posted);
+  return received.length === expected.length && timingSafeEqual(received, expected);
+}
+
+const ORGANIZATION_CHANGED = { error: 'invalid_request', error_description: 'organization_changed' } as const;
+
 /** The name the consent page shows for `orgId` ('system' as itself). */
 async function orgDisplayName(storage: StorageAdapter, orgId: string): Promise<string> {
   if (orgId === 'system') return orgId;
@@ -154,6 +177,8 @@ export async function registerAuthorizeRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
 ): Promise<void> {
+  const bindingKey = randomBytes(32);
+
   // ── GET /oauth/authorize ──────────────────────────────────────────────────
   server.get('/oauth/authorize', {
     schema: {
@@ -352,7 +377,7 @@ export async function registerAuthorizeRoutes(
       state: q.state ?? '',
       codeChallenge: q.code_challenge,
       csrfToken,
-      consentBinding: 'stub',
+      consentBinding: consentBinding(bindingKey, user.id, orgId),
     });
   });
 
@@ -362,7 +387,7 @@ export async function registerAuthorizeRoutes(
   //   2. redirect_uri re-validation  ← T-31.1-02-03 defense-in-depth
   //   3. scope whitelist re-validation
   //   4. PKCE re-validation
-  //   5. admin.system gate re-apply
+  //   5. mcp.use gate re-apply, then the consent binding (organization named by the page)
   //   6. approved branching
   server.post('/oauth/authorize/consent', {
     schema: {
@@ -443,6 +468,12 @@ export async function registerAuthorizeRoutes(
         error: 'access_denied',
         error_description: 'mcp.use permission required in active org',
       });
+    }
+
+    // 5a. The approval acts in the organization its page named: the page's binding of (user,
+    //     organization) is recomputed from this request and compared before anything is written.
+    if (!bindingMatches(bindingKey, user.id, orgId, body.consent_binding)) {
+      return reply.status(400).send(ORGANIZATION_CHANGED);
     }
 
     // 6. Phase 31.2 D-12: partitionScopes is now a no-op forwarder — every

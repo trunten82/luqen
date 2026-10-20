@@ -93,7 +93,7 @@ const SESSION_SECRET = 'm'.repeat(32);
 
 /** The consent page's organization binding (a hidden input), which a browser posts back with Allow. */
 const bindingOf = (html: string): string | undefined =>
-  /name="consent_binding" value="([^"]+)"/.exec(html)?.[1];
+  /name="consent_binding"\s+value="([^"]+)"/.exec(html)?.[1];
 
 const tokenOf = (html: string): string | undefined =>
   /name="csrf-token" content="([^"]+)"/.exec(html)?.[1] ?? /name="_csrf" value="([^"]+)"/.exec(html)?.[1];

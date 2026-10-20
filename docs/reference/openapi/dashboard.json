@@ -41821,6 +41821,9 @@
                   },
                   "approved": {
                     "type": "string"
+                  },
+                  "consent_binding": {
+                    "type": "string"
                   }
                 }
               }

@@ -86,7 +86,7 @@ async function codeFor(reader: SeededReader, trail: string[]): Promise<{ code: s
   let location = typeof authorize.headers.location === 'string' ? authorize.headers.location : undefined;
   if (location === undefined) {
     const pageToken = /name="_csrf" value="([^"]+)"/.exec(authorize.body)?.[1];
-    const binding = /name="consent_binding" value="([^"]+)"/.exec(authorize.body)?.[1];
+    const binding = /name="consent_binding"\s+value="([^"]+)"/.exec(authorize.body)?.[1];
     const cookie = authorize.cookies.find((c) => c.name === 'session')?.value ?? switched.session.cookie;
     if (authorize.statusCode !== 200 || pageToken === undefined) return undefined;
     const consent = await h.app.inject({
