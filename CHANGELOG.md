@@ -24,7 +24,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   browser carries over. A sign-in sent from a sign-in page opened before
   another sign-in is answered with a fresh sign-in page, or with the requested
   page when the browser is already signed in; the page token changes at every
-  sign-in.
+  sign-in. The page a sign-in returns to, from the sign-in page, the sign-in
+  form or the consent page's organization switch, is used only when it is a
+  path of the dashboard: a value holding a control character or a backslash,
+  or one that resolves to another host, returns to the home page. A language
+  change and an organization switch return to the page they were made on only
+  under the same rule.
 - The client address behind the sign-in limit, the per-address request
   limits, the scan-start limit, client registration and the address recorded
   in audit entries is read from `X-Forwarded-For` only through trusted
@@ -85,17 +90,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   error, and answers `500` with a generic message. A paused action runs once
   (another confirmation or decline of it answers `409`), is declined when it
   is neither confirmed nor declined within 24 hours (a confirmation after 24
-  hours declines it and answers `409` `expired`; the assistant then says the
-  action expired instead of offering to retry, and the audit entry names the
-  user and the action), and is declined when its
-  conversation is deleted. Only the user who started a conversation can open,
-  change, delete or share it; another member of the organization gets `404`.
+  hours declines it and answers `409` `expired`; the assistant panel then
+  shows a notice that the action expired, or was already approved or declined,
+  instead of offering to retry, and the audit entry names the user and the
+  action), and is declined when its
+  conversation is deleted. Editing a question replaces its whole answer,
+  including the assistant's tool calls and their results, and an action
+  awaiting confirmation in that answer can no longer be approved. Only the user
+  who started a conversation can open, change, delete or share it; another
+  member of the organization gets `404`.
 - The agent audit stores tool arguments named like a password, secret, token,
   API key, authorization value or credential as `[redacted]`, at any depth,
   for every tool call the assistant runs, refuses or confirms.
 - The assistant's conversation messages store those tool arguments as
   `[redacted]` too. An action awaiting confirmation keeps its arguments as
-  given until it is confirmed or declined, then they are stored redacted; a
+  given until it is confirmed, declined or replaced by an edit of its
+  question, then they are stored redacted; a
   confirmation that is refused leaves the action awaiting confirmation. A
   tool call that carries `[redacted]` in place of a secret value is not run:
   the assistant asks for the value again. A shared conversation shows the

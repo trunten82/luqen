@@ -77,9 +77,10 @@ once: a second confirmation of it, or a confirmation after a decline, is
 answered with a conflict and nothing runs. An action you neither approve nor
 cancel within 24 hours is declined, and deleting its conversation declines it
 too. Approving an action after those 24 hours declines it instead of running
-it, and the assistant tells you it expired so you can ask for it again; an
-approval for an action that was already approved or declined says so too.
-Neither shows a Retry button.
+it, and the assistant panel shows a notice that it expired, so you can ask for
+it again; an approval for an action that was already approved or declined shows
+a notice too. Neither shows a Retry button. Editing the question of an answer
+that paused an action withdraws that action: it can no longer be approved.
 
 ### Multi-step tool transparency
 
@@ -218,10 +219,11 @@ Every agent turn produces audit entries:
   API key, authorization value or credential is stored as `[redacted]`,
   at any depth, in the agent audit and in the conversation's stored
   messages. An action awaiting your confirmation keeps its arguments as
-  given, so it runs exactly as shown; once it is confirmed or declined its
-  stored arguments are redacted too. When a tool call carries `[redacted]` in
-  place of a secret value, the assistant does not run it and asks you for the
-  value again; the text you type is stored as you typed it
+  given, so it runs exactly as shown; once it is confirmed, declined or
+  withdrawn by an edit of its question, its stored arguments are redacted
+  too. When a tool call carries `[redacted]` in place of a secret value, the
+  assistant does not run it and asks you for the value again; the text you
+  type is stored as you typed it
 - Token-budget compaction events
 - Soft-delete and share-link operations on conversations
 

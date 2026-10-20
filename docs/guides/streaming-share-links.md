@@ -30,7 +30,8 @@ devices (`@media (hover: none)`) it is always visible underneath the bubble.
 - The **Retry** action only appears on the **most-recent assistant turn**.
 - Clicking it marks the previous reply as **superseded** (soft-deleted from the
   visible thread, retained in DB for audit) and re-streams a fresh reply against
-  the same user message and the same context window.
+  the same user message and the same context window. The tool results of that
+  turn stay, so the new reply is written from them without running a tool again.
 - The visible drawer thread stays linear — superseded rows are hidden from the
   user, but `/admin/audit` still shows them.
 
@@ -39,8 +40,10 @@ devices (`@media (hover: none)`) it is always visible underneath the bubble.
 - The pencil icon on the **most-recent user bubble** opens an inline editor
   (textarea pre-filled with the current text + Save / Cancel).
 - On Save:
-  1. The original user message and the assistant reply that followed it are
-     marked **superseded**.
+  1. The original user message and its whole answer (the assistant's replies,
+     its tool calls and their results, and an action awaiting confirmation) are
+     marked **superseded**. An action awaiting confirmation in that answer can no
+     longer be approved, and its stored arguments are redacted.
   2. The edited text is persisted as a **new row** in the same conversation —
      not an UPDATE, so the audit trail keeps the original wording.
   3. The agent streams a fresh reply against the new user message + prior
