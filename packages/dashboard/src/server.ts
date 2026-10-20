@@ -305,6 +305,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // sessionSecret so at-rest wiring below always has a real key.
   config = withEncryptionKeyDefault(config);
 
+  // X-Forwarded-For is believed only through these hops (throws for a setting that trusts every address).
+  const trustedProxies = resolveTrustedProxies(config.trustedProxies);
+
   // Phase 41-04: TypeBox type provider for schema-aware route registration.
   // Routes can declare TypeBox `schema:` blocks and Fastify's AJV runs them
   // at request time; @fastify/swagger collects them into the OpenAPI spec.
@@ -314,7 +317,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     logger: {
       level: process.env['NODE_ENV'] === 'production' ? 'warn' : 'info',
     },
-    trustProxy: resolveTrustedProxies(config.trustedProxies) as boolean | string[],
+    trustProxy: trustedProxies === false ? false : [...trustedProxies],
   }).withTypeProvider<TypeBoxTypeProvider>();
 
   // Phase 41-04: capture every registered route for the OpenAPI coverage

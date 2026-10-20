@@ -1,6 +1,7 @@
 import { readFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { z } from 'zod';
+import { resolveTrustedProxies } from './auth/trusted-proxies.js';
 
 const ConfigSchema = z.object({
   port: z.number().int().min(1).max(65535).default(5000),
@@ -225,6 +226,9 @@ export function validateConfig(config: DashboardConfig): void {
   if (isNaN(config.maxPages) || config.maxPages < 1 || config.maxPages > 1000) {
     throw new Error(`Invalid maxPages: ${config.maxPages}. Must be between 1 and 1000.`);
   }
+
+  // Refuses a setting that would trust every forwarded address, naming the entry.
+  resolveTrustedProxies(config.trustedProxies);
 
   try {
     new URL(config.complianceUrl);
