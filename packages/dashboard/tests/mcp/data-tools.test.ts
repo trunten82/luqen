@@ -772,7 +772,7 @@ describe('Phase 30 data tools — dashboard_list_reports strips jsonReport (2604
     const bloatedRows: ScanRecord[] = [
       {
         id: 'scan-a',
-        siteUrl: 'https://www.sky.it',
+        siteUrl: 'https://www.fabrikam.example',
         status: 'completed',
         standard: 'WCAG2AA',
         jurisdictions: [],
@@ -837,7 +837,7 @@ describe('Phase 30 data tools — dashboard_list_reports strips jsonReport (2604
     // Specific-row sanity
     const scanA = parsed.data.find((r) => r['id'] === 'scan-a');
     expect(scanA?.['totalIssues']).toBe(205);
-    expect(scanA?.['siteUrl']).toBe('https://www.sky.it');
+    expect(scanA?.['siteUrl']).toBe('https://www.fabrikam.example');
   });
 });
 

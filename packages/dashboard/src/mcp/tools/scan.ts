@@ -178,7 +178,7 @@ export function registerScanTools(
       // interception INSIDE the shared @luqen/core scanner (re-validate every
       // navigation/subresource host against the core SSRF predicate, or launch with network
       // egress disabled) — a scanner-level change tracked separately. The tool
-      // is gated by mcp.use + scans.create (authenticated org members only),
+      // is gated by scans.create and, for an external MCP client, mcp.use (org members only),
       // which bounds exposure until that lands.
       const scanTarget =
         url !== undefined
