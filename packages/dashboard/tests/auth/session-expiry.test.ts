@@ -164,7 +164,7 @@ describe('Session Expiry', () => {
       expect(reply.sentCode).toBeUndefined();
     });
 
-    it('does not expire sessions without lastActivity (legacy)', async () => {
+    it('expires a signed in session that carries no lastActivity', async () => {
       const session = mockSession({ userId: 'user-1' });
       const req = { session, url: '/dashboard' } as unknown as FastifyRequest;
       const reply = mockReply();
@@ -172,9 +172,8 @@ describe('Session Expiry', () => {
       const hook = createSessionExpiryHook(3600000);
       await hook(req, reply);
 
-      expect(reply.redirectUrl).toBeUndefined();
-      // Should set lastActivity for future checks
-      expect(session.set).toHaveBeenCalledWith('lastActivity', expect.any(Number));
+      expect(reply.redirectUrl).toBe('/login?expired=1');
+      expect(session.regenerate).toHaveBeenCalled();
     });
   });
 });

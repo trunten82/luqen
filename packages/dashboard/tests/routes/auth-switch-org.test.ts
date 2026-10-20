@@ -117,6 +117,11 @@ async function buildCtx(activeUser: 'A' | 'B' = 'A'): Promise<Ctx> {
     if (session.get('currentOrgId') === undefined) {
       session.set('currentOrgId', seededOrgId);
     }
+    // The request's organization is the one the session stores (server.ts resolves it the same way).
+    const stored = session.get('currentOrgId');
+    if (typeof stored === 'string' && stored !== '') {
+      request.user = { ...request.user, currentOrgId: stored };
+    }
   });
 
   // CSRF preHandler bound globally (matches server.ts lines 797-808).

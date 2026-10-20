@@ -42,6 +42,14 @@ async function createTestServer(userId = 'test-user-id'): Promise<TestContext> {
     request.user = { id: userId, username: 'testuser', role: 'user' };
   });
 
+  // The request's organization is the one the session stores (server.ts resolves it the same way).
+  server.addHook('preHandler', async (request) => {
+    const stored = (request.session as { get(key: string): unknown }).get('currentOrgId');
+    if (request.user !== undefined && typeof stored === 'string' && stored !== '') {
+      request.user = { ...request.user, currentOrgId: stored };
+    }
+  });
+
   await orgRoutes(server, storage);
   await server.ready();
 

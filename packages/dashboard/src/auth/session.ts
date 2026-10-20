@@ -83,10 +83,11 @@ export function isSessionExpired(
     return false;
   }
 
-  const lastActivity = session.get('lastActivity') as number | undefined;
-  if (lastActivity === undefined) {
-    // No lastActivity set means the session predates this feature — not expired
-    return false;
+  const lastActivity = session.get('lastActivity');
+  if (typeof lastActivity !== 'number') {
+    // Every sign-in records an activity time, so a signed-in session without one is expired;
+    // a session that has no user yet (the sign-in page's anonymous session) is not.
+    return session.get('userId') !== undefined;
   }
 
   return Date.now() - lastActivity > expiryMs;

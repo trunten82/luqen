@@ -1,12 +1,14 @@
 import type Database from 'better-sqlite3';
 import type { FastifyRequest } from 'fastify';
-import { randomUUID, randomBytes } from 'node:crypto';
+import { createHash, randomUUID, randomBytes } from 'node:crypto';
 import type { PluginManager } from '../plugins/manager.js';
 import type { AuthPlugin, AuthResult, PluginInstance } from '../plugins/types.js';
 import type { StorageAdapter } from '../db/index.js';
 import { setEncryptionSalt } from '../plugins/crypto.js';
 
 import { apiKeyOpensDashboardSession, validateApiKey } from './api-key.js';
+import { createEndedSessionRecord, type EndedSessionRecord } from './ended-session-record.js';
+import { getSessionExpiryMs } from './session.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -35,6 +37,12 @@ function isAuthPlugin(instance: PluginInstance): instance is AuthPlugin {
 
 /** Why a signed-in session is refused (the session.ended audit row's details). */
 export type SessionRefusal = 'inactive_user' | 'unknown_user' | 'key_refused';
+
+/** The session key that records an identity had a stored dashboard user at sign-in or since. */
+const STORED_USER_MARKER = 'storedUser';
+
+/** The most ended sessions the in-memory record holds at once. */
+const ENDED_SESSION_RECORD_MAX_KEYS = 10_000;
 
 /** What a sign-in hands to {@link AuthService.beginSession}. */
 export interface SessionStart {
@@ -71,6 +79,13 @@ export class AuthService {
 
 
   private bootId: string;
+  /** One key per ended session, held for the idle window: one session.ended row per session. */
+  private readonly endedSessions: EndedSessionRecord = createEndedSessionRecord({
+    maxKeys: ENDED_SESSION_RECORD_MAX_KEYS,
+    ttlMs: getSessionExpiryMs(),
+  });
+  /** Requests that authenticated by an API key header (not by a session cookie). */
+  private readonly keyHeaderRequests = new WeakSet<object>();
 
   constructor(db: Database.Database, pluginManager: PluginManager, storage: StorageAdapter) {
     this.db = db;
@@ -111,14 +126,26 @@ export class AuthService {
     return this.bootId;
   }
 
-  /** The one writer of a signed-in session: every sign-in route calls it. */
+  /**
+   * The one writer of a signed-in session: every sign-in route calls it. Besides the identity it
+   * records the activity time (so the cookie the sign-in returns idle-expires like every later
+   * one), a random session id (the key that records the session's end once), and, for a session
+   * signed in through an external identity service, whether a stored dashboard user answers for
+   * the identity at sign-in (see sessionPrincipal).
+   */
   async beginSession(session: { set(key: string, value: unknown): void }, input: SessionStart): Promise<void> {
+    const external = input.authMethod === 'oauth' || input.authMethod === 'sso';
+    const hasStoredUser = external && (await this.storage.users.getUserById(input.userId)) !== null;
     session.set('userId', input.userId);
     session.set('username', input.username);
     session.set('role', input.role);
     session.set('authMethod', input.authMethod);
+    // The key's row id (never the secret), so dismissals made in this session name the key.
     if (input.apiKeyId !== undefined) session.set('apiKeyId', input.apiKeyId);
     session.set('bootId', this.bootId);
+    session.set('lastActivity', Date.now());
+    session.set('sid', randomBytes(16).toString('base64url'));
+    if (hasStoredUser) session.set(STORED_USER_MARKER, true);
   }
 
   // -----------------------------------------------------------------------
@@ -189,8 +216,13 @@ export class AuthService {
    * True only when the presented key actually validates — a bogus header does
    * not count, because authenticateRequest then falls through to the cookie.
    */
+  /**
+   * Did this request authenticate by an API key header (Bearer or X-API-Key)? Recorded by
+   * authenticateRequest on the request it authenticates, without a second key validation. A
+   * request answered by a session cookie, including a /login API-key session, is not.
+   */
   authenticatedByKeyHeader(request: FastifyRequest): boolean {
-    return request.user?.id === 'api-key' && request.user.role === 'admin';
+    return this.keyHeaderRequests.has(request);
   }
 
   hasValidApiCredential(request: FastifyRequest): boolean {
@@ -205,6 +237,7 @@ export class AuthService {
     if (apiKeyToken !== undefined && apiKeyToken !== '') {
       const result = validateApiKey(this.db, apiKeyToken);
       if (result.valid) {
+        this.keyHeaderRequests.add(request);
         const isOrgScoped = result.orgId !== undefined && result.orgId !== 'system';
         return {
           authenticated: true,
@@ -222,6 +255,7 @@ export class AuthService {
     // 2. Check session for stored user info
     const session = request.session as {
       get(key: string): unknown;
+      set?(key: string, value: unknown): void;
     } | undefined;
 
     if (session !== undefined && typeof session.get === 'function') {
@@ -266,7 +300,9 @@ export class AuthService {
    *      The session's role and username are never read for authorization.
    *   3. no stored user, signed in through an external identity service (authMethod 'oauth',
    *      the compliance-service sign-in, or 'sso', an auth plugin) -> the values given at
-   *      sign-in, unchanged
+   *      sign-in, unchanged, but only for an identity that never had a stored user: a session
+   *      that carries the stored-user marker (written at sign-in when a stored user existed
+   *      then, and by rule 2 the first time a stored user answers) is refused ('unknown_user')
    *   4. anything else -> refused ('unknown_user')
    *
    * One stored read per request (a primary-key lookup of the user or of the key) and no cache, so a deactivation,
@@ -274,7 +310,7 @@ export class AuthService {
    * the request ends in an error and is never answered from the session's values.
    */
   private async sessionPrincipal(
-    session: { get(key: string): unknown },
+    session: { get(key: string): unknown; set?(key: string, value: unknown): void },
     userId: string,
     username: string,
   ): Promise<SessionPrincipal> {
@@ -300,11 +336,19 @@ export class AuthService {
     const stored = await this.storage.users.getUserById(userId);
     if (stored !== null) {
       if (!stored.active) return { ok: false, refusal: 'inactive_user' };
+      const authMethodOfStored = session.get('authMethod');
+      if (
+        (authMethodOfStored === 'oauth' || authMethodOfStored === 'sso')
+        && session.get(STORED_USER_MARKER) !== true
+        && typeof session.set === 'function'
+      ) {
+        session.set(STORED_USER_MARKER, true);
+      }
       return { ok: true, user: { id: stored.id, username: stored.username, role: stored.role } };
     }
 
     const authMethod = session.get('authMethod');
-    if (authMethod === 'oauth' || authMethod === 'sso') {
+    if ((authMethod === 'oauth' || authMethod === 'sso') && session.get(STORED_USER_MARKER) !== true) {
       return {
         ok: true,
         user: { id: userId, username, role: (session.get('role') as string | undefined) ?? 'user' },
@@ -316,7 +360,10 @@ export class AuthService {
   /**
    * End a session its stored principal refuses: clear it (so the next request is
    * an anonymous one and the sign-in page is reachable) and record one session.ended audit row
-   * carrying the reason code only. A failed audit write is logged; the session still ends.
+   * carrying the reason code only. The row is written once per session and reason within the idle
+   * window, however often its cookie is replayed and from whatever address (the record's key is
+   * the user id, the session id and the reason, never the cookie). A failed audit write is
+   * logged and releases the key; the session still ends.
    */
   private async endSession(
     request: FastifyRequest,
@@ -324,10 +371,16 @@ export class AuthService {
     username: string,
     refusal: SessionRefusal,
   ): Promise<void> {
-    const regenerable = request.session as { regenerate?: (keep?: string[]) => void } | undefined;
+    const regenerable = request.session as
+      { get?(key: string): unknown; regenerate?: (keep?: string[]) => void } | undefined;
+    const sessionId = typeof regenerable?.get === 'function' ? regenerable.get('sid') : undefined;
     if (typeof regenerable?.regenerate === 'function') {
       regenerable.regenerate();
     }
+    const recordKey = createHash('sha256')
+      .update(`${userId}\0${typeof sessionId === 'string' ? sessionId : ''}\0${refusal}`)
+      .digest('hex');
+    if (!this.endedSessions.claim(recordKey)) return;
     try {
       await this.storage.audit.log({
         actor: username,
@@ -338,6 +391,7 @@ export class AuthService {
         ...(typeof request.ip === 'string' ? { ipAddress: request.ip } : {}),
       });
     } catch (err) {
+      this.endedSessions.release(recordKey);
       request.log?.warn({ err, refusal }, 'session.ended audit row not written');
     }
   }
