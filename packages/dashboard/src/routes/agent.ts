@@ -979,9 +979,13 @@ export async function registerAgentRoutes(
     // HTML fragment (no layout wrapping) that agent.js swaps into
     // #agent-messages via DOMParser + importNode.
     //
-    // If no conversation exists yet, renders the empty-state (first-open
-    // greeting). If a conversation exists but belongs to a different org,
-    // returns 404 (org isolation — same invariant as /agent/message).
+    // The panel shows the requester's own conversation in the organization the request acts in
+    // (ownConversation, anyOrg off). Every non-empty id that does not resolve to such a row — an
+    // unknown id, a deleted conversation, another member's, another organization's — is answered
+    // alike: the empty-state greeting and `x-conversation-id: ''`, so the page cannot tell them
+    // apart and the client forgets the id. With no id the empty-state greeting is sent without the
+    // header. After an organization change a page reload therefore forgets a conversation of the
+    // earlier organization; it stays in that organization's History.
     scope.get('/panel', async (request: FastifyRequest, reply: FastifyReply) => {
       const user = request.user;
       if (user === undefined) {
@@ -993,9 +997,6 @@ export async function registerAgentRoutes(
       }
       const q = (request.query ?? {}) as Record<string, unknown>;
       const conversationId = typeof q['conversationId'] === 'string' ? q['conversationId'] : '';
-      // Resolve the rolling window — empty if the conversation is new or
-      // doesn't yet belong to the user. getConversation returns null for a
-      // foreign org so we only call getWindow when the org check passes.
       let messages: ReadonlyArray<{
         readonly id: string;
         readonly role: 'user' | 'assistant' | 'tool';
@@ -1006,35 +1007,11 @@ export async function registerAgentRoutes(
         readonly images?: ReadonlyArray<{ readonly mediaType: string; readonly data: string }> | null;
       }> = [];
       if (conversationId.length > 0) {
-        const conv = await storage.conversations.getConversation(conversationId, orgId);
-        // Bug #3 (agent-chat-ui-cluster): treat soft-deleted conversations as
-        // missing here so the drawer doesn't render a chat that the history
-        // panel deliberately hides. Without this, users who delete the
-        // conversation they're currently chatting in still see all the
-        // messages on refresh — but the conversation is absent from history,
-        // matching the "open chat not in history" symptom.
-        //
-        // SECURITY (agent-conversation-leak-cross-user): the panel auto-mount
-        // path MUST enforce per-user ownership in addition to per-org. The
-        // repository's getConversation only filters by org_id (see
-        // conversation-repository.ts:96), so without this guard a user in the
-        // same org can render another user's window via a stale localStorage
-        // conversationId carried across a logout/login boundary on the same
-        // browser. The explicit GET /agent/conversations/:id route is the
-        // sanctioned cross-user/cross-org admin path; the panel is not.
-        // Foreign-user ids are treated identically to soft-deleted: empty
-        // panel + x-conversation-id:'' so the client wipes its localStorage.
-        const isForeignUser = conv !== null && conv.userId !== user.id;
-        if (conv === null || conv.isDeleted || isForeignUser) {
-          // Either the id is unknown / from another org / soft-deleted /
-          // belongs to another user. Treat all four as empty panel — the
-          // user's next message POST will auto-create a fresh conversation
-          // row. Signal the client via x-conversation-id: '' so it can clear
-          // its localStorage and start a new conversation cleanly.
-          messages = [];
-          if (conv?.isDeleted === true || isForeignUser) {
-            void reply.header('x-conversation-id', '');
-          }
+        const conv = await ownConversation(storage, { id: conversationId, orgId, userId: user.id, anyOrg: false });
+        if (conv === null) {
+          // The user's next message POST creates a fresh conversation row; x-conversation-id: ''
+          // tells the client to clear its stored id and start a new conversation cleanly.
+          void reply.header('x-conversation-id', '');
         } else {
           messages = await storage.conversations.getWindow(conversationId);
         }
@@ -1551,14 +1528,17 @@ export async function registerAgentRoutes(
 
     // ── GET /agent/share/:shareId — Phase 37 Plan 03 Task 3 ───────────
     //
-    // Read-only conversation snapshot. Auth required + same-org gate
-    // (T-37-12). Three failure modes:
-    //   401 unauthenticated, 400 no_org, 404 unknown/revoked, 403
-    //   foreign-org, 404 conversation soft-deleted.
+    // Read-only snapshot of the conversation up to and including the answer it was shared from.
+    // Auth required + same-org gate (T-37-12). Failure modes:
+    //   401 unauthenticated, 400 no_org, 404 unknown/revoked, 403 foreign-org, 404 conversation
+    //   soft-deleted, 404 share_not_found when the link has no shared answer or that answer is no
+    //   longer on the conversation's active branch (it was retried, or its question was edited).
     //
-    // The page is shown to members of the organization other than the conversation's owner, so
-    // every stored tool call it renders (a paused action's included) has its secret-named
-    // argument values replaced by the redaction marker first; the stored rows are not changed.
+    // The page holds the active branch's rows created at or before the shared answer (rows written in
+    // the same millisecond are its own turn); nothing the owner typed or received afterwards is on
+    // it. The page is shown to members of the organization other than the conversation's owner, so
+    // every stored tool call it renders (a paused action's included) has its secret-named argument
+    // values replaced by the redaction marker first; the stored rows are not changed.
     scope.get(
       '/share/:shareId',
       async (request: FastifyRequest, reply: FastifyReply) => {
@@ -1580,7 +1560,12 @@ export async function registerAgentRoutes(
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
         // Active branch only — superseded rows excluded by default.
-        const messages = (await storage.conversations.getFullHistory(link.conversationId)).map((m) => (
+        const branch = await storage.conversations.getFullHistory(link.conversationId);
+        const anchor = link.anchorMessageId === null ? undefined : branch.find((m) => m.id === link.anchorMessageId);
+        if (anchor === undefined) {
+          return reply.code(404).send({ error: 'share_not_found' });
+        }
+        const messages = branch.filter((m) => m.createdAt <= anchor.createdAt).map((m) => (
           m.toolCallJson === null ? m : { ...m, toolCallJson: redactArgumentsJson(m.toolCallJson) }
         ));
         const creator = await storage.users.getUserById(link.createdByUserId);
@@ -1667,10 +1652,11 @@ async function ownConversation(
 }
 
 /**
- * Phase 38 — load a conversation row by id ignoring org-scope. Used by
- * GET /agent/conversations/:id when the caller has admin.system, so global
- * admins can open any conversation cross-org. Falls back to null when the
- * raw-database hatch is unavailable (non-SQLite adapters).
+ * Phase 38 — load a conversation row by id ignoring org-scope. ownConversation uses it, for a
+ * global administrator on GET /agent/conversations/:id and on delete, to find the administrator's
+ * own conversation in another organization; the row must still be the administrator's own, which
+ * ownConversation checks. Falls back to null when the raw-database hatch is unavailable
+ * (non-SQLite adapters).
  */
 async function loadConversationAnyOrg(
   storage: StorageAdapter,
