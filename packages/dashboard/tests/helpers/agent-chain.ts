@@ -6,8 +6,10 @@
  *   (resolveScopes = storedPermissionsOrNone, the real OAuth signer) -> AgentService
  *   (resolvePermissions = storedPermissionsOrNone)
  *
- * Only the model is scripted: each step returns text and tool calls, and the model records the tool
- * list it was offered and the context hints block it received. The service-connection repository is a spy on every method, and the scan
+ * Only the model is scripted: each step returns text and tool calls (or is a function of the messages
+ * the provider received, so a scripted model can copy its own earlier call from the history), and the
+ * model records the tool list it was offered, the context hints block it received and the messages it
+ * was given. The service-connection repository is a spy on every method, and the scan
  * service is a real ScanService over a spy storage and orchestrator with its own start limiter, so a
  * test can see whether a scan start was attempted, created and metered.
  *
@@ -44,6 +46,9 @@ export interface ScriptStep {
   readonly toolCalls: readonly ToolCallInput[];
 }
 
+/** A scripted step, or a function of the messages the provider receives that returns one. */
+export type ScriptEntry = ScriptStep | ((history: readonly unknown[]) => ScriptStep);
+
 export interface ToolRow {
   readonly status: string;
   readonly name: string | null;
@@ -71,6 +76,8 @@ export interface AgentChain {
   readonly offered: string[][];
   /** The context hints block the model received, one entry per model call (in call order). */
   readonly hints: string[];
+  /** The messages the model received, one entry per model call (in call order). */
+  readonly history: unknown[][];
   readonly serviceConnections: {
     readonly list: ReturnType<typeof vi.fn>;
     readonly get: ReturnType<typeof vi.fn>;
@@ -85,7 +92,7 @@ export interface AgentChain {
   /** The scan service's start-limiter store: key -> start timestamps. */
   readonly startStore: Map<string, readonly number[]>;
   /** Queue the model's next steps. */
-  script(steps: readonly ScriptStep[]): void;
+  script(steps: readonly ScriptEntry[]): void;
   createOrg(name: string): Promise<string>;
   /** A user with `globalRole`, in a team of `orgId` bound to the org role named `orgRoleName`. */
   addOrgUser(orgId: string, username: string, globalRole: string, orgRoleName: string): Promise<{ userId: string; teamId: string }>;
@@ -146,14 +153,17 @@ export async function buildAgentChain(): Promise<AgentChain> {
     resolveScopes: async (userId, orgId) => [...(await storedPermissionsOrNone(storage, userId, orgId))],
   });
 
-  const queue: ScriptStep[] = [];
+  const queue: ScriptEntry[] = [];
   const offered: string[][] = [];
   const hints: string[] = [];
+  const history: unknown[][] = [];
   const llm = {
     streamAgentConversation: async (input: AgentStreamInput): Promise<AgentStreamTurn> => {
       offered.push(input.tools.map((t) => t.name));
       hints.push(input.contextHintsBlock ?? '');
-      const next = queue.shift() ?? { text: 'done', toolCalls: [] };
+      history.push([...input.messages]);
+      const entry = queue.shift();
+      const next = entry === undefined ? { text: 'done', toolCalls: [] } : typeof entry === 'function' ? entry(input.messages) : entry;
       return { text: next.text, toolCalls: [...next.toolCalls] } as AgentStreamTurn;
     },
   };
@@ -185,6 +195,7 @@ export async function buildAgentChain(): Promise<AgentChain> {
     service,
     offered,
     hints,
+    history,
     serviceConnections,
     scanService,
     scanStart,

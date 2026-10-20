@@ -46,3 +46,8 @@ export function redactArgumentsJson(argsJson: string): string {
   }
   return holdsSecret(parsed) ? JSON.stringify(redactSecretArguments(parsed)) : argsJson;
 }
+
+/** The key paths in `args` whose secret-named value holds {@link REDACTED}. */
+export function redactedArgumentPaths(_args: unknown): readonly string[] {
+  return [];
+}
