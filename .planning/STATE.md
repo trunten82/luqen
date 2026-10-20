@@ -5,16 +5,16 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: Completed 91-22d-PLAN.md (PR4 plan 6: a tool call carrying the redaction marker in place of a secret value is not run and the assistant asks for the value again; shared conversations show tool calls redacted and only the owner shares one; a paused action leaves pending through one conditional claim, is declined after 24 hours and when its conversation is deleted; 11 breaks MATCH; final PR4 gates green, UAT GREEN 238; not pushed)
-last_updated: "2026-10-20T17:50:00.000Z"
+stopped_at: Completed 91-22e-PLAN.md (PR4 plan 7: only the user who started a conversation opens, changes or deletes it (one owner check for the seven conversation routes, owner-scoped rename and delete in the repository); a trusted-proxy list that together trusts every IPv4 or IPv6 address is refused at startup; the consent fast path answers only for the organization the consent names; confirming a paused action after 24 hours declines it; every sign-in starts a new session; public pages record no session activity; the redaction marker is refused in any case and bracket form; 20 breaks MATCH; final PR4 gates green, UAT GREEN 238; not pushed)
+last_updated: "2026-10-20T19:45:00.000Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
-state_head: fa4839643cd253813de944cdf4aa55936a3a4cf1
+state_head: 45c35a36e76400c06db9ed10ec0248a6a886b6fb
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 40
-  completed_plans: 40
+  total_plans: 41
+  completed_plans: 41
   percent: 33
 ---
 
@@ -128,7 +128,7 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 ## Current Position
 
 Phase: 91 (Dismissal and permission hardening) — EXECUTING
-Plan: 22d of 23
+Plan: 22e of 23
 Status: Ready to execute
 Last activity: 2026-10-20 - Completed quick task 261020-izd: fix-suggestion route admits issues.fix (PR #12)
 
@@ -220,10 +220,10 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-20T17:50:00.000Z
-Stopped at: Completed 91-22d-PLAN.md (PR4 plan 6: a tool call carrying the redaction marker in place of a secret value is not run and the assistant asks for the value again; shared conversations show tool calls redacted and only the owner shares one; a paused action leaves pending through one conditional claim, is declined after 24 hours and when its conversation is deleted; 11 breaks MATCH; final PR4 gates green, UAT GREEN 238; not pushed)
+Last session: 2026-10-20T19:45:00.000Z
+Stopped at: Completed 91-22e-PLAN.md (PR4 plan 7: only the user who started a conversation opens, changes or deletes it (one owner check for the seven conversation routes, owner-scoped rename and delete in the repository); a trusted-proxy list that together trusts every IPv4 or IPv6 address is refused at startup; the consent fast path answers only for the organization the consent names; confirming a paused action after 24 hours declines it; every sign-in starts a new session; public pages record no session activity; the redaction marker is refused in any case and bracket form; 20 breaks MATCH; final PR4 gates green, UAT GREEN 238; not pushed)
 Resume file: None
-Next action: Phase 91 PR4 continues with the focused re-review of 91-22b..d, then 91-23 (branch fix/v3.9.0-phase-91-session-freshness).
+Next action: Phase 91 PR4 continues with the focused re-review of the 91-22e delta, then 91-23 (branch fix/v3.9.0-phase-91-session-freshness).
 
 ## Operator Next Steps
 
@@ -297,6 +297,7 @@ Next action: Phase 91 PR4 continues with the focused re-review of 91-22b..d, the
 | Phase 91 P22b | ~55min | 3 tasks | 23 files |
 | Phase 91 P22c | ~85min | 3 tasks | 17 files |
 | Phase 91 P22d | ~95min | 3 tasks | 21 files |
+| Phase 91 P22e | ~75min | 3 tasks | 36 files |
 
 ## Decisions
 
@@ -362,6 +363,7 @@ Next action: Phase 91 PR4 continues with the focused re-review of 91-22b..d, the
 - [Phase 91]: Phase 91 P21: the assistant's context hints are read with the stored user's permissions in the conversation's organization, resolved once for the turn (no hints without a permission there; recent scans need reports.view and an organization; brand guideline names need branding.view); conversation tool calls store secret-named arguments as [redacted], except that a paused action keeps its arguments as given until the write that confirms or declines it stores them redacted, and a confirmation the dispatcher refuses returns the action to pending with its arguments; destructive tools that may carry a secret argument are pinned by a test
 - [Phase 91]: Phase 91 P22c: the consent page carries a binding of the signed-in user and the organization it names (HMAC under a per-process key) and the approval recomputes it from its own request, so a code is minted only for the organization its page named (400 invalid_request organization_changed otherwise, nothing written); a recorded consent covers only the organization stored with it (migration 093, nullable org_id; NULL covers none, so earlier consents show their page once more); a refresh token presented by a client it was not issued to is answered 400 invalid_grant before anything is written, whatever its row state; the code exchange consumes the code before asking the access rule and the docs say a deleted user's refresh tokens are removed with the user
 - [Phase 91]: Phase 91 P22d: the dispatcher answers a tool call whose secret-named argument holds the redaction marker with redacted_argument (key paths only, never a value) before argument parsing and the handler, and the assistant loop answers a destructive call holding it the same way instead of pausing it, so the model is told to ask the user for the value again; the shared conversation view renders stored tool calls with secret-named values redacted (the stored rows are unchanged) and only the owner of a conversation creates a share link for it (404 conversation_not_found otherwise); confirm, decline, the 24-hour expiry sweep (run when the server starts and every hour, unref'd, cleared on close) and a conversation delete all leave pending_confirmation through one conditional claim (claimPendingMessage: the status change and the redaction of the stored call in one UPDATE, changes = 1 wins, the rest answer 409 not_pending), and a refused confirmation restores only the row it claimed; the destructive-tool schema walk recognises patternProperties and open values
+- [Phase 91]: Phase 91 P22e: the seven conversation routes (open, message, edit form, retry, edit and resend, rename, delete) answer only the user who started the conversation through one helper (404 conversation_not_found for anyone else, a global administrator included, before any message is read or anything is written) and the repository renames and deletes only for the owner's user id; resolveTrustedProxies refuses a list whose entries together trust every IPv4 or every IPv6 address, decided on the addresses covered (an IPv6 range holding the IPv4-mapped block counts for IPv4, named ranges counted as the addresses they hold, sizes computed not written); the consent fast path issues a code only when the remembered consent names the organization of the request; confirming a paused action older than 24 hours declines it through the sweep's claim, result row and summary audit row and answers 409 expired; beginSession starts from an empty session (regenerate) so nothing an earlier sign-in left carries over; the idle hook records activity only on the paths the session guard checks (one predicate decides both); the redaction marker is recognised in any letter case, with surrounding space and in square, angle, round and curly bracket forms or as the bare word
 
 ### Blockers
 
