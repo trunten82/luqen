@@ -66,6 +66,7 @@ const ConsentBodySchema = Type.Object(
     code_challenge: Type.Optional(Type.String()),
     code_challenge_method: Type.Optional(Type.String()),
     approved: Type.Optional(Type.String()),
+    consent_binding: Type.Optional(Type.String()),
   },
   { additionalProperties: true },
 );
@@ -104,6 +105,7 @@ interface ConsentBody {
   readonly code_challenge?: string;
   readonly code_challenge_method?: string;
   readonly approved?: string;
+  readonly consent_binding?: string;
 }
 
 function splitSpace(value: string | undefined): readonly string[] {
@@ -350,6 +352,7 @@ export async function registerAuthorizeRoutes(
       state: q.state ?? '',
       codeChallenge: q.code_challenge,
       csrfToken,
+      consentBinding: 'stub',
     });
   });
 

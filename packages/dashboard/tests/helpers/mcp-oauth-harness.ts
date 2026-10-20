@@ -91,6 +91,10 @@ const REDIRECT_URI = 'https://mcp-client.example/callback';
 /** createServer defaults encryptionKey to sessionSecret; the harness passes this sessionSecret. */
 const SESSION_SECRET = 'm'.repeat(32);
 
+/** The consent page's organization binding (a hidden input), which a browser posts back with Allow. */
+const bindingOf = (html: string): string | undefined =>
+  /name="consent_binding" value="([^"]+)"/.exec(html)?.[1];
+
 const tokenOf = (html: string): string | undefined =>
   /name="csrf-token" content="([^"]+)"/.exec(html)?.[1] ?? /name="_csrf" value="([^"]+)"/.exec(html)?.[1];
 
@@ -254,6 +258,7 @@ export async function startMcpOauthHarness(
         payload: formBody({
           _csrf: pageToken, client_id: id, redirect_uri: REDIRECT_URI, scope, resource, state: 'harness',
           code_challenge: s256(verifier), code_challenge_method: 'S256', approved: 'true',
+          ...(bindingOf(authorize.body) !== undefined ? { consent_binding: bindingOf(authorize.body)! } : {}),
         }),
       });
       steps.push({ step: 'consent', status: consent.statusCode });

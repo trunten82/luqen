@@ -115,6 +115,7 @@
         <input type="hidden" name="state"                 value="{{state}}" aria-label="OAuth state parameter" />
         <input type="hidden" name="code_challenge"        value="{{codeChallenge}}" aria-label="PKCE code challenge" />
         <input type="hidden" name="code_challenge_method" value="S256" aria-label="PKCE method" />
+        <input type="hidden" name="consent_binding"       value="{{consentBinding}}" aria-label="Organization binding" />
 
         <button type="submit" name="approved" value="true"  class="btn btn--primary">Allow</button>
         <button type="submit" name="approved" value="false" class="btn btn--secondary">Deny</button>

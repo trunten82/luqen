@@ -86,6 +86,7 @@ async function codeFor(reader: SeededReader, trail: string[]): Promise<{ code: s
   let location = typeof authorize.headers.location === 'string' ? authorize.headers.location : undefined;
   if (location === undefined) {
     const pageToken = /name="_csrf" value="([^"]+)"/.exec(authorize.body)?.[1];
+    const binding = /name="consent_binding" value="([^"]+)"/.exec(authorize.body)?.[1];
     const cookie = authorize.cookies.find((c) => c.name === 'session')?.value ?? switched.session.cookie;
     if (authorize.statusCode !== 200 || pageToken === undefined) return undefined;
     const consent = await h.app.inject({
@@ -94,6 +95,7 @@ async function codeFor(reader: SeededReader, trail: string[]): Promise<{ code: s
       payload: formBody({
         _csrf: pageToken, client_id: clientId, redirect_uri: REDIRECT_URI, scope: 'read', resource, state: 'grant',
         code_challenge: challenge, code_challenge_method: 'S256', approved: 'true',
+        ...(binding !== undefined ? { consent_binding: binding } : {}),
       }),
     });
     trail.push(`consent=${consent.statusCode}`);

@@ -127,7 +127,7 @@ async function buildCtx(opts: {
 // secure-session cookies must be URL-encoded when round-tripping through a
 // `Cookie:` header, otherwise the session fails to decode and the stored CSRF
 // secret appears missing.
-async function primeCsrf(ctx: TestCtx): Promise<{ csrf: string; cookie: string }> {
+async function primeCsrf(ctx: TestCtx): Promise<{ csrf: string; cookie: string; binding: string }> {
   const verifier = 'a'.repeat(50);
   const url = `/oauth/authorize?response_type=code&client_id=${ctx.clientId}&redirect_uri=${encodeURIComponent(
     ctx.redirectUri,
@@ -138,8 +138,8 @@ async function primeCsrf(ctx: TestCtx): Promise<{ csrf: string; cookie: string }
   const rawSetCookie = res.headers['set-cookie'];
   const setCookie = Array.isArray(rawSetCookie) ? rawSetCookie[0] : (rawSetCookie ?? '');
   const cookie = setCookie.split(';')[0] ?? '';
-  const body = JSON.parse(res.body) as { data: { csrfToken: string } };
-  return { csrf: body.data.csrfToken, cookie };
+  const body = JSON.parse(res.body) as { data: { csrfToken: string; consentBinding?: string } };
+  return { csrf: body.data.csrfToken, cookie, binding: body.data.consentBinding ?? '' };
 }
 
 // ── GET /oauth/authorize ────────────────────────────────────────────────────
@@ -300,7 +300,7 @@ describe('POST /oauth/authorize/consent — Test 8 (approve inserts consent + co
   afterEach(async () => { await ctx.cleanup(); });
 
   it('writes consent + authorization code (TTL 60s) + 302 with code', async () => {
-    const { csrf, cookie } = await primeCsrf(ctx);
+    const { csrf, cookie, binding } = await primeCsrf(ctx);
     const verifier = 'a'.repeat(50);
     const res = await ctx.server.inject({
       method: 'POST',
@@ -316,6 +316,7 @@ describe('POST /oauth/authorize/consent — Test 8 (approve inserts consent + co
         code_challenge: s256(verifier),
         code_challenge_method: 'S256',
         approved: 'true',
+        consent_binding: binding,
       }).toString(),
     });
     expect(res.statusCode).toBe(302);
@@ -352,7 +353,7 @@ describe('POST /oauth/authorize/consent — Test 9 (deny redirects with access_d
   afterEach(async () => { await ctx.cleanup(); });
 
   it('redirects with ?error=access_denied&state=... and writes no row', async () => {
-    const { csrf, cookie } = await primeCsrf(ctx);
+    const { csrf, cookie, binding } = await primeCsrf(ctx);
     const verifier = 'a'.repeat(50);
     const res = await ctx.server.inject({
       method: 'POST',
@@ -368,6 +369,7 @@ describe('POST /oauth/authorize/consent — Test 9 (deny redirects with access_d
         code_challenge: s256(verifier),
         code_challenge_method: 'S256',
         approved: 'false',
+        consent_binding: binding,
       }).toString(),
     });
     expect(res.statusCode).toBe(302);
@@ -690,7 +692,7 @@ describe('POST /oauth/authorize/consent — Phase 31.2 Test G (31.1 SMOKE step 3
   afterEach(async () => { await ctx.cleanup(); });
 
   it('admin + scope=read+write + DCR client → consent Allow → 302 redirect with ?code=&state=', async () => {
-    const { csrf, cookie } = await primeCsrf(ctx);
+    const { csrf, cookie, binding } = await primeCsrf(ctx);
     const verifier = 'a'.repeat(50);
     const res = await ctx.server.inject({
       method: 'POST',
@@ -706,6 +708,7 @@ describe('POST /oauth/authorize/consent — Phase 31.2 Test G (31.1 SMOKE step 3
         code_challenge: s256(verifier),
         code_challenge_method: 'S256',
         approved: 'true',
+        consent_binding: binding,
       }).toString(),
     });
     expect(res.statusCode).toBe(302);
@@ -728,7 +731,7 @@ describe('POST /oauth/authorize/consent — Phase 31.2 Task 1 Test 4 (first-cons
     const preBackfill = await ctx.storage.oauthClients.findByClientId(ctx.clientId);
     expect(preBackfill!.registeredByUserId).toBeNull();
 
-    const { csrf, cookie } = await primeCsrf(ctx);
+    const { csrf, cookie, binding } = await primeCsrf(ctx);
     const verifier = 'a'.repeat(50);
     const res = await ctx.server.inject({
       method: 'POST',
@@ -744,6 +747,7 @@ describe('POST /oauth/authorize/consent — Phase 31.2 Task 1 Test 4 (first-cons
         code_challenge: s256(verifier),
         code_challenge_method: 'S256',
         approved: 'true',
+        consent_binding: binding,
       }).toString(),
     });
     expect(res.statusCode).toBe(302);
