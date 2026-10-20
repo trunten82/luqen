@@ -5,16 +5,16 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: Completed 91-22b-PLAN.md (PR4 plan 4: forwarded client addresses are read only through trusted proxies; one sign-in session writer, ended sessions recorded once, external sessions follow their stored user, the sign-in cookie idle-expires, /orgs/current reports the request's own organization; 13 breaks MATCH; UAT GREEN 238; not pushed)
-last_updated: "2026-10-20T16:40:00.000Z"
+stopped_at: Completed 91-22c-PLAN.md (PR4 plan 5: a consent approval acts only in the organization its page named; a recorded consent covers the organization it was given in (migration 093); a refresh token answers only the client it was issued to; 7 breaks MATCH; not pushed)
+last_updated: "2026-10-20T17:05:00.000Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
-state_head: c83741c1b7fc89d708a644c2659830a8064d95d6
+state_head: 19ad48f8bacf49091699c50f9f1350d08185e740
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 39
-  completed_plans: 38
+  completed_plans: 39
   percent: 33
 ---
 
@@ -128,7 +128,7 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 ## Current Position
 
 Phase: 91 (Dismissal and permission hardening) — EXECUTING
-Plan: 22b of 23
+Plan: 22c of 23
 Status: Ready to execute
 Last activity: 2026-10-20 - Completed quick task 261020-izd: fix-suggestion route admits issues.fix (PR #12)
 
@@ -220,10 +220,10 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-20T16:40:00.000Z
-Stopped at: Completed 91-22b-PLAN.md (PR4 plan 4: forwarded client addresses are read only through trusted proxies; one sign-in session writer, ended sessions recorded once, external sessions follow their stored user, the sign-in cookie idle-expires, /orgs/current reports the request's own organization; 13 breaks MATCH; UAT GREEN 238; not pushed)
+Last session: 2026-10-20T17:05:00.000Z
+Stopped at: Completed 91-22c-PLAN.md (PR4 plan 5: a consent approval acts only in the organization its page named; a recorded consent covers the organization it was given in (migration 093); a refresh token answers only the client it was issued to; 7 breaks MATCH; not pushed)
 Resume file: None
-Next action: Phase 91 PR4 continues with 91-22c (branch fix/v3.9.0-phase-91-session-freshness).
+Next action: Phase 91 PR4 continues with 91-22d (branch fix/v3.9.0-phase-91-session-freshness).
 
 ## Operator Next Steps
 
@@ -295,6 +295,7 @@ Next action: Phase 91 PR4 continues with 91-22c (branch fix/v3.9.0-phase-91-sess
 | Phase 91 P20 | ~45min | 3 tasks | 25 files |
 | Phase 91 P21 | ~46min | 3 tasks | 15 files |
 | Phase 91 P22b | ~55min | 3 tasks | 23 files |
+| Phase 91 P22c | ~85min | 3 tasks | 17 files |
 
 ## Decisions
 
@@ -358,6 +359,7 @@ Next action: Phase 91 PR4 continues with 91-22c (branch fix/v3.9.0-phase-91-sess
 - [Phase 91]: Phase 91 P19: a signed-in session answers every request for its stored principal: the stored dashboard user (an inactive or deleted user's session is cleared and answered as unauthenticated; the stored role and username answer, so a role change applies on the next request), the API key a key session names (checked by id with the sign-in predicate, read without writing), or, for a compliance-service or SSO session without a stored user, the values given at sign-in; any other session is refused, and each refused request writes one session.ended audit row with the reason code; the session organization must be one of the user's organizations on every request (otherwise the first organization, or none); one primary-key read per session request, no cache
 - [Phase 91]: Phase 91 P20: one MCP rule (resolveMcpCaller: the stored-caller rule, then no permission, then no mcp.use) is asked by /api/v1/mcp on every request (403 insufficient_scope, no_mcp_use), by the refresh grant before the chain rotates and by the code exchange before minting (400 invalid_grant; a refused refresh writes nothing and its refresh token works again once access is restored); OAuth consent acts in and names the organization the request acts in ('system' when none), offers to switch only to the user's organizations with the stored role, and needs a stored dashboard user (403 dashboard_user_required); the in-dashboard assistant does not require mcp.use (its tools follow the stored user's permissions), pinned in behaviour and in the server wiring
 - [Phase 91]: Phase 91 P21: the assistant's context hints are read with the stored user's permissions in the conversation's organization, resolved once for the turn (no hints without a permission there; recent scans need reports.view and an organization; brand guideline names need branding.view); conversation tool calls store secret-named arguments as [redacted], except that a paused action keeps its arguments as given until the write that confirms or declines it stores them redacted, and a confirmation the dispatcher refuses returns the action to pending with its arguments; destructive tools that may carry a secret argument are pinned by a test
+- [Phase 91]: Phase 91 P22c: the consent page carries a binding of the signed-in user and the organization it names (HMAC under a per-process key) and the approval recomputes it from its own request, so a code is minted only for the organization its page named (400 invalid_request organization_changed otherwise, nothing written); a recorded consent covers only the organization stored with it (migration 093, nullable org_id; NULL covers none, so earlier consents show their page once more); a refresh token presented by a client it was not issued to is answered 400 invalid_grant before anything is written, whatever its row state; the code exchange consumes the code before asking the access rule and the docs say a deleted user's refresh tokens are removed with the user
 
 ### Blockers
 
