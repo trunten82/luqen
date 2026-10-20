@@ -275,6 +275,7 @@ export interface ConversationRepository {
    * `superseded_at=now()` for rows currently in
    * ('streaming','final','stopped','sent','pending_confirmation','approved','denied','failed').
    * Already-superseded rows are skipped (idempotent).
+   * A row moved out of 'pending_confirmation' here stores its tool-call arguments redacted.
    *
    * Org-guarded: only rows whose parent conversation is in `orgId` are
    * touched. Returns the number of rows actually updated.

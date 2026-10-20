@@ -1441,15 +1441,17 @@ export async function registerAgentRoutes(
         if (lastUser === undefined || lastUser.id !== mid) {
           return reply.code(400).send({ error: 'not_most_recent_user' });
         }
-        // Identify the assistant reply that immediately followed :mid (if any).
+        // The edited question and its whole answer are superseded: every active row from :mid on (the
+        // assistant's tool-call rows, the tool results, an action awaiting confirmation, the final
+        // answer), in branch order. No later question exists (:mid is the most recent one). A share link
+        // to that answer ends with it, and an action awaiting confirmation in it can no longer be approved
+        // (confirm and decline answer 409 not_pending) and is never seen by the expiry sweep.
         const userIdx = active.findIndex((m) => m.id === mid);
+        const supersededMessageIds = active.slice(userIdx).map((m) => m.id);
         const followingAssistant = active
           .slice(userIdx + 1)
           .find((m) => m.role === 'assistant');
-        const toSupersede = followingAssistant !== undefined
-          ? [mid, followingAssistant.id]
-          : [mid];
-        await storage.conversations.markMessagesSuperseded(toSupersede, cid, orgId);
+        await storage.conversations.markMessagesSuperseded(supersededMessageIds, cid, orgId);
 
         // Persist the new edited user message.
         const newUser = await storage.conversations.appendMessage({
@@ -1470,6 +1472,7 @@ export async function registerAgentRoutes(
             ...(followingAssistant !== undefined
               ? { supersededAssistantId: followingAssistant.id }
               : {}),
+            supersededMessageIds,
           }),
           outcome: 'success',
           latencyMs: 0,

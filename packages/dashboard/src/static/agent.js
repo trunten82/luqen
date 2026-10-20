@@ -695,10 +695,10 @@
 
   function loadPanel() {
     var cid = getConversationId();
-    if (!cid || cid.length === 0) { return; }
+    if (!cid || cid.length === 0) { return Promise.resolve(); }
     var url = '/agent/panel?conversationId=' + encodeURIComponent(cid);
     var resetConv = false;
-    fetch(url, { credentials: 'same-origin', headers: { 'x-csrf-token': csrfToken() } })
+    return fetch(url, { credentials: 'same-origin', headers: { 'x-csrf-token': csrfToken() } })
       .then(function (r) {
         if (!r.ok) return '';
         // Bug #3 (agent-chat-ui-cluster): server signals an out-of-band conv
@@ -870,10 +870,10 @@
       });
   }
 
-  // A 409 answer to an approval: the dialog stays closed, the status line says why (the expired text
-  // for { error: 'expired' }, otherwise the already-resolved text; both come from the dialog's
-  // data attributes, filled by the server in the user's language) and the panel is fetched again so
-  // the row shows its new state. A body that does not parse counts as already resolved.
+  // A 409 answer to an approval: no Retry; the panel reloads (loadPanel's promise settles once it is applied)
+  // and then a notice saying why (the expired or already-resolved text of the dialog's attributes, in the
+  // user's language; an unparsed body counts as resolved) replaces any earlier one in the messages list. That
+  // list is a polite log announcing additions, so the status line does not repeat it; a reload with rows clears it.
   function showNoLongerPending(response, approveBtn) {
     var dialog = byId(DIALOG_ID);
     return response.json().then(
@@ -888,9 +888,15 @@
       var fallback = reason === 'expired'
         ? 'This action was not approved within 24 hours, so it was declined.'
         : 'This action was already approved or declined, so it cannot be approved here.';
-      setStatus(attr && attr.length > 0 ? attr : fallback);
-      loadPanel();
+      return loadPanel().then(function () { showPanelNotice(attr && attr.length > 0 ? attr : fallback); });
     });
+  }
+  function showPanelNotice(text) {
+    var msgs = byId(MESSAGES_ID); if (!msgs) return;
+    var stale = msgs.querySelectorAll('[data-agent-notice]'); for (var i = 0; i < stale.length; i++) { stale[i].parentNode.removeChild(stale[i]); }
+    var notice = document.createElement('div'); notice.className = 'alert alert--warning';
+    notice.setAttribute('data-agent-notice', 'no-longer-pending');
+    var p = document.createElement('p'); p.textContent = text; notice.appendChild(p); msgs.appendChild(notice);
   }
 
   function handleCancelClick() {

@@ -551,22 +551,34 @@ export class SqliteConversationRepository implements ConversationRepository {
     const now = new Date().toISOString();
     // Build IN-list of placeholders. better-sqlite3 binds positional args.
     const placeholders = messageIds.map(() => '?').join(',');
-    const sql = `
-      UPDATE agent_messages
-      SET status = 'superseded',
-          superseded_at = ?
-      WHERE id IN (${placeholders})
+    const target = `id IN (${placeholders})
         AND conversation_id = ?
         AND status != 'superseded'
         AND EXISTS (
           SELECT 1 FROM agent_conversations c
           WHERE c.id = agent_messages.conversation_id
             AND c.org_id = ?
-        )
-    `;
-    const params: unknown[] = [now, ...messageIds, conversationId, orgId];
-    const result = this.db.prepare(sql).run(...params);
-    return result.changes;
+        )`;
+    const targetParams: unknown[] = [...messageIds, conversationId, orgId];
+    // A paused action superseded with its turn leaves pending_confirmation here, so its stored
+    // arguments are redacted in the same transaction, as every other write out of pending_confirmation does.
+    const selectPaused = this.db.prepare(
+      `SELECT id, tool_call_json FROM agent_messages
+       WHERE ${target} AND status = 'pending_confirmation' AND tool_call_json IS NOT NULL`,
+    );
+    const supersede = this.db.prepare(
+      `UPDATE agent_messages
+       SET status = 'superseded',
+           superseded_at = ?
+       WHERE ${target}`,
+    );
+    const storeRedactedCall = this.db.prepare('UPDATE agent_messages SET tool_call_json = ? WHERE id = ?');
+    return this.db.transaction(() => {
+      const paused = selectPaused.all(...targetParams) as Array<{ id: string; tool_call_json: string }>;
+      const result = supersede.run(now, ...targetParams);
+      for (const row of paused) storeRedactedCall.run(redactArgumentsJson(row.tool_call_json), row.id);
+      return result.changes;
+    })();
   }
 
   async getMessagesIncludingSuperseded(
