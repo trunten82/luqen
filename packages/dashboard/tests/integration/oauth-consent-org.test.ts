@@ -20,6 +20,7 @@ let h: McpOauthHarness;
 interface AuthorizeRequest {
   readonly url: string;
   readonly challenge: string;
+  readonly verifier: string;
   readonly clientId: string;
   readonly resource: string;
 }
@@ -33,7 +34,7 @@ async function authorizeRequest(clientIdOverride?: string): Promise<AuthorizeReq
     response_type: 'code', client_id: clientId, redirect_uri: REDIRECT_URI, scope: 'read', resource,
     code_challenge: challenge, code_challenge_method: 'S256', state: 'consent',
   });
-  return { url: `/oauth/authorize?${query.toString()}`, challenge, clientId, resource };
+  return { url: `/oauth/authorize?${query.toString()}`, challenge, verifier, clientId, resource };
 }
 
 /** The claims of a signed JWT (no verification: the server's own MCP endpoint verifies it). */
@@ -321,5 +322,60 @@ describe('HARD-21 a consent approval is checked against the organization its pag
     trail.push(`own-binding=${accepted.status}`);
     expect(accepted.status, trail.join(' ')).toBe(302);
     expect(writes(u.userId, clientId).codes, trail.join(' ')).toBe(1);
+  }, 60_000);
+});
+
+describe('HARD-21 a recorded consent covers the organization it was given in', () => {
+  it('HARD-21 a recorded consent covers only the organization it was given in', async () => {
+    const u = await seedTwoOrgViewer('co1');
+    const clientId = await h.newClient('co1');
+    const trail: string[] = [];
+    const login = await h.login(u.username, PASSWORD);
+    const inFabrikam = await h.switchOrg(login.session, u.fabrikam);
+    const minted = await h.mintToken(inFabrikam.session, ['read'], { clientId });
+    for (const step of minted.steps) trail.push(`${step.step}=${step.status}`);
+    expect(minted.token, trail.join(' ')).toBeDefined(); // positive control: the consent was given in Fabrikam
+    expect(writes(u.userId, clientId).consents, trail.join(' ')).toBe(1);
+    const codesBefore = writes(u.userId, clientId).codes;
+
+    const inNorthwind = await h.switchOrg(inFabrikam.session, u.northwind);
+    trail.push(`switch-northwind=${inNorthwind.status}`);
+    expect(inNorthwind.status, trail.join(' ')).toBe(302);
+    const req = await authorizeRequest(clientId);
+    const page = await openPage(inNorthwind.session, req);
+    trail.push(`authorize=${page.status}`);
+    expect(page.status, trail.join(' ')).toBe(200);
+    expect(page.body, trail.join(' ')).toMatch(/Active org<\/dt>\s*<dd>Northwind RV co1<\/dd>/);
+    expect(page.binding, trail.join(' ')).toBeDefined();
+    expect(writes(u.userId, clientId).codes, trail.join(' ')).toBe(codesBefore);
+  }, 60_000);
+
+  it('HARD-21 a recorded consent covers its own organization', async () => {
+    const u = await seedTwoOrgViewer('co2');
+    const clientId = await h.newClient('co2');
+    const trail: string[] = [];
+    const login = await h.login(u.username, PASSWORD);
+    const inFabrikam = await h.switchOrg(login.session, u.fabrikam);
+    const minted = await h.mintToken(inFabrikam.session, ['read'], { clientId });
+    for (const step of minted.steps) trail.push(`${step.step}=${step.status}`);
+    expect(minted.token, trail.join(' ')).toBeDefined(); // positive control: the consent was given in Fabrikam
+
+    const req = await authorizeRequest(clientId);
+    const again = await h.app.inject({ method: 'GET', url: req.url, cookies: { session: inFabrikam.session.cookie } });
+    const location = typeof again.headers.location === 'string' ? again.headers.location : undefined;
+    trail.push(`authorize-again=${again.statusCode}`);
+    expect(again.statusCode, trail.join(' ')).toBe(302);
+    expect(location?.startsWith(REDIRECT_URI), trail.join(' ')).toBe(true);
+    const code = new URL(location!).searchParams.get('code');
+    expect(code, trail.join(' ')).not.toBeNull();
+    const exchanged = await h.app.inject({
+      method: 'POST', url: '/oauth/token', headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: new URLSearchParams({
+        grant_type: 'authorization_code', client_id: clientId, code: code!, code_verifier: req.verifier, redirect_uri: REDIRECT_URI,
+      }).toString(),
+    });
+    trail.push(`exchange=${exchanged.statusCode}`);
+    expect(exchanged.statusCode, trail.join(' ')).toBe(200);
+    expect(claimsOf((exchanged.json() as { access_token: string }).access_token)['orgId'], trail.join(' ')).toBe(u.fabrikam);
   }, 60_000);
 });

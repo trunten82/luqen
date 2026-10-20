@@ -257,3 +257,82 @@ describe('HARD-21 the token endpoint mints only for a user the MCP endpoint woul
     expect(rows.filter((r) => r.rotated === 1).length, trail.join(' ')).toBe(1);
   }, 60_000);
 });
+
+function reuseAudits(): number {
+  return (h.seed.getRawDatabase()
+    .prepare("SELECT COUNT(*) AS n FROM agent_audit_log WHERE tool_name = 'oauth.refresh_reuse_detected'")
+    .get() as { n: number }).n;
+}
+
+describe('HARD-21 a refresh token answers only the client it was issued to', () => {
+  it('HARD-21 a refresh token presented by another client leaves its owner chain usable', async () => {
+    const reader = await seedReader('rw1');
+    const trail: string[] = [];
+    const chain = await refreshTokenFor(reader, trail);
+    expect(chain, trail.join(' ')).toBeDefined(); // positive control: the chain exists
+    const other = await h.newClient('rw1-other');
+    const before = chainRows(reader.userId);
+    trail.push(`rows-before=${JSON.stringify(before)}`);
+    expect(before.length, trail.join(' ')).toBe(1);
+
+    const refused = await postToken({ grant_type: 'refresh_token', client_id: other, refresh_token: chain!.refreshToken });
+    const after = chainRows(reader.userId);
+    trail.push(`refused=${refused.status}/${JSON.stringify(refused.body).slice(0, 80)} rows-after=${JSON.stringify(after)} reuse=${reuseAudits()}`);
+    expectRefused(refused, trail.join(' '));
+    expect(after, trail.join(' ')).toEqual(before);
+    expect(reuseAudits(), trail.join(' ')).toBe(0);
+
+    const owner = await refresh(chain!);
+    trail.push(`owner=${owner.status}`);
+    expect(owner.status, trail.join(' ')).toBe(200);
+  }, 60_000);
+
+  it('HARD-21 a rotated refresh token presented by another client leaves its owner chain usable', async () => {
+    const reader = await seedReader('rw2');
+    const trail: string[] = [];
+    const chain = await refreshTokenFor(reader, trail);
+    expect(chain, trail.join(' ')).toBeDefined();
+    const first = await refresh(chain!);
+    trail.push(`owner-first=${first.status}`);
+    expect(first.status, trail.join(' ')).toBe(200); // positive control: the first token is now rotated
+    const current = first.body['refresh_token'];
+    expect(typeof current, trail.join(' ')).toBe('string');
+    const other = await h.newClient('rw2-other');
+    const before = chainRows(reader.userId);
+    trail.push(`rows-before=${JSON.stringify(before)}`);
+    expect(before.length, trail.join(' ')).toBe(2);
+
+    const refused = await postToken({ grant_type: 'refresh_token', client_id: other, refresh_token: chain!.refreshToken });
+    const after = chainRows(reader.userId);
+    trail.push(`refused=${refused.status}/${JSON.stringify(refused.body).slice(0, 80)} rows-after=${JSON.stringify(after)} reuse=${reuseAudits()}`);
+    expectRefused(refused, trail.join(' '));
+    expect(after, trail.join(' ')).toEqual(before);
+    expect(reuseAudits(), trail.join(' ')).toBe(0);
+
+    const owner = await refresh({ refreshToken: current as string, clientId: chain!.clientId });
+    trail.push(`owner=${owner.status}`);
+    expect(owner.status, trail.join(' ')).toBe(200);
+  }, 60_000);
+});
+
+describe('HARD-21 a refused code exchange', () => {
+  it('HARD-21 a refused code exchange consumes its code', async () => {
+    const reader = await seedReader('cx1');
+    const trail: string[] = [];
+    const grant = await codeFor(reader, trail);
+    expect(grant, trail.join(' ')).toBeDefined(); // positive control: consent wrote a code
+    expect(codeRows(reader.userId), trail.join(' ')).toBe(1);
+
+    await h.seed.users.deactivateUser(reader.userId);
+    const refused = await exchange(grant!);
+    trail.push(`refused=${refused.status}/${JSON.stringify(refused.body).slice(0, 80)} codes=${codeRows(reader.userId)}`);
+    expectRefused(refused, trail.join(' '));
+    expect(codeRows(reader.userId), trail.join(' ')).toBe(0);
+
+    await h.seed.users.activateUser(reader.userId);
+    const again = await exchange(grant!);
+    trail.push(`again=${again.status}/${JSON.stringify(again.body).slice(0, 80)} chain=${JSON.stringify(chainRows(reader.userId))}`);
+    expectRefused(again, trail.join(' '));
+    expect(chainRows(reader.userId), trail.join(' ')).toEqual([]);
+  }, 60_000);
+});

@@ -22,6 +22,8 @@ export interface Consent {
   readonly clientId: string;
   readonly scopes: readonly string[];
   readonly resources: readonly string[];
+  /** The organization the consent was given in; null for a consent recorded without one. */
+  readonly orgId: string | null;
   readonly consentedAt: string;
   readonly updatedAt: string;
 }
@@ -29,6 +31,8 @@ export interface Consent {
 export interface RecordConsentInput {
   readonly userId: string;
   readonly clientId: string;
+  /** The organization the code is minted for. */
+  readonly orgId: string;
   readonly scopes: readonly string[];
   readonly resources: readonly string[];
 }
@@ -36,6 +40,8 @@ export interface RecordConsentInput {
 export interface CheckCoverageInput {
   readonly userId: string;
   readonly clientId: string;
+  /** The organization the request acts in. */
+  readonly orgId: string;
   readonly requestedScopes: readonly string[];
   readonly requestedResources: readonly string[];
 }

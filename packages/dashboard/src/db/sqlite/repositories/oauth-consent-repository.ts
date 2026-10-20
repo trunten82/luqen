@@ -18,6 +18,7 @@ interface OauthConsentRow {
   client_id: string;
   scopes: string;
   resources: string;
+  org_id: string | null;
   consented_at: string;
   updated_at: string;
 }
@@ -29,6 +30,7 @@ function rowToConsent(row: OauthConsentRow): Consent {
     clientId: row.client_id,
     scopes: JSON.parse(row.scopes) as readonly string[],
     resources: JSON.parse(row.resources) as readonly string[],
+    orgId: row.org_id,
     consentedAt: row.consented_at,
     updatedAt: row.updated_at,
   };
@@ -49,12 +51,13 @@ export class SqliteOauthConsentRepository implements OauthConsentRepository {
     this.db
       .prepare(
         `INSERT INTO oauth_user_consents
-           (id, user_id, client_id, scopes, resources, consented_at, updated_at)
+           (id, user_id, client_id, scopes, resources, org_id, consented_at, updated_at)
          VALUES
-           (@id, @userId, @clientId, @scopes, @resources, @consentedAt, @updatedAt)
+           (@id, @userId, @clientId, @scopes, @resources, @orgId, @consentedAt, @updatedAt)
          ON CONFLICT(user_id, client_id) DO UPDATE SET
            scopes = excluded.scopes,
            resources = excluded.resources,
+           org_id = excluded.org_id,
            updated_at = excluded.updated_at`,
       )
       .run({
@@ -63,6 +66,7 @@ export class SqliteOauthConsentRepository implements OauthConsentRepository {
         clientId: input.clientId,
         scopes: JSON.stringify(input.scopes),
         resources: JSON.stringify(input.resources),
+        orgId: input.orgId,
         consentedAt: now,
         updatedAt: now,
       });

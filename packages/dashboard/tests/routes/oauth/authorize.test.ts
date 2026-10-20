@@ -271,6 +271,7 @@ describe('GET /oauth/authorize — Test 7 (covered consent auto-redirects with c
     await ctx.storage.oauthConsents.recordConsent({
       userId: ctx.userId,
       clientId: ctx.clientId,
+      orgId: 'org-test',
       scopes: ['read', 'write'],
       resources: ['https://svc/mcp'],
     });

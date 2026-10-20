@@ -298,6 +298,7 @@ export async function registerAuthorizeRoutes(
     const coverage = await storage.oauthConsents.checkCoverage({
       userId: user.id,
       clientId: client.clientId,
+      orgId,
       requestedScopes: grantedScopes,
       requestedResources,
     });
@@ -511,6 +512,7 @@ export async function registerAuthorizeRoutes(
     await storage.oauthConsents.recordConsent({
       userId: user.id,
       clientId: client.clientId,
+      orgId,
       scopes: grantedScopes,
       resources: requestedResources,
     });
