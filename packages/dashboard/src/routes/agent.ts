@@ -678,9 +678,13 @@ export async function registerAgentRoutes(
           return reply.code(400).send({ error: 'malformed_tool_call' });
         }
 
-        // The action leaves pending_confirmation: its stored arguments become redacted in this
-        // write, and the dispatch below runs `call`, the arguments it was paused with.
-        await storage.conversations.updateMessageStatus(messageId, 'sent');
+        // The action leaves pending_confirmation through one conditional claim: of any number of
+        // confirmations or declines that arrive together exactly one wins, so the action runs once.
+        // Its stored arguments become redacted in the claiming write, and the dispatch below runs
+        // `call`, the arguments it was paused with.
+        if (!(await storage.conversations.claimPendingMessage(messageId, 'sent'))) {
+          return reply.code(409).send({ error: 'not_pending' });
+        }
         const agentGroupId = readAgentGroupCookie(request.headers.cookie);
         const startedAt = Date.now();
         let result: Awaited<ReturnType<typeof dispatcher.dispatch>>;
@@ -766,7 +770,10 @@ export async function registerAgentRoutes(
         }
         const call = safeParseCall(pending.toolCallJson);
 
-        await storage.conversations.updateMessageStatus(messageId, 'denied');
+        // The same claim a confirmation takes: only one of any number of declines resolves the action.
+        if (!(await storage.conversations.claimPendingMessage(messageId, 'denied'))) {
+          return reply.code(409).send({ error: 'not_pending' });
+        }
         await storage.conversations.appendMessage({
           conversationId: pending.conversationId,
           role: 'tool',

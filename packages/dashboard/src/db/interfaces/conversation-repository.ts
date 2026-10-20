@@ -194,6 +194,8 @@ export interface ConversationRepository {
    * Returns a paused action whose confirmation did not run (the dispatcher
    * refused it) to `pending_confirmation`, with the arguments it was paused
    * with (`toolCallJson`, as read from the paused row before the attempt).
+   * Only a row the confirmation claimed (status `sent`) is restored; any
+   * other row is left as it is.
    */
   reopenPendingMessage(messageId: string, toolCallJson: string): Promise<void>;
 
@@ -242,7 +244,9 @@ export interface ConversationRepository {
   /**
    * Phase 35 Plan 01 (AHIST-04): Soft-delete a conversation. Sets
    * is_deleted=1, deleted_at=now(). Returns true on success, false if
-   * already deleted, not found, or wrong org.
+   * already deleted, not found, or wrong org. The conversation's paused
+   * actions are declined in the same transaction, through the claim, so
+   * their stored arguments are redacted.
    */
   softDeleteConversation(id: string, orgId: string): Promise<boolean>;
 

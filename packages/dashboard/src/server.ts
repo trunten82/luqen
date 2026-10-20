@@ -122,6 +122,7 @@ import type { GraphQLContext } from './graphql/resolvers.js';
 import { registerGraphqlCsrfGuard } from './graphql/csrf-guard.js';
 import { getToken } from './routes/admin/helpers.js';
 import { runApiKeySweep } from './api-key-sweep.js';
+import { startPendingExpirySweep } from './agent/pending-expiry.js';
 import { registerMcpRoutes } from './routes/api/mcp.js';
 import { createDashboardJwtVerifier } from './mcp/verifier.js';
 import type { McpTokenVerifier } from './mcp/middleware.js';
@@ -396,6 +397,10 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     24 * 60 * 60 * 1000,
   );
   server.addHook('onClose', () => clearInterval(apiKeySweepHandle));
+
+  // ── Paused assistant actions — declined after 24 h; startup + hourly ────
+  const pendingExpirySweep = await startPendingExpirySweep(storage, server.log);
+  server.addHook('onClose', () => pendingExpirySweep.stop());
 
   // ── Solo mode: first-start API key ──────────────────────────────────────
   if (authService.getAuthMode() === 'solo') {

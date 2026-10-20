@@ -283,8 +283,32 @@ export class SqliteConversationRepository implements ConversationRepository {
   }
 
   async claimPendingMessage(messageId: string, status: 'sent' | 'denied'): Promise<boolean> {
-    await this.updateMessageStatus(messageId, status);
-    return true;
+    return this.db.transaction(() => this.claimPendingRow(messageId, status))();
+  }
+
+  /**
+   * The one conditional write out of pending_confirmation: the row's status changes and its stored
+   * call is redacted in the same UPDATE, and only when the row is still paused. True when this write
+   * moved the row. Runs inside the caller's transaction.
+   */
+  private claimPendingRow(messageId: string, status: 'sent' | 'denied'): boolean {
+    const row = this.db
+      .prepare("SELECT tool_call_json FROM agent_messages WHERE id = ? AND status = 'pending_confirmation'")
+      .get(messageId) as { tool_call_json: string | null } | undefined;
+    if (row === undefined) return false;
+    const result = this.db
+      .prepare(
+        `UPDATE agent_messages
+         SET status = @status,
+             tool_call_json = COALESCE(@resolvedCallJson, tool_call_json)
+         WHERE id = @messageId AND status = 'pending_confirmation'`,
+      )
+      .run({
+        messageId,
+        status,
+        resolvedCallJson: row.tool_call_json === null ? null : redactArgumentsJson(row.tool_call_json),
+      });
+    return result.changes === 1;
   }
 
   async listPendingMessagesBefore(createdBefore: string): Promise<readonly PendingMessageRef[]> {
@@ -316,7 +340,7 @@ export class SqliteConversationRepository implements ConversationRepository {
         `UPDATE agent_messages
          SET status = 'pending_confirmation',
              tool_call_json = @toolCallJson
-         WHERE id = @messageId`,
+         WHERE id = @messageId AND status = 'sent'`,
       )
       .run({ messageId, toolCallJson });
   }
@@ -471,14 +495,23 @@ export class SqliteConversationRepository implements ConversationRepository {
 
   async softDeleteConversation(id: string, orgId: string): Promise<boolean> {
     const now = new Date().toISOString();
-    const result = this.db
-      .prepare(
-        `UPDATE agent_conversations
-         SET is_deleted = 1, deleted_at = @now, updated_at = @now
-         WHERE id = @id AND org_id = @orgId AND is_deleted = 0`,
-      )
-      .run({ id, orgId, now });
-    return result.changes > 0;
+    return this.db.transaction(() => {
+      const result = this.db
+        .prepare(
+          `UPDATE agent_conversations
+           SET is_deleted = 1, deleted_at = @now, updated_at = @now
+           WHERE id = @id AND org_id = @orgId AND is_deleted = 0`,
+        )
+        .run({ id, orgId, now });
+      if (result.changes === 0) return false;
+      // The conversation is gone: its paused actions are declined, through the same claim that a
+      // decline takes, so their stored arguments are redacted.
+      const paused = this.db
+        .prepare("SELECT id FROM agent_messages WHERE conversation_id = ? AND status = 'pending_confirmation'")
+        .all(id) as Array<{ id: string }>;
+      for (const { id: messageId } of paused) this.claimPendingRow(messageId, 'denied');
+      return true;
+    })();
   }
 
   // ── Phase 37 Plan 01 — stopped / superseded operations ──────────────

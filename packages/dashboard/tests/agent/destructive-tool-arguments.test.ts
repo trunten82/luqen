@@ -60,7 +60,20 @@ function declaredArguments(schema: Json): string[] {
   return out;
 }
 
-/** The argument paths whose entry names the caller chooses (a record or open object), at any depth. */
+/** JSON Schema keywords that describe an argument without constraining it. */
+const ANNOTATION_KEYS = new Set(['description', 'title', 'default', 'examples', 'deprecated', 'readOnly', 'writeOnly', '$comment', '$schema']);
+
+/** An open value: a schema that constrains nothing (what zod emits for z.any() and z.unknown()). */
+function isOpenValue(node: Json): boolean {
+  return node !== null && typeof node === 'object' && !Array.isArray(node)
+    && Object.keys(node as Record<string, Json>).every((k) => ANNOTATION_KEYS.has(k));
+}
+
+/**
+ * The argument paths whose entry names the caller chooses, at any depth: a record or open object
+ * (additionalProperties, propertyNames), a map named by patterns (patternProperties), and an open
+ * value (an argument, or the items of an array, whose schema is empty).
+ */
 function callerNamedArguments(schema: Json): string[] {
   const out: string[] = [];
   const visit = (node: Json, at: string): void => {
@@ -70,11 +83,17 @@ function callerNamedArguments(schema: Json): string[] {
     }
     if (node === null || typeof node !== 'object') return;
     const rec = node as Record<string, Json>;
-    const open = ('additionalProperties' in rec && rec['additionalProperties'] !== false) || 'propertyNames' in rec;
+    const open = ('additionalProperties' in rec && rec['additionalProperties'] !== false)
+      || 'propertyNames' in rec
+      || 'patternProperties' in rec
+      || ('items' in rec && isOpenValue(rec['items']));
     if (open) out.push(at === '' ? '(root)' : at.slice(0, -1));
     for (const [key, child] of Object.entries(rec)) {
       if (key === 'properties' && child !== null && typeof child === 'object' && !Array.isArray(child)) {
-        for (const [name, sub] of Object.entries(child)) visit(sub, `${at}${name}.`);
+        for (const [name, sub] of Object.entries(child)) {
+          if (isOpenValue(sub)) out.push(`${at}${name}`);
+          visit(sub, `${at}${name}.`);
+        }
       } else {
         visit(child, at);
       }
