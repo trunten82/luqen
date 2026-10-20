@@ -110,4 +110,18 @@ describe('HARD-21 destructive assistant tools and secret named arguments', () =>
     // The scan's custom request headers are named by the caller.
     expect(listed).toEqual(['dashboard_scan_site.headers']);
   });
+
+  it('HARD-21 the destructive tool schema walk sees pattern properties and open values', () => {
+    // A map whose entries are named by a pattern.
+    const patterned = { type: 'object', properties: { settings: { type: 'object', patternProperties: { '^x-': { type: 'string' } } } } };
+    // zod emits an empty schema for an argument of any type (z.any / z.unknown).
+    const open = z.toJSONSchema(z.object({ payload: z.unknown(), note: z.string() }), { unrepresentable: 'any', io: 'input' });
+    const openItems = { type: 'object', properties: { list: { type: 'array', items: {} } } };
+    expect(callerNamedArguments(patterned)).toEqual(['settings']);
+    expect(callerNamedArguments(open)).toEqual(['payload']);
+    expect(callerNamedArguments(openItems)).toEqual(['list']);
+    // Controls: a closed object and a description-only argument that is typed report nothing.
+    const closed = { type: 'object', properties: { a: { type: 'string', description: 'typed' } }, additionalProperties: false };
+    expect(callerNamedArguments(closed)).toEqual([]);
+  });
 });

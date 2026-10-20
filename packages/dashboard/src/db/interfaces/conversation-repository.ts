@@ -115,6 +115,16 @@ export interface AppendMessageInput {
   readonly images?: readonly ImageInput[];
 }
 
+/** A paused action (a `pending_confirmation` row) with the conversation it belongs to. */
+export interface PendingMessageRef {
+  readonly id: string;
+  readonly conversationId: string;
+  readonly orgId: string;
+  readonly userId: string;
+  readonly toolCallJson: string | null;
+  readonly createdAt: string;
+}
+
 export interface ListConversationsOptions {
   readonly limit?: number;
   readonly offset?: number;
@@ -167,6 +177,18 @@ export interface ConversationRepository {
     status: MessageStatus,
     toolResultJson?: string,
   ): Promise<void>;
+
+  /**
+   * Claims a paused action: the one write that takes a row out of `pending_confirmation`.
+   * Answers true only for the caller whose write moved the row; a row that is not paused (a
+   * second confirmation, a decline that arrived first, an expiry) answers false and changes
+   * nothing, so exactly one caller wins however many arrive together. The same write stores the
+   * row's `toolCallJson` with secret-named argument values redacted.
+   */
+  claimPendingMessage(messageId: string, status: 'sent' | 'denied'): Promise<boolean>;
+
+  /** Paused actions created before `createdBefore` (ISO timestamp), oldest first. */
+  listPendingMessagesBefore(createdBefore: string): Promise<readonly PendingMessageRef[]>;
 
   /**
    * Returns a paused action whose confirmation did not run (the dispatcher

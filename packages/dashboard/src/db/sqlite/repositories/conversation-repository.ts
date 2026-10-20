@@ -12,6 +12,7 @@ import type {
   Message,
   MessageRole,
   MessageStatus,
+  PendingMessageRef,
   SearchConversationsOptions,
 } from '../../interfaces/conversation-repository.js';
 
@@ -279,6 +280,34 @@ export class SqliteConversationRepository implements ConversationRepository {
         resolvedCallJson: resolvesPending ? redactArgumentsJson(row.tool_call_json as string) : null,
       });
     })();
+  }
+
+  async claimPendingMessage(messageId: string, status: 'sent' | 'denied'): Promise<boolean> {
+    await this.updateMessageStatus(messageId, status);
+    return true;
+  }
+
+  async listPendingMessagesBefore(createdBefore: string): Promise<readonly PendingMessageRef[]> {
+    const rows = this.db
+      .prepare(
+        `SELECT m.id AS id, m.conversation_id AS conversation_id, c.org_id AS org_id, c.user_id AS user_id,
+                m.tool_call_json AS tool_call_json, m.created_at AS created_at
+           FROM agent_messages m
+           INNER JOIN agent_conversations c ON c.id = m.conversation_id
+          WHERE m.status = 'pending_confirmation' AND m.created_at < @createdBefore
+          ORDER BY m.created_at ASC, m.rowid ASC`,
+      )
+      .all({ createdBefore }) as Array<{
+        id: string; conversation_id: string; org_id: string; user_id: string; tool_call_json: string | null; created_at: string;
+      }>;
+    return rows.map((r) => ({
+      id: r.id,
+      conversationId: r.conversation_id,
+      orgId: r.org_id,
+      userId: r.user_id,
+      toolCallJson: r.tool_call_json,
+      createdAt: r.created_at,
+    }));
   }
 
   async reopenPendingMessage(messageId: string, toolCallJson: string): Promise<void> {
