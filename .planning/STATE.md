@@ -130,7 +130,7 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 Phase: 91 (Dismissal and permission hardening) — EXECUTING
 Plan: 21 of 23
 Status: Ready to execute
-Last activity: 2026-10-15 — Phase 91 execution started
+Last activity: 2026-10-20 - Completed quick task 261020-izd: fix-suggestion route admits issues.fix (PR #12)
 
 ## Phase Map (v3.9.0 — Dismissal follow-through)
 
@@ -202,6 +202,7 @@ measures a candidate model — that is explicitly next-milestone work.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 261008-fs4 | Deploy waits for in-flight scans before restarting the dashboard (incident: deploy killed a customer scan); live break-test passed | 2026-10-08 | a36b2c16 | [261008-fs4-deploy-waits-for-in-flight-scans-before-](./quick/261008-fs4-deploy-waits-for-in-flight-scans-before-/) |
+| 261020-izd | Fix-suggestion route admits issues.fix; AI only with llm.view (UAT 91 PR3 check 7); shipped alone as PR #12 | 2026-10-20 | d5f85148 | [261020-izd-fix-suggestion-route-admits-issues-fix-a](./quick/261020-izd-fix-suggestion-route-admits-issues-fix-a/) |
 | 261008-dd4 | Drop htmlcs/axe contrast false positives on non-rendered noscript/video/audio fallback content (customer report); PR #97 deployed | 2026-10-08 | d18cbe66 | [261008-dd4-htmlcs-false-positives-on-noscript-video](./quick/261008-dd4-htmlcs-false-positives-on-noscript-video/) |
 | 260601-fte | Manual-test evidence artifacts (screenshots/documents) in the VPAT/ACR report (web + PDF) | 2026-06-01 | 1304877 | [260601-fte-vpat-evidence-artifacts](./quick/260601-fte-vpat-evidence-artifacts/) |
 | 260601-njq | Per-org legal/company identity on VPAT/ACR reports (web + PDF + share); migration 082, optional StorageAdapter field | 2026-06-01 | c3cc788 | [260601-njq-vpat-org-legal-identity](./quick/260601-njq-vpat-org-legal-identity/) |
