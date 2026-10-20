@@ -54,6 +54,7 @@ Place in the working directory where you run `luqen-dashboard serve`. All fields
 | `llmClientSecret` | `string` | — | OAuth2 client secret paired with `llmClientId`. Store securely; use `DASHBOARD_LLM_CLIENT_SECRET` env var in production. |
 | `catalogueUrl` | `string` | `https://github.com/trunten82/luqen-plugins` | Base URL of the remote plugin catalogue GitHub repository. The dashboard fetches `catalogue.json` from GitHub releases at this URL. |
 | `catalogueCacheTtl` | `number` | `3600` | Time-to-live in seconds for the cached plugin catalogue. The dashboard re-fetches `catalogue.json` from GitHub after this interval. Set to `0` to disable caching. |
+| `trustedProxies` | `string[]` | `["loopback", "linklocal", "uniquelocal"]` | Proxies whose `X-Forwarded-For` entries are believed: addresses, CIDR ranges (`address/length`), the names `loopback`, `linklocal`, `uniquelocal`, or the single entry `none` to trust no proxy. A configured list replaces the default, so list the addresses of a CDN or of a proxy outside the private ranges next to the default names. `true`, `*`, `0.0.0.0/0`, `::/0`, hop counts and malformed entries are refused at startup. See [Session security](../guides/security-administration.md#session-security). |
 
 ---
 
@@ -79,6 +80,7 @@ Place in the working directory where you run `luqen-dashboard serve`. All fields
 | `DASHBOARD_WEBSERVICE_URLS` | `webserviceUrls` | **Optional.** Comma-separated list of additional pa11y webservice URLs for horizontal scaling. Only relevant when `DASHBOARD_WEBSERVICE_URL` is set. |
 | `DASHBOARD_CATALOGUE_URL` | `catalogueUrl` | Base URL of the remote plugin catalogue GitHub repository (default: `https://github.com/trunten82/luqen-plugins`). |
 | `DASHBOARD_CATALOGUE_CACHE_TTL` | `catalogueCacheTtl` | Plugin catalogue cache TTL in seconds (default: `3600`). |
+| `DASHBOARD_TRUSTED_PROXIES` | `trustedProxies` | Comma-separated trusted proxies (same entries as `trustedProxies`). Empty is treated as unset. |
 | `DASHBOARD_REDIS_URL` | — | Optional Redis URL for distributed scan queue and SSE pub/sub. |
 | `DASHBOARD_API_KEY` | — | API key for the dashboard data API endpoints (`/api/v1/scans`, `/api/v1/trends`, etc.) and Excel/CSV export. Clients authenticate by sending `X-API-Key: <key>` in the request header. Generate keys from the admin UI at `/admin/api-keys`. |
 
@@ -100,6 +102,7 @@ On startup the dashboard validates:
 - `reportsDir` exists and is writable (created if missing)
 - `pluginsDir` exists (created if missing)
 - `dbPath` parent directory exists and is writable
+- `trustedProxies` does not trust every address and every entry is an address, a CIDR range, a named range or `none`
 
 Any failure exits immediately with a descriptive error message.
 

@@ -12,11 +12,30 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - A signed-in session follows the stored dashboard user on every request:
   deactivating or deleting a user ends their session on its next request, and
-  a role change applies on the next request. A session opened with an API key
-  ends when the key is revoked or expires. A session acts only in one of its
-  user's organizations; otherwise the user's first organization (or none) is
-  used. Signed-in sessions record a `session.ended` audit entry when they are
-  ended for their user or key.
+  a role change applies on the next request. A session signed in through the
+  compliance service or an SSO plugin keeps its sign-in values only while its
+  identity has no stored dashboard user and had none at sign-in; once a stored
+  user exists at sign-in or answers for the session, deleting that user ends
+  it. A session opened with an API key ends when the key is revoked or
+  expires. A session acts only in one of its user's organizations; otherwise
+  the user's first organization (or none) is used. Each ended session records
+  one `session.ended` audit entry, however often its cookie is sent again.
+- The client address behind the sign-in limit, the per-address request
+  limits, the scan-start limit, client registration and the address recorded
+  in audit entries is read from `X-Forwarded-For` only through trusted
+  proxies: the loopback, link-local and unique-local ranges by default, or the
+  `trustedProxies` / `DASHBOARD_TRUSTED_PROXIES` list (addresses, CIDR ranges,
+  `loopback`, `linklocal`, `uniquelocal`, or `none`), which replaces the
+  default. A client that is not behind a trusted proxy is its socket address.
+  Trusting every address is refused at startup. Deployments behind a CDN or a
+  proxy outside the private ranges list its addresses.
+- The cookie a sign-in returns expires after `SESSION_EXPIRY_MINUTES`
+  (default 60) without a request, like every later cookie, and a signed-in
+  session that carries no activity time is expired.
+- `/orgs/current` reports the organization the request acts in. `X-Org-Id`
+  names the organization of a request authenticated by an admin API key
+  header; a cookie session, including an API-key sign-in session, acts through
+  the organization rules of a session.
 - MCP requests require `mcp.use` in the token's organization on every
   request (`403 insufficient_scope`, `no_mcp_use`). The token endpoint answers
   a refresh or an authorization-code exchange with `400 invalid_grant` for a
