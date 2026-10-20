@@ -36,7 +36,7 @@ Luqen uses a **database-driven RBAC** (Role-Based Access Control) model. Permiss
 | | `reports.delete` | Delete scan reports |
 | | `reports.compare` | Compare two scan reports side by side |
 | **Issues** | `issues.assign` | Assign issues to team members |
-| | `issues.fix` | View and propose code fixes |
+| | `issues.fix` | View and propose code fixes. The report's "How to fix" hints are pattern-based for `issues.fix` holders; `llm.view` adds AI-generated suggestions |
 | **Testing** | `manual_testing` | Run manual testing checklists |
 | **Repositories** | `repos.manage` | Connect and manage source code repositories |
 | **Analytics** | `trends.view` | View trend charts and analytics dashboards |

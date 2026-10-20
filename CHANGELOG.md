@@ -188,6 +188,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- On the report page, a user who can propose fixes (`issues.fix`) but does not
+  hold `llm.view` now gets the pattern-based "How to fix" suggestion instead of
+  a 403. AI-generated fix suggestions still need `llm.view`.
 - GraphQL `createScan` now starts the scan (it previously stored a `queued`
   row that never ran) and applies the scan form's validation, including
   `allowPrivateScanTargets`, the reachability probe, the 50-jurisdiction cap
