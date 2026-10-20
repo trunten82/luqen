@@ -479,7 +479,9 @@ export class SqliteConversationRepository implements ConversationRepository {
     id: string,
     orgId: string,
     title: string,
+    userId: string,
   ): Promise<Conversation | null> {
+    void userId;
     const now = new Date().toISOString();
     const result = this.db
       .prepare(
@@ -493,7 +495,8 @@ export class SqliteConversationRepository implements ConversationRepository {
     return this.getConversation(id, orgId);
   }
 
-  async softDeleteConversation(id: string, orgId: string): Promise<boolean> {
+  async softDeleteConversation(id: string, orgId: string, userId: string): Promise<boolean> {
+    void userId;
     const now = new Date().toISOString();
     return this.db.transaction(() => {
       const result = this.db

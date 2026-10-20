@@ -1149,14 +1149,13 @@ export async function registerAgentRoutes(
       if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
 
       const { id } = request.params as { id: string };
-      // Phase 38 (AORG-04): admin.system bypasses the org-scope check so
-      // global admins can open any conversation cross-org. Non-admins keep
-      // the org-scoped lookup.
-      let conv = await storage.conversations.getConversation(id, orgId);
-      if (conv === null && permissions.has('admin.system')) {
-        conv = await loadConversationAnyOrg(storage, id);
-      }
-      if (conv === null || conv.isDeleted) {
+      const conv = await ownConversation(storage, {
+        id,
+        orgId,
+        userId: user.id,
+        anyOrg: permissions.has('admin.system'),
+      });
+      if (conv === null) {
         return reply.code(404).send({ error: 'conversation_not_found' });
       }
       const messages = await storage.conversations.getFullHistory(id);
@@ -1195,14 +1194,15 @@ export async function registerAgentRoutes(
         const { id } = request.params as { id: string };
 
         // Capture old title for audit meta before the update.
-        const before = await storage.conversations.getConversation(id, orgId);
-        if (before === null || before.isDeleted) {
+        const before = await ownConversation(storage, { id, orgId, userId: user.id, anyOrg: false });
+        if (before === null) {
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
         const updated = await storage.conversations.renameConversation(
           id,
           orgId,
           parsed.data.title,
+          user.id,
         );
         if (updated === null) {
           // Race: soft-deleted between read and write.
@@ -1250,14 +1250,17 @@ export async function registerAgentRoutes(
         // conversation's actual orgId, not the admin's currently resolved org,
         // otherwise softDeleteConversation writes 0 rows → 404 → DOM li stays →
         // "respawn on refresh" symptom.
-        let effectiveOrgId = orgId;
-        if (permissions.has('admin.system')) {
-          const conv = await loadConversationAnyOrg(storage, id);
-          if (conv !== null && !conv.isDeleted) {
-            effectiveOrgId = conv.orgId;
-          }
+        const conv = await ownConversation(storage, {
+          id,
+          orgId,
+          userId: user.id,
+          anyOrg: permissions.has('admin.system'),
+        });
+        if (conv === null) {
+          return reply.code(404).send({ error: 'conversation_not_found' });
         }
-        const deleted = await storage.conversations.softDeleteConversation(id, effectiveOrgId);
+        const effectiveOrgId = conv.orgId;
+        const deleted = await storage.conversations.softDeleteConversation(id, effectiveOrgId, user.id);
         if (!deleted) {
           // Idempotent: second call + wrong org + unknown id all map to 404.
           return reply.code(404).send({ error: 'conversation_not_found' });
@@ -1311,8 +1314,8 @@ export async function registerAgentRoutes(
         const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
         if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
         const { cid, mid } = request.params as { cid: string; mid: string };
-        const conv = await storage.conversations.getConversation(cid, orgId);
-        if (conv === null || conv.isDeleted) {
+        const conv = await ownConversation(storage, { id: cid, orgId, userId: user.id, anyOrg: false });
+        if (conv === null) {
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
         const active = await storage.conversations.getFullHistory(cid);
@@ -1338,8 +1341,8 @@ export async function registerAgentRoutes(
         const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
         if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
         const { cid, mid } = request.params as { cid: string; mid: string };
-        const conv = await storage.conversations.getConversation(cid, orgId);
-        if (conv === null || conv.isDeleted) {
+        const conv = await ownConversation(storage, { id: cid, orgId, userId: user.id, anyOrg: false });
+        if (conv === null) {
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
         const active = await storage.conversations.getFullHistory(cid);
@@ -1375,8 +1378,8 @@ export async function registerAgentRoutes(
         if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
         const { cid, mid } = request.params as { cid: string; mid: string };
 
-        const conv = await storage.conversations.getConversation(cid, orgId);
-        if (conv === null || conv.isDeleted) {
+        const conv = await ownConversation(storage, { id: cid, orgId, userId: user.id, anyOrg: false });
+        if (conv === null) {
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
         // Active-branch read excludes superseded rows (Plan 01 contract).
@@ -1429,8 +1432,8 @@ export async function registerAgentRoutes(
         }
         const { cid, mid } = request.params as { cid: string; mid: string };
 
-        const conv = await storage.conversations.getConversation(cid, orgId);
-        if (conv === null || conv.isDeleted) {
+        const conv = await ownConversation(storage, { id: cid, orgId, userId: user.id, anyOrg: false });
+        if (conv === null) {
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
         const active = await storage.conversations.getFullHistory(cid);
@@ -1627,6 +1630,18 @@ async function fetchMessageCounts(
 // ---------------------------------------------------------------------------
 // Private helpers — message-level lookup + safe-parse.
 // ---------------------------------------------------------------------------
+
+/**
+ * The conversation a conversation route acts on, for its requester.
+ */
+async function ownConversation(
+  storage: StorageAdapter,
+  lookup: { readonly id: string; readonly orgId: string; readonly userId: string; readonly anyOrg: boolean },
+): Promise<import('../db/interfaces/conversation-repository.js').Conversation | null> {
+  let conv = await storage.conversations.getConversation(lookup.id, lookup.orgId);
+  if (conv === null && lookup.anyOrg) conv = await loadConversationAnyOrg(storage, lookup.id);
+  return conv === null || conv.isDeleted ? null : conv;
+}
 
 /**
  * Phase 38 — load a conversation row by id ignoring org-scope. Used by

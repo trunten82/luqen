@@ -167,6 +167,7 @@ describe('AgentService — post-first-assistant title hook', () => {
       ctx.conversationId,
       ctx.orgId,
       'Pre-existing Title',
+      ctx.userId,
     );
     const llm = makeLlmStub([{ text: 'OK.', toolCalls: [] }]);
     const titleGenerator = vi.fn(async () => 'Should Not Happen');

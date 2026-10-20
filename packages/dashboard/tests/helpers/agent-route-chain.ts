@@ -26,8 +26,21 @@ export interface RouteHarness {
   readonly chain: AgentChain;
   readonly orgId: string;
   readonly server: FastifyInstance;
-  post(path: string, userId: string): Promise<{ status: number; body: Record<string, unknown> }>;
-  get(path: string, userId: string): Promise<{ status: number; text: string }>;
+  /**
+   * A POST as `userId`; a JSON body when `options.body` is given. `x-test-org` in the headers makes
+   * the request act in that organization and `x-test-permissions` (a comma list) stamps the
+   * request's permissions.
+   */
+  post(
+    path: string,
+    userId: string,
+    options?: { body?: Record<string, unknown>; headers?: Record<string, string> },
+  ): Promise<{ status: number; body: Record<string, unknown> }>;
+  get(
+    path: string,
+    userId: string,
+    options?: { headers?: Record<string, string> },
+  ): Promise<{ status: number; text: string }>;
   row(messageId: string): StoredRow | undefined;
   /** Every message row of a conversation, oldest first. */
   rows(conversationId: string): StoredRow[];
@@ -44,7 +57,17 @@ export async function buildRouteHarness(orgName: string): Promise<RouteHarness> 
   server.addHook('preHandler', async (request) => {
     const id = request.headers['x-test-user'];
     if (typeof id === 'string' && id.length > 0) {
-      request.user = { id, username: 'tester', role: 'viewer', currentOrgId: orgId };
+      const actingOrg = request.headers['x-test-org'];
+      request.user = {
+        id,
+        username: 'tester',
+        role: 'viewer',
+        currentOrgId: typeof actingOrg === 'string' && actingOrg.length > 0 ? actingOrg : orgId,
+      };
+    }
+    const granted = request.headers['x-test-permissions'];
+    if (typeof granted === 'string' && granted.length > 0) {
+      (request as unknown as Record<string, unknown>)['permissions'] = new Set(granted.split(','));
     }
   });
   await registerAgentRoutes(server, {
@@ -64,12 +87,21 @@ export async function buildRouteHarness(orgName: string): Promise<RouteHarness> 
     chain,
     orgId,
     server,
-    async post(path, userId) {
-      const res = await server.inject({ method: 'POST', url: path, headers: { 'x-test-user': userId } });
+    async post(path, userId, options) {
+      const res = await server.inject({
+        method: 'POST',
+        url: path,
+        headers: { 'x-test-user': userId, ...(options?.headers ?? {}) },
+        ...(options?.body !== undefined ? { payload: options.body } : {}),
+      });
       return { status: res.statusCode, body: (res.body.length > 0 ? res.json() : {}) as Record<string, unknown> };
     },
-    async get(path, userId) {
-      const res = await server.inject({ method: 'GET', url: path, headers: { 'x-test-user': userId } });
+    async get(path, userId, options) {
+      const res = await server.inject({
+        method: 'GET',
+        url: path,
+        headers: { 'x-test-user': userId, ...(options?.headers ?? {}) },
+      });
       return { status: res.statusCode, text: res.body };
     },
     row(messageId) {

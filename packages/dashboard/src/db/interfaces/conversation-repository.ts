@@ -239,6 +239,7 @@ export interface ConversationRepository {
     id: string,
     orgId: string,
     title: string,
+    userId: string,
   ): Promise<Conversation | null>;
 
   /**
@@ -248,7 +249,7 @@ export interface ConversationRepository {
    * actions are declined in the same transaction, through the claim, so
    * their stored arguments are redacted.
    */
-  softDeleteConversation(id: string, orgId: string): Promise<boolean>;
+  softDeleteConversation(id: string, orgId: string, userId: string): Promise<boolean>;
 
   /**
    * Phase 37 Plan 01 (AUX-01): Mark an in-flight message as stopped by

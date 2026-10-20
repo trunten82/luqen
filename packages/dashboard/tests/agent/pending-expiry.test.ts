@@ -114,7 +114,7 @@ describe('HARD-21 paused actions expire', () => {
   it('HARD-21 deleting a conversation declines its paused action', async () => {
     const { conversationId, messageId } = await f.pause();
 
-    const deleted = await f.storage.conversations.softDeleteConversation(conversationId, f.orgId);
+    const deleted = await f.storage.conversations.softDeleteConversation(conversationId, f.orgId, f.userId);
 
     expect(deleted).toBe(true);
     const stored = f.status(messageId);

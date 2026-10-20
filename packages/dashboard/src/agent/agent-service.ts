@@ -876,6 +876,7 @@ export class AgentService {
         args.conversationId,
         args.orgId,
         title,
+        args.userId,
       ))
       .catch(() => {
         // See JSDoc above — generator's own fallback normally prevents this.
