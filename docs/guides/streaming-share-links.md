@@ -61,12 +61,16 @@ devices (`@media (hover: none)`) it is always visible underneath the bubble.
 ### Share a conversation via permalink
 
 - The **Share** action creates a permalink of the form `/agent/share/:shareId` and
-  copies that URL to your clipboard.
+  copies that URL to your clipboard. Only the conversation's owner can share it;
+  another member of the org gets a not-found answer.
 - The link is **scoped to your org**: anyone in the same org with a valid login
   can open the URL and see a read-only render of the conversation. Users outside
   the org get a `403`. There are no public, unauthenticated share links.
 - The shared view shows the conversation thread with **no composer and no
   actions** — it is a snapshot for review, not a hand-off into a live session.
+  Tool call details in it show the values of secret-named arguments (password,
+  secret, token, API key, authorization, credential) as `[redacted]`, including
+  those of an action still awaiting confirmation.
 
 ### Permalink expiry
 

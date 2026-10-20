@@ -68,14 +68,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   a confirmation checks again that the user may still run the tool (`403`
   otherwise, leaving the action pending). A confirmation whose tool fails to
   run closes the action as failed, is recorded in the agent audit as an
-  error, and answers `500` with a generic message.
+  error, and answers `500` with a generic message. A paused action runs once
+  (another confirmation or decline of it answers `409`), is declined when it
+  is neither confirmed nor declined within 24 hours, and is declined when its
+  conversation is deleted.
 - The agent audit stores tool arguments named like a password, secret, token,
   API key, authorization value or credential as `[redacted]`, at any depth,
   for every tool call the assistant runs, refuses or confirms.
 - The assistant's conversation messages store those tool arguments as
   `[redacted]` too. An action awaiting confirmation keeps its arguments as
   given until it is confirmed or declined, then they are stored redacted; a
-  confirmation that is refused leaves the action awaiting confirmation.
+  confirmation that is refused leaves the action awaiting confirmation. A
+  tool call that carries `[redacted]` in place of a secret value is not run:
+  the assistant asks for the value again. A shared conversation shows stored
+  tool call arguments redacted, and only a conversation's owner can share it.
 - The assistant's context hints are read with the user's permissions in the
   conversation's organization: recent scans need `reports.view`, brand
   guideline names need `branding.view`, and a user holding no permission there

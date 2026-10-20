@@ -72,7 +72,11 @@ can approve or cancel an action paused in your conversation, and Approve
 checks again that your role still allows the tool: if it no longer does,
 nothing runs and the dialog reports the error. Every approval is recorded
 in the agent audit. If the approved tool fails to run, the action is closed
-as failed and recorded in the agent audit as an error.
+as failed and recorded in the agent audit as an error. A paused action runs
+once: a second confirmation of it, or a confirmation after a decline, is
+answered with a conflict and nothing runs. An action you neither approve nor
+cancel within 24 hours is declined, and deleting its conversation declines it
+too.
 
 ### Multi-step tool transparency
 
@@ -206,7 +210,9 @@ Every agent turn produces audit entries:
   at any depth, in the agent audit and in the conversation's stored
   messages. An action awaiting your confirmation keeps its arguments as
   given, so it runs exactly as shown; once it is confirmed or declined its
-  stored arguments are redacted too
+  stored arguments are redacted too. When a tool call carries `[redacted]` in
+  place of a secret value, the assistant does not run it and asks you for the
+  value again; the text you type is stored as you typed it
 - Token-budget compaction events
 - Soft-delete and share-link operations on conversations
 
