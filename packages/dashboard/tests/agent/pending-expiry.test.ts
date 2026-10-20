@@ -98,6 +98,21 @@ describe('HARD-21 paused actions expire', () => {
     expect(JSON.parse(String(audit.entries[0]!.details))).toEqual({ count: 1, trigger: 'startup' });
   });
 
+  it('HARD-21 the audit entry of the sweep names the system', async () => {
+    const { createdAt } = await f.pause();
+    const now = new Date(Date.parse(createdAt) + PENDING_CONFIRMATION_TTL_MS + MINUTE);
+
+    expect(await runPendingExpirySweep(f.storage, log, 'startup', now)).toBe(1);
+
+    const audit = await f.storage.audit.query({ action: 'agent.pending_expired' });
+    expect(audit.entries).toHaveLength(1);
+    const entry = audit.entries[0]!;
+    expect(entry.actor).toBe('system');
+    expect(entry.resourceId).toBe('sweep');
+    expect(entry.actorId).toBeNull();
+    expect(JSON.parse(String(entry.details))).toEqual({ count: 1, trigger: 'startup' });
+  });
+
   it('HARD-21 a paused action younger than 24 hours stays paused', async () => {
     const { messageId, createdAt } = await f.pause();
     const now = new Date(Date.parse(createdAt) + PENDING_CONFIRMATION_TTL_MS - MINUTE);

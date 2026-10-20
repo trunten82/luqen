@@ -52,6 +52,22 @@ describe('HARD-21 a paused action is confirmed only within 24 hours', () => {
     expect(JSON.parse(String(audit.entries[0]!.details))).toEqual({ count: 1, trigger: 'confirm' });
   });
 
+  it('HARD-21 the audit entry of an action declined on confirm names the user and the action', async () => {
+    const { userId, messageId } = await pausedFor(PENDING_CONFIRMATION_TTL_MS + MINUTE);
+
+    const res = await h.post(`/agent/confirm/${messageId}`, userId);
+
+    expect(res.status).toBe(409);
+    const audit = await h.chain.storage.audit.query({ action: 'agent.pending_expired' });
+    expect(audit.entries).toHaveLength(1);
+    const entry = audit.entries[0]!;
+    expect(entry.actorId).toBe(userId);
+    expect(entry.resourceId).toBe(messageId);
+    expect(entry.actor).toBe('tester');
+    expect(entry.orgId).toBe(h.orgId);
+    expect(JSON.parse(String(entry.details))).toEqual({ count: 1, trigger: 'confirm' });
+  });
+
   it('HARD-21 a paused action younger than 24 hours runs when it is confirmed', async () => {
     const { userId, messageId } = await pausedFor(PENDING_CONFIRMATION_TTL_MS - MINUTE);
 

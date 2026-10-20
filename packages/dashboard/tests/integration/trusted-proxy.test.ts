@@ -127,4 +127,17 @@ describe('HARD-21 per-address limits key on the real client address', () => {
     // The harness's own failure path restores the environment it changed.
     expect(process.env['DASHBOARD_PUBLIC_URL']).toBe(publicUrlBefore);
   }, 60_000);
+
+  it('HARD-21 the server does not start with a trusted proxy list that trusts every internet client', async () => {
+    const publicUrlBefore = process.env['DASHBOARD_PUBLIC_URL'];
+    const wide = ['0.0.0.0/1', '128.0.0.0/2', '192.0.0.0/3'];
+
+    // A server that starts is closed here, so an unexpected start never leaks one.
+    const attempt = startMcpOauthHarness('trusted-proxy-wide', { config: { trustedProxies: wide } });
+    const result = await attempt.then(async (s) => { await s.close(); return 'started'; }, (err) => String(err));
+
+    for (const entry of wide) expect(result).toContain(entry);
+    expect(result).toContain('public IPv4');
+    expect(process.env['DASHBOARD_PUBLIC_URL']).toBe(publicUrlBefore);
+  }, 60_000);
 });

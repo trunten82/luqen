@@ -8,6 +8,7 @@
  */
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { LightMyRequestResponse } from 'fastify';
+import { generateApiKey, storeApiKey } from '../../src/auth/api-key.js';
 import { startMcpOauthHarness, type McpOauthHarness } from '../helpers/mcp-oauth-harness.js';
 
 const PASSWORD = 'Fabrikam-Idle-42!';
@@ -109,5 +110,28 @@ describe('HARD-21 session activity is recorded where the guard checks', () => {
 
     expect(first.res.statusCode, trail).toBe(200);
     expect(second.res.statusCode, trail).toBe(200);
+  }, 60_000);
+
+  it('HARD-21 a refused session cookie is not kept alive by requests authenticated with a key', async () => {
+    const user = await h.seed.users.createUser('fabrikam-ia4', PASSWORD, 'user');
+    const refusedCookie = await signIn('fabrikam-ia4', '127.0.0.23');
+    await h.seed.users.deactivateUser(user.id);
+    const key = generateApiKey();
+    storeApiKey(h.seed.getRawDatabase(), key, 'fabrikam idle key');
+    vi.useFakeTimers({ toFake: ['Date'] });
+    const base = Date.now();
+
+    // The key answers the request; the cookie it carries is not what authenticated it.
+    vi.setSystemTime(base + STEP_MS);
+    const keyed = await h.app.inject({ method: 'GET', url: '/account', cookies: { session: refusedCookie }, headers: { 'x-api-key': key } });
+    const latest = keyed.cookies.find((c) => c.name === 'session')?.value ?? refusedCookie;
+    // Two idle windows after the sign-in: the cookie is past the limit, whatever the key request did.
+    vi.setSystemTime(base + 2 * STEP_MS);
+    const afterwards = await follow(latest, '/health');
+    const trail = `keyed=${keyed.statusCode} afterwards=${afterwards.res.statusCode} ${String(afterwards.res.headers.location)}`;
+
+    expect(keyed.statusCode, trail).toBe(200);
+    expect(afterwards.res.statusCode, trail).toBe(302);
+    expect(String(afterwards.res.headers.location), trail).toBe('/login?expired=1');
   }, 60_000);
 });
