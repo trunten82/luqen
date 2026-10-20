@@ -44,6 +44,12 @@ const STORED_USER_MARKER = 'storedUser';
 /** The most ended sessions the in-memory record holds at once. */
 const ENDED_SESSION_RECORD_MAX_KEYS = 10_000;
 
+/** The session a sign-in writes: the secure-session object of the request. */
+export interface SessionWriter {
+  set(key: string, value: unknown): void;
+  regenerate(keep?: string[]): void;
+}
+
 /** What a sign-in hands to {@link AuthService.beginSession}. */
 export interface SessionStart {
   readonly userId: string;
@@ -133,7 +139,7 @@ export class AuthService {
    * signed in through an external identity service, whether a stored dashboard user answers for
    * the identity at sign-in (see sessionPrincipal).
    */
-  async beginSession(session: { set(key: string, value: unknown): void }, input: SessionStart): Promise<void> {
+  async beginSession(session: SessionWriter, input: SessionStart): Promise<void> {
     const external = input.authMethod === 'oauth' || input.authMethod === 'sso';
     const hasStoredUser = external && (await this.storage.users.getUserById(input.userId)) !== null;
     session.set('userId', input.userId);

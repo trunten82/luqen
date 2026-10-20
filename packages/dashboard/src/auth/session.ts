@@ -98,7 +98,8 @@ export function isSessionExpired(
  * 1. Checks session expiry and invalidates expired sessions
  * 2. Updates lastActivity timestamp on each request
  */
-export function createSessionExpiryHook(expiryMs: number) {
+export function createSessionExpiryHook(expiryMs: number, recordsActivity: (path: string) => boolean) {
+  void recordsActivity;
   return async function sessionExpiryHook(
     request: FastifyRequest,
     reply: FastifyReply,

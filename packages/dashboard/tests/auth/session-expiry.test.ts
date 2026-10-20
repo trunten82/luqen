@@ -122,7 +122,7 @@ describe('Session Expiry', () => {
       const req = { session, url: '/dashboard' } as unknown as FastifyRequest;
       const reply = mockReply();
 
-      const hook = createSessionExpiryHook(3600000);
+      const hook = createSessionExpiryHook(3600000, () => true);
       await hook(req, reply);
 
       expect(session.set).toHaveBeenCalledWith('lastActivity', expect.any(Number));
@@ -134,7 +134,7 @@ describe('Session Expiry', () => {
       const req = { session, url: '/dashboard' } as unknown as FastifyRequest;
       const reply = mockReply();
 
-      const hook = createSessionExpiryHook(3600000);
+      const hook = createSessionExpiryHook(3600000, () => true);
       await hook(req, reply);
 
       expect(reply.redirectUrl).toBe('/login?expired=1');
@@ -146,7 +146,7 @@ describe('Session Expiry', () => {
       const req = { session, url: '/api/v1/scans' } as unknown as FastifyRequest;
       const reply = mockReply();
 
-      const hook = createSessionExpiryHook(3600000);
+      const hook = createSessionExpiryHook(3600000, () => true);
       await hook(req, reply);
 
       expect(reply.sentCode).toBe(401);
@@ -157,11 +157,25 @@ describe('Session Expiry', () => {
       const req = { session, url: '/login' } as unknown as FastifyRequest;
       const reply = mockReply();
 
-      const hook = createSessionExpiryHook(3600000);
+      const hook = createSessionExpiryHook(3600000, () => true);
       await hook(req, reply);
 
       expect(reply.redirectUrl).toBeUndefined();
       expect(reply.sentCode).toBeUndefined();
+    });
+
+    it('HARD-21 the idle hook records activity only on paths the session guard checks', async () => {
+      const hook = createSessionExpiryHook(3600000, (path) => path !== '/health');
+      const before = Date.now() - 1000;
+      const publicSession = mockSession({ userId: 'user-1', lastActivity: before });
+      const checkedSession = mockSession({ userId: 'user-1', lastActivity: before });
+
+      await hook({ session: publicSession, url: '/health' } as unknown as FastifyRequest, mockReply());
+      await hook({ session: checkedSession, url: '/reports?page=2' } as unknown as FastifyRequest, mockReply());
+
+      expect(publicSession.get('lastActivity')).toBe(before);
+      expect(publicSession.set).not.toHaveBeenCalled();
+      expect(checkedSession.get('lastActivity')).toBeGreaterThan(before);
     });
 
     it('expires a signed in session that carries no lastActivity', async () => {
@@ -169,7 +183,7 @@ describe('Session Expiry', () => {
       const req = { session, url: '/dashboard' } as unknown as FastifyRequest;
       const reply = mockReply();
 
-      const hook = createSessionExpiryHook(3600000);
+      const hook = createSessionExpiryHook(3600000, () => true);
       await hook(req, reply);
 
       expect(reply.redirectUrl).toBe('/login?expired=1');

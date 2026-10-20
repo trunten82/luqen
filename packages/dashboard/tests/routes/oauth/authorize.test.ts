@@ -16,7 +16,7 @@
  *     non-HTMX rendering assertions.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import Fastify, { FastifyInstance, FastifyReply } from 'fastify';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
@@ -290,6 +290,65 @@ describe('GET /oauth/authorize — Test 7 (covered consent auto-redirects with c
     const db = ctx.storage.getRawDatabase();
     const row = db.prepare('SELECT COUNT(*) AS n FROM oauth_authorization_codes').get() as { n: number };
     expect(row.n).toBe(1);
+  });
+});
+
+// ── GET /oauth/authorize: a remembered consent names its organization ──────
+
+describe('GET /oauth/authorize: remembered consent and the organization', () => {
+  let ctx: TestCtx;
+  beforeEach(async () => { ctx = await buildCtx(); });
+  afterEach(async () => { await ctx.cleanup(); });
+
+  const authorizeUrl = (): string => {
+    const verifier = 'a'.repeat(50);
+    return `/oauth/authorize?response_type=code&client_id=${ctx.clientId}&redirect_uri=${encodeURIComponent(
+      ctx.redirectUri,
+    )}&scope=read&resource=${encodeURIComponent('https://svc/mcp')}&code_challenge=${s256(verifier)}&code_challenge_method=S256&state=abc`;
+  };
+
+  /** What an adapter that does not apply the organization rule would answer: covered, whatever the consent names. */
+  function adapterAnswers(consentOrgId: string | null | 'none'): void {
+    const now = new Date().toISOString();
+    vi.spyOn(ctx.storage.oauthConsents, 'checkCoverage').mockResolvedValue({
+      covered: true,
+      missingScopes: [],
+      missingResources: [],
+      existingConsent: consentOrgId === 'none' ? null : {
+        id: randomUUID(), userId: ctx.userId, clientId: ctx.clientId, scopes: ['read'], resources: ['https://svc/mcp'],
+        orgId: consentOrgId, consentedAt: now, updatedAt: now,
+      },
+    });
+  }
+
+  function codeCount(): number {
+    const row = ctx.storage.getRawDatabase().prepare('SELECT COUNT(*) AS n FROM oauth_authorization_codes').get() as { n: number };
+    return row.n;
+  }
+
+  it('HARD-21 a remembered consent answers without a page only in the organization it names', async () => {
+    for (const answer of ['org-other', 'none'] as const) {
+      adapterAnswers(answer);
+
+      const res = await ctx.server.inject({ method: 'GET', url: authorizeUrl() });
+
+      expect(res.statusCode, answer).toBe(200);
+      const body = JSON.parse(res.body) as { template: string };
+      expect(body.template, answer).toBe('oauth-consent');
+      expect(codeCount(), answer).toBe(0);
+    }
+  });
+
+  it('HARD-21 a remembered consent for the active organization answers with a code', async () => {
+    adapterAnswers('org-test');
+
+    const res = await ctx.server.inject({ method: 'GET', url: authorizeUrl() });
+
+    expect(res.statusCode).toBe(302);
+    expect(res.headers.location as string).toContain(`${ctx.redirectUri}?code=`);
+    expect(codeCount()).toBe(1);
+    const row = ctx.storage.getRawDatabase().prepare('SELECT org_id FROM oauth_authorization_codes').get() as { org_id: string };
+    expect(row.org_id).toBe('org-test');
   });
 });
 

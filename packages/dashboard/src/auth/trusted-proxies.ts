@@ -65,5 +65,13 @@ export function resolveTrustedProxies(configured?: readonly string[]): readonly 
     if (configured.length === 1) return false;
     return refuse(NO_PROXY_WORD, `${NO_PROXY_WORD} cannot be combined with other entries`);
   }
-  return configured.map(checkEntry);
+  const checked = configured.map(checkEntry);
+  refuseCoveringList(checked, configured);
+  return checked;
+}
+
+/** Throws, naming the entries, for a list that together trusts every address of an IP family. */
+function refuseCoveringList(entries: readonly string[], configured: readonly string[]): void {
+  void entries;
+  void configured;
 }

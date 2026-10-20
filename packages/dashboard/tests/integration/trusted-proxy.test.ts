@@ -116,4 +116,15 @@ describe('HARD-21 per-address limits key on the real client address', () => {
     expect(single, trail).toBe('203.0.113.13');
     expect(chain, trail).toBe('203.0.113.14');
   }, 60_000);
+
+  it('HARD-21 the server does not start with a trusted proxy list that trusts every address', async () => {
+    const publicUrlBefore = process.env['DASHBOARD_PUBLIC_URL'];
+
+    await expect(
+      startMcpOauthHarness('trusted-proxy-covering', { config: { trustedProxies: ['::ffff:0:0/96'] } }),
+    ).rejects.toThrow('::ffff:0:0/96');
+
+    // The harness's own failure path restores the environment it changed.
+    expect(process.env['DASHBOARD_PUBLIC_URL']).toBe(publicUrlBefore);
+  }, 60_000);
 });

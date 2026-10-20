@@ -1760,7 +1760,7 @@ async function findPendingMessage(
   storage: StorageAdapter,
   messageId: string,
   orgId: string,
-): Promise<{ id: string; conversationId: string; userId: string; status: string; toolCallJson: string | null } | null> {
+): Promise<{ id: string; conversationId: string; userId: string; status: string; toolCallJson: string | null; createdAt: string } | null> {
   // ConversationRepository has no direct-by-id lookup; walk the user's
   // conversations and check full history. Small price in exchange for no
   // new query surface in Phase 31's repo. If this becomes hot, extract a
@@ -1775,13 +1775,13 @@ async function findPendingMessage(
   if (raw === undefined) return null;
   const row = raw
     .prepare(
-      `SELECT m.id, m.conversation_id, c.user_id, m.status, m.tool_call_json
+      `SELECT m.id, m.conversation_id, c.user_id, m.status, m.tool_call_json, m.created_at
          FROM agent_messages m
          INNER JOIN agent_conversations c ON c.id = m.conversation_id
          WHERE m.id = ? AND c.org_id = ?`,
     )
     .get(messageId, orgId) as
-      | { id: string; conversation_id: string; user_id: string; status: string; tool_call_json: string | null }
+      | { id: string; conversation_id: string; user_id: string; status: string; tool_call_json: string | null; created_at: string }
       | undefined;
   if (row === undefined) return null;
   return {
@@ -1790,6 +1790,7 @@ async function findPendingMessage(
     userId: row.user_id,
     status: row.status,
     toolCallJson: row.tool_call_json,
+    createdAt: row.created_at,
   };
 }
 

@@ -105,6 +105,49 @@ describe('HARD-21 the assistant never sends a redacted value as a value', () => 
     expect(chain.scanStart).not.toHaveBeenCalled();
   });
 
+  it('HARD-21 the assistant refuses a copied tool call whose redacted value changed case', async () => {
+    const adminId = await chain.addUser('fabrikam-global-admin', 'admin');
+    const value = 'placeholder-llm-secret-3';
+    chain.script([
+      { text: 'Saving the llm connection.', toolCalls: [{ id: 'c1', name: 'dashboard_create_service_connection', args: { ...LLM_CONNECTION, clientSecret: value } }] },
+      (history) => {
+        const earlier = lastEarlierCall(history);
+        return {
+          text: 'Saving the branding connection the same way.',
+          toolCalls: [{ id: 'c2', name: earlier.name, args: { ...earlier.args, serviceId: 'branding', clientSecret: '[REDACTED]' } }],
+        };
+      },
+      { text: 'Done.', toolCalls: [] },
+    ]);
+
+    const turn = await chain.runTurn(adminId, orgId, 'configure the connections');
+
+    expect(chain.serviceConnections.upsert).toHaveBeenCalledTimes(1);
+    expect(chain.serviceConnections.upsert.mock.calls[0]![0]).toMatchObject({ serviceId: 'llm', clientSecret: value });
+    const rows = chain.toolRows(turn.conversationId);
+    expect(rows).toHaveLength(2);
+    expect(rows[1]!.result).toContain('redacted_argument');
+  });
+
+  it('HARD-21 the assistant asks again instead of pausing for a redacted value in another form', async () => {
+    const member = await chain.addOrgUser(orgId, 'fabrikam-member', 'viewer', 'Member');
+    chain.script([
+      { text: 'Scanning.', toolCalls: [{ id: 's1', name: 'dashboard_scan_site', args: { siteUrl: ROUTE_SITE, headers: { Authorization: 'Bearer <redacted>' } } }] },
+      { text: 'Please give me the header value again.', toolCalls: [] },
+    ]);
+
+    const turn = await chain.runTurn(member.userId, orgId, 'scan the site');
+
+    expect(turn.frames.some((f) => f.type === 'pending_confirmation')).toBe(false);
+    const raw = chain.storage.getRawDatabase();
+    const pending = raw.prepare("SELECT COUNT(*) AS n FROM agent_messages WHERE status = 'pending_confirmation'").get() as { n: number };
+    expect(pending.n).toBe(0);
+    const rows = chain.toolRows(turn.conversationId);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.result).toContain('redacted_argument');
+    expect(chain.scanStart).not.toHaveBeenCalled();
+  });
+
   it('HARD-21 the assistant runs a tool call whose secret value was supplied', async () => {
     const adminId = await chain.addUser('fabrikam-global-admin', 'admin');
     const value = 'placeholder-llm-secret-2';

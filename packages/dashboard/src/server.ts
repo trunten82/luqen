@@ -254,6 +254,21 @@ export function isPublicPath(path: string): boolean {
   return false;
 }
 
+/**
+ * Does the session guard check the session on this path? Every path except the public ones and
+ * the Bearer-only MCP endpoint. The idle hook records session activity on exactly these paths.
+ *
+ * PITFALLS.md #9: the MCP endpoint uses Bearer-only auth, so the session guard never runs on this
+ * path. The scoped Bearer preHandler in routes/api/mcp.ts enforces authentication and emits the
+ * WWW-Authenticate header on 401 per MCP Authorization spec 2025-06-18. The guard stays away from
+ * the path unconditionally (not only when an Authorization header is present) because MCP clients
+ * probe the endpoint without credentials first to discover the AS via WWW-Authenticate; a guard
+ * that ran on that probe would answer it with a /login redirect.
+ */
+export function guardChecksSession(path: string): boolean {
+  return !isPublicPath(path) && !isBearerOnlyPath(path);
+}
+
 // HTTP methods that mutate state and require CSRF verification
 const CSRF_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -869,23 +884,12 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── Session expiry ──────────────────────────────────────────────────────
   const sessionExpiryMs = getSessionExpiryMs();
-  server.addHook('preHandler', createSessionExpiryHook(sessionExpiryMs));
+  server.addHook('preHandler', createSessionExpiryHook(sessionExpiryMs, guardChecksSession));
 
   // ── Global auth guard ─────────────────────────────────────────────────────
   const authGuard = createAuthGuard(authService);
   server.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
-    if (isPublicPath(request.url.split('?')[0])) {
-      return;
-    }
-    // PITFALLS.md #9: MCP endpoint uses Bearer-only auth — session guard is
-    // ALWAYS bypassed on this path. The scoped Bearer preHandler in
-    // routes/api/mcp.ts enforces authentication and emits the WWW-Authenticate
-    // header on 401 per MCP Authorization spec 2025-06-18. Bypassing
-    // unconditionally (not only when Authorization header present) is required
-    // because MCP clients probe the endpoint without credentials first to
-    // discover the AS via WWW-Authenticate; the old conditional swallowed that
-    // probe with a /login redirect. Smoke-surfaced gap 2026-04-19.
-    if (isBearerOnlyPath(request.url.split('?')[0])) {
+    if (!guardChecksSession(request.url.split('?')[0])) {
       return;
     }
     await authGuard(request, reply);

@@ -615,6 +615,36 @@ describe('AuthService', () => {
       expect(rows, trail).toEqual([{ details: 'unknown_user' }]);
     });
 
+    it('HARD-21 a sign in starts from an empty session', async () => {
+      const db = storage.getRawDatabase();
+      const service = new AuthService(db, mockPluginManager([]), storage);
+      const store = new Map<string, unknown>([
+        ['userId', 'northwind-earlier'], ['username', 'northwind-earlier'], ['role', 'admin'], ['authMethod', 'sso'],
+        ['bootId', service.getBootId()], ['lastActivity', 1], ['sid', 'earlier-sid'],
+        ['apiKeyId', 'earlier-key'], ['groups', ['earlier-group']], ['teams', ['earlier-team']],
+        ['currentOrgId', 'earlier-org'], ['storedUser', true], ['_csrf', 'earlier-csrf-secret'],
+      ]);
+      const session = {
+        set: (key: string, value: unknown): void => { store.set(key, value); },
+        regenerate: (keep?: string[]): void => {
+          for (const key of [...store.keys()]) if (keep === undefined || !keep.includes(key)) store.delete(key);
+        },
+      };
+
+      await service.beginSession(session, { userId: 'contoso-later-sub', username: 'contoso-later', role: 'viewer', authMethod: 'oauth' });
+
+      const kept = [...store.keys()].sort();
+      expect(kept).toEqual(['authMethod', 'bootId', 'lastActivity', 'role', 'sid', 'userId', 'username']);
+      const request = {
+        headers: {},
+        session: { get: (key: string) => store.get(key), set: (key: string, value: unknown) => { store.set(key, value); }, delete: vi.fn() },
+      } as unknown as FastifyRequest;
+      const answered = await service.authenticateRequest(request);
+      expect(answered.authenticated, `kept=${kept.join(',')}`).toBe(true);
+      expect(answered.user?.id).toBe('contoso-later-sub');
+      expect(answered.user?.role).toBe('viewer');
+    });
+
     it('HARD-21 a session is not answered when its stored user cannot be read', async () => {
       const db = storage.getRawDatabase();
       const user = await storage.users.createUser('fabrikam-u5', 'password123', 'admin');

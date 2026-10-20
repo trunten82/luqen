@@ -47,6 +47,11 @@ export function redactArgumentsJson(argsJson: string): string {
   return holdsSecret(parsed) ? JSON.stringify(redactSecretArguments(parsed)) : argsJson;
 }
 
+/** Does `value` hold the redaction marker, in the stored form? */
+export function holdsRedactionMarker(value: string): boolean {
+  return value.includes(REDACTED);
+}
+
 /**
  * The key paths in `args` whose value holds {@link REDACTED} under a secret-named key, at any depth and
  * inside arrays (`headers.Authorization`, `items[0].token`). A string under a secret-named key counts
@@ -60,7 +65,7 @@ export function redactedArgumentPaths(args: unknown): readonly string[] {
   const found: string[] = [];
   const walk = (value: unknown, path: string, underSecretKey: boolean): void => {
     if (typeof value === 'string') {
-      if (underSecretKey && value.includes(REDACTED)) found.push(path);
+      if (underSecretKey && holdsRedactionMarker(value)) found.push(path);
       return;
     }
     if (Array.isArray(value)) {

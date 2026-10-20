@@ -118,4 +118,27 @@ describe('HARD-21 an external session follows its stored user', () => {
     expect(first.res.statusCode, trail).toBe(200);
     expect(second.res.statusCode, trail).toBe(200);
   }, 60_000);
+
+  it('HARD-21 a second sign in in the same browser starts a new session', async () => {
+    const stored = await h.seed.users.createUser('fabrikam-ex4', EXTERNAL_PASSWORD, 'user');
+    external.claims.set('ext-ex4a', { sub: stored.id, role: 'admin', username: 'fabrikam-ex4' });
+    external.claims.set('ext-ex4b', { sub: randomUUID(), role: 'admin', username: 'contoso-ex4' });
+    const remoteAddress = '127.0.0.14';
+    // The first identity has a stored user, so the session carries the stored-user marker.
+    const firstCookie = await signInExternal('ext-ex4a', remoteAddress);
+    const marked = await follow(firstCookie, '/account');
+    expect(marked.res.statusCode, `marked=${marked.res.statusCode}`).toBe(200);
+
+    // Without signing out, the same browser signs in as an identity with no stored user.
+    const login = await h.app.inject({
+      method: 'POST', url: '/login', remoteAddress, cookies: { session: marked.cookie },
+      headers: { 'x-csrf-token': csrfOf(marked.res.body) }, payload: { username: 'ext-ex4b', password: EXTERNAL_PASSWORD },
+    });
+    const secondCookie = login.cookies.find((c) => c.name === 'session')?.value ?? marked.cookie;
+    const page = await get(secondCookie, '/admin/dashboard-users');
+    const trail = `login=${login.statusCode} page=${page.statusCode} ${String(page.headers.location)}`;
+
+    expect(login.statusCode, trail).toBe(302);
+    expect(page.statusCode, trail).toBe(200);
+  }, 60_000);
 });

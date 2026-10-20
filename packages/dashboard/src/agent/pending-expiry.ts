@@ -26,12 +26,69 @@ export const PENDING_CONFIRMATION_TTL_MS = 24 * 60 * 60 * 1000;
 /** How often the server looks for paused actions past their time. */
 export const PENDING_SWEEP_INTERVAL_MS = 60 * 60 * 1000;
 
-export type PendingSweepTrigger = 'startup' | 'interval';
+export type PendingSweepTrigger = 'startup' | 'interval' | 'confirm';
 
 const EXPIRED_RESULT = JSON.stringify({
   error: 'expired',
   message: 'The action was not confirmed within 24 hours and was declined.',
 });
+
+/** The created-at time (ISO) before which a paused action is past its time at `now`. */
+export function pendingConfirmationCutoff(now: Date): string {
+  return new Date(now.getTime() - PENDING_CONFIRMATION_TTL_MS).toISOString();
+}
+
+/**
+ * Declines one paused action as expired: the row leaves pending through the conditional claim (its
+ * arguments stored redacted), then a tool row carrying `{ error: 'expired' }` is appended so the
+ * conversation's history stays well formed. Returns false when the claim was lost (the action was
+ * resolved a moment earlier). A tool row that cannot be written is logged at warn; the action is
+ * declined all the same, so the answer is still true.
+ */
+export async function expirePendingAction(
+  storage: StorageAdapter,
+  log: FastifyBaseLogger,
+  row: { readonly id: string; readonly conversationId: string; readonly toolCallJson: string | null },
+): Promise<boolean> {
+  if (!(await storage.conversations.claimPendingMessage(row.id, 'denied'))) return false;
+  try {
+    await storage.conversations.appendMessage({
+      conversationId: row.conversationId,
+      role: 'tool',
+      toolCallJson: row.toolCallJson ?? '{}',
+      toolResultJson: EXPIRED_RESULT,
+      status: 'sent',
+    });
+  } catch (err) {
+    log.warn({ err, messageId: row.id }, 'pending action expiry could not write its result row');
+  }
+  return true;
+}
+
+/** One log line and one summary audit row (action agent.pending_expired) for `count` declined actions. */
+export async function recordPendingExpired(
+  storage: StorageAdapter,
+  log: FastifyBaseLogger,
+  count: number,
+  trigger: PendingSweepTrigger,
+  now: Date,
+): Promise<void> {
+  log.info(
+    { event: 'agent.pending_expired', count, at: now.toISOString(), trigger },
+    `Declined ${count} paused assistant actions not confirmed within 24 hours (${trigger})`,
+  );
+  try {
+    await storage.audit.log({
+      actor: 'system',
+      action: 'agent.pending_expired',
+      resourceType: 'agent_message',
+      resourceId: 'sweep',
+      details: { count, trigger },
+    });
+  } catch (err) {
+    log.warn({ err }, `pending action expiry audit row failed (${trigger})`);
+  }
+}
 
 /** Declines every paused action older than the TTL at `now`. Returns how many were declined. */
 export async function runPendingExpirySweep(
@@ -41,41 +98,16 @@ export async function runPendingExpirySweep(
   now: Date = new Date(),
 ): Promise<number> {
   try {
-    const cutoff = new Date(now.getTime() - PENDING_CONFIRMATION_TTL_MS).toISOString();
-    const due = await storage.conversations.listPendingMessagesBefore(cutoff);
+    const due = await storage.conversations.listPendingMessagesBefore(pendingConfirmationCutoff(now));
     let count = 0;
     for (const row of due) {
       try {
-        if (!(await storage.conversations.claimPendingMessage(row.id, 'denied'))) continue;
-        count++;
-        await storage.conversations.appendMessage({
-          conversationId: row.conversationId,
-          role: 'tool',
-          toolCallJson: row.toolCallJson ?? '{}',
-          toolResultJson: EXPIRED_RESULT,
-          status: 'sent',
-        });
+        if (await expirePendingAction(storage, log, row)) count++;
       } catch (err) {
         log.warn({ err, messageId: row.id }, `pending action expiry failed for one action (${trigger})`);
       }
     }
-    if (count > 0) {
-      log.info(
-        { event: 'agent.pending_expired', count, at: now.toISOString(), trigger },
-        `Declined ${count} paused assistant actions not confirmed within 24 hours (${trigger})`,
-      );
-      try {
-        await storage.audit.log({
-          actor: 'system',
-          action: 'agent.pending_expired',
-          resourceType: 'agent_message',
-          resourceId: 'sweep',
-          details: { count, trigger },
-        });
-      } catch (err) {
-        log.warn({ err }, `pending action expiry audit row failed (${trigger})`);
-      }
-    }
+    if (count > 0) await recordPendingExpired(storage, log, count, trigger, now);
     return count;
   } catch (err) {
     log.warn({ err }, `pending action expiry sweep failed (${trigger})`);

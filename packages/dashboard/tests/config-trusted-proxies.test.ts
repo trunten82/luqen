@@ -54,3 +54,64 @@ describe('trusted proxy setting', () => {
     }
   });
 });
+
+/** Runs `check` with a config whose trustedProxies is `list`, in a throw-away directory. */
+function withListConfig(list: readonly string[], check: (config: ReturnType<typeof loadConfig>) => void): void {
+  const dir = mkdtempSync(join(tmpdir(), 'luqen-trusted-proxies-list-'));
+  try {
+    const config = {
+      ...loadConfig(NONEXISTENT), sessionSecret: 's'.repeat(32), encryptionKey: 's'.repeat(32),
+      reportsDir: join(dir, 'reports'), pluginsDir: join(dir, 'plugins'), dbPath: join(dir, 'dashboard.db'),
+      trustedProxies: [...list],
+    };
+    check(config);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/** The 25-style catch-all pair: every IPv4 address except one /8, written with documentation-neutral blocks. */
+const ALL_BUT_ONE_BLOCK = ['0.0.0.0/5', '8.0.0.0/7', '11.0.0.0/8', '12.0.0.0/6', '16.0.0.0/4', '32.0.0.0/3', '64.0.0.0/2', '128.0.0.0/1'];
+
+describe('trusted proxy coverage', () => {
+  it('HARD-21 the trusted proxy setting refuses lists that together trust every address', () => {
+    const covering: ReadonlyArray<readonly string[]> = [
+      ['::ffff:0:0/96'],
+      ['::/64'],
+      ['::/80'],
+      ['0.0.0.0/1', '128.0.0.0/1'],
+      ['::ffff:0.0.0.0/97', '::ffff:128.0.0.0/97'],
+      ['::/1', '8000::/1'],
+    ];
+    for (const list of covering) {
+      const named = list.join(', ');
+      expect(() => resolveTrustedProxies(list), named).toThrow(named);
+      withListConfig(list, (config) => {
+        expect(() => validateConfig(config), named).toThrow(named);
+      });
+    }
+  });
+
+  it('HARD-21 the trusted proxy setting accepts lists that leave addresses untrusted', () => {
+    const fine: ReadonlyArray<readonly string[]> = [
+      [...DEFAULT_TRUSTED_PROXIES],
+      ['0.0.0.0/1', '128.0.0.0/2'],
+      ['::ffff:0.0.0.0/97'],
+      ['2001:db8::/33', '2001:db8:8000::/33'],
+      ['loopback', 'linklocal', 'uniquelocal', '198.51.100.0/24', '2001:db8::/32'],
+    ];
+    for (const list of fine) {
+      expect(resolveTrustedProxies(list), list.join(', ')).toEqual(list);
+      withListConfig(list, (config) => {
+        expect(() => validateConfig(config), list.join(', ')).not.toThrow();
+      });
+    }
+  });
+
+  it('HARD-21 the trusted proxy setting counts named ranges toward every address', () => {
+    const withNamed = [...ALL_BUT_ONE_BLOCK, 'uniquelocal'];
+
+    expect(() => resolveTrustedProxies(withNamed)).toThrow(withNamed.join(', '));
+    expect(resolveTrustedProxies(ALL_BUT_ONE_BLOCK)).toEqual(ALL_BUT_ONE_BLOCK);
+  });
+});

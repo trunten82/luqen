@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { getToken } from '../compliance-client.js';
 import type { DashboardConfig } from '../config.js';
-import type { AuthService } from '../auth/auth-service.js';
+import type { AuthService, SessionWriter } from '../auth/auth-service.js';
 import type { StorageAdapter } from '../db/index.js';
 import { decodeJwt } from 'jose';
 import { validatePassword } from '../validation.js';
@@ -136,7 +136,7 @@ export async function authRoutes(
         }
 
         // The key's row id (never the secret), so dismissals made in this session name the key.
-        await authService.beginSession(request.session as { set(key: string, value: unknown): void }, {
+        await authService.beginSession(request.session as SessionWriter, {
           userId: 'api-key', username: 'admin', role: 'admin', authMethod: 'api-key',
           ...(check.keyId !== undefined ? { apiKeyId: check.keyId } : {}),
         });
@@ -207,7 +207,7 @@ export async function authRoutes(
             // Use defaults if JWT decode fails
           }
 
-          await authService.beginSession(request.session as { set(key: string, value: unknown): void }, {
+          await authService.beginSession(request.session as SessionWriter, {
             userId, username: displayUsername, role: userRole, authMethod: 'oauth',
           });
 
@@ -232,7 +232,7 @@ export async function authRoutes(
         });
       }
 
-      await authService.beginSession(request.session as { set(key: string, value: unknown): void }, {
+      await authService.beginSession(request.session as SessionWriter, {
         userId: result.user!.id, username: result.user!.username, role: result.user!.role ?? 'user', authMethod: 'password',
       });
 
@@ -284,7 +284,7 @@ export async function authRoutes(
         });
       }
 
-      const session = request.session as { set(key: string, value: unknown): void };
+      const session = request.session as SessionWriter;
       await authService.beginSession(session, {
         userId: result.user!.id, username: result.user!.username, role: result.user!.role ?? 'user', authMethod: 'sso',
       });
