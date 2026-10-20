@@ -297,6 +297,35 @@ describe('POST /session/switch-org — Phase 31.2 Task 2b (D-05)', () => {
     expect(res.statusCode).toBe(403);
   });
 
+  it('HARD-21 switching organization from the consent page returns only to a page of the dashboard', async () => {
+    ctx = await buildCtx('A');
+    const dashboard = 'https://dashboard.example.com';
+    const table: ReadonlyArray<readonly [string, string]> = [
+      ['/reports?x=1#h', '/reports?x=1#h'],
+      ['/%09/evil.example/x', '/%09/evil.example/x'],
+      ['/\t/evil.example/x', '/'],
+      ['/\n/evil.example/x', '/'],
+      ['/\\evil.example/x', '/'],
+      ['//evil.example/x', '/'],
+      ['https://evil.example/x', '/'],
+      ['/..//evil.example/x', '/'],
+    ];
+    for (const [row, want] of table) {
+      const { csrf, cookie } = await primeCsrf(ctx);
+      const res = await ctx.server.inject({
+        method: 'POST',
+        url: '/session/switch-org',
+        headers: { cookie, 'content-type': 'application/x-www-form-urlencoded' },
+        payload: new URLSearchParams({ _csrf: csrf, orgId: ctx.orgBId, returnTo: row }).toString(),
+      });
+      const location = String(res.headers.location);
+      const detail = `${JSON.stringify(row)}: ${res.statusCode} ${JSON.stringify(location)}`;
+      expect(res.statusCode, detail).toBe(302);
+      expect(location, detail).toBe(want);
+      expect(new URL(location, `${dashboard}/login`).origin, detail).toBe(dashboard);
+    }
+  });
+
   it('Test 6 (missing orgId): 400 invalid_request with valid CSRF', async () => {
     ctx = await buildCtx('A');
     const { csrf, cookie } = await primeCsrf(ctx);

@@ -30,7 +30,7 @@ interface LoginBody {
  * honored — protects against open-redirect abuse via returnTo=https://evil.
  * Fallback is "/". Smoke-surfaced gap 2026-04-19.
  */
-function safeReturnTo(raw: unknown): string {
+export function safeReturnTo(raw: unknown): string {
   if (typeof raw !== 'string' || raw.length === 0) return '/';
   if (!raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) return '/';
   return raw;
