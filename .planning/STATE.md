@@ -296,7 +296,7 @@ Next action: Phase 91 PR4 continues with the focused re-review of 91-22b..d, the
 | Phase 91 P21 | ~46min | 3 tasks | 15 files |
 | Phase 91 P22b | ~55min | 3 tasks | 23 files |
 | Phase 91 P22c | ~85min | 3 tasks | 17 files |
-| Phase 91 P22d | ~95min | 3 tasks | 24 files |
+| Phase 91 P22d | ~95min | 3 tasks | 21 files |
 
 ## Decisions
 
