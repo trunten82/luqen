@@ -18,6 +18,7 @@ import { createServer as createNetServer } from 'node:net';
 import { createHash, randomBytes } from 'node:crypto';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { createServer } from '../../src/server.js';
+import type { DashboardConfig } from '../../src/config.js';
 import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { createDashboardSigner } from '../../src/auth/oauth-signer.js';
 
@@ -132,8 +133,10 @@ function parseRpc(body: string): Record<string, unknown> {
   return dataLine === undefined ? {} : (JSON.parse(dataLine.slice('data:'.length).trim()) as Record<string, unknown>);
 }
 
-/** Boot the real server on a free 127.0.0.1 port. Call close() in afterAll. */
-export async function startMcpOauthHarness(tag: string): Promise<McpOauthHarness> {
+/** Boot the real server on a free 127.0.0.1 port; `opts.config` is merged into the server config. Call close() in afterAll. */
+export async function startMcpOauthHarness(
+  tag: string, opts: { readonly config?: Partial<DashboardConfig> } = {},
+): Promise<McpOauthHarness> {
   const priorPublicUrl = process.env['DASHBOARD_PUBLIC_URL'];
   const priorJwksUri = process.env['DASHBOARD_JWKS_URI'];
   const restoreEnv = (): void => {
@@ -162,6 +165,7 @@ export async function startMcpOauthHarness(tag: string): Promise<McpOauthHarness
     app = (await createServer({
       dbPath, reportsDir, sessionSecret: SESSION_SECRET,
       catalogueUrl: '', catalogueCacheTtl: 0, redisUrl: '', maxConcurrentScans: 1,
+      ...(opts.config ?? {}),
     } as never)) as FastifyInstance;
     await app.listen({ host: '127.0.0.1', port });
     seed = new SqliteStorageAdapter(dbPath);

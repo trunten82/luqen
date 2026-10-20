@@ -139,6 +139,7 @@ import { DASHBOARD_TOOL_METADATA } from './mcp/metadata.js';
 import { createDashboardMcpServer } from './mcp/server.js';
 import { bridgeMcpToolsForAgent } from './agent/mcp-bridge.js';
 import { registerAgentRoutes, buildDrawerOrgContext, buildDrawerGroupContext } from './routes/agent.js';
+import { resolveTrustedProxies } from './auth/trusted-proxies.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -313,7 +314,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     logger: {
       level: process.env['NODE_ENV'] === 'production' ? 'warn' : 'info',
     },
-    trustProxy: true,
+    trustProxy: resolveTrustedProxies(config.trustedProxies) as boolean | string[],
   }).withTypeProvider<TypeBoxTypeProvider>();
 
   // Phase 41-04: capture every registered route for the OpenAPI coverage
