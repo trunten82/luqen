@@ -906,7 +906,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     // Org-scoped API keys are locked to their org — no header override
     if (request.user.id === 'api-key' && request.user.currentOrgId !== undefined) {
       // currentOrgId already set from key's org_id — skip header override
-    } else if (orgHeader !== undefined && request.user.id === 'api-key' && request.user.role === 'admin') {
+    } else if (orgHeader !== undefined && authService.authenticatedByKeyHeader(request)) {
       request.user = { ...request.user, currentOrgId: orgHeader };
     } else if (session !== undefined && typeof session.get === 'function') {
       const userOrgs = await storage.organizations.getUserOrgs(request.user.id);

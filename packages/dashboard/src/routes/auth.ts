@@ -135,14 +135,11 @@ export async function authRoutes(
           });
         }
 
-        const session = request.session as { set(key: string, value: unknown): void };
-        session.set('userId', 'api-key');
-        session.set('username', 'admin');
-        session.set('role', 'admin');
-        session.set('authMethod', 'api-key');
         // The key's row id (never the secret), so dismissals made in this session name the key.
-        if (check.keyId !== undefined) session.set('apiKeyId', check.keyId);
-        session.set('bootId', authService.getBootId());
+        await authService.beginSession(request.session as { set(key: string, value: unknown): void }, {
+          userId: 'api-key', username: 'admin', role: 'admin', authMethod: 'api-key',
+          ...(check.keyId !== undefined ? { apiKeyId: check.keyId } : {}),
+        });
 
         void storage?.audit.log({ actor: 'admin', actorId: 'api-key', action: 'login.success', resourceType: 'session', ...(check.keyId ? { resourceId: check.keyId } : {}), details: 'API key login', ipAddress: request.ip });
         await reply.redirect(safeReturnTo(body.returnTo));
@@ -210,12 +207,9 @@ export async function authRoutes(
             // Use defaults if JWT decode fails
           }
 
-          const session = request.session as { set(key: string, value: unknown): void };
-          session.set('userId', userId);
-          session.set('username', displayUsername);
-          session.set('role', userRole);
-          session.set('authMethod', 'oauth');
-          session.set('bootId', authService.getBootId());
+          await authService.beginSession(request.session as { set(key: string, value: unknown): void }, {
+            userId, username: displayUsername, role: userRole, authMethod: 'oauth',
+          });
 
           void storage?.audit.log({ actor: displayUsername, actorId: userId, action: 'login.success', resourceType: 'session', details: 'OAuth login', ipAddress: request.ip });
           await reply.redirect(safeReturnTo(body.returnTo));
@@ -238,12 +232,9 @@ export async function authRoutes(
         });
       }
 
-      const session = request.session as { set(key: string, value: unknown): void };
-      session.set('userId', result.user!.id);
-      session.set('username', result.user!.username);
-      session.set('role', result.user!.role ?? 'user');
-      session.set('authMethod', 'password');
-      session.set('bootId', authService.getBootId());
+      await authService.beginSession(request.session as { set(key: string, value: unknown): void }, {
+        userId: result.user!.id, username: result.user!.username, role: result.user!.role ?? 'user', authMethod: 'password',
+      });
 
       void storage?.audit.log({ actor: result.user!.username, actorId: result.user!.id, action: 'login.success', resourceType: 'session', details: 'Password login', ipAddress: request.ip });
       await reply.redirect(safeReturnTo(body.returnTo));
@@ -294,11 +285,9 @@ export async function authRoutes(
       }
 
       const session = request.session as { set(key: string, value: unknown): void };
-      session.set('userId', result.user!.id);
-      session.set('username', result.user!.username);
-      session.set('role', result.user!.role ?? 'user');
-      session.set('authMethod', 'sso');
-      session.set('bootId', authService.getBootId());
+      await authService.beginSession(session, {
+        userId: result.user!.id, username: result.user!.username, role: result.user!.role ?? 'user', authMethod: 'sso',
+      });
 
       // Store IdP groups and resolved team names in the session
       if (result.groups) {

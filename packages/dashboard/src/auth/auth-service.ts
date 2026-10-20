@@ -36,6 +36,16 @@ function isAuthPlugin(instance: PluginInstance): instance is AuthPlugin {
 /** Why a signed-in session is refused (the session.ended audit row's details). */
 export type SessionRefusal = 'inactive_user' | 'unknown_user' | 'key_refused';
 
+/** What a sign-in hands to {@link AuthService.beginSession}. */
+export interface SessionStart {
+  readonly userId: string;
+  readonly username: string;
+  readonly role: string;
+  readonly authMethod: 'password' | 'oauth' | 'sso' | 'api-key';
+  /** The api_keys row id (never the secret) of a /login API-key session. */
+  readonly apiKeyId?: string;
+}
+
 interface SessionUserResult {
   readonly id: string;
   readonly username: string;
@@ -99,6 +109,16 @@ export class AuthService {
 
   getBootId(): string {
     return this.bootId;
+  }
+
+  /** The one writer of a signed-in session: every sign-in route calls it. */
+  async beginSession(session: { set(key: string, value: unknown): void }, input: SessionStart): Promise<void> {
+    session.set('userId', input.userId);
+    session.set('username', input.username);
+    session.set('role', input.role);
+    session.set('authMethod', input.authMethod);
+    if (input.apiKeyId !== undefined) session.set('apiKeyId', input.apiKeyId);
+    session.set('bootId', this.bootId);
   }
 
   // -----------------------------------------------------------------------
@@ -169,6 +189,10 @@ export class AuthService {
    * True only when the presented key actually validates — a bogus header does
    * not count, because authenticateRequest then falls through to the cookie.
    */
+  authenticatedByKeyHeader(request: FastifyRequest): boolean {
+    return request.user?.id === 'api-key' && request.user.role === 'admin';
+  }
+
   hasValidApiCredential(request: FastifyRequest): boolean {
     const token = this.apiKeyTokenFrom(request);
     return token !== undefined && token !== '' && validateApiKey(this.db, token).valid;

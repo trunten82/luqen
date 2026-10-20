@@ -6,7 +6,7 @@
  * adapter on the same database file (active flag, user row, role, API key, organization membership)
  * and reads what the next request with the SAME cookie answers.
  */
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { LightMyRequestResponse } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { startMcpOauthHarness, type HarnessSession, type McpOauthHarness } from '../helpers/mcp-oauth-harness.js';
@@ -341,4 +341,145 @@ describe('HARD-21 a session acts only in an organization of its user', () => {
 
     expect(after, trail.join(' ')).toBeNull();
   }, 60_000);
+});
+
+describe('HARD-21 an ended session is recorded once', () => {
+  it('HARD-21 a replayed ended session cookie writes one audit row', async () => {
+    const user = await h.seed.users.createUser('fabrikam-se1', PASSWORD, 'user');
+    const session = await signInFrom({ username: 'fabrikam-se1', password: PASSWORD }, '127.0.0.4');
+    await h.seed.users.deactivateUser(user.id);
+
+    const answers = new Map<number, number>();
+    const replay = async (index: number, extra: Record<string, string>): Promise<void> => {
+      const forwarded = index % 2 === 0 ? `203.0.113.${(index >> 1) % 256}` : `198.51.100.${(index >> 1) % 256}`;
+      const res = await h.app.inject({
+        method: 'GET', url: '/account', remoteAddress: '127.0.0.1', cookies: { session: session.cookie },
+        headers: { 'x-forwarded-for': forwarded, ...extra },
+      });
+      answers.set(res.statusCode, (answers.get(res.statusCode) ?? 0) + 1);
+    };
+    for (let i = 0; i < 1000; i += 1) await replay(i, {});
+    for (let i = 0; i < 100; i += 1) await replay(i, { authorization: 'Bearer not-a-key' });
+    const rows = sessionEndedRows(user.id);
+    const trail = `answers=${JSON.stringify([...answers])} rows=${rows.length}`;
+
+    expect(answers.get(429) ?? 0, trail).toBe(0);
+    expect(answers.get(302), trail).toBe(1100);
+    expect(rows, trail).toEqual([{ details: 'inactive_user', actor_id: user.id }]);
+  }, 120_000);
+
+  it('HARD-21 each ended session writes its own audit row', async () => {
+    const user = await h.seed.users.createUser('fabrikam-se2', PASSWORD, 'user');
+    const first = await signInFrom({ username: 'fabrikam-se2', password: PASSWORD }, '127.0.0.5');
+    const second = await signInFrom({ username: 'fabrikam-se2', password: PASSWORD }, '127.0.0.5');
+    await h.seed.users.deactivateUser(user.id);
+
+    for (const session of [first, second]) {
+      for (let i = 0; i < 5; i += 1) {
+        const res = await get(session.cookie, '/account');
+        expect(res.statusCode, `replay ${i}`).toBe(302);
+      }
+    }
+    const rows = sessionEndedRows(user.id);
+
+    expect(rows.length, JSON.stringify(rows)).toBe(2);
+  }, 60_000);
+});
+
+describe('HARD-21 a request acts in its own organization only', () => {
+  async function orgAs(headers: Record<string, string>, cookie?: string): Promise<{ readonly status: number; readonly orgId: string | null }> {
+    const res = await h.app.inject({
+      method: 'GET', url: '/orgs/current', headers,
+      ...(cookie !== undefined ? { cookies: { session: cookie } } : {}),
+    });
+    return { status: res.statusCode, orgId: res.statusCode === 200 ? (res.json() as { currentOrgId: string | null }).currentOrgId : null };
+  }
+
+  it('HARD-21 an api key request reports no organization from a session cookie it carries', async () => {
+    const user = await h.seed.users.createUser('fabrikam-or1', PASSWORD, 'user');
+    const org = await h.seed.organizations.createOrg({ name: 'Fabrikam OR1', slug: 'fabrikam-or1' });
+    await h.seed.organizations.addMember(org.id, user.id, 'member');
+    const session = await signInFrom({ username: 'fabrikam-or1', password: PASSWORD }, '127.0.0.6');
+    const switched = await h.switchOrg(session, org.id);
+    const cookie = switched.session.cookie;
+    const { key } = await systemAdminKey('Fabrikam or1');
+
+    const ownCookie = await currentOrgOf(cookie);
+    const withKey = await orgAs({ authorization: `Bearer ${key}` }, cookie);
+    const trail = `ownCookie=${String(ownCookie)} withKey=${withKey.status}/${String(withKey.orgId)} switched=${switched.status}`;
+
+    expect(ownCookie, trail).toBe(org.id); // positive control: the cookie stores the organization
+    expect(withKey.status, trail).toBe(200);
+    expect(withKey.orgId, trail).toBeNull();
+  }, 60_000);
+
+  it('HARD-21 an api key session acts in no organization named by a request header', async () => {
+    const org = await h.seed.organizations.createOrg({ name: 'Fabrikam OR2', slug: 'fabrikam-or2' });
+    const { key } = await systemAdminKey('Fabrikam or2');
+    const session = await signInFrom({ apiKey: key }, '127.0.0.7');
+
+    const plain = await orgAs({}, session.cookie);
+    const named = await orgAs({ 'x-org-id': org.id }, session.cookie);
+    const trail = `plain=${plain.status}/${String(plain.orgId)} named=${named.status}/${String(named.orgId)}`;
+
+    expect(plain.orgId, trail).toBeNull();
+    expect(named.status, trail).toBe(200);
+    expect(named.orgId, trail).toBeNull();
+  }, 60_000);
+
+  it('HARD-21 an api key request acts in the organization its header names', async () => {
+    const org = await h.seed.organizations.createOrg({ name: 'Fabrikam OR3', slug: 'fabrikam-or3' });
+    const { key } = await systemAdminKey('Fabrikam or3');
+
+    const named = await orgAs({ authorization: `Bearer ${key}`, 'x-org-id': org.id });
+    const trail = `named=${named.status}/${String(named.orgId)}`;
+
+    expect(named.status, trail).toBe(200);
+    expect(named.orgId, trail).toBe(org.id);
+  }, 60_000);
+});
+
+describe('HARD-21 every cookie of a session idle-expires', () => {
+  it('HARD-21 the cookie a sign in returns expires after the idle limit', async () => {
+    const priorLimit = process.env['SESSION_EXPIRY_MINUTES'];
+    process.env['SESSION_EXPIRY_MINUTES'] = '1';
+    let short: McpOauthHarness | undefined;
+    try {
+      short = await startMcpOauthHarness('session-idle');
+    } finally {
+      if (priorLimit === undefined) delete process.env['SESSION_EXPIRY_MINUTES'];
+      else process.env['SESSION_EXPIRY_MINUTES'] = priorLimit;
+    }
+    try {
+      const server = short;
+      await server.seed.users.createUser('fabrikam-sc1', PASSWORD, 'user');
+      const remoteAddress = '127.0.0.8';
+      const page = await server.app.inject({ method: 'GET', url: '/login', remoteAddress });
+      const anonymous = page.cookies.find((c) => c.name === 'session')?.value ?? '';
+      const login = await server.app.inject({
+        method: 'POST', url: '/login', remoteAddress, cookies: { session: anonymous },
+        headers: { 'x-csrf-token': csrfOf(page.body) }, payload: { username: 'fabrikam-sc1', password: PASSWORD },
+      });
+      const signInCookie = login.cookies.find((c) => c.name === 'session')?.value ?? '';
+      // One request with a copy of the sign-in cookie: the cookie that request returns is a later one.
+      const used = await server.app.inject({ method: 'GET', url: '/account', cookies: { session: signInCookie } });
+      const laterCookie = used.cookies.find((c) => c.name === 'session')?.value ?? '';
+
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(Date.now() + 61_000));
+      const fromSignIn = await server.app.inject({ method: 'GET', url: '/account', cookies: { session: signInCookie } });
+      const fromLater = await server.app.inject({ method: 'GET', url: '/account', cookies: { session: laterCookie } });
+      const trail = `login=${login.statusCode} used=${used.statusCode} signIn=${fromSignIn.statusCode} ${String(fromSignIn.headers.location)} later=${fromLater.statusCode} ${String(fromLater.headers.location)}`;
+
+      expect(login.statusCode, trail).toBe(302);
+      expect(used.statusCode, trail).toBe(200); // positive control: the sign-in cookie works before the limit
+      expect(fromSignIn.statusCode, trail).toBe(302);
+      expect(String(fromSignIn.headers.location), trail).toBe('/login?expired=1');
+      expect(fromLater.statusCode, trail).toBe(302);
+      expect(String(fromLater.headers.location), trail).toBe('/login?expired=1');
+    } finally {
+      vi.useRealTimers();
+      await short.close();
+    }
+  }, 120_000);
 });

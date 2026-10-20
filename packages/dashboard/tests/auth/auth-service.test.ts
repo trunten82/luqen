@@ -588,6 +588,33 @@ describe('AuthService', () => {
       }
     });
 
+    it('HARD-21 an sso session answered by its stored user is refused once that user is deleted', async () => {
+      const db = storage.getRawDatabase();
+      const service = new AuthService(db, mockPluginManager([]), storage);
+      const user = await storage.users.createUser('contoso-u7', 'password123', 'user');
+      const store = new Map<string, unknown>([
+        ['userId', user.id], ['username', 'contoso-u7'], ['role', 'admin'], ['authMethod', 'sso'], ['bootId', service.getBootId()],
+      ]);
+      const request = {
+        headers: {},
+        ip: '203.0.113.5',
+        session: { get: (key: string) => store.get(key), set: (key: string, value: unknown) => { store.set(key, value); } },
+      } as unknown as FastifyRequest;
+
+      const answered = await service.authenticateRequest(request);
+      const markerAfterAnswer = store.get('storedUser');
+      expect(await storage.users.deleteUser(user.id)).toBe(true);
+      const afterDelete = await service.authenticateRequest(request);
+      const rows = db.prepare("SELECT details FROM audit_log WHERE action = 'session.ended' AND actor_id = ?").all(user.id);
+      const trail = `answered=${String(answered.authenticated)}/${String(answered.user?.role)} marker=${String(markerAfterAnswer)} afterDelete=${String(afterDelete.authenticated)} rows=${JSON.stringify(rows)}`;
+
+      expect(answered.authenticated, trail).toBe(true);
+      expect(answered.user?.role, trail).toBe('user');
+      expect(markerAfterAnswer, trail).toBe(true);
+      expect(afterDelete.authenticated, trail).toBe(false);
+      expect(rows, trail).toEqual([{ details: 'unknown_user' }]);
+    });
+
     it('HARD-21 a session is not answered when its stored user cannot be read', async () => {
       const db = storage.getRawDatabase();
       const user = await storage.users.createUser('fabrikam-u5', 'password123', 'admin');

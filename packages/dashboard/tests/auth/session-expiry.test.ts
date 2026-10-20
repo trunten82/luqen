@@ -50,6 +50,13 @@ describe('Session Expiry', () => {
       expect(isSessionExpired(session, 3600000)).toBe(false);
     });
 
+    it('HARD-21 a signed in session without an activity time is expired', () => {
+      const signedIn = { get: vi.fn((key: string) => (key === 'userId' ? 'user-1' : undefined)) };
+      expect(isSessionExpired(signedIn, 3600000)).toBe(true);
+      const anonymous = { get: vi.fn().mockReturnValue(undefined) };
+      expect(isSessionExpired(anonymous, 3600000)).toBe(false);
+    });
+
     it('returns false when session is within expiry window', () => {
       const recentTime = Date.now() - 1000; // 1 second ago
       const session = { get: vi.fn().mockReturnValue(recentTime) };
