@@ -2,14 +2,13 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../db/index.js';
 import { HtmlPageSchema, ErrorEnvelope } from '../api/schemas/envelope.js';
+import { refererReturnTo } from './auth.js';
 
 const OrgsCurrentResponse = Type.Object({}, { additionalProperties: true });
 
-function safeRedirect(referer: string | undefined): string {
-  if (referer == null || referer === '') return '/';
-  // Only allow relative paths starting with /
-  if (referer.startsWith('/') && !referer.startsWith('//')) return referer;
-  return '/';
+/** Back to the page the switch was made on, when the Referer names a page of the dashboard (refererReturnTo). */
+function switchReturnTarget(request: FastifyRequest): string {
+  return refererReturnTo(request.headers.referer, request.headers.host);
 }
 
 export async function orgRoutes(
@@ -34,7 +33,7 @@ export async function orgRoutes(
     // Clear org context when orgId is 'system' or empty
     if (orgId === undefined || orgId === '' || orgId === 'system') {
       session.set('currentOrgId', '');
-      const redirectTo = safeRedirect(request.headers.referer as string | undefined);
+      const redirectTo = switchReturnTarget(request);
       await reply.redirect(redirectTo);
       return;
     }
@@ -49,7 +48,7 @@ export async function orgRoutes(
     }
 
     session.set('currentOrgId', orgId);
-    const redirectTo = safeRedirect(request.headers.referer as string | undefined);
+    const redirectTo = switchReturnTarget(request);
     await reply.redirect(redirectTo);
   });
 

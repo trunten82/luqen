@@ -24,16 +24,55 @@ interface LoginBody {
   returnTo?: string;
 }
 
+/** The fixed base a return target is resolved against; a reserved name, never contacted. */
+const RETURN_TARGET_BASE = 'http://luqen.invalid';
+const RETURN_TARGET_ORIGIN = new URL(RETURN_TARGET_BASE).origin;
+/** ASCII control characters, U+0000 to U+001F and U+007F (a browser drops tab, CR and LF from a Location). */
+const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
+
 /**
- * Resolve a login returnTo input to a safe post-login redirect target.
- * Only same-origin absolute paths (starting with "/" but NOT "//") are
- * honored — protects against open-redirect abuse via returnTo=https://evil.
- * Fallback is "/". Smoke-surfaced gap 2026-04-19.
+ * The page a redirect may return to, taken from the request (a sign-in's returnTo, the consent page's
+ * organization switch). The answer is `/` (the home page) when the value is not a non-empty string,
+ * holds an ASCII control character or a backslash anywhere, does not start with `/`, resolves against a
+ * fixed base to another origin, or resolves to a path that starts with two slashes. Otherwise the answer
+ * is the resolved path with its query and fragment (the normalised path), which a browser resolves to
+ * the dashboard's own origin.
  */
 export function safeReturnTo(raw: unknown): string {
   if (typeof raw !== 'string' || raw.length === 0) return '/';
-  if (!raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) return '/';
-  return raw;
+  if (CONTROL_CHARACTER.test(raw)) return '/';
+  if (raw.includes('\\')) return '/';
+  if (!raw.startsWith('/')) return '/';
+  let resolved: URL;
+  try {
+    resolved = new URL(raw, RETURN_TARGET_BASE);
+  } catch {
+    return '/';
+  }
+  if (resolved.origin !== RETURN_TARGET_ORIGIN) return '/';
+  const target = resolved.pathname + resolved.search + resolved.hash;
+  if (target.startsWith('//')) return '/';
+  return target;
+}
+
+/**
+ * The page a redirect may return to when it is taken from the Referer header (the language change and
+ * the organization switch). A path is held to safeReturnTo's rule. An absolute Referer is reduced to its
+ * path, query and fragment only when its host is the request's own Host, and that path is then held to
+ * the same rule; any other value answers `/`. The scheme is not compared: the answer is a path, which the
+ * browser resolves on the origin it is already on.
+ */
+export function refererReturnTo(referer: unknown, ownHost: unknown): string {
+  if (typeof referer !== 'string' || referer.length === 0) return '/';
+  if (referer.startsWith('/')) return safeReturnTo(referer);
+  let url: URL;
+  try {
+    url = new URL(referer);
+  } catch {
+    return '/';
+  }
+  if (typeof ownHost !== 'string' || ownHost === '' || url.host !== ownHost.toLowerCase()) return '/';
+  return safeReturnTo(url.pathname + url.search + url.hash);
 }
 
 /**
@@ -63,9 +102,8 @@ export async function authRoutes(
     const query = request.query as Record<string, string | undefined>;
     const returnTo = safeReturnTo(query['returnTo']);
 
-    // If already authenticated, honor returnTo (so /oauth/authorize?...
-    // survives the "am I logged in?" shortcut — the user pasted an OAuth
-    // consent URL while already signed in on the dashboard).
+    // A signed-in browser goes straight to the page it asked for (so /oauth/authorize?... survives
+    // the "am I logged in?" shortcut), and only when safeReturnTo accepts it as a path of the dashboard.
     if (typeof session.get === 'function') {
       const userId = session.get('userId') as string | undefined;
       if (userId !== undefined) {
@@ -412,19 +450,8 @@ export async function authRoutes(
       await reply.redirect('/account?localeSaved=1');
       return;
     }
-    // Validate referer to prevent open redirect — only allow same-origin paths
-    const referer = request.headers.referer ?? '/';
-    let redirectTo = '/';
-    try {
-      const url = new URL(referer);
-      const host = request.headers.host ?? '';
-      if (url.host === host) {
-        redirectTo = url.pathname + url.search;
-      }
-    } catch {
-      // Invalid URL — use root
-    }
-    await reply.redirect(redirectTo);
+    // Back to the page the change was made on, when the Referer names a page of the dashboard.
+    await reply.redirect(refererReturnTo(request.headers.referer, request.headers.host));
   });
 
   // POST /account/density — switch UI density (Phase 57 R2). Cookie-backed,
@@ -449,8 +476,8 @@ export async function authRoutes(
   // redirect to the original /oauth/authorize?... URL.
   //
   // Semantically equivalent to POST /orgs/switch (routes/orgs.ts) but accepts
-  // the returnTo target in the POST body (open-redirect-safe via
-  // safeReturnTo) rather than sniffing the referer header, because the OAuth
+  // the returnTo target in the POST body (held to safeReturnTo's rule)
+  // rather than reading the referer header, because the OAuth
   // consent view supplies the exact `/oauth/authorize?...` URL it wants to
   // resume. The two routes coexist by design:
   //   - /orgs/switch        — nav-dropdown flow (referer-based redirect).
@@ -498,8 +525,8 @@ export async function authRoutes(
     const session = request.session as { set(key: string, value: unknown): void };
     session.set('currentOrgId', orgId);
 
-    // T-31.2-02-09: open-redirect-safe — safeReturnTo rejects cross-origin
-    // and protocol-relative targets, falling back to '/'.
+    // T-31.2-02-09: the browser returns to returnTo only when safeReturnTo accepts it as a path of the
+    // dashboard; any other value returns to the home page.
     await reply.redirect(safeReturnTo(body.returnTo));
   });
 }
