@@ -2,20 +2,18 @@
 gsd_state_version: "1.0"
 milestone: v3.9.0
 milestone_name: Dismissal follow-through
-current_phase: 91
-current_phase_name: Dismissal and permission hardening
-status: executing
-stopped_at: Completed 91-22h-PLAN.md (PR4 plan 10: an edit, a retry or a delete that lands while the assistant is still answering ends that turn and the store refuses every later row of the withdrawn answer, the result of an action resolved meanwhile included; no status writer moves a superseded row; edit and retry decide on the conversation's newest rows in one transaction each, retry only of the last message when it is a reply (409 otherwise), and only that reply offers Retry in the panel; the message read, edit form and share work in conversations of any length; 29 breaks MATCH; final PR4 gates green, UAT GREEN 238; not pushed)
-last_updated: "2026-10-21T03:30:00.000Z"
-last_activity: 2026-10-15
-last_activity_desc: Phase 91 execution started
-state_head: 06b9b6a6bbe413ad618eff2b4e31afa592c93647
+status: Awaiting next milestone
+stopped_at: "v3.9.0 shipped 2026-10-21 (PRs #8-#14, plus the HARD-02 brand drilldown closure); milestone archived"
+last_updated: "2026-10-21T11:09:48.994Z"
+last_activity: 2026-10-21
+last_activity_desc: Milestone v3.9.0 completed and archived
+state_head: d7f6a04d9cf69ef8ceed3428a531adc719bc27ee
 progress:
   total_phases: 3
-  completed_phases: 1
-  total_plans: 44
-  completed_plans: 44
-  percent: 33
+  completed_phases: 3
+  total_plans: 57
+  completed_plans: 57
+  percent: 100
 ---
 
 # Project State
@@ -127,10 +125,10 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 
 ## Current Position
 
-Phase: 91 (Dismissal and permission hardening) — EXECUTING
-Plan: 22h of 23
-Status: Ready to execute
-Last activity: 2026-10-20 - Completed quick task 261020-izd: fix-suggestion route admits issues.fix (PR #12)
+Phase: Milestone v3.9.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-10-21 — Milestone v3.9.0 completed and archived
 
 ## Phase Map (v3.9.0 — Dismissal follow-through)
 

@@ -1,5 +1,24 @@
 # Milestones
 
+## v3.9.0 Dismissal follow-through (Shipped: 2026-10-21)
+
+**Phases completed:** 3 phases, 57 plans (+ quick 261020-izd). PRs #8-#14. Closeout: override_closeout
+(phases 90 and 92 verified passed; phase 91 human_needed: the owner's seven prod checks remain).
+
+**Key accomplishments:**
+
+- GraphQL `createScan` starts real scans through the single shared, validated, rate-limited scan-start path.
+- Every scan-start and scan-delete path applies one rule; cookie-reachable API writes enforce CSRF.
+- `issues.dismiss` is org-scoped only; API-key dismissals stay attributable after the key is deleted.
+- Sessions and MCP tokens follow the stored user on every request (role, org and access change at once).
+- Forwarded client addresses are trusted only through configured proxies.
+- A false-positive dismissal guide whose every procedure was executed cold by a non-author agent.
+
+**Known verification overrides:** Phase 91 human checks (a)-(g) on prod are pending with the owner; 4 UAT
+evidence files acknowledged at close (the PR3 UAT pack passed 7/7 on 2026-10-20).
+
+---
+
 ## v3.8.0 Mark as false positive (Shipped: 2026-10-13)
 
 **Phases completed:** 3 phases, 35 plans (+ quick 261013-dr7). Prod 23c40aaf. Closeout: override_closeout.

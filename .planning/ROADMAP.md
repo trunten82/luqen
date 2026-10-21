@@ -9,116 +9,10 @@
 - ✅ **v3.6.0 Agent surface + semantic depth** — shipped 2026-09-04 directly to master (no numbered phases — vision adapter + `analyse-visual`, companion multimodal image upload + TTS, WP vision mirror, C#2 VPAT elevation)
 - ✅ **v3.7.0 AI output quality — eval harness + labelled reference sets** — Phases 83-86 (shipped 2026-09-07; archived 2026-09-28)
 - ✅ **v3.8.0 Mark as false positive** — Phases 87-89 (shipped 2026-10-13; prod 23c40aaf) — dormant-by-choice after close (closure ruling 2026-10-12)
-- 🚧 **v3.9.0 Dismissal follow-through** — Phases 90-92 (opened 2026-10-15; scope approved by Alessandro 2026-10-15)
+- ✅ **v3.9.0 Dismissal follow-through** — Phases 90-92 (shipped 2026-10-21; PRs #8-#14)
+- 📋 **Next milestone** — not yet defined (proposal goes to the owner via the orchestrator)
 
 > **Milestone redefined (v3.5.0).** The original v3.5.0 "Commercial positioning & agency monetization" (Pro/Agency gates, credit-metered fixes) was **reversed by the single-product decision** ([[project_single_tier_decision]]). Only its Phase 78 (anti-overlay positioning) survives. The dead monetization phases that were numbered 79-82 (GATE/CREDIT/AGENCY/PRICE) are **retired** — their concepts must NOT be reused. v3.5.0 is now the **Anti-overlay wedge**: convert the verified 2026-06 market-positioning brief into product. Phase numbering continues from 78 (no reset).
-
----
-
-## Current Milestone: v3.9.0 Dismissal follow-through
-
-**Goal:** Finish what v3.8.0 (Mark as false positive) deliberately left open: make GraphQL `createScan` actually start scans, close the hardening items from the v3.8.0 review and the quick 261013-dr7 deferred list, and give users documentation they can follow. No new dismissal features, no schema change expected (if HARD-08 turns out to need one, raise it with the owner before building).
-
-**Granularity:** coarse · **Phases:** 3 (90-92) · **Requirements:** 18/18 mapped
-
-**Standing rules for every phase (not repeated per criterion):**
-
-- Every new guard is watched failing before it lands: break the guard, confirm that ONLY the targeted test goes red (name the isolation command and read the test NAME on the result line, not the count), then restore.
-- Every phase ships the same way: merged to master via PR, CI green, auto-deploy to prod succeeded (the deploy drains in-flight scans first, up to 30 minutes), and a read-back on prod of what the system now holds, not just the deploy exit code.
-- Planning artifacts under `.planning/` are not committed (`commit_docs: false`); copy new SUMMARY/VERIFICATION files out of any executor worktree before it is removed.
-
-## Phases
-
-- [x] **Phase 90: GraphQL createScan starts scans** - A scan created through GraphQL runs to a terminal state and is validated by the same code path as `/scan/new` (completed 2026-10-15)
-- [ ] **Phase 91: Dismissal and permission hardening** - Close the 15 review and deferred-list items so dismissal and permission boundaries hold on every path
-- [ ] **Phase 92: Dismissal user documentation** - Users can follow written docs to mark, understand, revoke and audit false-positive dismissals
-
-## Phase Details
-
-### Phase 90: GraphQL createScan starts scans
-
-**Goal**: A scan created through the GraphQL `createScan` mutation is a real scan: it starts, reaches a terminal state, and is subject to exactly the same validation and limits as a scan started from `/scan/new`.
-**Depends on**: Nothing (first phase; independent of the dismissal hardening work)
-**Requirements**: SCAN-01, SCAN-02
-**Success Criteria** (what must be TRUE):
-
-  1. A scan created with the GraphQL `createScan` mutation moves out of `queued` and reaches `completed` or `failed`, exactly like a scan started from `/scan/new`; it is never left `queued` forever (read back on prod with a real GraphQL-created scan)
-  2. An input refused on `/scan/new` (invalid URL, private/SSRF target including a name that resolves to a private address, org the caller cannot access, missing permission, invalid standard, page concurrency outside 1-10, more than 50 jurisdictions, more than 30 scan starts per user in 10 minutes) is refused identically through GraphQL `createScan`, because both go through one shared code path. Reworded at verification per D-90-04 and D-90-07: neither path has a queue or concurrency refusal; these are the limits both enforce through the shared scan function. The scan-start rate limit (30 per 10 minutes per user, per API key for key callers) is one bucket that both paths draw from.
-  3. Each guard on the GraphQL path has been watched failing: with the guard broken, only the targeted test goes red, and the evidence (command, output, commit) is recorded before the guard lands
-  4. Merged to master via PR, CI green, auto-deploy to prod succeeded, and the GraphQL-created scan read back on prod
-
-**Plans:** 7/6 plans complete
-
-Plans:
-
-- [x] 90-01-PLAN.md — Tracer: GraphQL createScan goes through the shared authorized scan function and reaches the orchestrator (RED first); docs
-- [x] 90-02-PLAN.md — POST /scan/new refuses callers without scans.create through the same function; one scan-start rate limit inside it, one bucket for both paths (D-90-07)
-- [x] 90-03-PLAN.md — Env-only prod read-back script with selftest, its guards broken, and the read-only prod preflight
-- [x] 90-04-PLAN.md — Break every guard (permission, SSRF, wiring, generator, shared rate limit) one at a time against pre-declared red sets
-- [x] 90-05-PLAN.md — Ship: content scan, PR with green checks, pre-merge prod gates, merge, deploy, prod read-back
-- [x] 90-06-PLAN.md — RBAC matrix shows the guard; docs for the 403 and the shared rate limit; full gates and local end-to-end rehearsal with a rate-limit probe (wave 3, runs before 90-04)
-
-### Phase 91: Dismissal and permission hardening
-
-**Goal**: The dismissal feature and the permission model behave correctly at their edges on every path (UI, API, MCP, admin roles): no user can reach a dead-end control, see data they may not see, or hold a permission that was never meant to be grantable.
-**Depends on**: Nothing functionally (Phase 90 is independent); sequenced before Phase 92 so the documentation describes the hardened behaviour
-**Requirements**: HARD-01, HARD-02, HARD-03, HARD-04, HARD-05, HARD-06, HARD-07, HARD-08, HARD-09, HARD-10, HARD-11, HARD-12, HARD-13, HARD-14, HARD-15
-**Success Criteria** (what must be TRUE):
-
-  1. On the report page, the Dismiss button is disabled for every selector the server refuses (including over 4000 characters), so no user reaches an endless "Try again" loop; a user without `reports.view_technical` never receives a raw selector in the DOM or in requests from the Dismiss/Assign controls; a key label containing `$&`, `` $` `` or `$'` renders unchanged; dismissed/revoked dates show in the viewing user's session locale (HARD-01, 02, 04, 05)
-  2. Permission boundaries hold: a role holding only `issues.dismiss` cannot mark or preview a dismissal on reports it cannot open; `issues.dismiss` cannot be put on a global/system role (including built-in `user`) through `/admin/roles`; the dismissals list API returns exactly the rows the Dismissed section shows for the same user and scan, including system scans; an API-key dismissal stays attributable after the key is deleted and two same-label keys are distinguishable (HARD-03, 08, 11, 12)
-  3. Every state-changing `/api/v1/*` route reachable with a session cookie enforces CSRF, and an inventory test fails when a new cookie-reachable write route lacks the check; MCP user create/update tools refuse invalid role names and usernames with a clear error, using the same rules as the dashboard (HARD-10, 13)
-  4. The test and harness guards hold: the dark-permission filters take an injectable set with one red/green test per path even while `DARK_PERMISSIONS` is empty; the remote dismissal UAT harness refuses to run against anything but a dedicated UAT org/site (and the README says so); the at-rest key-invariant test anchors on the `server.ts` wiring call expressions, not line numbers (HARD-06, 07, 09)
-  5. Each new guard has been watched failing (only the targeted test goes red, evidence recorded before it lands), and the phase is merged to master via PR, CI green, auto-deploy to prod succeeded, with a read-back on prod of the changed behaviour
-
-**Plans:** 18 plans (three PRs, each shipped and read back before the next merges)
-
-Plans:
-
-- [x] 91-01-PLAN.md — PR1: at-rest wiring test anchored on call expressions; read-back probe for schedule creation; read-only prod preflight
-- [x] 91-02-PLAN.md — PR1: report retry and cancel go through the scan service (scans.create, the scan's organization, shared start validation, shared scan-start limit); Retry/Cancel shown only to viewers who may use them
-- [x] 91-03-PLAN.md — PR1: scheduled runs, schedule creation and startup recovery go through the shared start validation
-- [x] 91-04-PLAN.md — PR1: MCP scan starts draw from the shared scan-start limit; one bucket proven through createServer
-- [x] 91-05-PLAN.md — PR1: RBAC matrix, docs and CHANGELOG; full gates; local rehearsal of startup recovery and the read-back
-- [x] 91-06-PLAN.md — PR1: break every new guard against pre-declared red sets
-- [x] 91-07-PLAN.md — PR1 ship: outgoing-content scan, PR, pre-merge prod gates, merge, deploy, prod read-back
-- [x] 91-08-PLAN.md — PR2: injectable dark-permission set per path; issues.dismiss refused on global roles (route and repository)
-- [x] 91-09-PLAN.md — PR2: mark, preview and revoke require reports.view; the dismissals list API returns the rows the Dismissed section shows
-- [x] 91-10-PLAN.md — PR2: MCP user tools validate role names, usernames, passwords and duplicates like the dashboard
-- [x] 91-11-PLAN.md — PR2: cookie sessions send the CSRF token on every /api write; route inventory test; read-back probe
-- [x] 91-12-PLAN.md — PR2: gates (incl. the dismissal browser UAT) and break every new guard
-- [x] 91-13-PLAN.md — PR2 ship: outgoing-content scan, PR, permission read-back on a prod DB copy, merge, deploy, prod read-back
-- [x] 91-14-PLAN.md — PR3: Dismiss/Assign need technical-details access; the Dismiss button refuses what the server validator refuses
-- [x] 91-15-PLAN.md — PR3: API-key dismissals keep the key's label and creation time (migration 092); dismissal dates in the viewer's locale
-- [x] 91-16-PLAN.md — PR3: the remote UAT harness requires a dedicated target; i18n values render literally
-- [x] 91-17-PLAN.md — PR3: gates, break every new guard, real-browser UAT read by eye
-- [x] 91-18-PLAN.md — PR3 ship: migration dry-run on prod, outgoing-content scan, PR, merge, deploy, schema and harness read-back
-
-**UI hint**: yes
-
-### Phase 92: Dismissal user documentation
-
-**Goal**: A user can learn from the docs how to mark a finding as a false positive, what that does to their numbers and exports, and how to revoke and audit it, and every step works as written against the hardened product.
-**Depends on**: Phase 91 (the docs must describe the hardened behaviour; HARD-03 and HARD-12 change who can do what)
-**Requirements**: DOCS-01, DOCS-02, DOCS-03
-**Success Criteria** (what must be TRUE):
-
-  1. A reader of the docs can mark a finding as a false positive, knows why a reason is required, and knows who can do it (Owner/Admin and custom org roles granted `issues.dismiss`, as hardened in Phase 91)
-  2. The docs state the effects of a dismissal (excluded from counts, score, exports and ACR/VPAT with per-criterion disclosure; re-applied on later scans) and show how to revoke one and read its audit history
-  3. The docs are linked from the docs index/README navigation, and a different agent than the author has executed every procedure cold against the shipped product and recorded where it reached for the wrong step
-  4. Merged to master via PR, CI green, auto-deploy to prod succeeded, and the published docs read back from master
-
-**Plans**: TBD
-
-## Progress (v3.9.0)
-
-**Execution Order:** 90 → 91 → 92 (90 and 91 are functionally independent; 92 must follow 91)
-
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|----------------|--------|-----------|
-| 90. GraphQL createScan starts scans | v3.9.0 | 0/0 | Not started | - |
-| 91. Dismissal and permission hardening | v3.9.0 | 0/0 | Not started | - |
-| 92. Dismissal user documentation | v3.9.0 | 0/0 | Not started | - |
 
 ---
 
@@ -311,5 +205,19 @@ Requirements (16/16 Complete): `milestones/v3.7.0-REQUIREMENTS.md`.
 - [x] Quick 261013-dr7: review security fixes (CR-01 global-role shadowing, SC2 system-org Dismissed section, CSRF on mark/revoke) — PR #6, 23c40aaf
 
 Full details: `milestones/v3.8.0-ROADMAP.md`, `milestones/v3.8.0-REQUIREMENTS.md`, phases in `milestones/v3.8.0-phases/`.
+
+</details>
+
+## Completed Milestone: v3.9.0 Dismissal follow-through
+
+<details>
+<summary>✅ v3.9.0 Dismissal follow-through (Phases 90-92) — SHIPPED 2026-10-21</summary>
+
+- [x] Phase 90: GraphQL createScan starts scans (7/7 plans) — completed 2026-10-15 (PR #8)
+- [x] Phase 91: Dismissal and permission hardening (41/41 plans) — completed 2026-10-21 (PRs #9-#13, plus the HARD-02 brand drilldown closure)
+- [x] Phase 92: Dismissal user documentation (9/9 plans) — completed 2026-10-21 (PR #14); every procedure read cold by a non-author
+- [x] Quick 261020-izd: fix suggestions open for issues.fix holders without llm.view — PR #12
+
+Full details: `milestones/v3.9.0-ROADMAP.md`, `milestones/v3.9.0-REQUIREMENTS.md`.
 
 </details>

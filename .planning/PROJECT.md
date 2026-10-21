@@ -8,22 +8,21 @@ Luqen is a WCAG accessibility compliance platform built as a monorepo of Fastify
 
 AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control of the whole stack through the dashboard, not config files.
 
-## Current Milestone: v3.9.0 Dismissal follow-through
+## Last Milestone (shipped 2026-10-21): v3.9.0 Dismissal follow-through
 
-**Goal:** Close the follow-ups v3.8.0 left open: scans created through GraphQL actually run, the false-positive
-dismissal feature and its permissions are hardened against the review's deferred findings, and users get
-documentation for it.
+**Status:** SHIPPED 2026-10-21 (PRs #8-#14). Scope approved by Alessandro 2026-10-15 (question card to Allanon).
 
-**Owner ruling:** APPROVED by Alessandro 2026-10-15, directly to Allanon in session (question card), relayed to
-luqen by a2a 01M4ZHSH3Y4SE3V6WNHDHCH0J3. Scope (a)+(b)+(c) exactly as proposed in a2a 01M4XX2RSV4MH61PZJ7ECS1TB1.
+**Delivered:**
+- GraphQL `createScan` starts real scans through the same validated, rate-limited path as `/scan/new` (Phase 90).
+- Dismissal and permission boundaries hold on every path: one rule each for scan start and scan delete, CSRF on
+  cookie-reachable API writes, org-scoped `issues.dismiss`, attributable API-key dismissals, and sessions and MCP
+  tokens that follow the stored user on every request (Phase 91, HARD-01..21).
+- A user guide for false-positive dismissals, every procedure executed cold by a non-author (Phase 92).
 
-**Target features:**
-- GraphQL `createScan` starts the scan through the same path and guards as `/scan/new` (D-89-07-01)
-- Dismissal/permission hardening from the quick 261013-dr7 deferred list (review WR-05, IN-01..IN-08, /api/v1
-  cookie-CSRF sweep, list API read predicate, scope-aware grantability D-89-09-01, MCP user role validation)
-- User documentation for false-positive dismissals (D-89-09-02)
+**Next milestone:** not yet defined. The candidate follow-ups are recorded privately; the proposal goes to the
+owner through the orchestrator.
 
-## Last Milestone (shipped 2026-10-13): v3.8.0 Mark as false positive
+## Earlier Milestone (shipped 2026-10-13): v3.8.0 Mark as false positive
 
 **Status:** SHIPPED and archived 2026-10-13, prod 23c40aaf. Follow-up milestone v3.9.0 opened 2026-10-15.
 
@@ -225,9 +224,13 @@ but it ADDS a capability while this milestone protects the ones already shipped 
 - ✓ Pre-registered non-inferiority margin + analyse-visual zero-false-pass bar, verdict with a required power field (BARS-01..03) — v3.7.0
 - ✓ Live baselines of the production pins with measured run-to-run instability, consumable by `eval verdict --replication` (BASELINE-01..02) — v3.7.0
 
+- ✓ GraphQL `createScan` starts real scans under the same guards as `/scan/new` (SCAN-01..02) — v3.9.0
+- ✓ Dismissal and permission hardening on every path, sessions and MCP tokens follow the stored user (HARD-01..19, 21) — v3.9.0
+- ✓ False-positive dismissal user guide, cold-read verified (DOCS-01..03) — v3.9.0
+
 ### Active
 
-v3.9.0 Dismissal follow-through — see REQUIREMENTS.md (SCAN-*, HARD-*, DOCS-*). Unchanged and still pending with the owner:
+None in flight (v3.9.0 shipped 2026-10-21). Unchanged and still pending with the owner:
 a pre-registered, noise-aware v2 false-PASS gate (register 01M3K97VY409DDC376SWQ2YK09).
 
 ### Out of Scope
@@ -264,6 +267,8 @@ a pre-registered, noise-aware v2 false-PASS gate (register 01M3K97VY409DDC376SWQ
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
+| Code-review gate before every ship, plus focused re-reviews until a stated ship rule holds | Each v3.9.0 PR review found live defects that tests and break-tests missed; a ship rule bounds the loop | ✓ Good — v3.9.0 |
+| Docs verified by cold reads from non-author agents with dispatch nonces | Authors cannot see their own gaps; nonces make reader independence checkable | ✓ Good — v3.9.0 |
 | Build on existing capability engine | Phase 2 engine handles retry/fallback/priority — reuse, don't rebuild | ✓ Good |
 | Hardcoded fix patterns as fallback | 50 patterns in fix-suggestions.ts provide value even without LLM | ✓ Good |
 | Regulation filter additive, not replacing | Backwards compatible — no data migration, existing callers unchanged | ✓ Good — v2.8.0 |
@@ -314,4 +319,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-15 after starting v3.9.0 milestone*
+*Last updated: 2026-10-21 after the v3.9.0 milestone*
