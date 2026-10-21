@@ -16,6 +16,7 @@ Luqen is a site-wide WCAG accessibility scanner with legal compliance mapping, a
 | Understand the system design | [contributing/architecture.md](contributing/architecture.md) |
 | Configure a specific package | [Configuration reference](#reference) |
 | Learn how to scan | [guides/scanning.md](guides/scanning.md) |
+| Mark a finding as a false positive | [guides/false-positives.md](guides/false-positives.md) |
 | Use the agent companion | [guides/agent-companion.md](guides/agent-companion.md) |
 | Connect an external MCP client | [guides/mcp-integration.md](guides/mcp-integration.md) |
 | Set up CI/CD | [guides/ci-cd.md](guides/ci-cd.md) |
@@ -45,6 +46,7 @@ Narrative how-to guides under `guides/`. v3.1.0 surface guides have explicit `##
 | [guides/ci-cd.md](guides/ci-cd.md) | Pipeline integration, exit codes, fail-on-violations |
 | [guides/compliance-check.md](guides/compliance-check.md) | Jurisdictions, reading the matrix, confirmed vs review |
 | [guides/dashboard-admin.md](guides/dashboard-admin.md) | Dashboard user + admin reference; teams, roles, repos, schedules, email reports |
+| [guides/false-positives.md](guides/false-positives.md) | Mark, revoke and audit false-positive dismissals |
 | [guides/fix-proposals.md](guides/fix-proposals.md) | Auto-fixable issues, interactive CLI, MCP flow |
 | [guides/llm-model-selection.md](guides/llm-model-selection.md) | Which model each LLM capability uses, how the pin actually works (DB rows not config), the measured 2026-09-04 model comparison, and the exact PUT still pending |
 | [guides/mcp-integration.md](guides/mcp-integration.md) | External MCP client setup over OAuth 2.1 + PKCE + DCR (Claude Desktop, Cursor, Windsurf, custom clients) |
