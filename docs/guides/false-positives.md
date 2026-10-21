@@ -123,3 +123,74 @@ If some of the site's scans could not be updated, one of these messages appears 
 - **Saved, but the other scans of this site could not be fully updated. Totals on the home page and trends may be out of date.**
 
 The dismissal is saved either way, and the report pages of those scans already leave the finding out, because they apply the dismissal when they are opened. Only the stored totals of those scans, which the home page and trends show, may be out of date. The next dismissal or revocation on the same site updates every scan of the site again.
+
+---
+
+## Check a dismissal on a new scan
+
+See for yourself that a dismissal already applies to a new scan of the same site.
+
+Before you start:
+
+- A dismissal is active for the site (see [Mark a finding as a false positive](#mark-a-finding-as-a-false-positive)).
+- Your role holds **Create scans**, so that you can start a scan.
+
+Steps:
+
+1. At the top left of the page, click the menu button **Open navigation menu**.
+2. In the menu, click **New Scan**, the entry just below Reports. If the page behind the menu has a **New Scan** button of its own, that button opens the same page.
+3. Type the site's address in **Website URL**, written as it was for the scan you dismissed the finding on. What counts as the same site is explained in [Which findings a dismissal covers](#which-findings-a-dismissal-covers).
+4. Click **Start Scan**. The other options on this page are described in [Starting a scan](scanning.md#starting-a-scan); they do not affect the dismissal.
+5. Wait until the scan is complete. The progress page then shows **Scan completed! Redirecting to report…** and, a few seconds later, opens the scan's report by itself.
+6. Click the **Issues** tab.
+7. If the criterion the dismissed finding was listed under is still listed, click its title to expand it.
+
+Result: the dismissed finding is not listed, and the report's totals do not count it. At the end of the **Issues** tab, **Dismissed findings — active: N, revoked: N** is shown; expand it to see the dismissal under **Active dismissals**.
+
+If it does not work: when the dismissed finding is listed again, compare its element with the one shown for the dismissal under **Active dismissals**. If the selector has changed, or the scan was started with a different address, the dismissal does not match (see [Which findings a dismissal covers](#which-findings-a-dismissal-covers)).
+
+---
+
+## Find dismissed findings in the Excel export
+
+Check in a spreadsheet which findings a report leaves out, and why.
+
+Before you start:
+
+- Your role holds **Export CSV and PDF**.
+- The report has at least one active dismissal.
+
+Steps:
+
+1. At the top left of the page, click the menu button **Open navigation menu**.
+2. In the menu, click **Reports**.
+3. In the list, click the site address of the scan.
+4. In the row of buttons at the top of the report, click **Export Excel**. Your browser downloads a workbook.
+5. Open the downloaded workbook in a spreadsheet application.
+
+Result: the workbook has a sheet **Issues**, which does not list the dismissed findings, and a sheet **Dismissed**, with one row for each dismissed occurrence under the headings **Page URL**, **Rule Code**, **Selector**, **Level**, **Reason**, **Dismissed By** and **Dismissed At**.
+
+If it does not work: when the workbook has no **Dismissed** sheet, nothing on this report is dismissed. The Dismissed findings section at the end of the report's **Issues** tab shows the site's active dismissals.
+
+---
+
+## See the disclosure in the conformance report
+
+See how a conformance report (VPAT / ACR) discloses dismissed findings.
+
+Before you start:
+
+- Your role holds **Generate and export VPAT/ACR reports**.
+- The report has at least one active dismissal.
+
+Steps:
+
+1. At the top left of the page, click the menu button **Open navigation menu**.
+2. In the menu, click **Reports**.
+3. In the list, click the site address of the scan.
+4. In the row of buttons at the top of the report, click **Generate VPAT / ACR**. The conformance report opens in a new tab.
+5. In the conformance report's tables, find the row of the criterion the dismissed finding was listed under. The criterion's number and name are in the first column, **Criteria**; the page shows the column headings in capital letters.
+
+Result: the row's last column, **Remarks and Explanations**, ends with **1 automated finding was dismissed as a false positive after review.** When more than one occurrence on that criterion is dismissed, it ends with **N automated findings were dismissed as false positives after review.** instead. The same sentence is in the conformance report's **Download PDF**, in its evidence pack and in its shared and public links (see [Conformance reports and the accessibility statement](#conformance-reports-and-the-accessibility-statement)).
+
+If it does not work: when no row carries the sentence, check that the dismissal is listed under **Active dismissals** in the Dismissed findings section at the end of the report's **Issues** tab.
