@@ -37,6 +37,7 @@ Luqen uses a **database-driven RBAC** (Role-Based Access Control) model. Permiss
 | | `reports.compare` | Compare two scan reports side by side |
 | **Issues** | `issues.assign` | Assign issues to team members |
 | | `issues.fix` | View and propose code fixes. The report's "How to fix" hints are pattern-based for `issues.fix` holders; `llm.view` adds AI-generated suggestions |
+| | `issues.dismiss` | Mark findings as false positives and revoke those dismissals. Organization roles only: a global role cannot carry it. On the report page it also needs `reports.view` and `reports.view_technical`; see [Who can dismiss](false-positives.md#who-can-dismiss) |
 | **Testing** | `manual_testing` | Run manual testing checklists |
 | **Repositories** | `repos.manage` | Connect and manage source code repositories |
 | **Analytics** | `trends.view` | View trend charts and analytics dashboards |
@@ -53,14 +54,14 @@ Luqen uses a **database-driven RBAC** (Role-Based Access Control) model. Permiss
 
 | Role | Permissions | Use case |
 |------|------------|---------|
-| **admin** | All 20 permissions | System administrators |
+| **admin** | Every permission | System administrators |
 | **developer** | Scans, reports (incl. technical), issues, fixes, repos, trends, manual testing | Developers fixing accessibility issues |
 | **user** | Scans, schedules, reports, issues, manual testing, trends | QA testers and content editors |
 | **executive** | Reports (view + export), trends | Management and stakeholders |
 
 ### Custom roles
 
-Admins can create custom roles at **Admin > Roles** with any combination of the 20 available permissions. Common examples:
+Admins can create custom roles at **Admin > Roles** with any combination of the available permissions, except that a global role cannot carry `issues.dismiss`: only an organization role can (see [Let a custom role dismiss findings](false-positives.md#let-a-custom-role-dismiss-findings)). Common examples:
 
 | Custom role | Suggested permissions | Use case |
 |-------------|----------------------|----------|
@@ -1418,7 +1419,7 @@ Internet → Reverse Proxy (nginx/Caddy) → Luqen Dashboard (:5000)
 
 ## Audit log
 
-Luqen includes a built-in audit log that records security-relevant actions in the dashboard database via the `AuditRepository` (part of the StorageAdapter). Audit entries are queryable from the admin UI at **Admin > Audit Log** and via the GraphQL API (`auditLog` query, requires `audit.view` permission).
+Luqen includes a built-in audit log that records security-relevant actions in the dashboard database via the `AuditRepository` (part of the StorageAdapter). Audit entries are queryable in the dashboard on the **Audit Log** page, at `/admin/audit-log` under your dashboard's address (requires `audit.view`; the menu lists the page under **More** for roles that also hold `admin.system`), and via the GraphQL API (`auditLog` query, requires `audit.view` permission). The page filters by an exact action given in its address, for example `/admin/audit-log?action=issue_dismissal.mark`.
 
 ### Logged events
 
@@ -1430,6 +1431,7 @@ Luqen includes a built-in audit log that records security-relevant actions in th
 | **Plugins** | Installed, configured, activated, deactivated, removed |
 | **Scans** | Scan created, completed, failed, deleted |
 | **Roles** | Role created, updated, deleted |
+| **False-positive dismissals** | `issue_dismissal.mark` (a finding dismissed, with its reason) and `issue_dismissal.revoke` (a dismissal revoked, with its comment); see [Read the audit history](false-positives.md#read-the-audit-history) |
 | **System** | Organisation created/deleted, settings changed |
 
 ### Additional recommendations

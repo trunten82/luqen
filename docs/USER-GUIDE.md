@@ -203,6 +203,10 @@ Each issue in a report can be assigned to a user or team and tracked through a l
 
 **Roles:** Admin, Developer, and User roles can manage assignments; the Executive role has read-only access.
 
+### False positives
+
+When a finding is not a real problem on your site, you can dismiss it as a false positive with a reason. The dismissed finding no longer counts in the report's totals, scores and exports, and conformance reports state how many findings were dismissed. A dismissal can be revoked, and every dismissal and revocation is recorded with who made it and why. See [Dismissing false positives](guides/false-positives.md).
+
 ### Uploading regulations (LLM extraction)
 
 The **Sources** admin page shows an **Upload Regulation** form when the `@luqen/llm` service is running (port 4200). Paste or upload regulatory text, select an LLM Provider from the dropdown, and submit. The LLM service extracts structured regulation and requirement data from the document, creating a proposal for admin review.

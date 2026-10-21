@@ -116,7 +116,7 @@ The dashboard supports four default role-based personas, each with tailored navi
 
 | Role | Default view | Default capabilities |
 |------|-------------|-------------|
-| **admin** | System overview | All 15 permissions. Manage users, roles, jurisdictions, regulations, webhooks, OAuth clients, connected repos, schedules, and system settings. Can delete any report. |
+| **admin** | System overview | Every permission. Manage users, roles, jurisdictions, regulations, webhooks, OAuth clients, connected repos, schedules, and system settings. Can delete any report. |
 | **developer** | Issue list | View fix proposals and code diffs, manage assignment queue, start scans, delete own reports. Cannot access admin settings. |
 | **user** | Report list | Start scans, view all reports, run manual testing checklists, delete own reports. Cannot access admin pages. |
 | **executive** | Org score dashboard | Read-only. View org-wide accessibility score (0-100), aggregated trends, and compliance summaries. Cannot start scans or modify data. |
@@ -146,15 +146,15 @@ Manage the permission model for all dashboard users:
 
 **Default roles:** The dashboard ships with four system roles — `admin`, `developer`, `user`, and `executive` — each pre-configured with appropriate permissions. System roles can have their permissions modified but cannot be deleted.
 
-**Custom roles:** Admins can create new roles with any combination of the 15 available permissions. This is useful for specialized personas (e.g., a "QA Tester" role with only scan and manual testing permissions).
+**Custom roles:** Admins can create new roles with any combination of the available permissions. `issues.dismiss` (mark findings as false positives) can be carried by organization roles only, never by a global role; see [Let a custom role dismiss findings](false-positives.md#let-a-custom-role-dismiss-findings). This is useful for specialized personas (e.g., a "QA Tester" role with only scan and manual testing permissions).
 
-**Permission matrix:** The role editor displays checkboxes grouped into 7 categories:
+**Permission matrix:** The role editor displays checkboxes grouped by category:
 
 | Group | Permissions |
 |-------|------------|
 | **Scans** | `scans.create`, `scans.schedule` |
 | **Reports** | `reports.view`, `reports.view_technical`, `reports.export`, `reports.delete`, `reports.compare` |
-| **Issues** | `issues.assign`, `issues.fix` |
+| **Issues** | `issues.assign`, `issues.fix`, `issues.dismiss` (organization roles only) |
 | **Testing** | `manual_testing` |
 | **Repositories** | `repos.manage` |
 | **Analytics** | `trends.view` |

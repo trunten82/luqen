@@ -265,6 +265,14 @@ Status transitions are logged with timestamps. Filter the issue list by assignme
 
 ---
 
+## False positives
+
+A finding that is not a real accessibility problem can be dismissed as a false positive from the report's **Issues** tab, by people allowed to dismiss findings, with a reason that is required and visible to everyone who can view the report. For the steps and who can dismiss, see [Mark a finding as a false positive](false-positives.md#mark-a-finding-as-a-false-positive).
+
+A dismissal changes the totals, scores, exports and conformance reports of every completed scan of the site in your organization, earlier scans included. For each effect, see [What a dismissal changes](false-positives.md#what-a-dismissal-changes).
+
+---
+
 ## Fix proposals from connected repos
 
 When repositories are connected (see [dashboard-admin.md](dashboard-admin.md#connected-repositories)), luqen generates AI-powered fix proposals for scan issues. The system supports 21 suggestion types covering common WCAG violations, delivered via MCP/A2A integration.
