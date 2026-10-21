@@ -438,6 +438,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   which now actually starts scans, previously had only the global request
   limit. Over the limit both surfaces answer with the same message.
 
+### Documentation
+
+- New guide, [Dismissing false positives](docs/guides/false-positives.md):
+  who can mark a finding as a false positive, how to do it, what a dismissal
+  changes in counts, scores, exports and conformance reports, how to revoke a
+  dismissal, where to read its audit history, how to give the right to a
+  custom role, and what to do when the Dismiss button is missing or disabled.
+  The permission and audit references now include dismissals.
+
 ## [3.6.0] - 2026-09-04
 
 This entry covers everything released since 3.4.0 — the v3.5.0 wave, its later
