@@ -5,16 +5,16 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: Completed 91-22f-PLAN.md (PR4 plan 8: a trusted-proxy list that together trusts more than one /8 of public IPv4 or one /16 of global IPv6 addresses is refused at startup (the default list and a CDN-sized list stay accepted); a shared conversation shows the conversation up to and including the answer it was shared from, and a link whose shared answer was retried or edited, or that has no shared answer, answers not found; a sign-in sent from a page that is no longer current is answered with a fresh sign-in page or the requested page, never JSON; a request authenticated by an API key header records no session activity; the assistant panel answers another member's conversation like a missing one; an expired or already-resolved approval closes its dialog with a translated message and no retry; the confirm-time expiry audit row names the user and the message; 15 breaks MATCH; final PR4 gates green, UAT GREEN 238; not pushed)
-last_updated: "2026-10-20T21:30:00.000Z"
+stopped_at: Completed 91-22g-PLAN.md (PR4 plan 9: a sign-in, a language change and an organization switch return only to a path of the dashboard, anything else to the home page; an expired or already-resolved approval shows a visible notice in the assistant panel, announced by the conversation log; editing a question replaces its whole answer, withdraws a paused action of it and stores that action's arguments redacted, while retry keeps the turn's tool results; 22 breaks MATCH; final PR4 gates green, UAT GREEN 238; not pushed)
+last_updated: "2026-10-21T00:30:00.000Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
-state_head: a8dc03fdf9fd8c4ed5ac36e49892bf81ee4a343a
+state_head: 8e6886b106b85d93419d3f986dfe8d57dbb8fe60
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 42
-  completed_plans: 42
+  total_plans: 43
+  completed_plans: 43
   percent: 33
 ---
 
@@ -128,7 +128,7 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 ## Current Position
 
 Phase: 91 (Dismissal and permission hardening) — EXECUTING
-Plan: 22f of 23
+Plan: 22g of 23
 Status: Ready to execute
 Last activity: 2026-10-20 - Completed quick task 261020-izd: fix-suggestion route admits issues.fix (PR #12)
 
@@ -220,10 +220,10 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-20T21:30:00.000Z
-Stopped at: Completed 91-22f-PLAN.md (PR4 plan 8: a trusted-proxy list that together trusts more than one /8 of public IPv4 or one /16 of global IPv6 addresses is refused at startup (the default list and a CDN-sized list stay accepted); a shared conversation shows the conversation up to and including the answer it was shared from, and a link whose shared answer was retried or edited, or that has no shared answer, answers not found; a sign-in sent from a page that is no longer current is answered with a fresh sign-in page or the requested page, never JSON; a request authenticated by an API key header records no session activity; the assistant panel answers another member's conversation like a missing one; an expired or already-resolved approval closes its dialog with a translated message and no retry; the confirm-time expiry audit row names the user and the message; 15 breaks MATCH; final PR4 gates green, UAT GREEN 238; not pushed)
+Last session: 2026-10-21T00:30:00.000Z
+Stopped at: Completed 91-22g-PLAN.md (PR4 plan 9: a sign-in, a language change and an organization switch return only to a path of the dashboard, anything else to the home page; an expired or already-resolved approval shows a visible notice in the assistant panel, announced by the conversation log; editing a question replaces its whole answer, withdraws a paused action of it and stores that action's arguments redacted, while retry keeps the turn's tool results; 22 breaks MATCH; final PR4 gates green, UAT GREEN 238; not pushed)
 Resume file: None
-Next action: Phase 91 PR4 continues with the focused re-review of the 91-22f delta, then 91-23 (branch fix/v3.9.0-phase-91-session-freshness).
+Next action: Phase 91 PR4 continues with the focused re-review of the 91-22g delta, then 91-23 (branch fix/v3.9.0-phase-91-session-freshness).
 
 ## Operator Next Steps
 
@@ -299,6 +299,7 @@ Next action: Phase 91 PR4 continues with the focused re-review of the 91-22f del
 | Phase 91 P22d | ~95min | 3 tasks | 21 files |
 | Phase 91 P22e | ~75min | 3 tasks | 36 files |
 | Phase 91 P22f | ~80min | 3 tasks | 33 files |
+| Phase 91 P22g | ~125min | 3 tasks | 18 files |
 
 ## Decisions
 
@@ -366,6 +367,7 @@ Next action: Phase 91 PR4 continues with the focused re-review of the 91-22f del
 - [Phase 91]: Phase 91 P22d: the dispatcher answers a tool call whose secret-named argument holds the redaction marker with redacted_argument (key paths only, never a value) before argument parsing and the handler, and the assistant loop answers a destructive call holding it the same way instead of pausing it, so the model is told to ask the user for the value again; the shared conversation view renders stored tool calls with secret-named values redacted (the stored rows are unchanged) and only the owner of a conversation creates a share link for it (404 conversation_not_found otherwise); confirm, decline, the 24-hour expiry sweep (run when the server starts and every hour, unref'd, cleared on close) and a conversation delete all leave pending_confirmation through one conditional claim (claimPendingMessage: the status change and the redaction of the stored call in one UPDATE, changes = 1 wins, the rest answer 409 not_pending), and a refused confirmation restores only the row it claimed; the destructive-tool schema walk recognises patternProperties and open values
 - [Phase 91]: Phase 91 P22e: the seven conversation routes (open, message, edit form, retry, edit and resend, rename, delete) answer only the user who started the conversation through one helper (404 conversation_not_found for anyone else, a global administrator included, before any message is read or anything is written) and the repository renames and deletes only for the owner's user id; resolveTrustedProxies refuses a list whose entries together trust every IPv4 or every IPv6 address, decided on the addresses covered (an IPv6 range holding the IPv4-mapped block counts for IPv4, named ranges counted as the addresses they hold, sizes computed not written); the consent fast path issues a code only when the remembered consent names the organization of the request; confirming a paused action older than 24 hours declines it through the sweep's claim, result row and summary audit row and answers 409 expired; beginSession starts from an empty session (regenerate) so nothing an earlier sign-in left carries over; the idle hook records activity only on the paths the session guard checks (one predicate decides both); the redaction marker is recognised in any letter case, with surrounding space and in square, angle, round and curly bracket forms or as the bare word
 - [Phase 91]: Phase 91 P22f: resolveTrustedProxies refuses a list whose entries together trust more than one /8 of public IPv4 addresses (2^24, after removing the this-network, private-use, shared, loopback, link-local and multicast-and-reserved blocks, which are written as octet numbers and prefix lengths) or more than one /16 of global IPv6 addresses (inside 2000::/3), decided on the addresses covered (an IPv6 range holding the IPv4-mapped block counts for IPv4; named ranges add nothing), which replaces the every-address rule it contains; the share page renders the active branch only up to and including the shared answer (rows created at or before it), and a link whose anchor is absent from the active branch or null answers 404 share_not_found (no revoke route is built); POST /login with a refused page token is answered by a redirect from cookieCsrfPreHandler (the plugin sends the refusal itself, so the sign-in path takes it as a rejection through a reply facade): to /login?stale=1 (keeping a safe returnTo) with a translated notice when signed out, to the safe requested page when already signed in, and the route never runs; the session expiry hook records activity only when the guard checks the path and no valid API key header answers the request; the panel resolves the conversation through the owner lookup and answers every unresolved id with an empty panel and x-conversation-id empty; a 409 approval answer closes the dialog with the expired or already-resolved text (dialog data attributes, six locales) and no Retry; recordPendingExpired takes an optional subject so the confirm-time row names the acting user and the message while the sweep row is unchanged
+- [Phase 91]: Phase 91 P22g: safeReturnTo (exported) answers the home page for a value that holds an ASCII control character or a backslash, does not start with a slash, resolves against a fixed reserved base to another origin, or resolves to a path starting with two slashes, and otherwise the resolved path with its query and fragment; refererReturnTo holds the language change and the organization switch to the same rule (a relative Referer as given, an absolute one only on the request's own host, reduced to its path); a 409 approval answer reloads the panel and then appends a warning notice with the localized sentence to the messages list, a polite log, without writing the status line; agent.js?v=1.2.7; edit-resend supersedes the question and every active row after it and lists them in the audit row (supersededMessageIds); markMessagesSuperseded stores the call of a row it moves out of pending_confirmation redacted, in one transaction; retry is unchanged
 
 ### Blockers
 
