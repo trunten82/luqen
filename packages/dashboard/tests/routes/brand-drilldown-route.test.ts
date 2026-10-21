@@ -19,7 +19,7 @@ interface TestContext {
   cleanup: () => void;
 }
 
-async function createTestServer(): Promise<TestContext> {
+async function createTestServer(extraPermissions: readonly string[] = []): Promise<TestContext> {
   loadTranslations();
   const dbPath = join(tmpdir(), `test-drilldown-${randomUUID()}.db`);
   const reportsDir = join(tmpdir(), `test-drilldown-dir-${randomUUID()}`);
@@ -52,6 +52,7 @@ async function createTestServer(): Promise<TestContext> {
       'reports.delete',
       'scans.create',
       'reports.view',
+      ...extraPermissions,
     ]);
   });
 
@@ -225,5 +226,45 @@ describe('GET /reports/:id/brand-drilldown', () => {
       url: `/reports/${id}/brand-drilldown?dimension=color`,
     });
     expect(res.statusCode).toBe(404);
+  });
+});
+
+// HARD-02: the data handed to the partial (the JSON view stub) carries the element's selector and
+// markup only for a viewer holding reports.view_technical, so the response cannot carry them either.
+describe('GET /reports/:id/brand-drilldown technical details', () => {
+  const DIMENSIONS = ['color', 'typography', 'components'] as const;
+
+  async function viewDataFor(extraPermissions: readonly string[], dimension: string) {
+    const ctx = await createTestServer(extraPermissions);
+    try {
+      const scanId = await makeScanWithReport(ctx);
+      const res = await ctx.server.inject({
+        method: 'GET', url: `/reports/${scanId}/brand-drilldown?dimension=${dimension}`,
+      });
+      expect(res.statusCode).toBe(200);
+      return JSON.parse(res.body).data as { issues: Array<Record<string, unknown>>; showElement: boolean };
+    } finally {
+      ctx.cleanup();
+    }
+  }
+
+  it.each(DIMENSIONS)('HARD-02 drilldown %s view data has no selector or markup without technical details', async (dimension) => {
+    const data = await viewDataFor([], dimension);
+    expect(data.showElement).toBe(false);
+    expect(data.issues.length).toBeGreaterThan(0);
+    for (const issue of data.issues) {
+      expect(Object.keys(issue).sort()).toEqual(['code', 'matchDetail', 'message', 'strategy']);
+    }
+  });
+
+  it.each(DIMENSIONS)('HARD-02 drilldown %s view data keeps the selector with technical details', async (dimension) => {
+    const data = await viewDataFor(['reports.view_technical'], dimension);
+    expect(data.showElement).toBe(true);
+    expect(data.issues.length).toBeGreaterThan(0);
+    for (const issue of data.issues) {
+      expect(typeof issue['selector']).toBe('string');
+      expect(issue['selector']).not.toBe('');
+      expect(typeof issue['context']).toBe('string');
+    }
   });
 });

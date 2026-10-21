@@ -55,3 +55,33 @@ mark/revoke UI with preview and a Dismissed section in 6 locales; dark launch, o
 ### Key Lessons
 - A "lift the dark filter" change widens every pre-existing path to the permission; review those paths before the lift, not after.
 - Read-back instruments must check reserved-name shadowing independently of their allow flags.
+
+## Milestone: v3.9.0 — Dismissal follow-through
+
+**Shipped:** 2026-10-21
+**Phases:** 3 | **Plans:** 57 (+ 1 quick task)
+
+### What Was Built
+- GraphQL `createScan` starts real scans through the shared scan-start path (Phase 90).
+- Dismissal and permission hardening across scan start/delete, CSRF, role scope, API-key attribution, sessions, MCP tokens, consent and trusted proxies (Phase 91, four PRs plus a verification-found closure).
+- A false-positive dismissal guide, every procedure executed cold by a non-author agent (Phase 92).
+
+### What Worked
+- A code-review gate before every PR ship: every PR's review found live defects that tests and deliberate breaks had missed.
+- Bounding the re-review loop with an explicit ship rule. Only withdrawn-action execution, cross-user or cross-org access, active data loss or a crash on a normal path blocks; everything else is recorded for later.
+- Phase verification after shipping found one remaining gap (brand drilldown selectors) that every review had missed.
+- Cold reads with per-dispatch nonces: three RED reads each found real wrong steps, and the confirmation read came back green.
+
+### What Was Inefficient
+- PR4 needed seven gap plans (91-22b..h). Edit and retry kept yielding one more interacting path per review round.
+- Several guard checks could not fail until a break run showed it (docs lint placeholders, label coverage, ownership counts).
+- Owner-question status was reported from plan text instead of the recorded answers, which needed a retraction.
+
+### Patterns Established
+- Break every new guard and read the red set by test NAME; declared red set must equal observed.
+- Production gates read a backup copy of the database, never the live file, and print counts only.
+- Docs are verified by the reader who will execute them, not by the author.
+
+### Key Lessons
+- A defaults-only deploy behind a CDN can make every client look like the CDN edge. Measure the audit address against real egress after deploy.
+- Check the answers section before listing a question as open.

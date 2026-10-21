@@ -381,7 +381,7 @@ After you click **Dismiss as false positive** or **Revoke dismissal**, the dialo
 | **This finding is already dismissed. Reload the page to see it under Dismissed findings.** | Someone dismissed the same finding a moment before you. | Reload the page. |
 | **This dismissal was already revoked. Reload the page.** | Someone revoked the dismissal a moment before you. | Reload the page. |
 | **This report has no matching finding to dismiss.** | The scan has no finding with this rule and element, it has not completed, or its stored report cannot be read. | Reload the page. |
-| **Too many requests. Wait a minute and try again.** | More than 60 dismissals and revocations were sent within a minute. | Wait a minute, then try again. |
+| **Too many requests. Wait a minute and try again.** | More than 60 dismissals, or more than 60 revocations, were sent from your network address within a minute. | Wait a minute, then try again. |
 | **Dismissals are not available on this server.** | The dashboard's database does not support dismissals. | Ask the administrator of your dashboard. |
 | **Something went wrong. Check your connection and try again.** | Any other failure, for example a lost connection. | Check your connection and try again. |
 

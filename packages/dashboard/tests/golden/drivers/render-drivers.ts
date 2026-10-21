@@ -142,6 +142,7 @@ export async function seedPriorScan(ctx: SurfaceContext): Promise<string> {
 export async function makeServer(
   ctx: SurfaceContext,
   register: (server: FastifyInstance) => Promise<void>,
+  extraPermissions: readonly string[] = [],
 ): Promise<FastifyInstance> {
   const server = Fastify({ logger: false });
   await server.register(import('@fastify/formbody'));
@@ -158,7 +159,10 @@ export async function makeServer(
       role: 'admin',
       currentOrgId: ctx.orgs.fabrikamOrgId,
     };
-    (request as unknown as Record<string, unknown>)['permissions'] = new Set(FABRIKAM_ADMIN_PERMISSIONS);
+    (request as unknown as Record<string, unknown>)['permissions'] = new Set([
+      ...FABRIKAM_ADMIN_PERMISSIONS,
+      ...extraPermissions,
+    ]);
   });
   await register(server);
   await server.ready();
@@ -193,8 +197,9 @@ async function withReportServer<T>(
   ctx: SurfaceContext,
   getLLMClient: () => LLMClient | null,
   run: (server: FastifyInstance) => Promise<T>,
+  extraPermissions: readonly string[] = [],
 ): Promise<T> {
-  const server = await makeServer(ctx, (s) => reportRoutes(s, ctx.storage, getLLMClient));
+  const server = await makeServer(ctx, (s) => reportRoutes(s, ctx.storage, getLLMClient), extraPermissions);
   try {
     return await run(server);
   } finally {
@@ -264,7 +269,11 @@ export async function driveAiSummaryInput(ctx: SurfaceContext, scanId: string): 
   });
 }
 
-/** GET /reports/:id/brand-drilldown for the two dimensions the fixture populates. */
+/**
+ * GET /reports/:id/brand-drilldown for the two dimensions the fixture populates. Driven as a viewer
+ * holding reports.view_technical: only that viewer receives selectors (HARD-02), and the selectors are
+ * what shows a dismissed finding is absent rather than merely unlabelled.
+ */
 export async function driveBrandDrilldown(ctx: SurfaceContext, scanId: string): Promise<unknown> {
   return withReportServer(ctx, () => null, async (server) => {
     const out: Record<string, unknown> = {};
@@ -274,10 +283,20 @@ export async function driveBrandDrilldown(ctx: SurfaceContext, scanId: string): 
         url: `/reports/${scanId}/brand-drilldown?dimension=${dimension}`,
       });
       ok(res.statusCode, `brand drilldown ${dimension}`);
-      out[dimension] = viewData(res.body);
+      out[dimension] = withoutShowElement(viewData(res.body));
     }
     return out;
-  });
+  }, ['reports.view_technical']);
+}
+
+/**
+ * The baseline compares dismissal output only. The drilldown's Element-column switch is not dismissal
+ * output; tests/integration/brand-drilldown-selector-visibility.test.ts pins it.
+ */
+function withoutShowElement(data: unknown): unknown {
+  if (typeof data !== 'object' || data === null) return data;
+  const { showElement: _showElement, ...rest } = data as Record<string, unknown>;
+  return rest;
 }
 
 /** buildDigest over the org: a baseline scan before the period, the main scan inside it. */

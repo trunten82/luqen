@@ -182,6 +182,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   these controls carry the finding's element selector.
 - The report page's fix hint carries the flagged element's markup only for
   viewers holding `reports.view_technical`.
+- The brand score panel's drilldown lists each failing element's selector only
+  for viewers holding `reports.view_technical`; other viewers see the issue and
+  its brand match without the Element column.
 - The report page disables Dismiss for every finding the server would refuse
   to dismiss, including a selector or rule code over its length limit, and the
   disabled button says why (no specific element, element selector too long,
@@ -446,6 +449,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   dismissal, where to read its audit history, how to give the right to a
   custom role, and what to do when the Dismiss button is missing or disabled.
   The permission and audit references now include dismissals.
+- The false-positive guide's rate-limit row says that dismissals and
+  revocations are limited separately, 60 a minute each, per network address.
+  The permission references say that the global administrator holds
+  `issues.dismiss` and that no global role can be given it.
 
 ## [3.6.0] - 2026-09-04
 
