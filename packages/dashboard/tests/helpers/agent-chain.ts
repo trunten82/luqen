@@ -30,7 +30,7 @@ import { createDashboardMcpServer } from '../../src/mcp/server.js';
 import { DASHBOARD_TOOL_METADATA } from '../../src/mcp/metadata.js';
 import { bridgeMcpToolsForAgent } from '../../src/agent/mcp-bridge.js';
 import { ToolDispatcher, type ToolCallInput } from '../../src/agent/tool-dispatch.js';
-import { AgentService, type AgentStreamInput, type AgentStreamTurn } from '../../src/agent/agent-service.js';
+import { AgentService, type AgentStreamInput, type AgentStreamOptions, type AgentStreamTurn } from '../../src/agent/agent-service.js';
 import { ActiveTurnRegistry } from '../../src/agent/active-turn-registry.js';
 import { ScanService, createScanStartLimiter } from '../../src/services/scan-service.js';
 import type { ScanOrchestrator } from '../../src/scanner/orchestrator.js';
@@ -46,8 +46,11 @@ export interface ScriptStep {
   readonly toolCalls: readonly ToolCallInput[];
 }
 
-/** A scripted step, or a function of the messages the provider receives that returns one. */
-export type ScriptEntry = ScriptStep | ((history: readonly unknown[]) => ScriptStep);
+/**
+ * A scripted step, or a function of the messages the provider receives (and of the provider's options,
+ * its abort signal and frame callback) that returns one or a promise of one, which the model awaits.
+ */
+export type ScriptEntry = ScriptStep | ((history: readonly unknown[], options: AgentStreamOptions) => ScriptStep | Promise<ScriptStep>);
 
 export interface ToolRow {
   readonly status: string;
@@ -72,6 +75,8 @@ export interface AgentChain {
   readonly storage: SqliteStorageAdapter;
   readonly dispatcher: ToolDispatcher;
   readonly service: AgentService;
+  /** The registry of running turns the service uses. */
+  readonly turnRegistry: ActiveTurnRegistry;
   /** Tool names offered to the model, one entry per model call (in call order). */
   readonly offered: string[][];
   /** The context hints block the model received, one entry per model call (in call order). */
@@ -158,15 +163,17 @@ export async function buildAgentChain(): Promise<AgentChain> {
   const hints: string[] = [];
   const history: unknown[][] = [];
   const llm = {
-    streamAgentConversation: async (input: AgentStreamInput): Promise<AgentStreamTurn> => {
+    streamAgentConversation: async (input: AgentStreamInput, options: AgentStreamOptions): Promise<AgentStreamTurn> => {
       offered.push(input.tools.map((t) => t.name));
       hints.push(input.contextHintsBlock ?? '');
       history.push([...input.messages]);
       const entry = queue.shift();
-      const next = entry === undefined ? { text: 'done', toolCalls: [] } : typeof entry === 'function' ? entry(input.messages) : entry;
+      const produced = entry === undefined ? { text: 'done', toolCalls: [] } : typeof entry === 'function' ? entry(input.messages, options) : entry;
+      const next = produced instanceof Promise ? await produced : produced;
       return { text: next.text, toolCalls: [...next.toolCalls] } as AgentStreamTurn;
     },
   };
+  const turnRegistry = new ActiveTurnRegistry();
   const service = new AgentService({
     storage,
     llm: llm as never,
@@ -178,7 +185,7 @@ export async function buildAgentChain(): Promise<AgentChain> {
     titleGenerator: async () => {
       throw new Error('no title in the agent chain');
     },
-    turnRegistry: new ActiveTurnRegistry(),
+    turnRegistry,
   });
 
   const raw = storage.getRawDatabase();
@@ -193,6 +200,7 @@ export async function buildAgentChain(): Promise<AgentChain> {
     storage,
     dispatcher,
     service,
+    turnRegistry,
     offered,
     hints,
     history,

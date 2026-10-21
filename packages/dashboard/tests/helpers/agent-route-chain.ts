@@ -8,7 +8,6 @@
  */
 import Fastify, { type FastifyInstance } from 'fastify';
 import { registerAgentRoutes } from '../../src/routes/agent.js';
-import { ActiveTurnRegistry } from '../../src/agent/active-turn-registry.js';
 import { buildAgentChain, type AgentChain } from './agent-chain.js';
 
 export const ROUTE_PUBLIC_URL = 'https://dashboard.example.com';
@@ -75,7 +74,7 @@ export async function buildRouteHarness(orgName: string): Promise<RouteHarness> 
     dispatcher: chain.dispatcher,
     storage: chain.storage,
     publicUrl: ROUTE_PUBLIC_URL,
-    turnRegistry: new ActiveTurnRegistry(),
+    turnRegistry: chain.turnRegistry,
   });
   await server.ready();
   const raw = chain.storage.getRawDatabase();
