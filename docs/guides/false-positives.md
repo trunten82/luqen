@@ -8,13 +8,22 @@ A scan can report a finding that is not a real accessibility problem on your sit
 
 ## Who can dismiss
 
-You can dismiss findings when one of these applies:
+Dismissing a finding and revoking a dismissal on the report page are open to these people:
 
-- Your role in the organization is **Owner** or **Admin**. Both default roles can dismiss.
-- You are a global administrator. A global administrator can dismiss on the scans of any organization.
-- Your role in the organization is a custom role that holds **Mark findings as false positives** together with **View reports** and **View technical details (selectors, context)**.
+| Who | Can dismiss and revoke |
+|-----|------------------------|
+| A global administrator | Yes, on the scans of every organization and on scans that belong to no organization. |
+| The default **Owner** and **Admin** roles of an organization | Yes, on the scans of that organization. |
+| A custom role of an organization | Only when the person's permissions in that organization include **Mark findings as false positives**, **View reports** and **View technical details (selectors, context)**. |
+| The default **Member**, **Executive** and **Viewer** roles | No. |
 
-The permission **Mark findings as false positives** alone is not enough on the report page. The **Dismiss** button appears only for people who can also see technical details, because a dismissal names the exact element it covers. The default **Member**, **Executive** and **Viewer** roles cannot dismiss.
+A person's permissions in an organization are those of their global role together with those of the roles of every team they belong to in that organization. **View reports** and **View technical details (selectors, context)** can therefore come from the global role. **Mark findings as false positives** cannot: only a role of the organization can hold it, and a global role never does. To give it to a custom role, see [Let a custom role dismiss findings](#let-a-custom-role-dismiss-findings).
+
+The permission **Mark findings as false positives** alone is not enough on the report page. The **Dismiss** button appears only for people who can also see technical details, because a dismissal names the exact element it covers.
+
+You can dismiss and revoke only on the scans of the organization you are working in. If you belong to several organizations, choose the organization in the list under **Organization** at the bottom of the menu (the menu shows the heading in capital letters) before you open the report. Anyone in an organization can open a scan that belongs to no organization and read its Dismissed findings section, but only a global administrator can dismiss or revoke on it.
+
+An organization API key created with the role **Admin** can also dismiss and revoke, through the API; see [Issue dismissals](../reference/api-reference.md#issue-dismissals) in the API reference.
 
 ---
 
@@ -36,7 +45,7 @@ Steps:
 4. Click the **Issues** tab. On a wide screen the report's tabs are listed down the left side of the report; on a narrow screen they run across the top.
 5. Find the criterion the finding is listed under, and click the criterion's title to expand it. Do not click the criterion number in front of the title: it is a link that opens the WCAG page in a new tab.
 6. On the finding you want to dismiss, click **Dismiss**.
-   When the same finding is listed more than once (once for each page it is on), the rows look the same, because they do not show which page each one is on. Click **Dismiss** on any one of them: one dismissal covers them all. A finding that repeats on many pages as part of a shared component has the same **Dismiss** button on the **Templates** tab as well.
+   When the same finding is listed more than once (once for each page it is on), the rows look the same, because they do not show which page each one is on. Click **Dismiss** on any one of them: one dismissal covers them all. A finding that repeats on many pages as part of a shared component has the same **Dismiss** button on the **Templates** tab as well, once you click the component's name there to expand it.
    If **Dismiss** is greyed out, the finding cannot be dismissed and clicking it does nothing. Point at the button to see why; the reasons are listed in [Which findings a dismissal covers](#which-findings-a-dismissal-covers).
 7. Check the dialog **Dismiss as false positive**: **Rule**, **Element** and **Finding** show the finding you chose. Wait until **Occurrences in this scan** and **Pages in this scan** show numbers. They count what the dismissal covers in this scan; when more than one occurrence is counted, all of them are dismissed together.
 8. Type your reason in **Reason**: say why the finding is a false positive, in up to 1000 characters.
@@ -45,7 +54,7 @@ Steps:
 
 Result: the page reloads on the same tab and shows **Finding dismissed. Scans of this site updated: N.** This message closes by itself after about five seconds; what stays is the following. The finding is no longer in the list or in the totals. At the end of the **Issues** tab, **Dismissed findings — active: N, revoked: N** appears; expand it to see the dismissal, its reason and who made it.
 
-If it does not work: when there is no **Dismiss** button on the finding, check [Who can dismiss](#who-can-dismiss) and that the scan belongs to the organization you are working in. When the button is there but greyed out, the finding itself cannot be dismissed: see [Which findings a dismissal covers](#which-findings-a-dismissal-covers).
+If it does not work: when there is no **Dismiss** button on the finding, check [Who can dismiss](#who-can-dismiss) and that the scan belongs to the organization you are working in. When the button is there but greyed out, the finding itself cannot be dismissed: see [Which findings a dismissal covers](#which-findings-a-dismissal-covers). If something else goes wrong, see [When the Dismiss button is missing or disabled](#when-the-dismiss-button-is-missing-or-disabled) and [Messages you may see](#messages-you-may-see).
 
 ---
 
@@ -60,7 +69,7 @@ A dismissal matches a finding when all four of these are the same:
 
 Within a scan, every occurrence that matches is dismissed together: the same finding on every page it is on, and its entry in the **Shared components — fix once, fix everywhere** block when the finding is part of a shared component. This is why the dialog shows **Occurrences in this scan** and **Pages in this scan** before you confirm.
 
-The **Dismiss** button is next to each finding on the **Issues** tab, and next to each shared component's finding on the **Templates** tab. The **Pages** tab has no **Dismiss** button.
+The **Dismiss** button is next to each finding on the **Issues** tab, and next to each shared component's finding on the **Templates** tab, where you first click the component's name to expand it. The **Pages** tab has no **Dismiss** button.
 
 Some findings cannot be dismissed. Their **Dismiss** button is shown greyed out, and pointing at it shows one of these messages:
 
@@ -147,7 +156,7 @@ Steps:
 
 Result: the dismissed finding is not listed, and the report's totals do not count it. At the end of the **Issues** tab, **Dismissed findings — active: N, revoked: N** is shown; expand it to see the dismissal under **Active dismissals**.
 
-If it does not work: when the dismissed finding is listed again, compare its element with the one shown for the dismissal under **Active dismissals**. If the selector has changed, or the scan was started with a different address, the dismissal does not match (see [Which findings a dismissal covers](#which-findings-a-dismissal-covers)).
+If it does not work: when the dismissed finding is listed again, compare its element with the one shown for the dismissal under **Active dismissals**. If the selector has changed, or the scan was started with a different address, the dismissal does not match (see [Which findings a dismissal covers](#which-findings-a-dismissal-covers)). If something else goes wrong, see [When the Dismiss button is missing or disabled](#when-the-dismiss-button-is-missing-or-disabled) and [Messages you may see](#messages-you-may-see).
 
 ---
 
@@ -170,7 +179,7 @@ Steps:
 
 Result: the workbook has a sheet **Issues**, which does not list the dismissed findings, and a sheet **Dismissed**, with one row for each dismissed occurrence under the headings **Page URL**, **Rule Code**, **Selector**, **Level**, **Reason**, **Dismissed By** and **Dismissed At**.
 
-If it does not work: when the workbook has no **Dismissed** sheet, nothing on this report is dismissed. The Dismissed findings section at the end of the report's **Issues** tab shows the site's active dismissals.
+If it does not work: when the workbook has no **Dismissed** sheet, nothing on this report is dismissed. The Dismissed findings section at the end of the report's **Issues** tab shows the site's active dismissals. If something else goes wrong, see [When the Dismiss button is missing or disabled](#when-the-dismiss-button-is-missing-or-disabled) and [Messages you may see](#messages-you-may-see).
 
 ---
 
@@ -193,7 +202,7 @@ Steps:
 
 Result: the row's last column, **Remarks and Explanations**, ends with **1 automated finding was dismissed as a false positive after review.** When more than one occurrence on that criterion is dismissed, it ends with **N automated findings were dismissed as false positives after review.** instead. The same sentence is in the conformance report's **Download PDF**, in its evidence pack and in its shared and public links (see [Conformance reports and the accessibility statement](#conformance-reports-and-the-accessibility-statement)).
 
-If it does not work: when no row carries the sentence, check that the dismissal is listed under **Active dismissals** in the Dismissed findings section at the end of the report's **Issues** tab.
+If it does not work: when no row carries the sentence, check that the dismissal is listed under **Active dismissals** in the Dismissed findings section at the end of the report's **Issues** tab. If something else goes wrong, see [When the Dismiss button is missing or disabled](#when-the-dismiss-button-is-missing-or-disabled) and [Messages you may see](#messages-you-may-see).
 
 ---
 
@@ -222,7 +231,7 @@ Result: the page reloads on the same tab and shows **Dismissal revoked. Scans of
 
 To dismiss the same finding again later, mark it again as described in [Mark a finding as a false positive](#mark-a-finding-as-a-false-positive). A new dismissal is created; the revoked one stays under **Revoked dismissals** as part of the history.
 
-If it does not work: when there is no **Revoke** button, check [Who can dismiss](#who-can-dismiss) and that the scan belongs to the organization you are working in.
+If it does not work: when there is no **Revoke** button, check [Who can dismiss](#who-can-dismiss) and that the scan belongs to the organization you are working in. If something else goes wrong, see [When the Dismiss button is missing or disabled](#when-the-dismiss-button-is-missing-or-disabled) and [Messages you may see](#messages-you-may-see).
 
 ---
 
@@ -254,6 +263,8 @@ Result: **Active dismissals** lists the dismissals in force, under the columns *
 - A dismissal made through the API with an API key of the scan's organization names the key, for example **API key: Fabrikam CI**, followed in brackets by **Created** and the date the key was created. The date tells apart two keys with the same name, and the name is kept after the key is deleted. A key that is not one of the organization's own is shown only as **API key**.
 - The section is shown only in the dashboard. The public report, share links, the print view and conformance reports never show it.
 
+If it does not work: see [When the Dismiss button is missing or disabled](#when-the-dismiss-button-is-missing-or-disabled).
+
 ### In the audit log
 
 Find the audit log entries that record each dismissal and each revocation.
@@ -270,8 +281,112 @@ Steps:
 
 Result: each entry shows **Timestamp**, **Actor**, **Action** (`issue_dismissal.mark` or `issue_dismissal.revoke`), **Resource Type** (`issue_dismissal`), **Resource ID**, **Details**, **IP Address** and **Org**. The page shows the column headings in capital letters. **Details** holds the site address, the rule code and the selector, with the reason of a dismissal or the comment of a revocation. Unless you are a global administrator, only the entries of the organization you are working in are listed.
 
-If it does not work: when the address does not open the page and reports that access is forbidden, your role does not hold **View audit log**; ask an Owner of your organization.
+If it does not work: when the address does not open the page and reports that access is forbidden, your role does not hold **View audit log**; ask an Owner of your organization. If something else goes wrong, see [When the Dismiss button is missing or disabled](#when-the-dismiss-button-is-missing-or-disabled) and [Messages you may see](#messages-you-may-see).
 
 ### Through the API
 
 The dashboard's API returns every dismissal of a scan's site, active and revoked, each with its history of dismissal and revocation. Reading the list needs **View reports**. See [Issue dismissals](../reference/api-reference.md#issue-dismissals) in the API reference.
+
+---
+
+## Let a custom role dismiss findings
+
+Give the right to dismiss to people who hold neither the Owner nor the Admin role, through a role of your own.
+
+Before you start:
+
+- You are an Owner of the organization or a global administrator. Creating a role needs **Manage roles** and changing teams needs **Manage teams**; the default Owner role holds both and the default Admin role neither.
+- You are working in the organization (see [Who can dismiss](#who-can-dismiss) for how to choose it).
+- The person already has an account in the dashboard and belongs to the organization. For an Owner, **Add Member** lists only people who are already in one of the organization's teams; a global administrator can add any active user.
+
+Steps:
+
+1. At the top left of the page, click the menu button **Open navigation menu**.
+2. If **Roles** is not listed in the menu, click **More**, near the end of the menu; the menu shows it in capital letters. More entries appear below it.
+3. Click **Roles**.
+4. Click the tab whose name starts with **Organization Roles**. The rest of its name is your organization's name in brackets, for example *Organization Roles (Fabrikam)*.
+5. Above the list of the organization's roles, click **Create Role**.
+6. In **Role Name**, type a name made of letters, numbers, hyphens and underscores only, for example *fp-reviewer*. Spaces are not accepted.
+7. In **Description**, type what the role is for.
+8. Under **Permissions**, tick **Mark findings as false positives**. Each permission is listed by its name, with its identifier beside it in smaller type.
+9. Tick **View reports**.
+10. Tick **View technical details (selectors, context)**.
+11. At the bottom of the form, click **Create Role**. The roles page opens again, and the new role is listed on its **Organization Roles** tab.
+12. At the top left of the page, click the menu button **Open navigation menu**.
+13. In the menu, click **Teams**.
+14. In **Team Name**, type a name for a new team, for example *Accessibility reviewers*.
+15. In **Team Role**, choose the role you created.
+16. Click **Create Team**. The team is added to the list below.
+17. In the list, click the team's name. The team's page opens.
+18. In **Add Member**, choose the person. Each person is listed by user name, followed by their global role in brackets.
+19. Click the **Add Member** button next to the list. The person is added to the team's members.
+
+Result: the next page the person opens shows them **Dismiss** next to the findings on the organization's reports, and **Revoke** in the Dismissed findings section.
+
+To give the role to an existing team instead, open that team's page, choose the role in the **Role Name** list under **Team Role**, and click **Update Role**. Every member of that team then holds the role in the organization. The **Global Roles** tab never offers **Mark findings as false positives**, because a global role cannot hold it.
+
+If it does not work: open the role again from **Roles** and check that the three permissions are ticked, and check on the team's page that **Team Role** names the role. If something else goes wrong, see [When the Dismiss button is missing or disabled](#when-the-dismiss-button-is-missing-or-disabled).
+
+---
+
+## When the Dismiss button is missing or disabled
+
+| What you see | Why | What to do |
+|--------------|-----|------------|
+| No **Dismiss** button on any report. | Your role in the organization does not hold both **Mark findings as false positives** and **View technical details (selectors, context)**. The default **Member**, **Executive** and **Viewer** roles do not hold **Mark findings as false positives**. | Ask an Owner of your organization to give you a role that does; see [Let a custom role dismiss findings](#let-a-custom-role-dismiss-findings). |
+| **Dismiss** on one organization's reports, but not on a scan you can open. | The scan does not belong to the organization you are working in. A scan that belongs to no organization can be opened by everyone, but only a global administrator can dismiss on it. | Choose the scan's organization in the list under **Organization** at the bottom of the menu, then open the report again. |
+| **Dismiss** greyed out, and pointing at it shows **This finding has no specific element and cannot be dismissed.** | The finding is reported against the whole page or against no element. | Nothing: this finding cannot be dismissed. See [Which findings a dismissal covers](#which-findings-a-dismissal-covers). |
+| **Dismiss** greyed out, and pointing at it shows **This finding's element selector is too long to be dismissed.** | The element's selector is longer than 4000 characters. | Nothing: this finding cannot be dismissed. |
+| **Dismiss** greyed out, and pointing at it shows **This finding has no rule code and cannot be dismissed.** | The finding has no rule code. | Nothing: this finding cannot be dismissed. |
+| **Dismiss** greyed out, and pointing at it shows **This finding's rule code is too long to be dismissed.** | The rule code is longer than 300 characters. | Nothing: this finding cannot be dismissed. |
+| No findings at all, only the scan's details and its status. | The scan has not completed. Only a completed scan lists findings. | Wait until the scan is complete, then open its report again. |
+| No **Dismiss** on the **Pages** tab. | The **Pages** tab has no **Dismiss** button. | Use the **Issues** tab, or the **Templates** tab for a shared component. |
+| No **Revoke** button in the Dismissed findings section. | Revoking needs the same permissions and the same organization as dismissing. | See the first two rows of this table. |
+| No **Element** column in the Dismissed findings section. | Your role does not hold **View technical details (selectors, context)**. | Nothing to fix: the rest of the section is the same for you. |
+| No **Dismissed findings — active: N, revoked: N** at the end of the **Issues** tab. | The site has no dismissal, active or revoked, in the scan's organization. | Nothing to fix. |
+
+---
+
+## Messages you may see
+
+The messages below appear in the **Dismiss as false positive** and **Revoke dismissal** dialogs, or after the page reloads.
+
+While the dialog **Dismiss as false positive** checks what a dismissal would cover:
+
+| Message | When it appears | What to do |
+|---------|-----------------|------------|
+| **Checking what this covers in this scan…** | The dialog is counting the occurrences. | Wait until **Occurrences in this scan** and **Pages in this scan** show numbers. |
+| **Every occurrence counted above is dismissed together, including any that are listed separately in this report.** | More than one occurrence matches the finding. | Nothing: one dismissal covers them all. |
+| **This scan has no finding that matches this rule and element, so there is nothing to dismiss.** | The scan has no matching finding. | Close the dialog with **Cancel**. |
+| **This rule on this exact element is already dismissed for this site, so there is nothing to dismiss. Reload the page to see it under Dismissed findings.** | Someone has dismissed the finding since you opened the page. | Reload the page. |
+| **Could not check what this covers. Try again.** | The dashboard could not be reached, or was busy. | Click **Try again**. |
+| **This finding has no specific element and cannot be dismissed.** | The finding is reported against the whole page or against no element. | Close the dialog: the finding cannot be dismissed. |
+| **This finding's element selector is too long to be dismissed.** | The element's selector is longer than 4000 characters. | Close the dialog: the finding cannot be dismissed. |
+| **This finding cannot be dismissed: the request was refused.** | The dashboard refused the rule code or the selector. | Close the dialog: the finding cannot be dismissed. |
+| **This scan's report is not available, so nothing can be dismissed.** | The scan has not completed, or its stored report cannot be read. | Close the dialog and open the report again later. |
+| **This finding cannot be dismissed.** | Any other refusal. | Close the dialog. |
+
+After you click **Dismiss as false positive** or **Revoke dismissal**, the dialog stays open and shows one of these messages when the dashboard refuses the change. What you typed is kept.
+
+| Message | When it appears | What to do |
+|---------|-----------------|------------|
+| **This finding cannot be dismissed, or the reason is not valid. Check the reason and try again.** | The reason is empty or longer than 1000 characters, or the finding cannot be dismissed. | Check the reason. |
+| **This dismissal cannot be revoked, or the comment is not valid. Check the comment and try again.** | The comment is longer than 1000 characters. | Shorten the comment. |
+| **Your session has expired. Sign in again, then repeat this.** | You were signed out. | Sign in again, then repeat the dismissal or revocation. |
+| **You do not have permission to do this.** | Your permissions changed since the page was opened. | See [Who can dismiss](#who-can-dismiss). |
+| **This report or dismissal no longer exists. Reload the page.** | The scan or the dismissal was deleted, or it does not belong to the organization you are working in now. | Reload the page. |
+| **This finding is already dismissed. Reload the page to see it under Dismissed findings.** | Someone dismissed the same finding a moment before you. | Reload the page. |
+| **This dismissal was already revoked. Reload the page.** | Someone revoked the dismissal a moment before you. | Reload the page. |
+| **This report has no matching finding to dismiss.** | The scan has no finding with this rule and element, it has not completed, or its stored report cannot be read. | Reload the page. |
+| **Too many requests. Wait a minute and try again.** | More than 60 dismissals and revocations were sent within a minute. | Wait a minute, then try again. |
+| **Dismissals are not available on this server.** | The dashboard's database does not support dismissals. | Ask the administrator of your dashboard. |
+| **Something went wrong. Check your connection and try again.** | Any other failure, for example a lost connection. | Check your connection and try again. |
+
+After the page reloads, one of these messages appears:
+
+| Message | When it appears | What to do |
+|---------|-----------------|------------|
+| **Finding dismissed. Scans of this site updated: N.** | The dismissal was saved and the totals of N scans of the site were updated. It closes after about five seconds. | Nothing. |
+| **Dismissal revoked. Scans of this site updated: N.** | The revocation was saved and the totals of N scans of the site were updated. It closes after about five seconds. | Nothing. |
+| **Saved, but N scans of this site could not be updated. Totals on the home page and trends may be out of date for them.** | The change was saved, but the stored totals of N of the site's scans were not updated. It stays until you close it. | Nothing urgent: the report pages are right. The next dismissal or revocation on the site updates every scan again. |
+| **Saved, but the other scans of this site could not be fully updated. Totals on the home page and trends may be out of date.** | The change was saved, but the update of the other scans did not finish. It stays until you close it. | As above. |
