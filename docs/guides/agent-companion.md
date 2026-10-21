@@ -80,7 +80,10 @@ too. Approving an action after those 24 hours declines it instead of running
 it, and the assistant panel shows a notice that it expired, so you can ask for
 it again; an approval for an action that was already approved or declined shows
 a notice too. Neither shows a Retry button. Editing the question of an answer
-that paused an action withdraws that action: it can no longer be approved.
+that paused an action withdraws that action: it can no longer be approved. An
+action the assistant would still have asked you to confirm when you edited its
+question, or deleted its conversation, is withdrawn the same way and never
+offered.
 
 ### Multi-step tool transparency
 

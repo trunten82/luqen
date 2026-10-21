@@ -96,7 +96,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   action), and is declined when its
   conversation is deleted. Editing a question replaces its whole answer,
   including the assistant's tool calls and their results, and an action
-  awaiting confirmation in that answer can no longer be approved. Only the user
+  awaiting confirmation in that answer can no longer be approved. A reply still
+  being written when its question is edited, when it is retried or when its
+  conversation is deleted is ended, and nothing more of it is kept, a new
+  action awaiting confirmation included. Retry applies only to the
+  conversation's last message when it is a reply (another reply answers `400`,
+  a reply followed by a later message `409`), and only that reply offers Retry
+  in the assistant panel. Edit, retry, share and the message read decide on the
+  conversation's latest messages however long it is, and an edit that cannot
+  store its new question leaves the conversation unchanged. Only the user
   who started a conversation can open, change, delete or share it; another
   member of the organization gets `404`.
 - The agent audit stores tool arguments named like a password, secret, token,
@@ -109,7 +117,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   confirmation that is refused leaves the action awaiting confirmation. A
   tool call that carries `[redacted]` in place of a secret value is not run:
   the assistant asks for the value again. A shared conversation shows the
-  conversation up to and including the answer it was shared from, with stored
+  conversation up to and including the answer it was shared from (the 200
+  messages that end with it, in a longer conversation), with stored
   tool call arguments redacted; retrying that answer or editing its question
   ends the link. Only a conversation's owner can share it.
 - The assistant's context hints are read with the user's permissions in the
