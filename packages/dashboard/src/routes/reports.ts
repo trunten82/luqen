@@ -35,7 +35,7 @@ import { getFixSuggestion } from '../fix-suggestions.js';
 import type { LLMClient } from '../llm-client.js';
 import { resolveOrgLLMClient } from '../llm-client.js';
 import { t, type Locale } from '../i18n/index.js';
-import { filterDrilldownIssues, isValidDimension } from '../services/brand-drilldown.js';
+import { filterDrilldownIssues, isValidDimension, withoutTechnicalDetails } from '../services/brand-drilldown.js';
 import {
   loadVpatForScan,
   renderScanAcrHtml,
@@ -1539,9 +1539,14 @@ export async function reportRoutes(
         // Fall through
       }
 
-      const issues = reportData !== null
+      const matched = reportData !== null
         ? filterDrilldownIssues(dimension, reportData)
         : [];
+      // HARD-02: the element's raw selector and markup reach only a viewer holding
+      // reports.view_technical, the permission that shows selectors on the report page this modal
+      // opens from. Others get the rows without them, stripped here so the response never carries them.
+      const showElement = hasPermission(request, 'reports.view_technical');
+      const issues = showElement ? matched : withoutTechnicalDetails(matched);
 
       // Resolve dimension label via i18n
       const dimensionLabelMap: Record<string, string> = {
@@ -1567,6 +1572,7 @@ export async function reportRoutes(
 
       return reply.view('partials/brand-drilldown-modal.hbs', {
         issues,
+        showElement,
         dimension,
         dimensionLabel,
         dimensionScore,

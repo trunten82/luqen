@@ -21,6 +21,9 @@ export interface DrilldownIssue {
   readonly strategy: string;
 }
 
+/** A drilldown row with the element's selector and markup withheld (HARD-02). */
+export type DrilldownIssueSummary = Omit<DrilldownIssue, 'selector' | 'context'>;
+
 const VALID_DIMENSIONS: ReadonlySet<string> = new Set<string>([
   'color',
   'typography',
@@ -138,4 +141,17 @@ export function filterDrilldownIssues(
   }
 
   return Object.freeze(deduped);
+}
+
+/**
+ * HARD-02: the rows a viewer WITHOUT reports.view_technical receives. The element's raw selector
+ * and markup are dropped here, before rendering, so they are absent from the response itself and
+ * not merely hidden by the template.
+ */
+export function withoutTechnicalDetails(
+  issues: readonly DrilldownIssue[],
+): readonly DrilldownIssueSummary[] {
+  return Object.freeze(
+    issues.map(({ message, code, matchDetail, strategy }) => ({ message, code, matchDetail, strategy })),
+  );
 }

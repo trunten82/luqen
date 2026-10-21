@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   filterDrilldownIssues,
   isValidDimension,
+  withoutTechnicalDetails,
   type DrilldownIssue,
   type DrilldownDimension,
 } from '../../src/services/brand-drilldown.js';
@@ -313,5 +314,33 @@ describe('filterDrilldownIssues — edge cases', () => {
     expect(issue).toHaveProperty('code');
     expect(issue).toHaveProperty('matchDetail');
     expect(issue).toHaveProperty('strategy');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// withoutTechnicalDetails (HARD-02)
+// ---------------------------------------------------------------------------
+
+describe('withoutTechnicalDetails', () => {
+  const issue: DrilldownIssue = {
+    selector: '#fabrikam-banner', context: '<div id="fabrikam-banner">x</div>',
+    message: 'Contrast ratio too low', code: 'WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail',
+    matchDetail: 'Fabrikam blue on white', strategy: 'color-pair',
+  };
+
+  it('HARD-02 drops the selector and markup and keeps the rest of the row', () => {
+    const [row] = withoutTechnicalDetails([issue]);
+    expect(row).toEqual({
+      message: issue.message, code: issue.code, matchDetail: issue.matchDetail, strategy: issue.strategy,
+    });
+    expect(JSON.stringify(row)).not.toContain('fabrikam-banner');
+  });
+
+  it('returns a frozen array and leaves the input untouched', () => {
+    const input = [issue];
+    const out = withoutTechnicalDetails(input);
+    expect(Object.isFrozen(out)).toBe(true);
+    expect(input[0]).toBe(issue);
+    expect(issue.selector).toBe('#fabrikam-banner');
   });
 });

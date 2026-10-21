@@ -16,7 +16,7 @@
       <table class="data-table data-table--compact">
         <thead>
           <tr>
-            <th>{{t "reportDetail.brandDrilldownElement"}}</th>
+            {{#if showElement}}<th>{{t "reportDetail.brandDrilldownElement"}}</th>{{/if}}
             <th>{{t "reportDetail.brandDrilldownIssue"}}</th>
             <th>{{t "reportDetail.brandDrilldownDetail"}}</th>
           </tr>
@@ -24,7 +24,7 @@
         <tbody>
           {{#each issues}}
           <tr>
-            <td><code class="text-xs" style="word-break:break-all;">{{this.selector}}</code></td>
+            {{#if @root.showElement}}<td><code class="text-xs" style="word-break:break-all;">{{this.selector}}</code></td>{{/if}}
             <td style="font-size:var(--font-size-sm);">{{this.message}}</td>
             <td style="font-size:var(--font-size-xs);" class="text-muted">{{this.matchDetail}}</td>
           </tr>
