@@ -70,3 +70,56 @@ Some findings cannot be dismissed. Their **Dismiss** button is shown greyed out,
 | **This finding's element selector is too long to be dismissed.** | The element's selector is longer than 4000 characters. |
 | **This finding has no rule code and cannot be dismissed.** | The finding has no rule code. |
 | **This finding's rule code is too long to be dismissed.** | The rule code is longer than 300 characters. |
+
+---
+
+## What a dismissal changes
+
+A dismissal changes what the dashboard counts and reports for the site. Nothing is deleted from the scan: the stored report stays complete, and the dismissals are applied each time results are read and each time the totals are recomputed. Revoking a dismissal therefore brings every count back.
+
+### Counts and scores
+
+The dismissed finding leaves the report's totals and is no longer listed on the **Issues**, **Templates** and **Pages** tabs or in the print view that **Print / PDF** opens. Every page that shows issue totals or scores for the scan agrees with the report:
+
+- the **Home** page: **Issues Found** and the **Recent activity** list;
+- the **Reports** list;
+- **Trends**: the **Accessibility Score** and the score of each site;
+- the site's badge (**Shareable badges**);
+- the **Legal Exposure Indicator** on the report;
+- the **Fleet** page and the scheduled digests (**Digest Schedules**).
+
+### Compliance and regulation matrices
+
+When a scan was run with jurisdictions or regulations, the report's **Compliance** tab shows the **Legal Compliance Matrix** (**By Jurisdiction**) and the **Per-regulation breakdown** (**By Regulation**), which list the WCAG criteria each jurisdiction and regulation fails. There, a criterion stops showing as failing only when no finding behind it remains in the report, whatever its rule. While another finding of the same rule is still listed, for example on a different element, the criterion stays failing and its count in the matrix does not change. This is the one place where a single dismissal may not move a number.
+
+### Exports
+
+**Export Excel** on the report downloads a workbook whose **Issues** sheet leaves the dismissed finding out. Whenever something on the report is dismissed, the workbook also has a sheet named **Dismissed**, with one row for each dismissed occurrence and these columns, in this order: **Page URL**, **Rule Code**, **Selector**, **Level**, **Reason**, **Dismissed By** and **Dismissed At**. **Dismissed By** says who dismissed the finding. **Dismissed At** is the date and time of the dismissal as stored, in UTC, written like `2026-10-21T09:30:00.000Z`.
+
+**Download PDF** on the report leaves the dismissed finding out and has no section about dismissals.
+
+The workbooks that **Export Excel** downloads from the **Reports** list and from the **Issue Trends** page count issues without the dismissed finding, as the report does.
+
+### Conformance reports and the accessibility statement
+
+**Generate VPAT / ACR** on the report opens the conformance report in a new tab. There, the dismissed finding no longer counts against its WCAG criterion, and that criterion's **Remarks and Explanations** end with one of these sentences:
+
+- **1 automated finding was dismissed as a false positive after review.**
+- **N automated findings were dismissed as false positives after review.**
+
+The same sentence appears wherever the conformance report is produced: its **Download PDF**, its evidence pack, and the shared and public links to it.
+
+The public accessibility statement lists every criterion with dismissed findings under **Automated findings dismissed after review**, one line per criterion ending in **N automated finding(s) dismissed as false positives after review**. In the dashboard, the preview on the **Accessibility Statement** page shows **Criteria with dismissed findings:** followed by their number.
+
+These documents carry counts only: never the reason, and never who dismissed the finding. The public report, share links and the print view do not show the Dismissed findings section at all.
+
+### Earlier and later scans of the same site
+
+A dismissal applies to every completed scan of the site in your organization: to the scans made before it, and to every later scan, as long as the rule and the selector still match. When you dismiss, the stored totals of all those scans are updated at once; the number in **Finding dismissed. Scans of this site updated: N.** is how many of the site's scans were updated. A later scan saves its totals without the dismissed finding, and every report page applies the dismissals that are active when you open it. A scan of the same address by another organization is not affected.
+
+If some of the site's scans could not be updated, one of these messages appears instead, and it stays until you close it:
+
+- **Saved, but N scans of this site could not be updated. Totals on the home page and trends may be out of date for them.**
+- **Saved, but the other scans of this site could not be fully updated. Totals on the home page and trends may be out of date.**
+
+The dismissal is saved either way, and the report pages of those scans already leave the finding out, because they apply the dismissal when they are opened. Only the stored totals of those scans, which the home page and trends show, may be out of date. The next dismissal or revocation on the same site updates every scan of the site again.
