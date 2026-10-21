@@ -194,3 +194,84 @@ Steps:
 Result: the row's last column, **Remarks and Explanations**, ends with **1 automated finding was dismissed as a false positive after review.** When more than one occurrence on that criterion is dismissed, it ends with **N automated findings were dismissed as false positives after review.** instead. The same sentence is in the conformance report's **Download PDF**, in its evidence pack and in its shared and public links (see [Conformance reports and the accessibility statement](#conformance-reports-and-the-accessibility-statement)).
 
 If it does not work: when no row carries the sentence, check that the dismissal is listed under **Active dismissals** in the Dismissed findings section at the end of the report's **Issues** tab.
+
+---
+
+## Revoke a dismissal
+
+Undo a dismissal, so that the finding counts against the site again.
+
+Before you start:
+
+- You can dismiss (see [Who can dismiss](#who-can-dismiss)). Revoking needs the same permissions as dismissing.
+- The site has an active dismissal, and the scan you open belongs to the organization you are working in.
+
+Steps:
+
+1. At the top left of the page, click the menu button **Open navigation menu**.
+2. In the menu, click **Reports**.
+3. In the list, click the site address of a scan of the site.
+4. Click the **Issues** tab.
+5. At the end of the tab, click **Dismissed findings — active: N, revoked: N** to expand it.
+6. Under **Active dismissals**, on the row of the dismissal you want to undo, click **Revoke**. The table's first column, **Rule**, shows the rule code of each dismissal; the page shows the table's column headings in capital letters.
+7. Check the dialog **Revoke dismissal**: **Rule** shows the rule code of the dismissal you chose.
+8. If you want to record why, type it in **Comment (optional)**, in up to 1000 characters. The comment is not required.
+9. Click **Revoke dismissal** at the bottom of the dialog, next to **Cancel**. The dialog's title uses the same words; the button is the one at the bottom.
+
+Result: the page reloads on the same tab and shows **Dismissal revoked. Scans of this site updated: N.** This message closes by itself after about five seconds. The finding is listed and counted again, in this scan and in every other scan of the site, earlier ones included. Click **Dismissed findings — active: N, revoked: N** again to expand it: the dismissal is now under **Revoked dismissals**, with **Revoked by**, **Revoked on** and **Comment** filled in.
+
+To dismiss the same finding again later, mark it again as described in [Mark a finding as a false positive](#mark-a-finding-as-a-false-positive). A new dismissal is created; the revoked one stays under **Revoked dismissals** as part of the history.
+
+If it does not work: when there is no **Revoke** button, check [Who can dismiss](#who-can-dismiss) and that the scan belongs to the organization you are working in.
+
+---
+
+## Read the audit history
+
+Every dismissal and every revocation is recorded: who did it, when, and the reason or comment they gave. You can read this history in three places.
+
+### On the report page
+
+See every dismissal of a site, active and revoked, on any report of that site.
+
+Before you start:
+
+- You can open the site's reports.
+- The site has at least one dismissal, active or revoked. Without one, the section is not shown.
+
+Steps:
+
+1. At the top left of the page, click the menu button **Open navigation menu**.
+2. In the menu, click **Reports**.
+3. In the list, click the site address of a scan of the site.
+4. Click the **Issues** tab.
+5. At the end of the tab, click **Dismissed findings — active: N, revoked: N** to expand it.
+
+Result: **Active dismissals** lists the dismissals in force, under the columns **Rule**, **Element**, **Reason**, **Dismissed by** and **Dismissed on**. When at least one dismissal has been revoked, **Revoked dismissals** lists those too, with three more columns: **Revoked by**, **Revoked on** and **Comment**. The page shows the column headings in capital letters. When nothing is dismissed any more, **No active dismissals.** is shown under **Active dismissals**.
+
+- The **Element** column, which shows the element's selector, is shown only to people whose role holds **View technical details (selectors, context)**.
+- Dates and times are written in the language you use the dashboard in, and in the time zone of the server the dashboard runs on.
+- A dismissal made through the API with an API key of the scan's organization names the key, for example **API key: Fabrikam CI**, followed in brackets by **Created** and the date the key was created. The date tells apart two keys with the same name, and the name is kept after the key is deleted. A key that is not one of the organization's own is shown only as **API key**.
+- The section is shown only in the dashboard. The public report, share links, the print view and conformance reports never show it.
+
+### In the audit log
+
+Find the audit log entries that record each dismissal and each revocation.
+
+Before you start:
+
+- Your role holds **View audit log**. The default Owner role holds it and the default Admin role does not; global administrators hold it too.
+
+Steps:
+
+1. In your browser's address bar, open your dashboard's address followed by `/admin/audit-log?action=issue_dismissal.mark`, for example `https://luqen.fabrikam.example/admin/audit-log?action=issue_dismissal.mark`. The **Audit Log** page lists the dismissals that were made.
+2. To list the revocations, open your dashboard's address followed by `/admin/audit-log?action=issue_dismissal.revoke` instead.
+3. The newest entries come first, 50 at a time. When the list ends with **Load More**, click **Load More** to see the next ones; the same filter stays applied.
+
+Result: each entry shows **Timestamp**, **Actor**, **Action** (`issue_dismissal.mark` or `issue_dismissal.revoke`), **Resource Type** (`issue_dismissal`), **Resource ID**, **Details**, **IP Address** and **Org**. The page shows the column headings in capital letters. **Details** holds the site address, the rule code and the selector, with the reason of a dismissal or the comment of a revocation. Unless you are a global administrator, only the entries of the organization you are working in are listed.
+
+If it does not work: when the address does not open the page and reports that access is forbidden, your role does not hold **View audit log**; ask an Owner of your organization.
+
+### Through the API
+
+The dashboard's API returns every dismissal of a scan's site, active and revoked, each with its history of dismissal and revocation. Reading the list needs **View reports**. See [Issue dismissals](../reference/api-reference.md#issue-dismissals) in the API reference.
