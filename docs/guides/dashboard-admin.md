@@ -146,7 +146,7 @@ Manage the permission model for all dashboard users:
 
 **Default roles:** The dashboard ships with four system roles — `admin`, `developer`, `user`, and `executive` — each pre-configured with appropriate permissions. System roles can have their permissions modified but cannot be deleted.
 
-**Custom roles:** Admins can create new roles with any combination of the available permissions. `issues.dismiss` (mark findings as false positives) can be carried by organization roles only, never by a global role; see [Let a custom role dismiss findings](false-positives.md#let-a-custom-role-dismiss-findings). This is useful for specialized personas (e.g., a "QA Tester" role with only scan and manual testing permissions).
+**Custom roles:** Admins can create new roles with any combination of the available permissions. `issues.dismiss` (mark findings as false positives) can be given to organization roles only, never to a global role, the built-in ones included. The global administrator (`admin`) holds it anyway, because that role holds every permission. See [Let a custom role dismiss findings](false-positives.md#let-a-custom-role-dismiss-findings). This is useful for specialized personas (e.g., a "QA Tester" role with only scan and manual testing permissions).
 
 **Permission matrix:** The role editor displays checkboxes grouped by category:
 
@@ -154,7 +154,7 @@ Manage the permission model for all dashboard users:
 |-------|------------|
 | **Scans** | `scans.create`, `scans.schedule` |
 | **Reports** | `reports.view`, `reports.view_technical`, `reports.export`, `reports.delete`, `reports.compare` |
-| **Issues** | `issues.assign`, `issues.fix`, `issues.dismiss` (organization roles only) |
+| **Issues** | `issues.assign`, `issues.fix`, `issues.dismiss` (organization roles only; the global administrator holds every permission) |
 | **Testing** | `manual_testing` |
 | **Repositories** | `repos.manage` |
 | **Analytics** | `trends.view` |

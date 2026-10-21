@@ -37,7 +37,7 @@ Luqen uses a **database-driven RBAC** (Role-Based Access Control) model. Permiss
 | | `reports.compare` | Compare two scan reports side by side |
 | **Issues** | `issues.assign` | Assign issues to team members |
 | | `issues.fix` | View and propose code fixes. The report's "How to fix" hints are pattern-based for `issues.fix` holders; `llm.view` adds AI-generated suggestions |
-| | `issues.dismiss` | Mark findings as false positives and revoke those dismissals. Organization roles only: a global role cannot carry it. On the report page it also needs `reports.view` and `reports.view_technical`; see [Who can dismiss](false-positives.md#who-can-dismiss) |
+| | `issues.dismiss` | Mark findings as false positives and revoke those dismissals. Only an organization role can be given it: no global role can, the built-in ones included. The global administrator (`admin`) holds it anyway, because that role holds every permission. On the report page it also needs `reports.view` and `reports.view_technical`; see [Who can dismiss](false-positives.md#who-can-dismiss) |
 | **Testing** | `manual_testing` | Run manual testing checklists |
 | **Repositories** | `repos.manage` | Connect and manage source code repositories |
 | **Analytics** | `trends.view` | View trend charts and analytics dashboards |
@@ -61,7 +61,7 @@ Luqen uses a **database-driven RBAC** (Role-Based Access Control) model. Permiss
 
 ### Custom roles
 
-Admins can create custom roles at **Admin > Roles** with any combination of the available permissions, except that a global role cannot carry `issues.dismiss`: only an organization role can (see [Let a custom role dismiss findings](false-positives.md#let-a-custom-role-dismiss-findings)). Common examples:
+Admins can create custom roles at **Admin > Roles** with any combination of the available permissions, except that no global role can be given `issues.dismiss`, the built-in ones included: only an organization role can. The global administrator (`admin`) holds it anyway, because that role holds every permission (see [Let a custom role dismiss findings](false-positives.md#let-a-custom-role-dismiss-findings)). Common examples:
 
 | Custom role | Suggested permissions | Use case |
 |-------------|----------------------|----------|
