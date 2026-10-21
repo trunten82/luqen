@@ -1865,8 +1865,12 @@ function compileAgentMessagesTemplate(): HandlebarsTemplateDelegate {
   const messagesSrc = readFileSync(join(viewsDir, 'partials', 'agent-messages.hbs'), 'utf-8');
   const messageSrc = readFileSync(join(viewsDir, 'partials', 'agent-message.hbs'), 'utf-8');
   cachedAgentMessageTemplate = Handlebars.compile(messageSrc);
-  // Register the child partial so {{> agent-message}} resolves.
+  // Register the child partial so {{> agent-message}} resolves, and the per-message partials it
+  // renders (agent-msg-actions, agent-msg-stopped-chip), so the panel and the share view render
+  // without depending on the view engine having registered them first.
   Handlebars.registerPartial('agent-message', messageSrc);
+  Handlebars.registerPartial('agent-msg-actions', readFileSync(join(viewsDir, 'partials', 'agent-msg-actions.hbs'), 'utf-8'));
+  Handlebars.registerPartial('agent-msg-stopped-chip', readFileSync(join(viewsDir, 'partials', 'agent-msg-stopped-chip.hbs'), 'utf-8'));
   cachedAgentMessagesTemplate = Handlebars.compile(messagesSrc);
   return cachedAgentMessagesTemplate;
 }
@@ -1929,31 +1933,14 @@ function renderAgentMsgEditPartial(args: {
 // ---------------------------------------------------------------------------
 
 let cachedShareViewTemplate: HandlebarsTemplateDelegate | null = null;
-let cachedShareViewPartialsRegistered = false;
 
 function compileAgentShareViewTemplate(): HandlebarsTemplateDelegate {
   if (cachedShareViewTemplate !== null) return cachedShareViewTemplate;
   // Reuse the message-fragment helper bootstrap (eq, t fallback) and the
-  // agent-message partial registration. compileAgentMessagesTemplate is
-  // idempotent and registers `agent-message`.
+  // partial registrations (agent-message and its per-message partials;
+  // the {{#unless readOnly}} guard inside agent-msg-actions.hbs is the
+  // read-only suppression). compileAgentMessagesTemplate is idempotent.
   compileAgentMessagesTemplate();
-  if (!cachedShareViewPartialsRegistered) {
-    const viewsDir = resolveViewsDir();
-    // Register the per-message child partials referenced by agent-message
-    // (agent-msg-actions, agent-msg-stopped-chip). The {{#unless readOnly}}
-    // guard inside agent-msg-actions.hbs is the read-only suppression.
-    const actionsSrc = readFileSync(
-      join(viewsDir, 'partials', 'agent-msg-actions.hbs'),
-      'utf-8',
-    );
-    const stoppedSrc = readFileSync(
-      join(viewsDir, 'partials', 'agent-msg-stopped-chip.hbs'),
-      'utf-8',
-    );
-    Handlebars.registerPartial('agent-msg-actions', actionsSrc);
-    Handlebars.registerPartial('agent-msg-stopped-chip', stoppedSrc);
-    cachedShareViewPartialsRegistered = true;
-  }
   const viewsDir = resolveViewsDir();
   const viewSrc = readFileSync(join(viewsDir, 'agent-share-view.hbs'), 'utf-8');
   cachedShareViewTemplate = Handlebars.compile(viewSrc);
