@@ -79,7 +79,7 @@ Matrices and specs under `reference/`. These are generated from code and policed
 | [reference/openapi/](reference/openapi/) | Per-service OpenAPI 3.x snapshots — `compliance.json`, `branding.json`, `llm.json`, `dashboard.json`, `mcp.json`. Live Swagger UI at `/docs` per service. CI drift gate: `.github/workflows/openapi-drift.yml` |
 | [reference/plugin-development.md](reference/plugin-development.md) | Plugin authoring — manifest, lifecycle, tarball flow |
 | [reference/plugin-guide.md](reference/plugin-guide.md) | Plugin configuration — all 11 plugins (auth, notification, storage) |
-| [reference/rbac-matrix.md](reference/rbac-matrix.md) | Generated RBAC matrix — 332 (permission × surface) pairs across dashboard pages, HTTP routes, MCP tools. CI drift gate: `.github/workflows/rbac-drift.yml` |
+| [reference/rbac-matrix.md](reference/rbac-matrix.md) | Generated RBAC matrix — every (permission × surface) pair across dashboard pages, HTTP routes, MCP tools. CI drift gate: `.github/workflows/rbac-drift.yml` |
 
 ---
 
