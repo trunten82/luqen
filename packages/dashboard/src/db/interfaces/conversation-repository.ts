@@ -139,6 +139,38 @@ export function isWithdrawnAnswer(err: unknown): boolean {
   return err instanceof Error && err.name === 'WithdrawnAnswerError';
 }
 
+/** An edit of the conversation's latest question (`replaceLatestQuestion`). */
+export interface ReplaceQuestionInput {
+  readonly conversationId: string;
+  readonly orgId: string;
+  /** The question being edited; it must be the conversation's newest active user row. */
+  readonly messageId: string;
+  /** The new question. */
+  readonly content: string;
+}
+
+export type ReplaceQuestionResult =
+  | {
+      readonly ok: true;
+      readonly newMessage: Message;
+      /** Every row superseded, the question first, in branch order. */
+      readonly supersededMessageIds: readonly string[];
+      /** The first assistant row among them, or null. */
+      readonly firstAssistantId: string | null;
+    }
+  | { readonly ok: false; readonly reason: 'conversation_not_found' | 'not_most_recent_user' };
+
+/** A retry of the conversation's latest answer (`supersedeLatestAnswer`). */
+export interface RetryAnswerInput {
+  readonly conversationId: string;
+  readonly orgId: string;
+  readonly messageId: string;
+}
+
+export type RetryAnswerResult =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly reason: 'message_not_found' | 'not_most_recent_assistant' | 'not_last_message' };
+
 /** A paused action (a `pending_confirmation` row) with the conversation it belongs to. */
 export interface PendingMessageRef {
   readonly id: string;
@@ -235,6 +267,43 @@ export interface ConversationRepository {
     conversationId: string,
     options?: ListConversationsOptions,
   ): Promise<Message[]>;
+
+  /** The message `messageId` when it is an active (not superseded) row of the conversation, else null. */
+  getActiveMessage(conversationId: string, messageId: string): Promise<Message | null>;
+
+  /**
+   * The conversation's newest active row (of `role` when given), by created_at then insert order,
+   * however long the conversation is.
+   */
+  getLastActiveMessage(conversationId: string, role?: MessageRole): Promise<Message | null>;
+
+  /**
+   * The anchor (an active row of the conversation) and the `limit` (default 200) newest active rows
+   * created at or before it, oldest first; rows of the anchor's millisecond are included. Null unless
+   * the anchor is an active row of the conversation.
+   */
+  getActiveBranchUpTo(
+    conversationId: string,
+    anchorMessageId: string,
+    limit?: number,
+  ): Promise<{ readonly anchor: Message; readonly messages: readonly Message[] } | null>;
+
+  /**
+   * Edits the conversation's latest question in one transaction: the conversation is in `orgId`
+   * (else conversation_not_found), its newest active user row is `messageId` (else
+   * not_most_recent_user), the question and every active row after it are superseded (a paused
+   * action among them stored redacted) and the new question is stored. A refusal writes nothing;
+   * when the new question cannot be stored nothing is superseded.
+   */
+  replaceLatestQuestion(input: ReplaceQuestionInput): Promise<ReplaceQuestionResult>;
+
+  /**
+   * Retries the conversation's latest answer in one transaction: `messageId` is an active row of the
+   * conversation (else message_not_found), its newest assistant row (else not_most_recent_assistant)
+   * and its newest row of any role (else not_last_message); it is superseded only in `orgId` (else
+   * message_not_found). A refusal writes nothing.
+   */
+  supersedeLatestAnswer(input: RetryAnswerInput): Promise<RetryAnswerResult>;
 
   /**
    * Phase 33-03: flip every message row older than `beforeCreatedAt` to

@@ -10,7 +10,7 @@
       </div>
     {{/if}}
     {{#if (eq status "stopped")}}{{> agent-msg-stopped-chip}}{{/if}}
-    {{> agent-msg-actions id=id role=role isMostRecentUserMessage=isMostRecentUserMessage}}
+    {{> agent-msg-actions id=id role=role isMostRecentUserMessage=isMostRecentUserMessage olderReply=olderReply}}
   </div>
 {{else if (eq role "assistant")}}
   {{#if content}}
@@ -22,7 +22,7 @@
       <span class="agent-msg__role">{{../agentDisplayName}}</span>
       <div class="agent-msg__body">{{content}}</div>
       {{#if (eq status "stopped")}}{{> agent-msg-stopped-chip}}{{/if}}
-      {{> agent-msg-actions id=id role=role isMostRecentUserMessage=isMostRecentUserMessage}}
+      {{> agent-msg-actions id=id role=role isMostRecentUserMessage=isMostRecentUserMessage olderReply=olderReply}}
     </div>
   {{/if}}
 {{else if (eq role "tool")}}

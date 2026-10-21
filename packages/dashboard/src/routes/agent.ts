@@ -1302,10 +1302,10 @@ export async function registerAgentRoutes(
     // -guard preamble used above. Pattern:
     //   1. resolveAgentOrgId or 401/400
     //   2. ownConversation or 404
-    //   3. Load active-branch messages (excludes superseded by default)
-    //   4. Validate the target is the most-recent of its role
-    //   5. Apply markMessagesSuperseded / appendMessage / createShareLink
-    //   6. Audit row (toolName per behaviour block)
+    //   3. Read the target and the conversation's newest active rows (by id or from the
+    //      conversation's tail, however long it is; superseded rows are never active)
+    //   4. Edit and retry decide and write in one repository transaction
+    //   5. Audit row (toolName per behaviour block)
     //
     // Streaming kick-off for retry / edit-resend is delegated to the client
     // re-opening GET /agent/stream/:cid (see SSE handler above) — the route
@@ -1336,9 +1336,9 @@ export async function registerAgentRoutes(
         if (conv === null) {
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
-        const active = await storage.conversations.getFullHistory(cid);
-        const target = active.find((m) => m.id === mid);
-        if (target === undefined) {
+        // The message is read by id among the conversation's active rows, however long it is.
+        const target = await storage.conversations.getActiveMessage(cid, mid);
+        if (target === null) {
           return reply.code(404).send({ error: 'message_not_found' });
         }
         void reply.type('application/json');
@@ -1363,18 +1363,18 @@ export async function registerAgentRoutes(
         if (conv === null) {
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
-        const active = await storage.conversations.getFullHistory(cid);
-        const target = active.find((m) => m.id === mid);
-        if (target === undefined) {
+        const target = await storage.conversations.getActiveMessage(cid, mid);
+        if (target === null) {
           return reply.code(404).send({ error: 'message_not_found' });
         }
         // Most-recent-user-message guard: client UI is convenience, server
-        // is the security boundary (T-37-19).
+        // is the security boundary (T-37-19). The latest question is read from the
+        // conversation's newest active rows, however long the conversation is.
         if (target.role !== 'user') {
           return reply.code(400).send({ error: 'not_user_message' });
         }
-        const lastUser = [...active].reverse().find((m) => m.role === 'user');
-        if (lastUser === undefined || lastUser.id !== mid) {
+        const lastUser = await storage.conversations.getLastActiveMessage(cid, 'user');
+        if (lastUser === null || lastUser.id !== mid) {
           return reply.code(400).send({ error: 'not_most_recent_user' });
         }
         const html = renderAgentMsgEditPartial({
@@ -1400,26 +1400,16 @@ export async function registerAgentRoutes(
         if (conv === null) {
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
-        // Active-branch read excludes superseded rows (Plan 01 contract).
-        // If mid is not present in the active branch (unknown id, foreign,
-        // or already-superseded) treat as 404. If it's present but not
-        // the latest assistant, return 400 not_most_recent_assistant.
-        const active = await storage.conversations.getFullHistory(cid);
-        const present = active.some((m) => m.id === mid);
-        if (!present) {
-          return reply.code(404).send({ error: 'message_not_found' });
-        }
-        const lastAssistant = [...active].reverse().find((m) => m.role === 'assistant');
-        if (lastAssistant === undefined || lastAssistant.id !== mid) {
-          return reply.code(400).send({ error: 'not_most_recent_assistant' });
-        }
-        const updated = await storage.conversations.markMessagesSuperseded(
-          [mid],
-          cid,
-          orgId,
-        );
-        if (updated === 0) {
-          return reply.code(404).send({ error: 'message_not_found' });
+        // Only the conversation's last message is retried, when it is a reply, decided on the
+        // conversation's newest active rows and superseded in the same transaction: a row that is not
+        // active (unknown, of another conversation or organization, already superseded) answers 404, an
+        // older reply 400 not_most_recent_assistant, and the latest reply followed by a later row (a tool
+        // result, an action awaiting confirmation) 409 not_last_message. A refusal changes nothing and
+        // leaves a running turn to finish.
+        const retried = await storage.conversations.supersedeLatestAnswer({ conversationId: cid, orgId, messageId: mid });
+        if (!retried.ok) {
+          const code = retried.reason === 'message_not_found' ? 404 : retried.reason === 'not_last_message' ? 409 : 400;
+          return reply.code(code).send({ error: retried.reason });
         }
         // A retried answer's running turn ends; the store refuses any row it would still write.
         turnRegistry.cancel(cid);
@@ -1456,30 +1446,25 @@ export async function registerAgentRoutes(
         if (conv === null) {
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
-        const active = await storage.conversations.getFullHistory(cid);
-        const lastUser = [...active].reverse().find((m) => m.role === 'user');
-        if (lastUser === undefined || lastUser.id !== mid) {
-          return reply.code(400).send({ error: 'not_most_recent_user' });
-        }
-        // The edited question and its whole answer are superseded: every active row from :mid on (the
-        // assistant's tool-call rows, the tool results, an action awaiting confirmation, the final
-        // answer), in branch order. No later question exists (:mid is the most recent one). A share link
-        // to that answer ends with it, and an action awaiting confirmation in it can no longer be approved
-        // (confirm and decline answer 409 not_pending) and is never seen by the expiry sweep.
-        const userIdx = active.findIndex((m) => m.id === mid);
-        const supersededMessageIds = active.slice(userIdx).map((m) => m.id);
-        const followingAssistant = active
-          .slice(userIdx + 1)
-          .find((m) => m.role === 'assistant');
-        await storage.conversations.markMessagesSuperseded(supersededMessageIds, cid, orgId);
-
-        // Persist the new edited user message.
-        const newUser = await storage.conversations.appendMessage({
+        // The latest question is read from the conversation's newest active rows, in the same transaction
+        // that supersedes it with its whole answer (the assistant's tool-call rows, the tool results, an
+        // action awaiting confirmation, the final answer, in branch order) and stores the new question; when
+        // the new question cannot be stored nothing is superseded. A share link to that answer ends with it,
+        // and an action awaiting confirmation in it can no longer be approved (confirm and decline answer 409
+        // not_pending; its arguments are stored redacted) and is never seen by the expiry sweep.
+        const replaced = await storage.conversations.replaceLatestQuestion({
           conversationId: cid,
-          role: 'user',
+          orgId,
+          messageId: mid,
           content: parsed.data.content,
-          status: 'sent',
         });
+        if (!replaced.ok) {
+          return replaced.reason === 'conversation_not_found'
+            ? reply.code(404).send({ error: 'conversation_not_found' })
+            : reply.code(400).send({ error: 'not_most_recent_user' });
+        }
+        const newUser = replaced.newMessage;
+        const { supersededMessageIds, firstAssistantId } = replaced;
         // The replaced answer's running turn ends; the store refuses any row it would still write.
         turnRegistry.cancel(cid);
 
@@ -1491,8 +1476,8 @@ export async function registerAgentRoutes(
           argsJson: JSON.stringify({
             originalUserMessageId: mid,
             newUserMessageId: newUser.id,
-            ...(followingAssistant !== undefined
-              ? { supersededAssistantId: followingAssistant.id }
+            ...(firstAssistantId !== null
+              ? { supersededAssistantId: firstAssistantId }
               : {}),
             supersededMessageIds,
           }),
@@ -1523,11 +1508,10 @@ export async function registerAgentRoutes(
         if (conv === null || conv.isDeleted || conv.userId !== user.id) {
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
-        // Default getFullHistory excludes superseded — superseded targets
-        // resolve to "not found" without a separate branch.
-        const active = await storage.conversations.getFullHistory(cid);
-        const target = active.find((m) => m.id === mid);
-        if (target === undefined) {
+        // The answer is read by id among the conversation's active rows, however long it is; a
+        // superseded answer resolves to "not found".
+        const target = await storage.conversations.getActiveMessage(cid, mid);
+        if (target === null) {
           return reply.code(404).send({ error: 'message_not_found' });
         }
         if (target.role !== 'assistant') {
@@ -1565,8 +1549,8 @@ export async function registerAgentRoutes(
     //   longer on the conversation's active branch (it was retried, or its question was edited).
     //
     // The page holds the active branch's rows created at or before the shared answer (rows written in
-    // the same millisecond are its own turn); nothing the owner typed or received afterwards is on
-    // it. The page is shown to members of the organization other than the conversation's owner, so
+    // the same millisecond are its own turn), the 200 newest of them in a longer conversation; nothing
+    // the owner typed or received afterwards is on it. The page is shown to members of the organization other than the conversation's owner, so
     // every stored tool call it renders (a paused action's included) has its secret-named argument
     // values replaced by the redaction marker first; the stored rows are not changed.
     scope.get(
@@ -1589,13 +1573,15 @@ export async function registerAgentRoutes(
         if (conv === null || conv.isDeleted) {
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
-        // Active branch only — superseded rows excluded by default.
-        const branch = await storage.conversations.getFullHistory(link.conversationId);
-        const anchor = link.anchorMessageId === null ? undefined : branch.find((m) => m.id === link.anchorMessageId);
-        if (anchor === undefined) {
+        // Active branch only: the shared answer, found by id however long the conversation is, and the
+        // 200 active rows that end with it (superseded rows are never active).
+        const branch = link.anchorMessageId === null
+          ? null
+          : await storage.conversations.getActiveBranchUpTo(link.conversationId, link.anchorMessageId);
+        if (branch === null) {
           return reply.code(404).send({ error: 'share_not_found' });
         }
-        const messages = branch.filter((m) => m.createdAt <= anchor.createdAt).map((m) => (
+        const messages = branch.messages.map((m) => (
           m.toolCallJson === null ? m : { ...m, toolCallJson: redactArgumentsJson(m.toolCallJson) }
         ));
         const creator = await storage.users.getUserById(link.createdByUserId);
@@ -1903,9 +1889,13 @@ function renderAgentMessagesFragment(args: {
     }
     return null;
   })();
+  // Retry is offered only on the conversation's last message, when it is a reply (the server refuses
+  // every other retry): every other reply is marked olderReply and renders no Retry.
+  const lastId = args.messages.length > 0 ? args.messages[args.messages.length - 1]!.id : null;
   const enriched = args.messages.map((m) => ({
     ...m,
     isMostRecentUserMessage: m.role === 'user' && m.id === lastUserId,
+    olderReply: m.role === 'assistant' && m.id !== lastId,
   }));
   return tpl({
     messages: enriched,

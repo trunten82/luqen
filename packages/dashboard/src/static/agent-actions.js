@@ -349,6 +349,14 @@
 
   // ── delegated listeners ───────────────────────────────────────────────
 
+  // A new answer is being written: no earlier reply is the conversation's last message any more, so
+  // its Retry (which the server would refuse) is removed. The panel reload after the answer renders
+  // Retry again where it applies.
+  document.addEventListener('agent:stream-opened', function () {
+    var stale = document.querySelectorAll('[data-action="retryAssistant"]');
+    for (var i = 0; i < stale.length; i++) stale[i].parentNode.removeChild(stale[i]);
+  });
+
   document.addEventListener('click', function (e) {
     if (!e.target || !e.target.closest) return;
     var retryEl = e.target.closest('[data-action="retryAssistant"]');
