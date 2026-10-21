@@ -17,7 +17,7 @@ Dismissing a finding and revoking a dismissal on the report page are open to the
 | A custom role of an organization | Only when the person's permissions in that organization include **Mark findings as false positives**, **View reports** and **View technical details (selectors, context)**. |
 | The default **Member**, **Executive** and **Viewer** roles | No. |
 
-A person's permissions in an organization are those of their global role together with those of the roles of every team they belong to in that organization. **View reports** and **View technical details (selectors, context)** can therefore come from the global role. **Mark findings as false positives** cannot: only a role of the organization can hold it, and a global role never does. To give it to a custom role, see [Let a custom role dismiss findings](#let-a-custom-role-dismiss-findings).
+A person's permissions in an organization are those of their global role together with those of the roles of every team they belong to in that organization. **View reports** and **View technical details (selectors, context)** can therefore come from the global role. **Mark findings as false positives** cannot, except for a global administrator, who holds every permission: otherwise only a role of the organization can hold it. To give it to a custom role, see [Let a custom role dismiss findings](#let-a-custom-role-dismiss-findings).
 
 The permission **Mark findings as false positives** alone is not enough on the report page. The **Dismiss** button appears only for people who can also see technical details, because a dismissal names the exact element it covers.
 
@@ -41,7 +41,7 @@ Steps:
 
 1. At the top left of the page, click the menu button **Open navigation menu**.
 2. In the menu, click **Reports**.
-3. In the list, click the site address of the scan.
+3. In the list, click the site address of the scan. The list starts with the newest scan, and each row shows the date and time of its scan and its status. When the site has been scanned more than once, its address is listed once for each scan: click the newest completed one, the highest of them in the list.
 4. Click the **Issues** tab. On a wide screen the report's tabs are listed down the left side of the report; on a narrow screen they run across the top.
 5. Find the criterion the finding is listed under, and click the criterion's title to expand it. Do not click the criterion number in front of the title: it is a link that opens the WCAG page in a new tab.
 6. On the finding you want to dismiss, click **Dismiss**.
@@ -173,7 +173,7 @@ Steps:
 
 1. At the top left of the page, click the menu button **Open navigation menu**.
 2. In the menu, click **Reports**.
-3. In the list, click the site address of the scan.
+3. In the list, click the site address of the scan. The list starts with the newest scan, and each row shows the date and time of its scan and its status. When the site has been scanned more than once, its address is listed once for each scan: click the newest completed one, the highest of them in the list.
 4. In the row of buttons at the top of the report, click **Export Excel**. Your browser downloads a workbook.
 5. Open the downloaded workbook in a spreadsheet application.
 
@@ -196,7 +196,7 @@ Steps:
 
 1. At the top left of the page, click the menu button **Open navigation menu**.
 2. In the menu, click **Reports**.
-3. In the list, click the site address of the scan.
+3. In the list, click the site address of the scan. The list starts with the newest scan, and each row shows the date and time of its scan and its status. When the site has been scanned more than once, its address is listed once for each scan: click the newest completed one, the highest of them in the list.
 4. In the row of buttons at the top of the report, click **Generate VPAT / ACR**. The conformance report opens in a new tab.
 5. In the conformance report's tables, find the row of the criterion the dismissed finding was listed under. The criterion's number and name are in the first column, **Criteria**; the page shows the column headings in capital letters.
 
@@ -219,7 +219,7 @@ Steps:
 
 1. At the top left of the page, click the menu button **Open navigation menu**.
 2. In the menu, click **Reports**.
-3. In the list, click the site address of a scan of the site.
+3. In the list, click the site address of the site whose dismissal you want to revoke. When the site has been scanned more than once, its address is listed once for each scan, newest first: click the newest completed one, the highest of them in the list.
 4. Click the **Issues** tab.
 5. At the end of the tab, click **Dismissed findings — active: N, revoked: N** to expand it.
 6. Under **Active dismissals**, on the row of the dismissal you want to undo, click **Revoke**. The table's first column, **Rule**, shows the rule code of each dismissal; the page shows the table's column headings in capital letters.
@@ -252,7 +252,7 @@ Steps:
 
 1. At the top left of the page, click the menu button **Open navigation menu**.
 2. In the menu, click **Reports**.
-3. In the list, click the site address of a scan of the site.
+3. In the list, click the site address of a scan of the site. When the site has been scanned more than once, its address is listed once for each scan, newest first: click the newest completed one, the highest of them in the list.
 4. Click the **Issues** tab.
 5. At the end of the tab, click **Dismissed findings — active: N, revoked: N** to expand it.
 
@@ -297,7 +297,7 @@ Before you start:
 
 - You are an Owner of the organization or a global administrator. Creating a role needs **Manage roles** and changing teams needs **Manage teams**; the default Owner role holds both and the default Admin role neither.
 - You are working in the organization (see [Who can dismiss](#who-can-dismiss) for how to choose it).
-- The person already has an account in the dashboard and belongs to the organization. For an Owner, **Add Member** lists only people who are already in one of the organization's teams; a global administrator can add any active user.
+- The person already has an account in the dashboard. For an Owner, **Add Member** lists only people who are already in one of the organization's teams; a global administrator's list holds every active user. A person who is in none of the organization's teams is added by a global administrator (see step 20).
 
 Steps:
 
@@ -311,19 +311,22 @@ Steps:
 8. Under **Permissions**, tick **Mark findings as false positives**. Each permission is listed by its name, with its identifier beside it in smaller type.
 9. Tick **View reports**.
 10. Tick **View technical details (selectors, context)**.
-11. At the bottom of the form, click **Create Role**. The roles page opens again, and the new role is listed on its **Organization Roles** tab.
+11. At the bottom of the form, click **Create Role**. The roles page opens again on its **Global Roles** tab; the new role is listed on the tab whose name starts with **Organization Roles**.
 12. At the top left of the page, click the menu button **Open navigation menu**.
-13. In the menu, click **Teams**.
-14. In **Team Name**, type a name for a new team, for example *Accessibility reviewers*.
-15. In **Team Role**, choose the role you created.
-16. Click **Create Team**. The team is added to the list below.
-17. In the list, click the team's name. The team's page opens.
-18. In **Add Member**, choose the person. Each person is listed by user name, followed by their global role in brackets.
-19. Click the **Add Member** button next to the list. The person is added to the team's members.
+13. If **Teams** is not listed in the menu, click **More**, near the end of the menu; the menu shows it in capital letters. More entries appear below it.
+14. Click **Teams**.
+15. In **Team Name**, type a name for a new team, for example *Accessibility reviewers*.
+16. In **Organization**, choose the organization you are working in.
+17. In **Team Role**, choose the role you created.
+18. Click **Create Team**. The team is added to the list below.
+19. In the list, click the team's name. The team's page opens.
+20. In **Add Member**, choose the person. Each person is listed by user name, followed by their global role in brackets.
+   If you are an Owner and the person is not in the list, they are in none of the organization's teams. Ask a global administrator to add them: a global administrator opens this team's page through steps 12, 13, 14 and 19, and does this step and the next.
+21. Click the **Add Member** button next to the list. The person is added to the team's members. In the members table, the **Team Role** column (shown in capital letters) reads *member*: that is the person's place in the team, not the role. The role the team gives is the one named at the top of the page, under **Team Role**.
 
 Result: the next page the person opens shows them **Dismiss** next to the findings on the organization's reports, and **Revoke** in the Dismissed findings section.
 
-To give the role to an existing team instead, open that team's page, choose the role in the **Role Name** list under **Team Role**, and click **Update Role**. Every member of that team then holds the role in the organization. The **Global Roles** tab never offers **Mark findings as false positives**, because a global role cannot hold it.
+To give the role to an existing team instead, open that team's page, choose the role in the **Role Name** list under **Team Role**, and click **Update Role**. Every member of that team then holds the role in the organization. The **Global Roles** tab never offers **Mark findings as false positives**, because a role created there cannot hold it.
 
 If it does not work: open the role again from **Roles** and check that the three permissions are ticked, and check on the team's page that **Team Role** names the role. If something else goes wrong, see [When the Dismiss button is missing or disabled](#when-the-dismiss-button-is-missing-or-disabled).
 
