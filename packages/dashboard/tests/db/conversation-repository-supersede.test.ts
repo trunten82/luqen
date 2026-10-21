@@ -396,3 +396,105 @@ describe('Message.supersededAt mapping', () => {
     expect(() => new Date(row.supersededAt as string).toISOString()).not.toThrow();
   });
 });
+
+// ---------------------------------------------------------------------------
+// HARD-21 — rows of a withdrawn answer, and status writes on a superseded row
+// ---------------------------------------------------------------------------
+
+describe('HARD-21 a withdrawn answer gains no row and keeps its status', () => {
+  function rowCount(conversationId: string): number {
+    const row = storage.getRawDatabase()
+      .prepare('SELECT COUNT(*) AS n FROM agent_messages WHERE conversation_id = ?')
+      .get(conversationId) as { n: number };
+    return row.n;
+  }
+
+  function statusOf(messageId: string): string | undefined {
+    const row = storage.getRawDatabase()
+      .prepare('SELECT status FROM agent_messages WHERE id = ?')
+      .get(messageId) as { status: string } | undefined;
+    return row?.status;
+  }
+
+  it('HARD-21 a row that follows a withdrawn row is not written', async () => {
+    const conv = await storage.conversations.createConversation({ userId, orgId: orgA });
+    const question = await storage.conversations.appendMessage({ conversationId: conv.id, role: 'user', content: 'q' });
+    // Positive control: a row that follows an active row is written.
+    const answer = await storage.conversations.appendMessage({
+      conversationId: conv.id, role: 'assistant', content: 'a1', followsMessageId: question.id,
+    });
+    expect(answer.content).toBe('a1');
+    await storage.conversations.markMessagesSuperseded([answer.id], conv.id, orgA);
+    const before = rowCount(conv.id);
+
+    await expect(storage.conversations.appendMessage({
+      conversationId: conv.id, role: 'tool', toolResultJson: '{}', followsMessageId: answer.id,
+    })).rejects.toMatchObject({ name: 'WithdrawnAnswerError' });
+    expect(rowCount(conv.id)).toBe(before);
+
+    await expect(storage.conversations.appendMessage({
+      conversationId: conv.id, role: 'assistant', content: 'a2', followsMessageId: randomUUID(),
+    })).rejects.toMatchObject({ name: 'WithdrawnAnswerError' });
+    expect(rowCount(conv.id)).toBe(before);
+
+    expect(await storage.conversations.softDeleteConversation(conv.id, orgA, userId)).toBe(true);
+    await expect(storage.conversations.appendMessage({
+      conversationId: conv.id, role: 'assistant', content: 'a3', followsMessageId: question.id,
+    })).rejects.toMatchObject({ name: 'WithdrawnAnswerError' });
+    expect(rowCount(conv.id)).toBe(before);
+  });
+
+  it('HARD-21 a superseded row keeps its status whichever status writer is called', async () => {
+    const conv = await storage.conversations.createConversation({ userId, orgId: orgA });
+    const call = JSON.stringify({ id: 's1', name: 'dashboard_scan_site', args: {} });
+    const pausedForStatus = await storage.conversations.appendMessage({
+      conversationId: conv.id, role: 'tool', status: 'pending_confirmation', toolCallJson: call,
+    });
+    const streaming = await storage.conversations.appendMessage({
+      conversationId: conv.id, role: 'assistant', content: 'partial', status: 'streaming',
+    });
+    const claimed = await storage.conversations.appendMessage({
+      conversationId: conv.id, role: 'tool', status: 'sent', toolCallJson: call,
+    });
+    const pausedForClaim = await storage.conversations.appendMessage({
+      conversationId: conv.id, role: 'tool', status: 'pending_confirmation', toolCallJson: call,
+    });
+    const ids = [pausedForStatus.id, streaming.id, claimed.id, pausedForClaim.id];
+    expect(await storage.conversations.markMessagesSuperseded(ids, conv.id, orgA)).toBe(4);
+
+    await storage.conversations.updateMessageStatus(pausedForStatus.id, 'failed');
+    expect(statusOf(pausedForStatus.id), 'updateMessageStatus').toBe('superseded');
+
+    expect(await storage.conversations.markMessageStopped(streaming.id, conv.id, orgA, 'stopped text'), 'markMessageStopped answer').toBe(false);
+    expect(statusOf(streaming.id), 'markMessageStopped').toBe('superseded');
+    const content = (storage.getRawDatabase().prepare('SELECT content FROM agent_messages WHERE id = ?').get(streaming.id) as { content: string }).content;
+    expect(content, 'markMessageStopped content').toBe('partial');
+
+    await storage.conversations.reopenPendingMessage(claimed.id, call);
+    expect(statusOf(claimed.id), 'reopenPendingMessage').toBe('superseded');
+
+    expect(await storage.conversations.claimPendingMessage(pausedForClaim.id, 'sent'), 'claimPendingMessage answer').toBe(false);
+    expect(statusOf(pausedForClaim.id), 'claimPendingMessage').toBe('superseded');
+  });
+
+  it('HARD-21 an edit or a retry of a conversation of another organization writes nothing', async () => {
+    const conv = await storage.conversations.createConversation({ userId, orgId: orgA });
+    const question = await storage.conversations.appendMessage({ conversationId: conv.id, role: 'user', content: 'q' });
+    const answer = await storage.conversations.appendMessage({ conversationId: conv.id, role: 'assistant', content: 'a' });
+    const snapshot = (): unknown[] => storage.getRawDatabase()
+      .prepare('SELECT id, status, content FROM agent_messages WHERE conversation_id = ? ORDER BY created_at, rowid')
+      .all(conv.id);
+    const before = snapshot();
+
+    const edited = await storage.conversations.replaceLatestQuestion({
+      conversationId: conv.id, orgId: orgB, messageId: question.id, content: 'edited elsewhere',
+    });
+    const retried = await storage.conversations.supersedeLatestAnswer({
+      conversationId: conv.id, orgId: orgB, messageId: answer.id,
+    });
+
+    expect(edited.ok).toBe(false);
+    expect(retried.ok).toBe(false);
+    expect(snapshot()).toEqual(before);
+  });
+});

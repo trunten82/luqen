@@ -59,6 +59,7 @@ describe('listForUser — is_deleted = 0 filter', () => {
     const deleted = await storage.conversations.softDeleteConversation(
       c2.id,
       orgA,
+      userId,
     );
     expect(deleted).toBe(true);
 
@@ -135,7 +136,7 @@ describe('searchForUser', () => {
       orgId: orgA,
       title: 'hidden secret',
     });
-    await storage.conversations.softDeleteConversation(conv.id, orgA);
+    await storage.conversations.softDeleteConversation(conv.id, orgA, userId);
 
     const hits = await storage.conversations.searchForUser(userId, orgA, {
       query: 'secret',
@@ -218,6 +219,7 @@ describe('renameConversation', () => {
       conv.id,
       orgA,
       'new title',
+      userId,
     );
     expect(renamed).not.toBeNull();
     expect(renamed!.title).toBe('new title');
@@ -235,6 +237,7 @@ describe('renameConversation', () => {
       conv.id,
       orgB,
       'hijacked',
+      userId,
     );
     expect(renamed).toBeNull();
 
@@ -249,11 +252,12 @@ describe('renameConversation', () => {
       orgId: orgA,
       title: 'to-delete',
     });
-    await storage.conversations.softDeleteConversation(conv.id, orgA);
+    await storage.conversations.softDeleteConversation(conv.id, orgA, userId);
     const renamed = await storage.conversations.renameConversation(
       conv.id,
       orgA,
       'nope',
+      userId,
     );
     expect(renamed).toBeNull();
   });
@@ -273,6 +277,7 @@ describe('softDeleteConversation', () => {
     const ok = await storage.conversations.softDeleteConversation(
       conv.id,
       orgA,
+      userId,
     );
     expect(ok).toBe(true);
 
@@ -288,10 +293,10 @@ describe('softDeleteConversation', () => {
       orgId: orgA,
     });
     expect(
-      await storage.conversations.softDeleteConversation(conv.id, orgA),
+      await storage.conversations.softDeleteConversation(conv.id, orgA, userId),
     ).toBe(true);
     expect(
-      await storage.conversations.softDeleteConversation(conv.id, orgA),
+      await storage.conversations.softDeleteConversation(conv.id, orgA, userId),
     ).toBe(false);
   });
 
@@ -304,11 +309,58 @@ describe('softDeleteConversation', () => {
     const ok = await storage.conversations.softDeleteConversation(
       conv.id,
       orgB,
+      userId,
     );
     expect(ok).toBe(false);
 
     const fetched = await storage.conversations.getConversation(conv.id, orgA);
     expect(fetched!.isDeleted).toBe(false);
     expect(fetched!.deletedAt).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// owner scope: only the user who started a conversation renames or deletes it
+// ---------------------------------------------------------------------------
+
+describe('owner scope of rename and delete', () => {
+  async function colleagueId(): Promise<string> {
+    const colleague = await storage.users.createUser(`c-${randomUUID()}`, 'pass123', 'user');
+    return colleague.id;
+  }
+
+  it('HARD-21 a conversation is renamed only for its owner', async () => {
+    const conv = await storage.conversations.createConversation({ userId, orgId: orgA, title: 'mine' });
+    const other = await colleagueId();
+
+    const refused = await storage.conversations.renameConversation(conv.id, orgA, 'renamed by a colleague', other);
+
+    expect(refused).toBeNull();
+    expect((await storage.conversations.getConversation(conv.id, orgA))!.title).toBe('mine');
+    const renamed = await storage.conversations.renameConversation(conv.id, orgA, 'renamed by the owner', userId);
+    expect(renamed!.title).toBe('renamed by the owner');
+  });
+
+  it('HARD-21 a conversation is deleted only for its owner', async () => {
+    const conv = await storage.conversations.createConversation({ userId, orgId: orgA, title: 'paused' });
+    const paused = await storage.conversations.appendMessage({
+      conversationId: conv.id,
+      role: 'tool',
+      status: 'pending_confirmation',
+      toolCallJson: JSON.stringify({ id: 'p1', name: 'dashboard_scan_site', args: { siteUrl: 'https://fabrikam.example/' } }),
+    });
+    const other = await colleagueId();
+    const statusOf = (): string => (
+      storage.getRawDatabase().prepare('SELECT status FROM agent_messages WHERE id = ?').get(paused.id) as { status: string }
+    ).status;
+
+    const refused = await storage.conversations.softDeleteConversation(conv.id, orgA, other);
+
+    expect(refused).toBe(false);
+    expect((await storage.conversations.getConversation(conv.id, orgA))!.isDeleted).toBe(false);
+    expect(statusOf()).toBe('pending_confirmation');
+    const deleted = await storage.conversations.softDeleteConversation(conv.id, orgA, userId);
+    expect(deleted).toBe(true);
+    expect(statusOf()).toBe('denied');
   });
 });

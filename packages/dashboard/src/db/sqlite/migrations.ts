@@ -2355,4 +2355,16 @@ WHERE org_id != 'system' AND name IN ('Owner', 'Admin');
 ALTER TABLE issue_dismissals ADD COLUMN created_by_key_snapshot TEXT;
     `,
   },
+  {
+    id: '093',
+    name: 'oauth-consent-organization',
+    sql: `
+-- Phase 91 (HARD-21) - the organization a remembered OAuth consent was given in.
+-- Nullable. A consent covers an authorization only in the organization stored here;
+-- NULL covers no organization, so each consent recorded before this migration shows
+-- its page once more and is then recorded with the organization it was approved in.
+-- No backfill: existing rows are not rewritten.
+ALTER TABLE oauth_user_consents ADD COLUMN org_id TEXT;
+    `,
+  },
 ];

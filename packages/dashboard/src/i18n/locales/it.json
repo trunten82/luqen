@@ -129,7 +129,8 @@
     "passwordRequired": "La password è obbligatoria.",
     "invalidCredentials": "Nome utente o password non validi.",
     "learnMore": "Not a user yet? Learn what Luqen is on <a href=\"https://github.com/trunten82/luqen\" rel=\"noopener\">GitHub</a>.",
-    "genuineRemediation": "Luqen fixes real WCAG issues in your source — <a href=\"https://github.com/trunten82/luqen/blob/master/docs/why-not-an-overlay.md\" rel=\"noopener\">not an overlay</a>."
+    "genuineRemediation": "Luqen fixes real WCAG issues in your source — <a href=\"https://github.com/trunten82/luqen/blob/master/docs/why-not-an-overlay.md\" rel=\"noopener\">not an overlay</a>.",
+    "signInPageExpired": "Questa pagina di accesso è scaduta. Accedi di nuovo."
   },
   "users": {
     "title": "Utenti Dashboard",
@@ -1383,6 +1384,8 @@
   "agent.confirm.approveFailedTitle": "[IT] Approval failed",
   "agent.confirm.approveFailedBody": "[IT] The server could not confirm this action. Try again, or cancel to abort.",
   "agent.confirm.approveRetry": "[IT] Retry approval",
+  "agent.confirm.expired": "Questa azione non è stata approvata entro 24 ore ed è stata quindi rifiutata. Chiedila di nuovo all'assistente se la desideri ancora.",
+  "agent.confirm.notPending": "Questa azione è già stata approvata o rifiutata, quindi non può essere approvata qui.",
   "agent.newChat.label": "Inizia una nuova conversazione",
   "agent.newChat.button": "Nuova chat",
   "vpat": {

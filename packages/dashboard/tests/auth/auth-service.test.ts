@@ -7,6 +7,7 @@ import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { generateApiKey, storeApiKey } from '../../src/auth/api-key.js';
 import { AuthService } from '../../src/auth/auth-service.js';
 import type { AuthMode, LoginMethod } from '../../src/auth/auth-service.js';
+import { createAuthGuard } from '../../src/auth/middleware.js';
 import type { PluginManager } from '../../src/plugins/manager.js';
 import type { PluginInstance, AuthPlugin, PluginManifest } from '../../src/plugins/types.js';
 import type { FastifyRequest } from 'fastify';
@@ -370,9 +371,11 @@ describe('AuthService', () => {
       const db = storage.getRawDatabase();
       const pm = mockPluginManager([]);
       const service = new AuthService(db, pm, storage);
+      // The stored user decides the role; the session carries none.
+      const bob = await storage.users.createUser('bob', 'password123', 'user');
 
       const sessionData: Record<string, unknown> = {
-        userId: 'user-1',
+        userId: bob.id,
         username: 'bob',
         bootId: service.getBootId(),
       };
@@ -506,6 +509,193 @@ describe('AuthService', () => {
       // Should authenticate as api-key user, not session user
       expect(result.authenticated).toBe(true);
       expect(result.user?.username).toBe('api-key');
+    });
+
+    it('HARD-21 a session answers with the role of the stored user', async () => {
+      const db = storage.getRawDatabase();
+      const user = await storage.users.createUser('fabrikam-u1', 'password123', 'user');
+      const service = new AuthService(db, mockPluginManager([]), storage);
+      const request = fakeRequest({}, {
+        userId: user.id, username: 'fabrikam-u1', role: 'admin', authMethod: 'password', bootId: service.getBootId(),
+      });
+
+      const result = await service.authenticateRequest(request);
+
+      expect(result.authenticated).toBe(true);
+      expect(result.user?.role).toBe('user');
+    });
+
+    it('HARD-21 a session without a stored user is refused unless it came from an external identity service', async () => {
+      const db = storage.getRawDatabase();
+      const service = new AuthService(db, mockPluginManager([]), storage);
+      const regenerate = vi.fn();
+      const sessionData: Record<string, unknown> = {
+        userId: 'northwind-no-row', username: 'northwind-no-row', role: 'admin', authMethod: 'password', bootId: service.getBootId(),
+      };
+      const request = {
+        headers: {},
+        session: { get: vi.fn((key: string) => sessionData[key]), set: vi.fn(), delete: vi.fn(), regenerate },
+      } as unknown as FastifyRequest;
+
+      const result = await service.authenticateRequest(request);
+
+      expect(result.authenticated).toBe(false);
+      expect(regenerate).toHaveBeenCalled();
+    });
+
+    it('HARD-21 a session signed in through an external identity service keeps its sign in values', async () => {
+      const db = storage.getRawDatabase();
+      const service = new AuthService(db, mockPluginManager([]), storage);
+      const request = fakeRequest({}, {
+        userId: 'contoso-external-sub', username: 'contoso-external', role: 'viewer', authMethod: 'oauth', bootId: service.getBootId(),
+      });
+
+      const result = await service.authenticateRequest(request);
+
+      expect(result.authenticated).toBe(true);
+      expect(result.user?.id).toBe('contoso-external-sub');
+      expect(result.user?.username).toBe('contoso-external');
+      expect(result.user?.role).toBe('viewer');
+    });
+
+    it('HARD-21 a session signed in through an external identity service follows its stored user when one exists', async () => {
+      const db = storage.getRawDatabase();
+      const service = new AuthService(db, mockPluginManager([]), storage);
+      const demoted = await storage.users.createUser('fabrikam-u6-demoted', 'password123', 'user');
+      const inactive = await storage.users.createUser('fabrikam-u6-inactive', 'password123', 'admin');
+      await storage.users.deactivateUser(inactive.id);
+      const answers: string[] = [];
+      for (const authMethod of ['oauth', 'sso']) {
+        const regenerate = vi.fn();
+        const demotedSession: Record<string, unknown> = {
+          userId: demoted.id, username: 'claimed-name', role: 'admin', authMethod, bootId: service.getBootId(),
+        };
+        const inactiveSession: Record<string, unknown> = {
+          userId: inactive.id, username: 'fabrikam-u6-inactive', role: 'admin', authMethod, bootId: service.getBootId(),
+        };
+        const asDemoted = await service.authenticateRequest(fakeRequest({}, demotedSession));
+        const asInactive = await service.authenticateRequest({
+          headers: {},
+          session: { get: vi.fn((key: string) => inactiveSession[key]), set: vi.fn(), delete: vi.fn(), regenerate },
+        } as unknown as FastifyRequest);
+        answers.push(`${authMethod}: demoted=${String(asDemoted.authenticated)}/${String(asDemoted.user?.role)}/${String(asDemoted.user?.username)} inactive=${String(asInactive.authenticated)}`);
+
+        expect(asDemoted.authenticated, answers.join(' ')).toBe(true);
+        expect(asDemoted.user?.role, answers.join(' ')).toBe('user');
+        expect(asDemoted.user?.username, answers.join(' ')).toBe('fabrikam-u6-demoted');
+        expect(asInactive.authenticated, answers.join(' ')).toBe(false);
+        expect(regenerate, answers.join(' ')).toHaveBeenCalled();
+      }
+    });
+
+    it('HARD-21 an sso session answered by its stored user is refused once that user is deleted', async () => {
+      const db = storage.getRawDatabase();
+      const service = new AuthService(db, mockPluginManager([]), storage);
+      const user = await storage.users.createUser('contoso-u7', 'password123', 'user');
+      const store = new Map<string, unknown>([
+        ['userId', user.id], ['username', 'contoso-u7'], ['role', 'admin'], ['authMethod', 'sso'], ['bootId', service.getBootId()],
+      ]);
+      const request = {
+        headers: {},
+        ip: '203.0.113.5',
+        session: { get: (key: string) => store.get(key), set: (key: string, value: unknown) => { store.set(key, value); } },
+      } as unknown as FastifyRequest;
+
+      const answered = await service.authenticateRequest(request);
+      const markerAfterAnswer = store.get('storedUser');
+      expect(await storage.users.deleteUser(user.id)).toBe(true);
+      const afterDelete = await service.authenticateRequest(request);
+      const rows = db.prepare("SELECT details FROM audit_log WHERE action = 'session.ended' AND actor_id = ?").all(user.id);
+      const trail = `answered=${String(answered.authenticated)}/${String(answered.user?.role)} marker=${String(markerAfterAnswer)} afterDelete=${String(afterDelete.authenticated)} rows=${JSON.stringify(rows)}`;
+
+      expect(answered.authenticated, trail).toBe(true);
+      expect(answered.user?.role, trail).toBe('user');
+      expect(markerAfterAnswer, trail).toBe(true);
+      expect(afterDelete.authenticated, trail).toBe(false);
+      expect(rows, trail).toEqual([{ details: 'unknown_user' }]);
+    });
+
+    it('HARD-21 a sign in starts from an empty session', async () => {
+      const db = storage.getRawDatabase();
+      const service = new AuthService(db, mockPluginManager([]), storage);
+      const store = new Map<string, unknown>([
+        ['userId', 'northwind-earlier'], ['username', 'northwind-earlier'], ['role', 'admin'], ['authMethod', 'sso'],
+        ['bootId', service.getBootId()], ['lastActivity', 1], ['sid', 'earlier-sid'],
+        ['apiKeyId', 'earlier-key'], ['groups', ['earlier-group']], ['teams', ['earlier-team']],
+        ['currentOrgId', 'earlier-org'], ['storedUser', true], ['_csrf', 'earlier-csrf-secret'],
+      ]);
+      const session = {
+        set: (key: string, value: unknown): void => { store.set(key, value); },
+        regenerate: (keep?: string[]): void => {
+          for (const key of [...store.keys()]) if (keep === undefined || !keep.includes(key)) store.delete(key);
+        },
+      };
+
+      await service.beginSession(session, { userId: 'contoso-later-sub', username: 'contoso-later', role: 'viewer', authMethod: 'oauth' });
+
+      const kept = [...store.keys()].sort();
+      expect(kept).toEqual(['authMethod', 'bootId', 'lastActivity', 'role', 'sid', 'userId', 'username']);
+      const request = {
+        headers: {},
+        session: { get: (key: string) => store.get(key), set: (key: string, value: unknown) => { store.set(key, value); }, delete: vi.fn() },
+      } as unknown as FastifyRequest;
+      const answered = await service.authenticateRequest(request);
+      expect(answered.authenticated, `kept=${kept.join(',')}`).toBe(true);
+      expect(answered.user?.id).toBe('contoso-later-sub');
+      expect(answered.user?.role).toBe('viewer');
+    });
+
+    it('HARD-21 a session is not answered when its stored user cannot be read', async () => {
+      const db = storage.getRawDatabase();
+      const user = await storage.users.createUser('fabrikam-u5', 'password123', 'admin');
+      const service = new AuthService(db, mockPluginManager([]), storage);
+      const read = vi.spyOn(storage.users, 'getUserById').mockRejectedValue(new Error('storage unavailable'));
+      const request = fakeRequest({}, {
+        userId: user.id, username: 'fabrikam-u5', role: 'admin', authMethod: 'password', bootId: service.getBootId(),
+      }) as FastifyRequest & { url: string; method: string };
+      Object.assign(request, { url: '/account', method: 'GET' });
+      const reply = { code: vi.fn().mockReturnThis(), send: vi.fn(), redirect: vi.fn() };
+
+      await expect(service.authenticateRequest(request)).rejects.toThrow('storage unavailable');
+      await expect(createAuthGuard(service)(request, reply as never)).rejects.toThrow('storage unavailable');
+      expect(request.user).toBeUndefined();
+      expect(reply.send).not.toHaveBeenCalled();
+      expect(reply.redirect).not.toHaveBeenCalled();
+      expect(read).toHaveBeenCalled();
+    });
+
+    it('HARD-21 an api key session without a key id is refused', async () => {
+      const db = storage.getRawDatabase();
+      const service = new AuthService(db, mockPluginManager([]), storage);
+      const regenerate = vi.fn();
+      const sessionData: Record<string, unknown> = {
+        userId: 'api-key', username: 'admin', role: 'admin', authMethod: 'api-key', bootId: service.getBootId(),
+      };
+      const request = {
+        headers: {},
+        session: { get: vi.fn((key: string) => sessionData[key]), set: vi.fn(), delete: vi.fn(), regenerate },
+      } as unknown as FastifyRequest;
+
+      const result = await service.authenticateRequest(request);
+
+      expect(result.authenticated).toBe(false);
+      expect(regenerate).toHaveBeenCalled();
+    });
+
+    it('HARD-21 a session request reads the stored user once', async () => {
+      const db = storage.getRawDatabase();
+      const user = await storage.users.createUser('fabrikam-c1', 'password123', 'user');
+      const service = new AuthService(db, mockPluginManager([]), storage);
+      const read = vi.spyOn(storage.users, 'getUserById');
+      const request = fakeRequest({}, {
+        userId: user.id, username: 'fabrikam-c1', role: 'user', authMethod: 'password', bootId: service.getBootId(),
+      });
+
+      const result = await service.authenticateRequest(request);
+
+      expect(result.authenticated).toBe(true);
+      expect(read).toHaveBeenCalledTimes(1);
+      expect(read).toHaveBeenCalledWith(user.id);
     });
   });
 

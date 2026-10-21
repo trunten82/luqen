@@ -78,6 +78,27 @@ export function validateApiKey(
 }
 
 /**
+ * May the key with row id `keyId` keep a dashboard session open? The same predicate the API-key
+ * sign-in applies (AuthService.checkApiKeyForDashboardLogin): the key is active, unexpired, of the
+ * 'system' organization and of role admin. Read-only: one SELECT by primary key, no write (unlike
+ * validateApiKey, it does not touch last_used_at), so a signed-in session can ask on every request.
+ */
+export function apiKeyOpensDashboardSession(
+  db: Database.Database,
+  keyId: string,
+): boolean {
+  const row = db
+    .prepare(
+      `SELECT 1 AS ok FROM api_keys
+       WHERE id = @keyId AND active = 1
+         AND (expires_at IS NULL OR expires_at > @now)
+         AND org_id = 'system' AND role = 'admin'`,
+    )
+    .get({ keyId, now: new Date().toISOString() }) as { ok: number } | undefined;
+  return row !== undefined;
+}
+
+/**
  * Return an existing active key status or create a new key if none exist.
  * The plaintext key is only returned when newly generated.
  */

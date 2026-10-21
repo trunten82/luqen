@@ -714,6 +714,42 @@ describe('Auth routes', () => {
       expect(response.headers['location']).toBe('/');
     });
 
+    it('HARD-21 a language change returns only to a page of the dashboard', async () => {
+      const dashboard = 'http://dash.example';
+      const send = async (referer: string): Promise<{ status: number; location: string }> => {
+        const response = await ctx.server.inject({
+          method: 'POST',
+          url: '/account/locale',
+          payload: { locale: 'en' },
+          headers: { host: 'dash.example', referer },
+        });
+        return { status: response.statusCode, location: String(response.headers['location']) };
+      };
+      // Positive control: a page of the dashboard is returned to with its query.
+      expect(await send(`${dashboard}/reports?x=1`)).toEqual({ status: 302, location: '/reports?x=1' });
+      const table: ReadonlyArray<readonly [string, string]> = [
+        [`${dashboard}/reports?x=1#h`, '/reports?x=1#h'],
+        [`${dashboard}/account?tab=profile`, '/account?tab=profile'],
+        [`${dashboard}//evil.example/x`, '/'],
+        [`${dashboard}/\t/evil.example/x`, '/'],
+        [`${dashboard}/..//evil.example/x`, '/'],
+        [`${dashboard}/\\evil.example/x`, '/'],
+        ['https://evil.example/x', '/'],
+        ['http://dash.example.evil.example/x', '/'],
+        ['//evil.example/x', '/'],
+        ['/\t/evil.example/x', '/'],
+        ['/\\evil.example/x', '/'],
+      ];
+      const differing: string[] = [];
+      for (const [referer, want] of table) {
+        const { status, location } = await send(referer);
+        if (status !== 302 || location !== want || new URL(location, `${dashboard}/`).origin !== dashboard) {
+          differing.push(`${JSON.stringify(referer)} -> ${status} ${JSON.stringify(location)}`);
+        }
+      }
+      expect(differing, differing.join(' | ')).toEqual([]);
+    });
+
     it('ignores unsupported locale', async () => {
       const response = await ctx.server.inject({
         method: 'POST',

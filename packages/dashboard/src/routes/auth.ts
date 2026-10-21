@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { getToken } from '../compliance-client.js';
 import type { DashboardConfig } from '../config.js';
-import type { AuthService } from '../auth/auth-service.js';
+import type { AuthService, SessionWriter } from '../auth/auth-service.js';
 import type { StorageAdapter } from '../db/index.js';
 import { decodeJwt } from 'jose';
 import { validatePassword } from '../validation.js';
@@ -24,16 +24,66 @@ interface LoginBody {
   returnTo?: string;
 }
 
+/** The fixed base a return target is resolved against; a reserved name, never contacted. */
+const RETURN_TARGET_BASE = 'http://luqen.invalid';
+const RETURN_TARGET_ORIGIN = new URL(RETURN_TARGET_BASE).origin;
+/** ASCII control characters, U+0000 to U+001F and U+007F (a browser drops tab, CR and LF from a Location). */
+const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
+
 /**
- * Resolve a login returnTo input to a safe post-login redirect target.
- * Only same-origin absolute paths (starting with "/" but NOT "//") are
- * honored — protects against open-redirect abuse via returnTo=https://evil.
- * Fallback is "/". Smoke-surfaced gap 2026-04-19.
+ * The page a redirect may return to, taken from the request (a sign-in's returnTo, the consent page's
+ * organization switch). The answer is `/` (the home page) when the value is not a non-empty string,
+ * holds an ASCII control character or a backslash anywhere, does not start with `/`, resolves against a
+ * fixed base to another origin, or resolves to a path that starts with two slashes. Otherwise the answer
+ * is the resolved path with its query and fragment (the normalised path), which a browser resolves to
+ * the dashboard's own origin.
  */
-function safeReturnTo(raw: unknown): string {
+export function safeReturnTo(raw: unknown): string {
   if (typeof raw !== 'string' || raw.length === 0) return '/';
-  if (!raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) return '/';
-  return raw;
+  if (CONTROL_CHARACTER.test(raw)) return '/';
+  if (raw.includes('\\')) return '/';
+  if (!raw.startsWith('/')) return '/';
+  let resolved: URL;
+  try {
+    resolved = new URL(raw, RETURN_TARGET_BASE);
+  } catch {
+    return '/';
+  }
+  if (resolved.origin !== RETURN_TARGET_ORIGIN) return '/';
+  const target = resolved.pathname + resolved.search + resolved.hash;
+  if (target.startsWith('//')) return '/';
+  return target;
+}
+
+/**
+ * The page a redirect may return to when it is taken from the Referer header (the language change and
+ * the organization switch). A path is held to safeReturnTo's rule. An absolute Referer is reduced to its
+ * path, query and fragment only when its host is the request's own Host, and that path is then held to
+ * the same rule; any other value answers `/`. The scheme is not compared: the answer is a path, which the
+ * browser resolves on the origin it is already on.
+ */
+export function refererReturnTo(referer: unknown, ownHost: unknown): string {
+  if (typeof referer !== 'string' || referer.length === 0) return '/';
+  if (referer.startsWith('/')) return safeReturnTo(referer);
+  let url: URL;
+  try {
+    url = new URL(referer);
+  } catch {
+    return '/';
+  }
+  if (typeof ownHost !== 'string' || ownHost === '' || url.host !== ownHost.toLowerCase()) return '/';
+  return safeReturnTo(url.pathname + url.search + url.hash);
+}
+
+/**
+ * Where a sign-in whose page token was refused goes. A browser that is already signed in goes to the
+ * page it asked for (safeReturnTo of its returnTo); one that is not goes to a fresh sign-in page with
+ * the notice that the page it used had expired, which keeps the page asked for.
+ */
+export function staleSignInTarget(signedIn: boolean, returnTo: unknown): string {
+  const target = safeReturnTo(returnTo);
+  if (signedIn) return target;
+  return target === '/' ? '/login?stale=1' : `/login?stale=1&returnTo=${encodeURIComponent(target)}`;
 }
 
 interface SsoParams {
@@ -52,9 +102,8 @@ export async function authRoutes(
     const query = request.query as Record<string, string | undefined>;
     const returnTo = safeReturnTo(query['returnTo']);
 
-    // If already authenticated, honor returnTo (so /oauth/authorize?...
-    // survives the "am I logged in?" shortcut — the user pasted an OAuth
-    // consent URL while already signed in on the dashboard).
+    // A signed-in browser goes straight to the page it asked for (so /oauth/authorize?... survives
+    // the "am I logged in?" shortcut), and only when safeReturnTo accepts it as a path of the dashboard.
     if (typeof session.get === 'function') {
       const userId = session.get('userId') as string | undefined;
       if (userId !== undefined) {
@@ -68,6 +117,8 @@ export async function authRoutes(
 
     // Show session expired message if redirected from expiry hook
     const sessionExpired = query['expired'] === '1';
+    // A sign-in sent from a page that was no longer current lands here (staleSignInTarget).
+    const staleSignIn = query['stale'] === '1';
 
     // Phase 64.2: the login badge tracks the latest completed dogfood scan
     // dynamically. We auto-resolve (and idempotently seed) a site_badges
@@ -96,6 +147,7 @@ export async function authRoutes(
       mode,
       loginMethods,
       returnTo,
+      staleSignIn,
       selfScanId: config.selfScanId,
       selfLiveBadgeId,
       ...(sessionExpired ? { error: 'Your session has expired. Please log in again.' } : {}),
@@ -135,14 +187,11 @@ export async function authRoutes(
           });
         }
 
-        const session = request.session as { set(key: string, value: unknown): void };
-        session.set('userId', 'api-key');
-        session.set('username', 'admin');
-        session.set('role', 'admin');
-        session.set('authMethod', 'api-key');
         // The key's row id (never the secret), so dismissals made in this session name the key.
-        if (check.keyId !== undefined) session.set('apiKeyId', check.keyId);
-        session.set('bootId', authService.getBootId());
+        await authService.beginSession(request.session as SessionWriter, {
+          userId: 'api-key', username: 'admin', role: 'admin', authMethod: 'api-key',
+          ...(check.keyId !== undefined ? { apiKeyId: check.keyId } : {}),
+        });
 
         void storage?.audit.log({ actor: 'admin', actorId: 'api-key', action: 'login.success', resourceType: 'session', ...(check.keyId ? { resourceId: check.keyId } : {}), details: 'API key login', ipAddress: request.ip });
         await reply.redirect(safeReturnTo(body.returnTo));
@@ -210,12 +259,9 @@ export async function authRoutes(
             // Use defaults if JWT decode fails
           }
 
-          const session = request.session as { set(key: string, value: unknown): void };
-          session.set('userId', userId);
-          session.set('username', displayUsername);
-          session.set('role', userRole);
-          session.set('authMethod', 'oauth');
-          session.set('bootId', authService.getBootId());
+          await authService.beginSession(request.session as SessionWriter, {
+            userId, username: displayUsername, role: userRole, authMethod: 'oauth',
+          });
 
           void storage?.audit.log({ actor: displayUsername, actorId: userId, action: 'login.success', resourceType: 'session', details: 'OAuth login', ipAddress: request.ip });
           await reply.redirect(safeReturnTo(body.returnTo));
@@ -238,12 +284,9 @@ export async function authRoutes(
         });
       }
 
-      const session = request.session as { set(key: string, value: unknown): void };
-      session.set('userId', result.user!.id);
-      session.set('username', result.user!.username);
-      session.set('role', result.user!.role ?? 'user');
-      session.set('authMethod', 'password');
-      session.set('bootId', authService.getBootId());
+      await authService.beginSession(request.session as SessionWriter, {
+        userId: result.user!.id, username: result.user!.username, role: result.user!.role ?? 'user', authMethod: 'password',
+      });
 
       void storage?.audit.log({ actor: result.user!.username, actorId: result.user!.id, action: 'login.success', resourceType: 'session', details: 'Password login', ipAddress: request.ip });
       await reply.redirect(safeReturnTo(body.returnTo));
@@ -293,12 +336,10 @@ export async function authRoutes(
         });
       }
 
-      const session = request.session as { set(key: string, value: unknown): void };
-      session.set('userId', result.user!.id);
-      session.set('username', result.user!.username);
-      session.set('role', result.user!.role ?? 'user');
-      session.set('authMethod', 'sso');
-      session.set('bootId', authService.getBootId());
+      const session = request.session as SessionWriter;
+      await authService.beginSession(session, {
+        userId: result.user!.id, username: result.user!.username, role: result.user!.role ?? 'user', authMethod: 'sso',
+      });
 
       // Store IdP groups and resolved team names in the session
       if (result.groups) {
@@ -409,19 +450,8 @@ export async function authRoutes(
       await reply.redirect('/account?localeSaved=1');
       return;
     }
-    // Validate referer to prevent open redirect — only allow same-origin paths
-    const referer = request.headers.referer ?? '/';
-    let redirectTo = '/';
-    try {
-      const url = new URL(referer);
-      const host = request.headers.host ?? '';
-      if (url.host === host) {
-        redirectTo = url.pathname + url.search;
-      }
-    } catch {
-      // Invalid URL — use root
-    }
-    await reply.redirect(redirectTo);
+    // Back to the page the change was made on, when the Referer names a page of the dashboard.
+    await reply.redirect(refererReturnTo(request.headers.referer, request.headers.host));
   });
 
   // POST /account/density — switch UI density (Phase 57 R2). Cookie-backed,
@@ -446,8 +476,8 @@ export async function authRoutes(
   // redirect to the original /oauth/authorize?... URL.
   //
   // Semantically equivalent to POST /orgs/switch (routes/orgs.ts) but accepts
-  // the returnTo target in the POST body (open-redirect-safe via
-  // safeReturnTo) rather than sniffing the referer header, because the OAuth
+  // the returnTo target in the POST body (held to safeReturnTo's rule)
+  // rather than reading the referer header, because the OAuth
   // consent view supplies the exact `/oauth/authorize?...` URL it wants to
   // resume. The two routes coexist by design:
   //   - /orgs/switch        — nav-dropdown flow (referer-based redirect).
@@ -495,8 +525,8 @@ export async function authRoutes(
     const session = request.session as { set(key: string, value: unknown): void };
     session.set('currentOrgId', orgId);
 
-    // T-31.2-02-09: open-redirect-safe — safeReturnTo rejects cross-origin
-    // and protocol-relative targets, falling back to '/'.
+    // T-31.2-02-09: the browser returns to returnTo only when safeReturnTo accepts it as a path of the
+    // dashboard; any other value returns to the home page.
     await reply.redirect(safeReturnTo(body.returnTo));
   });
 }

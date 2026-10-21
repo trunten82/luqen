@@ -10,6 +10,66 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- A signed-in session follows the stored dashboard user on every request:
+  deactivating or deleting a user ends their session on its next request, and
+  a role change applies on the next request. A session signed in through the
+  compliance service or an SSO plugin keeps its sign-in values only while its
+  identity has no stored dashboard user and had none at sign-in; once a stored
+  user exists at sign-in or answers for the session, deleting that user ends
+  it. A session opened with an API key ends when the key is revoked or
+  expires. A session acts only in one of its user's organizations; otherwise
+  the user's first organization (or none) is used. Each ended session records
+  one `session.ended` audit entry, however often its cookie is sent again. A
+  sign-in starts a new session: nothing from an earlier sign-in in the same
+  browser carries over. A sign-in sent from a sign-in page opened before
+  another sign-in is answered with a fresh sign-in page, or with the requested
+  page when the browser is already signed in; the page token changes at every
+  sign-in. The page a sign-in returns to, from the sign-in page, the sign-in
+  form or the consent page's organization switch, is used only when it is a
+  path of the dashboard: a value holding a control character or a backslash,
+  or one that resolves to another host, returns to the home page. A language
+  change and an organization switch return to the page they were made on only
+  under the same rule.
+- The client address behind the sign-in limit, the per-address request
+  limits, the scan-start limit, client registration and the address recorded
+  in audit entries is read from `X-Forwarded-For` only through trusted
+  proxies: the loopback, link-local and unique-local ranges by default, or the
+  `trustedProxies` / `DASHBOARD_TRUSTED_PROXIES` list (addresses, CIDR ranges,
+  `loopback`, `linklocal`, `uniquelocal`, or `none`), which replaces the
+  default. A client that is not behind a trusted proxy is its socket address.
+  A list is refused at startup when it trusts every address, or when its
+  entries together trust more than one /8 of public IPv4 addresses or more
+  than one /16 of global IPv6 addresses (inside `2000::/3`); loopback,
+  link-local, private-use, shared, this-network, multicast and reserved
+  addresses do not count, and an IPv6 range that holds IPv4-mapped addresses
+  counts for IPv4. A provider's published ranges are far below the limits;
+  deployments behind a CDN or a proxy outside the private ranges list its
+  addresses, narrowly.
+- The cookie a sign-in returns expires after `SESSION_EXPIRY_MINUTES`
+  (default 60) without a request, like every later cookie, and a signed-in
+  session that carries no activity time is expired. Only requests answered
+  from the session count as activity: the sign-in page, static files, health
+  and public reports do not, and neither does a request authenticated by an
+  API key header.
+- `/orgs/current` reports the organization the request acts in. `X-Org-Id`
+  names the organization of a request authenticated by an admin API key
+  header; a cookie session, including an API-key sign-in session, acts through
+  the organization rules of a session.
+- MCP requests require `mcp.use` in the token's organization on every
+  request (`403 insufficient_scope`, `no_mcp_use`). The token endpoint answers
+  a refresh or an authorization-code exchange with `400 invalid_grant` for a
+  user the MCP endpoint would refuse, and a refused refresh leaves its refresh
+  token usable once the user's access is restored. A refresh token is answered
+  only for the client it was issued to: another client's presentation is
+  refused with `400 invalid_grant` and leaves the issuing client's chain
+  unchanged. A deleted user's refresh tokens are removed with the user.
+- OAuth consent acts in, and names, the organization the dashboard shows,
+  and offers to switch only to organizations the user belongs to. Consent
+  needs a dashboard user account (`403 access_denied`,
+  `dashboard_user_required`). An approval is checked against the organization
+  its screen named (`400 invalid_request`, `organization_changed`, when it
+  changed) and is remembered for that organization only; an approval recorded
+  without an organization covers none.
 - MCP requests are answered for the stored, active user of the token: tools
   and permissions follow the user's current roles, a role claim in a token is
   not read, and tokens of deactivated or removed users and of revoked OAuth
@@ -27,10 +87,44 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   a confirmation checks again that the user may still run the tool (`403`
   otherwise, leaving the action pending). A confirmation whose tool fails to
   run closes the action as failed, is recorded in the agent audit as an
-  error, and answers `500` with a generic message.
+  error, and answers `500` with a generic message. A paused action runs once
+  (another confirmation or decline of it answers `409`), is declined when it
+  is neither confirmed nor declined within 24 hours (a confirmation after 24
+  hours declines it and answers `409` `expired`; the assistant panel then
+  shows a notice that the action expired, or was already approved or declined,
+  instead of offering to retry, and the audit entry names the user and the
+  action), and is declined when its
+  conversation is deleted. Editing a question replaces its whole answer,
+  including the assistant's tool calls and their results, and an action
+  awaiting confirmation in that answer can no longer be approved. A reply still
+  being written when its question is edited, when it is retried or when its
+  conversation is deleted is ended, and nothing more of it is kept, a new
+  action awaiting confirmation included. Retry applies only to the
+  conversation's last message when it is a reply (another reply answers `400`,
+  a reply followed by a later message `409`), and only that reply offers Retry
+  in the assistant panel. Edit, retry, share and the message read decide on the
+  conversation's latest messages however long it is, and an edit that cannot
+  store its new question leaves the conversation unchanged. Only the user
+  who started a conversation can open, change, delete or share it; another
+  member of the organization gets `404`.
 - The agent audit stores tool arguments named like a password, secret, token,
   API key, authorization value or credential as `[redacted]`, at any depth,
   for every tool call the assistant runs, refuses or confirms.
+- The assistant's conversation messages store those tool arguments as
+  `[redacted]` too. An action awaiting confirmation keeps its arguments as
+  given until it is confirmed, declined or replaced by an edit of its
+  question, then they are stored redacted; a
+  confirmation that is refused leaves the action awaiting confirmation. A
+  tool call that carries `[redacted]` in place of a secret value is not run:
+  the assistant asks for the value again. A shared conversation shows the
+  conversation up to and including the answer it was shared from (the 200
+  messages that end with it, in a longer conversation), with stored
+  tool call arguments redacted; retrying that answer or editing its question
+  ends the link. Only a conversation's owner can share it.
+- The assistant's context hints are read with the user's permissions in the
+  conversation's organization: recent scans need `reports.view`, brand
+  guideline names need `branding.view`, and a user holding no permission there
+  gets no hints.
 - Scheduled scans, schedule creation, report retry and startup recovery use the
   same start-URL validation as the scan form: a schedule's URL is checked when
   it is created and at every run, and a refused run records a failed scan.

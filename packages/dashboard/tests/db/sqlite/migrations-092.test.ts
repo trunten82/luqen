@@ -47,10 +47,9 @@ function appliedIds(db: Database.Database): string[] {
 }
 
 describe('migration 092: the dismissal key snapshot column', () => {
-  it('092 is registered as the last migration', () => {
+  it('092 is registered', () => {
     const mig = DASHBOARD_MIGRATIONS.find((m) => m.id === '092');
     expect(mig?.name).toBe('add-dismissal-key-snapshot');
-    expect(DASHBOARD_MIGRATIONS[DASHBOARD_MIGRATIONS.length - 1]!.id).toBe('092');
     // Exactly one statement changes the schema, and it adds this one column.
     const statements = mig!.sql.split('\n').filter((l) => l.trim() !== '' && !l.trim().startsWith('--'));
     expect(statements).toEqual([`ALTER TABLE issue_dismissals ADD COLUMN ${COLUMN} TEXT;`]);

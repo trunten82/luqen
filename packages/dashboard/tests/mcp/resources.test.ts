@@ -35,7 +35,7 @@ import { DASHBOARD_RESOURCE_METADATA } from '../../src/mcp/resources.js';
 import type { McpTokenPayload, McpTokenVerifier } from '../../src/mcp/middleware.js';
 import type { StorageAdapter } from '../../src/db/index.js';
 import type { ScanService } from '../../src/services/scan-service.js';
-import { storedCallerOrgs, storedCallerUsers } from '../helpers/stored-caller-stub.js';
+import { storedCallerOrgs, storedCallerUsers, mcpCallerPermissions } from '../helpers/stored-caller-stub.js';
 
 // ---------------------------------------------------------------------------
 // Stub scaffolding (self-contained — no cross-imports from other test files)
@@ -80,7 +80,8 @@ function makeStubStorage(o: StubOverrides = {}): StorageAdapter {
     // The token's subject belongs to the token organizations used in this file.
     organizations: storedCallerOrgs('org-1') as unknown as StorageAdapter['organizations'],
     roles: {
-      getEffectivePermissions: o.getEffectivePermissions ?? (async () => perms),
+      getEffectivePermissions: async (userId: string, orgId?: string) =>
+        mcpCallerPermissions(await (o.getEffectivePermissions ?? (async () => perms))(userId, orgId)),
     } as unknown as StorageAdapter['roles'],
     schedules: empty as StorageAdapter['schedules'],
     assignments: empty as StorageAdapter['assignments'],

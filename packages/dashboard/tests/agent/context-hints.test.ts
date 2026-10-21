@@ -336,6 +336,9 @@ describe('buildRoleHintsSection', () => {
 // collectContextHints + formatContextHints integration
 // ---------------------------------------------------------------------------
 
+/** The caller may read both hint sections (reports.view, branding.view). */
+const READ_ALL: ReadonlySet<string> = new Set(['reports.view', 'branding.view']);
+
 describe('collectContextHints + formatContextHints', () => {
   beforeEach(() => {
     installFetch([
@@ -385,6 +388,7 @@ describe('collectContextHints + formatContextHints', () => {
     const hints = await collectContextHints(storage, {
       userId: 'u-1',
       orgId: 'org-1',
+      readPermissions: READ_ALL,
       complianceAccess: ACCESS,
       permissions: new Set(['compliance.manage', 'scans.create']),
     });
@@ -417,6 +421,7 @@ describe('collectContextHints + formatContextHints', () => {
     const hints: ContextHints = await collectContextHints(storage, {
       userId: 'u-1',
       orgId: 'org-1',
+      readPermissions: READ_ALL,
       // no complianceAccess, no permissions → all Phase 44 sections empty
     });
     const text = formatContextHints(hints);
@@ -434,6 +439,7 @@ describe('collectContextHints + formatContextHints', () => {
     const hints = await collectContextHints(storage, {
       userId: 'u-1',
       orgId: 'org-1',
+      readPermissions: READ_ALL,
       // No complianceAccess so proposals/jur/regs all empty.
       permissions: new Set(['admin.system']),
     });
@@ -442,5 +448,16 @@ describe('collectContextHints + formatContextHints', () => {
     expect(text).not.toContain('Org-defined jurisdictions');
     expect(text).not.toContain('Active regulations');
     expect(text).toContain('Your role hints — you can: system admin (all orgs).');
+  });
+});
+
+describe('HARD-21 context hints read in the caller organization', () => {
+  it('HARD-21 context hints list no scans without an organization', async () => {
+    const storage = makeStorage({
+      scans: [{ id: 's-1', siteUrl: 'https://fabrikam.example/', status: 'completed', totalIssues: 3, createdAt: '2026-04-25' }],
+    });
+    const hints = await collectContextHints(storage, { userId: 'u-1', orgId: '', readPermissions: READ_ALL });
+    expect(hints.recentScans).toEqual([]);
+    expect(formatContextHints(hints)).not.toContain('https://fabrikam.example/');
   });
 });

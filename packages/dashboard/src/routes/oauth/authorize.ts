@@ -12,6 +12,24 @@
  * travel through the browser as hidden form inputs an attacker can tamper
  * with (T-31.1-02-03 / T-31.1-02-04 / T-31.1-02-05).
  *
+ * HARD-21: consent acts in the organization the request acts in
+ * (request.user.currentOrgId, resolved for every request by the org-context
+ * preHandler from the user's own organizations; 'system' when there is none):
+ * the mcp.use check, the organization the page names and the organization the
+ * code (and so the token) carries are that one. The switch offer lists only
+ * organizations the user belongs to (getUserOrgs, the predicate of the
+ * org-switch routes). Only a stored dashboard user can consent: a session
+ * principal without a dashboard_users row is answered 403 access_denied
+ * (dashboard_user_required) before anything is rendered or written.
+ *
+ * The consent page binds the approval to the organization it names: it carries a hidden
+ * `consent_binding`, an HMAC (per-process random key) over the signed-in user's id and the named
+ * organization. The approval recomputes it from the request's own user and organization and compares
+ * it; a missing or different value (the organization changed in another tab, the user left the named
+ * organization, an altered field) is answered 400 invalid_request / organization_changed before
+ * anything is written. The posted value is only compared; the organization is never read from the form.
+ * The key lives in this process only, so a restart invalidates open consent pages.
+ *
  * Invariant: NEVER insert into `oauth_authorization_codes` without having
  * passed every check first. The Allow branch is the only code path that
  * writes to that table — the Deny, CSRF-fail, scope-fail, redirect-uri-fail,
@@ -20,7 +38,7 @@
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { Type } from '@sinclair/typebox';
-import { randomBytes } from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { ErrorEnvelope } from '../../api/schemas/envelope.js';
 import type { StorageAdapter } from '../../db/adapter.js';
 import { resolveEffectivePermissions } from '../../permissions.js';
@@ -56,6 +74,7 @@ const ConsentBodySchema = Type.Object(
     code_challenge: Type.Optional(Type.String()),
     code_challenge_method: Type.Optional(Type.String()),
     approved: Type.Optional(Type.String()),
+    consent_binding: Type.Optional(Type.String()),
   },
   { additionalProperties: true },
 );
@@ -94,6 +113,7 @@ interface ConsentBody {
   readonly code_challenge?: string;
   readonly code_challenge_method?: string;
   readonly approved?: string;
+  readonly consent_binding?: string;
 }
 
 function splitSpace(value: string | undefined): readonly string[] {
@@ -118,17 +138,47 @@ function partitionScopes(
   return { granted: requested, skipped: [] };
 }
 
-function sessionOrgId(request: FastifyRequest): string {
-  const session = request.session as { get?: (k: string) => unknown } | undefined;
-  if (session === undefined || typeof session.get !== 'function') return 'system';
-  const orgId = session.get('orgId') ?? session.get('currentOrgId');
+/** The organization the request acts in (the org-context preHandler's resolution), or 'system'. */
+function requestOrgId(request: FastifyRequest): string {
+  const orgId = request.user?.currentOrgId;
   return typeof orgId === 'string' && orgId.length > 0 ? orgId : 'system';
 }
+
+/** The binding of (user, named organization) under `key`, base64url. */
+function consentBinding(key: Buffer, userId: string, orgId: string): string {
+  return createHmac('sha256', key).update(`${userId}\0${orgId}`).digest('base64url');
+}
+
+/** True when `posted` is the binding of (user, organization) under `key` (constant-time comparison). */
+function bindingMatches(key: Buffer, userId: string, orgId: string, posted: string | undefined): boolean {
+  if (typeof posted !== 'string' || posted.length === 0) return false;
+  const expected = Buffer.from(consentBinding(key, userId, orgId));
+  const received = Buffer.from(posted);
+  return received.length === expected.length && timingSafeEqual(received, expected);
+}
+
+const ORGANIZATION_CHANGED = { error: 'invalid_request', error_description: 'organization_changed' } as const;
+
+/** The name the consent page shows for `orgId` ('system' as itself). */
+async function orgDisplayName(storage: StorageAdapter, orgId: string): Promise<string> {
+  if (orgId === 'system') return orgId;
+  const org = await storage.organizations.getOrg(orgId);
+  return org?.name ?? orgId;
+}
+
+/** True when the request's principal is a stored dashboard user (an API-key session is not). */
+async function isStoredDashboardUser(storage: StorageAdapter, userId: string): Promise<boolean> {
+  return (await storage.users.getUserById(userId)) !== null;
+}
+
+const DASHBOARD_USER_REQUIRED = { error: 'access_denied', error_description: 'dashboard_user_required' } as const;
 
 export async function registerAuthorizeRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
 ): Promise<void> {
+  const bindingKey = randomBytes(32);
+
   // ── GET /oauth/authorize ──────────────────────────────────────────────────
   server.get('/oauth/authorize', {
     schema: {
@@ -152,6 +202,9 @@ export async function registerAuthorizeRoutes(
     if (request.user === undefined) {
       const originalUrl = request.url;
       return reply.redirect(`/login?redirect=${encodeURIComponent(originalUrl)}`, 302);
+    }
+    if (!(await isStoredDashboardUser(storage, request.user.id))) {
+      return reply.status(403).send(DASHBOARD_USER_REQUIRED);
     }
 
     const q = request.query as AuthorizeQuery;
@@ -213,18 +266,19 @@ export async function registerAuthorizeRoutes(
     // + scope validation checks and BEFORE any consent-screen rendering, so
     // a user without mcp.use NEVER sees a live consent form for an MCP client.
     const user = request.user;
-    const orgId = sessionOrgId(request);
+    const orgId = requestOrgId(request);
     const perms = await resolveEffectivePermissions(storage.roles, user.id, user.role, orgId);
 
     const isSystemAdmin = user.role === 'admin';
     if (!isSystemAdmin && !perms.has('mcp.use')) {
       // D-05: if the user has mcp.use in SOME other org, offer a Switch CTA.
       // Empty array → the hbs template renders the "ask your admin" card.
-      const switchableOrgs = await listOrgsWithMcpUse(storage, user.id, orgId);
+      const switchableOrgs = await listOrgsWithMcpUse(storage, user.id, user.role, orgId);
       return reply.view('oauth-consent', {
         noMcpUse: true,
         switchableOrgs,
         activeOrgId: orgId,
+        activeOrgName: await orgDisplayName(storage, orgId),
         client,
         user,
         // Preserve the original URL so the switch-org POST can redirect back.
@@ -244,11 +298,15 @@ export async function registerAuthorizeRoutes(
     const coverage = await storage.oauthConsents.checkCoverage({
       userId: user.id,
       clientId: client.clientId,
+      orgId,
       requestedScopes: grantedScopes,
       requestedResources,
     });
 
-    if (coverage.covered) {
+    // The route compares the organization itself: a remembered consent answers without a page only
+    // when it names the organization this request acts in, so a storage adapter that does not apply
+    // the organization rule to its coverage answer cannot issue a code in another organization.
+    if (coverage.covered && coverage.existingConsent !== null && coverage.existingConsent.orgId === orgId) {
       const code = randomBytes(32).toString('base64url');
       const expiresAt = new Date(Date.now() + 60_000).toISOString();
       await storage.oauthCodes.createCode({
@@ -303,7 +361,7 @@ export async function registerAuthorizeRoutes(
       adminScopeBlocked: false,
       client,
       user,
-      orgName: orgId,
+      orgName: await orgDisplayName(storage, orgId),
       clientId: client.clientId,
       redirectUri: q.redirect_uri,
       // Phase 31.2 D-12: grantedScopes === requestedScopes (partitionScopes
@@ -323,6 +381,7 @@ export async function registerAuthorizeRoutes(
       state: q.state ?? '',
       codeChallenge: q.code_challenge,
       csrfToken,
+      consentBinding: consentBinding(bindingKey, user.id, orgId),
     });
   });
 
@@ -332,7 +391,7 @@ export async function registerAuthorizeRoutes(
   //   2. redirect_uri re-validation  ← T-31.1-02-03 defense-in-depth
   //   3. scope whitelist re-validation
   //   4. PKCE re-validation
-  //   5. admin.system gate re-apply
+  //   5. mcp.use gate re-apply, then the consent binding (organization named by the page)
   //   6. approved branching
   server.post('/oauth/authorize/consent', {
     schema: {
@@ -356,6 +415,9 @@ export async function registerAuthorizeRoutes(
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     if (request.user === undefined) {
       return reply.status(401).send({ error: 'unauthorized' });
+    }
+    if (!(await isStoredDashboardUser(storage, request.user.id))) {
+      return reply.status(403).send(DASHBOARD_USER_REQUIRED);
     }
 
     const body = request.body as ConsentBody;
@@ -403,13 +465,19 @@ export async function registerAuthorizeRoutes(
     //    org and rejects with 403 if mcp.use is missing (admin.system bypass
     //    preserved via user.role === 'admin'). No code row is written.
     const user = request.user;
-    const orgId = sessionOrgId(request);
+    const orgId = requestOrgId(request);
     const perms = await resolveEffectivePermissions(storage.roles, user.id, user.role, orgId);
     if (user.role !== 'admin' && !perms.has('mcp.use')) {
       return reply.status(403).send({
         error: 'access_denied',
         error_description: 'mcp.use permission required in active org',
       });
+    }
+
+    // 5a. The approval acts in the organization its page named: the page's binding of (user,
+    //     organization) is recomputed from this request and compared before anything is written.
+    if (!bindingMatches(bindingKey, user.id, orgId, body.consent_binding)) {
+      return reply.status(400).send(ORGANIZATION_CHANGED);
     }
 
     // 6. Phase 31.2 D-12: partitionScopes is now a no-op forwarder — every
@@ -447,6 +515,7 @@ export async function registerAuthorizeRoutes(
     await storage.oauthConsents.recordConsent({
       userId: user.id,
       clientId: client.clientId,
+      orgId,
       scopes: grantedScopes,
       resources: requestedResources,
     });
@@ -474,27 +543,28 @@ export async function registerAuthorizeRoutes(
 }
 
 /**
- * Phase 31.2 D-05 helper: list orgs (excluding the active one and 'system')
- * where the authenticated user holds `mcp.use`. Used to render the
+ * Phase 31.2 D-05 helper: list the organizations (excluding the active one and
+ * 'system') the user can switch to AND holds `mcp.use` in. Used to render the
  * switch-org CTA on the consent screen. Empty array → render "ask your
  * admin" card with no switch button.
  *
- * Information-disclosure note (T-31.2-02-02): the returned list is bounded
- * to orgs where the user has mcp.use. Org names/ids are not leaked for
- * orgs the user is not a member of — getEffectivePermissions for a non-
- * member returns an empty set, which filters the org out before any name
- * is projected.
+ * The candidates are getUserOrgs (org_members plus the organizations of the
+ * user's teams), the predicate POST /session/switch-org and POST /orgs/switch
+ * accept, so every offer can be taken; the permission check resolves the
+ * user's stored role in each one (resolveEffectivePermissions). No other
+ * organization's name or id is projected (T-31.2-02-02).
  */
 async function listOrgsWithMcpUse(
   storage: StorageAdapter,
   userId: string,
+  userRole: string,
   activeOrgId: string,
 ): Promise<ReadonlyArray<{ readonly id: string; readonly name: string }>> {
-  const orgs = await storage.organizations.listOrgs();
+  const orgs = await storage.organizations.getUserOrgs(userId);
   const matches: Array<{ id: string; name: string }> = [];
   for (const org of orgs) {
     if (org.id === activeOrgId || org.id === 'system') continue;
-    const perms = await storage.roles.getEffectivePermissions(userId, org.id);
+    const perms = await resolveEffectivePermissions(storage.roles, userId, userRole, org.id);
     if (perms.has('mcp.use')) matches.push({ id: org.id, name: org.name });
   }
   return matches;

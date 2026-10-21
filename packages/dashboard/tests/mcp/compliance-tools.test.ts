@@ -30,7 +30,7 @@ import type {
   ServiceConnectionsRepository,
 } from '../../src/db/service-connections-repository.js';
 import * as complianceClient from '../../src/compliance-client.js';
-import { storedCallerOrgs, storedCallerUsers } from '../helpers/stored-caller-stub.js';
+import { storedCallerOrgs, storedCallerUsers, mcpCallerPermissions } from '../helpers/stored-caller-stub.js';
 
 // ---------------------------------------------------------------------------
 // Stubs
@@ -46,7 +46,7 @@ function makeStubStorage(perms: readonly string[] = []): StorageAdapter {
     // The token's subject belongs to the token organizations used in this file.
     organizations: storedCallerOrgs('org-1') as unknown as StorageAdapter['organizations'],
     roles: {
-      getEffectivePermissions: async () => permSet,
+      getEffectivePermissions: async () => mcpCallerPermissions(permSet),
     } as unknown as StorageAdapter['roles'],
     schedules: empty as StorageAdapter['schedules'],
     assignments: empty as StorageAdapter['assignments'],

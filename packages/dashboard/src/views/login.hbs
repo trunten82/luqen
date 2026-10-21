@@ -16,6 +16,10 @@
         {{#unless mode}}{{t "auth.teamSubtitle"}}{{/unless}}
       </p>
 
+      {{#if staleSignIn}}
+      {{> alert type="warning" message=(t "auth.signInPageExpired") alertId="login-stale"}}
+      {{/if}}
+
       {{#if error}}
       {{> alert type="error" title=(t "auth.signInFailed") message=error alertId="login-error"}}
       {{/if}}

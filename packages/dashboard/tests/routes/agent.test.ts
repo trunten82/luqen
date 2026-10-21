@@ -1009,17 +1009,12 @@ describe('Phase 38 — GET /agent/conversations/:id cross-org admin allowance', 
     await ctx.cleanup();
   });
 
-  it('admin can load a conversation in org B while activeOrgId resolves to org A (200)', async () => {
+  it('admin can load their own conversation in org B while activeOrgId resolves to org A', async () => {
     // Pre-set admin's active org to orgA.
     await ctx.storage.users.setActiveOrgId(ctx.adminId, ctx.orgA.id);
-    // Create a foreign-org conversation directly in org B.
-    const foreignUserId = randomUUID();
-    ctx.storage.getRawDatabase().prepare(
-      `INSERT INTO dashboard_users (id, username, password_hash, role, active, created_at)
-       VALUES (?, ?, 'pw', 'viewer', 1, ?)`,
-    ).run(foreignUserId, `f-${foreignUserId.slice(0, 6)}`, new Date().toISOString());
+    // The admin's own conversation, started in org B.
     const foreignConv = await ctx.storage.conversations.createConversation({
-      userId: foreignUserId,
+      userId: ctx.adminId,
       orgId: ctx.orgB.id,
     });
 
@@ -1065,13 +1060,8 @@ describe('Phase 38 — GET /agent/conversations/:id cross-org admin allowance', 
 
   it('admin reading a foreign-org conversation does NOT mutate active_org_id (read-only)', async () => {
     await ctx.storage.users.setActiveOrgId(ctx.adminId, ctx.orgA.id);
-    const foreignUserId = randomUUID();
-    ctx.storage.getRawDatabase().prepare(
-      `INSERT INTO dashboard_users (id, username, password_hash, role, active, created_at)
-       VALUES (?, ?, 'pw', 'viewer', 1, ?)`,
-    ).run(foreignUserId, `f-${foreignUserId.slice(0, 6)}`, new Date().toISOString());
     const foreignConv = await ctx.storage.conversations.createConversation({
-      userId: foreignUserId,
+      userId: ctx.adminId,
       orgId: ctx.orgB.id,
     });
 

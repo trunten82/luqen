@@ -17,9 +17,13 @@
  * inputs are absent the helpers do nothing — preserving the original
  * scans+brands behaviour and keeping per-turn cost unchanged.
  *
- * Org-scoping rules:
- *   - orgId is a real org id  → fetch scoped to that org
- *   - orgId === ''            → unwrapped global admin (admin.system) — cross-org
+ * Permissions: hints are read with the caller's permissions in the conversation's
+ * organization (`readPermissions`, the stored caller's set the assistant resolves
+ * for the turn; the assistant collects no hints at all when that set is empty):
+ *   - recent scans need reports.view and are read only in a real organization
+ *     (orgId '' lists no scans)
+ *   - brand guideline names need branding.view
+ *   - the organization line is read for every caller holding a permission
  *
  * Failure rule: if any individual fetch throws, that slot returns an empty
  * list / null. Never propagate an error to the caller — context hints are a
@@ -102,7 +106,9 @@ export type ComplianceAccess = () => Promise<{
 
 export interface CollectHintsInput {
   readonly userId: string;
-  readonly orgId: string; // '' signifies cross-org (admin.system)
+  readonly orgId: string; // '' = no organization: no scans and no guideline names
+  /** The stored caller's permissions in `orgId`, resolved for the turn. */
+  readonly readPermissions: ReadonlySet<string>;
   /** Phase 44: opt-in compliance fetch for proposals/regs/jurisdictions. */
   readonly complianceAccess?: ComplianceAccess;
   /** Phase 44: caller's effective permissions for role-hint rendering. */
@@ -113,9 +119,9 @@ export async function fetchRecentScans(
   storage: StorageAdapter,
   orgId: string,
 ): Promise<readonly ContextScanHint[]> {
+  if (orgId.length === 0) return [];
   try {
-    const filters = orgId.length > 0 ? { orgId, limit: RECENT_SCANS_CAP } : { limit: RECENT_SCANS_CAP };
-    const rows = await storage.scans.listScans(filters);
+    const rows = await storage.scans.listScans({ orgId, limit: RECENT_SCANS_CAP });
     return rows.slice(0, RECENT_SCANS_CAP).map((r) => ({
       id: r.id,
       siteUrl: r.siteUrl,
@@ -134,9 +140,8 @@ export async function fetchActiveBrands(
 ): Promise<readonly ContextBrandHint[]> {
   try {
     if (orgId.length === 0) {
-      // Cross-org mode: the branding repository is org-keyed today, so we
-      // cannot return a cross-org list without changing its interface.
-      // Emit empty — dashboard admins can still ask for specific orgs.
+      // No organization: the branding repository is org-keyed, so no
+      // guideline is listed.
       return [];
     }
     const rows = await storage.branding.listGuidelines(orgId);
@@ -266,7 +271,10 @@ export async function collectContextHints(
 ): Promise<ContextHints> {
   // Run scans + brands + org identity (Phase 33) and the four Phase 44
   // sections in parallel. Each helper internally swallows errors so this
-  // Promise.all never rejects.
+  // Promise.all never rejects. Scans need reports.view and guideline names
+  // need branding.view in the conversation's organization.
+  const canReadScans = input.readPermissions.has('reports.view');
+  const canReadBrands = input.readPermissions.has('branding.view');
   const [
     recentScans,
     activeBrands,
@@ -275,8 +283,8 @@ export async function collectContextHints(
     jurisdictions,
     regulations,
   ] = await Promise.all([
-    fetchRecentScans(storage, input.orgId),
-    fetchActiveBrands(storage, input.orgId),
+    canReadScans ? fetchRecentScans(storage, input.orgId) : Promise.resolve([]),
+    canReadBrands ? fetchActiveBrands(storage, input.orgId) : Promise.resolve([]),
     fetchOrgIdentity(storage, input.orgId),
     buildProposalsSection(input.orgId, input.complianceAccess),
     buildJurisdictionSection(input.orgId, input.complianceAccess),

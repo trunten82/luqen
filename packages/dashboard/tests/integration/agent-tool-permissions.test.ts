@@ -9,6 +9,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { buildAgentChain, type AgentChain } from '../helpers/agent-chain.js';
+import { storedPermissionsOrNone } from '../../src/auth/stored-caller.js';
 
 const DENIED = 'denied';
 
@@ -316,5 +317,39 @@ describe('HARD-17 the assistant offers the user and system tools to a global adm
       expect(ownerOffer, name).not.toContain(name);
       expect(adminOffer, name).toContain(name);
     }
+  });
+});
+
+describe('HARD-21 the assistant follows the stored user without the MCP use permission', () => {
+  let chain: AgentChain;
+
+  beforeEach(async () => {
+    chain = await buildAgentChain();
+  });
+  afterEach(async () => {
+    await chain.cleanup();
+  });
+
+  it('HARD-21 the assistant does not require the MCP use permission', async () => {
+    const orgId = await chain.createOrg('Fabrikam Assistant Reader');
+    const viewer = await chain.addOrgUser(orgId, 'fabrikam-assistant-reader', 'viewer', 'Viewer');
+    // Premise: the user holds no MCP use permission, neither in the organization nor globally.
+    const inOrg = await storedPermissionsOrNone(chain.storage, viewer.userId, orgId);
+    expect(inOrg.size).toBeGreaterThan(0);
+    expect(inOrg.has('mcp.use')).toBe(false);
+    expect((await storedPermissionsOrNone(chain.storage, viewer.userId)).has('mcp.use')).toBe(false);
+    chain.script([
+      { text: 'Listing.', toolCalls: [{ id: 't1', name: 'dashboard_list_reports', args: {} }] },
+      { text: 'Here they are.', toolCalls: [] },
+    ]);
+
+    const turn = await chain.runTurn(viewer.userId, orgId, 'list reports');
+
+    expect(chain.offered[0]?.length ?? 0).toBeGreaterThan(0);
+    expect(chain.offered[0]).toContain('dashboard_list_reports');
+    const rows = chain.toolRows(turn.conversationId);
+    expect(rows.map((r) => [r.name, r.status])).toEqual([['dashboard_list_reports', 'sent']]);
+    expect(resultError(rows[0]?.result ?? null)).toBeUndefined();
+    expect(chain.auditRows(turn.conversationId).map((a) => a.outcome)).toEqual(['success']);
   });
 });

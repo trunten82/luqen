@@ -1,5 +1,16 @@
 import type Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
+import { redactArgumentsJson } from '../../agent-audit-redaction.js';
+import {
+  activeBranchUpTo,
+  activeMessageRow,
+  insertMessageRow,
+  lastActiveRow,
+  replaceLatestQuestion,
+  supersedeLatestAnswer,
+  supersedeRows,
+  type MessageRow,
+} from './conversation-branch.js';
 import type {
   AppendMessageInput,
   Conversation,
@@ -11,6 +22,11 @@ import type {
   Message,
   MessageRole,
   MessageStatus,
+  PendingMessageRef,
+  ReplaceQuestionInput,
+  ReplaceQuestionResult,
+  RetryAnswerInput,
+  RetryAnswerResult,
   SearchConversationsOptions,
 } from '../../interfaces/conversation-repository.js';
 
@@ -28,20 +44,6 @@ interface ConversationRow {
   last_message_at: string | null;
   is_deleted?: number;
   deleted_at?: string | null;
-}
-
-interface MessageRow {
-  id: string;
-  conversation_id: string;
-  role: MessageRole;
-  content: string | null;
-  tool_call_json: string | null;
-  tool_result_json: string | null;
-  status: MessageStatus;
-  created_at: string;
-  in_window: number;
-  superseded_at?: string | null;
-  images?: string | null;
 }
 
 /**
@@ -153,95 +155,10 @@ export class SqliteConversationRepository implements ConversationRepository {
   }
 
   async appendMessage(input: AppendMessageInput): Promise<Message> {
-    const id = randomUUID();
-    const now = new Date().toISOString();
-    const status: MessageStatus = input.status ?? 'sent';
-
-    const insertMsg = this.db.prepare(`
-      INSERT INTO agent_messages
-        (id, conversation_id, role, content, tool_call_json, tool_result_json, status, created_at, in_window, images)
-      VALUES
-        (@id, @conversationId, @role, @content, @toolCallJson, @toolResultJson, @status, @createdAt, 1, @images)
-    `);
-
-    const imagesJson =
-      input.images !== undefined && input.images.length > 0
-        ? JSON.stringify(input.images)
-        : null;
-
-    const updateConv = this.db.prepare(`
-      UPDATE agent_conversations
-      SET updated_at = @now, last_message_at = @now
-      WHERE id = @conversationId
-    `);
-
-    // Rolling-window maintenance — only run when appending a user message.
-    //
-    // Policy (from 31-CONTEXT.md, locked):
-    //   A "turn" starts at each role='user' row. The window is the most
-    //   recent 20 turns. Boundary = created_at of the 20th-most-recent
-    //   user message (OFFSET 19 on DESC order — zero-indexed). Every
-    //   message with created_at STRICTLY EARLIER than the boundary
-    //   flips to in_window = 0 — EXCEPT messages whose status is
-    //   'pending_confirmation' or 'streaming' (those stay in_window = 1
-    //   regardless of age, so the UX remains readable after restart).
-    //
-    // OFFSET 19 math:
-    //   - With 20 user messages in history, OFFSET 19 = the oldest user
-    //     message; nothing strictly older → no flips. Entire history
-    //     stays in window. Correct for ≤ 20-turn histories.
-    //   - With 21 user messages, OFFSET 19 = the 20th-most-recent; the
-    //     oldest user message + its assistant/tool followers flip out.
-    //   - With N > 20 user messages, the oldest N-20 turns flip out,
-    //     leaving exactly 20 turns + outstanding pending/streaming rows
-    //     inside the window.
-    //
-    // The new user row was inserted just above with in_window = 1, and
-    // its created_at = @now >= the boundary (strict-less comparison),
-    // so it is never flipped by this UPDATE.
-    const findBoundary = this.db.prepare(`
-      SELECT created_at FROM agent_messages
-      WHERE conversation_id = @conversationId AND role = 'user'
-      ORDER BY created_at DESC
-      LIMIT 1 OFFSET 19
-    `);
-
-    const flipOlder = this.db.prepare(`
-      UPDATE agent_messages
-      SET in_window = 0
-      WHERE conversation_id = @conversationId
-        AND created_at < @boundary
-        AND status NOT IN ('pending_confirmation', 'streaming')
-    `);
-
-    this.db.transaction(() => {
-      insertMsg.run({
-        id,
-        conversationId: input.conversationId,
-        role: input.role,
-        content: input.content ?? null,
-        toolCallJson: input.toolCallJson ?? null,
-        toolResultJson: input.toolResultJson ?? null,
-        status,
-        createdAt: now,
-        images: imagesJson,
-      });
-      updateConv.run({ now, conversationId: input.conversationId });
-
-      if (input.role === 'user') {
-        const boundaryRow = findBoundary.get({
-          conversationId: input.conversationId,
-        }) as { created_at: string } | undefined;
-
-        if (boundaryRow !== undefined) {
-          flipOlder.run({
-            conversationId: input.conversationId,
-            boundary: boundaryRow.created_at,
-          });
-        }
-      }
-    })();
-
+    // One insert for every writer (src/db/sqlite/repositories/conversation-branch.ts): a row that
+    // follows another is written only while that row is on the active branch of a conversation that is
+    // not deleted, in the same transaction.
+    const id = this.db.transaction(() => insertMessageRow(this.db, input))();
     const created = this.db
       .prepare('SELECT * FROM agent_messages WHERE id = ?')
       .get(id) as MessageRow;
@@ -253,18 +170,92 @@ export class SqliteConversationRepository implements ConversationRepository {
     status: MessageStatus,
     toolResultJson?: string,
   ): Promise<void> {
-    this.db
+    const read = this.db.prepare('SELECT status, tool_call_json FROM agent_messages WHERE id = ?');
+    // A superseded row keeps its status: a write that arrives after its answer was replaced moves nothing.
+    const write = this.db.prepare(
+      `UPDATE agent_messages
+       SET status = @status,
+           tool_result_json = COALESCE(@toolResultJson, tool_result_json),
+           tool_call_json = COALESCE(@resolvedCallJson, tool_call_json)
+       WHERE id = @messageId
+         AND status != 'superseded'`,
+    );
+    this.db.transaction(() => {
+      const row = read.get(messageId) as { status: string; tool_call_json: string | null } | undefined;
+      // HARD-21: the write that moves a paused action out of pending_confirmation stores its
+      // arguments redacted, in the same UPDATE as the status change.
+      const resolvesPending = row !== undefined && row.status === 'pending_confirmation'
+        && status !== 'pending_confirmation' && row.tool_call_json !== null;
+      write.run({
+        messageId,
+        status,
+        toolResultJson: toolResultJson ?? null,
+        resolvedCallJson: resolvesPending ? redactArgumentsJson(row.tool_call_json as string) : null,
+      });
+    })();
+  }
+
+  async claimPendingMessage(messageId: string, status: 'sent' | 'denied'): Promise<boolean> {
+    return this.db.transaction(() => this.claimPendingRow(messageId, status))();
+  }
+
+  /**
+   * The one conditional write out of pending_confirmation: the row's status changes and its stored
+   * call is redacted in the same UPDATE, and only when the row is still paused. True when this write
+   * moved the row. Runs inside the caller's transaction.
+   */
+  private claimPendingRow(messageId: string, status: 'sent' | 'denied'): boolean {
+    const row = this.db
+      .prepare("SELECT tool_call_json FROM agent_messages WHERE id = ? AND status = 'pending_confirmation'")
+      .get(messageId) as { tool_call_json: string | null } | undefined;
+    if (row === undefined) return false;
+    const result = this.db
       .prepare(
         `UPDATE agent_messages
          SET status = @status,
-             tool_result_json = COALESCE(@toolResultJson, tool_result_json)
-         WHERE id = @messageId`,
+             tool_call_json = COALESCE(@resolvedCallJson, tool_call_json)
+         WHERE id = @messageId AND status = 'pending_confirmation'`,
       )
       .run({
         messageId,
         status,
-        toolResultJson: toolResultJson ?? null,
+        resolvedCallJson: row.tool_call_json === null ? null : redactArgumentsJson(row.tool_call_json),
       });
+    return result.changes === 1;
+  }
+
+  async listPendingMessagesBefore(createdBefore: string): Promise<readonly PendingMessageRef[]> {
+    const rows = this.db
+      .prepare(
+        `SELECT m.id AS id, m.conversation_id AS conversation_id, c.org_id AS org_id, c.user_id AS user_id,
+                m.tool_call_json AS tool_call_json, m.created_at AS created_at
+           FROM agent_messages m
+           INNER JOIN agent_conversations c ON c.id = m.conversation_id
+          WHERE m.status = 'pending_confirmation' AND m.created_at < @createdBefore
+          ORDER BY m.created_at ASC, m.rowid ASC`,
+      )
+      .all({ createdBefore }) as Array<{
+        id: string; conversation_id: string; org_id: string; user_id: string; tool_call_json: string | null; created_at: string;
+      }>;
+    return rows.map((r) => ({
+      id: r.id,
+      conversationId: r.conversation_id,
+      orgId: r.org_id,
+      userId: r.user_id,
+      toolCallJson: r.tool_call_json,
+      createdAt: r.created_at,
+    }));
+  }
+
+  async reopenPendingMessage(messageId: string, toolCallJson: string): Promise<void> {
+    this.db
+      .prepare(
+        `UPDATE agent_messages
+         SET status = 'pending_confirmation',
+             tool_call_json = @toolCallJson
+         WHERE id = @messageId AND status = 'sent'`,
+      )
+      .run({ messageId, toolCallJson });
   }
 
   async getWindow(conversationId: string): Promise<Message[]> {
@@ -401,30 +392,40 @@ export class SqliteConversationRepository implements ConversationRepository {
     id: string,
     orgId: string,
     title: string,
+    userId: string,
   ): Promise<Conversation | null> {
     const now = new Date().toISOString();
     const result = this.db
       .prepare(
         `UPDATE agent_conversations
          SET title = @title, updated_at = @now
-         WHERE id = @id AND org_id = @orgId AND is_deleted = 0`,
+         WHERE id = @id AND org_id = @orgId AND user_id = @userId AND is_deleted = 0`,
       )
-      .run({ id, orgId, title, now });
+      .run({ id, orgId, userId, title, now });
 
     if (result.changes === 0) return null;
     return this.getConversation(id, orgId);
   }
 
-  async softDeleteConversation(id: string, orgId: string): Promise<boolean> {
+  async softDeleteConversation(id: string, orgId: string, userId: string): Promise<boolean> {
     const now = new Date().toISOString();
-    const result = this.db
-      .prepare(
-        `UPDATE agent_conversations
-         SET is_deleted = 1, deleted_at = @now, updated_at = @now
-         WHERE id = @id AND org_id = @orgId AND is_deleted = 0`,
-      )
-      .run({ id, orgId, now });
-    return result.changes > 0;
+    return this.db.transaction(() => {
+      const result = this.db
+        .prepare(
+          `UPDATE agent_conversations
+           SET is_deleted = 1, deleted_at = @now, updated_at = @now
+           WHERE id = @id AND org_id = @orgId AND user_id = @userId AND is_deleted = 0`,
+        )
+        .run({ id, orgId, userId, now });
+      if (result.changes === 0) return false;
+      // The conversation is gone: its paused actions are declined, through the same claim that a
+      // decline takes, so their stored arguments are redacted.
+      const paused = this.db
+        .prepare("SELECT id FROM agent_messages WHERE conversation_id = ? AND status = 'pending_confirmation'")
+        .all(id) as Array<{ id: string }>;
+      for (const { id: messageId } of paused) this.claimPendingRow(messageId, 'denied');
+      return true;
+    })();
   }
 
   // ── Phase 37 Plan 01 — stopped / superseded operations ──────────────
@@ -435,7 +436,8 @@ export class SqliteConversationRepository implements ConversationRepository {
     orgId: string,
     finalContent: string,
   ): Promise<boolean> {
-    // Org-guarded via JOIN-style EXISTS subquery on agent_conversations.org_id.
+    // Org-guarded via JOIN-style EXISTS subquery on agent_conversations.org_id. A superseded row keeps
+    // its status and content.
     const result = this.db
       .prepare(
         `UPDATE agent_messages
@@ -443,6 +445,7 @@ export class SqliteConversationRepository implements ConversationRepository {
              content = @finalContent
          WHERE id = @messageId
            AND conversation_id = @conversationId
+           AND status != 'superseded'
            AND EXISTS (
              SELECT 1 FROM agent_conversations c
              WHERE c.id = agent_messages.conversation_id
@@ -459,26 +462,45 @@ export class SqliteConversationRepository implements ConversationRepository {
     orgId: string,
   ): Promise<number> {
     if (messageIds.length === 0) return 0;
+    // One supersede for every writer (conversation-branch.ts); a paused row superseded here is stored redacted.
+    return this.db.transaction(() => supersedeRows(this.db, messageIds, conversationId, orgId))();
+  }
 
-    const now = new Date().toISOString();
-    // Build IN-list of placeholders. better-sqlite3 binds positional args.
-    const placeholders = messageIds.map(() => '?').join(',');
-    const sql = `
-      UPDATE agent_messages
-      SET status = 'superseded',
-          superseded_at = ?
-      WHERE id IN (${placeholders})
-        AND conversation_id = ?
-        AND status != 'superseded'
-        AND EXISTS (
-          SELECT 1 FROM agent_conversations c
-          WHERE c.id = agent_messages.conversation_id
-            AND c.org_id = ?
-        )
-    `;
-    const params: unknown[] = [now, ...messageIds, conversationId, orgId];
-    const result = this.db.prepare(sql).run(...params);
-    return result.changes;
+  // ── The conversation's newest active rows, and the edit and retry transactions ──
+
+  async getActiveMessage(conversationId: string, messageId: string): Promise<Message | null> {
+    const row = activeMessageRow(this.db, conversationId, messageId);
+    return row !== undefined ? this.rowToMessage(row) : null;
+  }
+
+  async getLastActiveMessage(conversationId: string, role?: MessageRole): Promise<Message | null> {
+    const row = lastActiveRow(this.db, conversationId, role);
+    return row !== undefined ? this.rowToMessage(row) : null;
+  }
+
+  async getActiveBranchUpTo(
+    conversationId: string,
+    anchorMessageId: string,
+    limit = DEFAULT_PAGE_LIMIT,
+  ): Promise<{ readonly anchor: Message; readonly messages: readonly Message[] } | null> {
+    const branch = activeBranchUpTo(this.db, conversationId, anchorMessageId, limit);
+    if (branch === null) return null;
+    return { anchor: this.rowToMessage(branch.anchor), messages: branch.rows.map((r) => this.rowToMessage(r)) };
+  }
+
+  async replaceLatestQuestion(input: ReplaceQuestionInput): Promise<ReplaceQuestionResult> {
+    const result = replaceLatestQuestion(this.db, input);
+    if (!result.ok) return result;
+    return {
+      ok: true,
+      newMessage: this.rowToMessage(result.newRow),
+      supersededMessageIds: result.supersededMessageIds,
+      firstAssistantId: result.firstAssistantId,
+    };
+  }
+
+  async supersedeLatestAnswer(input: RetryAnswerInput): Promise<RetryAnswerResult> {
+    return supersedeLatestAnswer(this.db, input);
   }
 
   async getMessagesIncludingSuperseded(

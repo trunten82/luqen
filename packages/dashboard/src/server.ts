@@ -8,7 +8,7 @@ import { DashboardConfig, withEncryptionKeyDefault, serverPluginsDir } from './c
 import { registerSession, getSessionExpiryMs, createSessionExpiryHook } from './auth/session.js';
 import { createAuthGuard } from './auth/middleware.js';
 import { AuthService } from './auth/auth-service.js';
-import { authRoutes } from './routes/auth.js';
+import { authRoutes, staleSignInTarget } from './routes/auth.js';
 import { homeRoutes } from './routes/home.js';
 import { glossaryRoutes } from './routes/glossary.js';
 import { badgeRoutes } from './routes/badge.js';
@@ -122,6 +122,7 @@ import type { GraphQLContext } from './graphql/resolvers.js';
 import { registerGraphqlCsrfGuard } from './graphql/csrf-guard.js';
 import { getToken } from './routes/admin/helpers.js';
 import { runApiKeySweep } from './api-key-sweep.js';
+import { startPendingExpirySweep } from './agent/pending-expiry.js';
 import { registerMcpRoutes } from './routes/api/mcp.js';
 import { createDashboardJwtVerifier } from './mcp/verifier.js';
 import type { McpTokenVerifier } from './mcp/middleware.js';
@@ -139,6 +140,7 @@ import { DASHBOARD_TOOL_METADATA } from './mcp/metadata.js';
 import { createDashboardMcpServer } from './mcp/server.js';
 import { bridgeMcpToolsForAgent } from './agent/mcp-bridge.js';
 import { registerAgentRoutes, buildDrawerOrgContext, buildDrawerGroupContext } from './routes/agent.js';
+import { resolveTrustedProxies } from './auth/trusted-proxies.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -252,6 +254,21 @@ export function isPublicPath(path: string): boolean {
   return false;
 }
 
+/**
+ * Does the session guard check the session on this path? Every path except the public ones and
+ * the Bearer-only MCP endpoint. The idle hook records session activity on exactly these paths.
+ *
+ * PITFALLS.md #9: the MCP endpoint uses Bearer-only auth, so the session guard never runs on this
+ * path. The scoped Bearer preHandler in routes/api/mcp.ts enforces authentication and emits the
+ * WWW-Authenticate header on 401 per MCP Authorization spec 2025-06-18. The guard stays away from
+ * the path unconditionally (not only when an Authorization header is present) because MCP clients
+ * probe the endpoint without credentials first to discover the AS via WWW-Authenticate; a guard
+ * that ran on that probe would answer it with a /login redirect.
+ */
+export function guardChecksSession(path: string): boolean {
+  return !isPublicPath(path) && !isBearerOnlyPath(path);
+}
+
 // HTTP methods that mutate state and require CSRF verification
 const CSRF_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -298,11 +315,24 @@ export function requiresCookieCsrf(method: string, path: string, hasApiCredentia
   return !hasApiCredential;
 }
 
+/** A reply whose send() hands the refusal csrfProtection would send to `reject` instead. */
+function refusalAsRejection(reply: FastifyReply, reject: (refusal: unknown) => void): FastifyReply {
+  return Object.assign(Object.create(reply) as FastifyReply, {
+    send: (refusal?: unknown): FastifyReply => {
+      reject(refusal);
+      return reply;
+    },
+  });
+}
+
 export async function createServer(config: DashboardConfig): Promise<FastifyInstance> {
   // PBH-A: normalise programmatic callers (tests, scripts/snapshot-openapi.ts)
   // that pass a config object without `encryptionKey` — defaults it to
   // sessionSecret so at-rest wiring below always has a real key.
   config = withEncryptionKeyDefault(config);
+
+  // X-Forwarded-For is believed only through these hops (throws for a setting that trusts every address).
+  const trustedProxies = resolveTrustedProxies(config.trustedProxies);
 
   // Phase 41-04: TypeBox type provider for schema-aware route registration.
   // Routes can declare TypeBox `schema:` blocks and Fastify's AJV runs them
@@ -313,7 +343,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     logger: {
       level: process.env['NODE_ENV'] === 'production' ? 'warn' : 'info',
     },
-    trustProxy: true,
+    trustProxy: trustedProxies === false ? false : [...trustedProxies],
   }).withTypeProvider<TypeBoxTypeProvider>();
 
   // Phase 41-04: capture every registered route for the OpenAPI coverage
@@ -392,6 +422,10 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     24 * 60 * 60 * 1000,
   );
   server.addHook('onClose', () => clearInterval(apiKeySweepHandle));
+
+  // ── Paused assistant actions — declined after 24 h; startup + hourly ────
+  const pendingExpirySweep = await startPendingExpirySweep(storage, server.log);
+  server.addHook('onClose', () => pendingExpirySweep.stop());
 
   // ── Solo mode: first-start API key ──────────────────────────────────────
   if (authService.getAuthMode() === 'solo') {
@@ -860,23 +894,16 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── Session expiry ──────────────────────────────────────────────────────
   const sessionExpiryMs = getSessionExpiryMs();
-  server.addHook('preHandler', createSessionExpiryHook(sessionExpiryMs));
+  // Activity is recorded on requests the session guard checks and the session answers: a request
+  // authenticated by an API key header (Bearer or X-API-Key) is answered by the key, not the cookie.
+  const recordsSessionActivity = (path: string, request: FastifyRequest): boolean =>
+    guardChecksSession(path) && !authService.hasValidApiCredential(request);
+  server.addHook('preHandler', createSessionExpiryHook(sessionExpiryMs, recordsSessionActivity));
 
   // ── Global auth guard ─────────────────────────────────────────────────────
   const authGuard = createAuthGuard(authService);
   server.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
-    if (isPublicPath(request.url.split('?')[0])) {
-      return;
-    }
-    // PITFALLS.md #9: MCP endpoint uses Bearer-only auth — session guard is
-    // ALWAYS bypassed on this path. The scoped Bearer preHandler in
-    // routes/api/mcp.ts enforces authentication and emits the WWW-Authenticate
-    // header on 401 per MCP Authorization spec 2025-06-18. Bypassing
-    // unconditionally (not only when Authorization header present) is required
-    // because MCP clients probe the endpoint without credentials first to
-    // discover the AS via WWW-Authenticate; the old conditional swallowed that
-    // probe with a /login redirect. Smoke-surfaced gap 2026-04-19.
-    if (isBearerOnlyPath(request.url.split('?')[0])) {
+    if (!guardChecksSession(request.url.split('?')[0])) {
       return;
     }
     await authGuard(request, reply);
@@ -894,20 +921,30 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     if (isBearerOnlyPath(request.url.split('?')[0])) return;
     if (request.user === undefined) return;
 
-    const session = request.session as { get(key: string): unknown } | undefined;
+    const session = request.session as { get(key: string): unknown; set?(key: string, value: unknown): void } | undefined;
 
     // 1. Determine org context
-    // API key users can override org via X-Org-Id header (admin keys only)
+    // A request authenticated by an admin API key header can name its organization with X-Org-Id;
+    // a cookie session (including a /login API-key session) acts through the organization rules of a session
     const orgHeader = request.headers['x-org-id'] as string | undefined;
     // Org-scoped API keys are locked to their org — no header override
     if (request.user.id === 'api-key' && request.user.currentOrgId !== undefined) {
       // currentOrgId already set from key's org_id — skip header override
-    } else if (orgHeader !== undefined && request.user.id === 'api-key' && request.user.role === 'admin') {
+    } else if (orgHeader !== undefined && authService.authenticatedByKeyHeader(request) && request.user.role === 'admin') {
       request.user = { ...request.user, currentOrgId: orgHeader };
     } else if (session !== undefined && typeof session.get === 'function') {
       const userOrgs = await storage.organizations.getUserOrgs(request.user.id);
 
       let currentOrgId = session.get('currentOrgId') as string | undefined;
+      // The session's organization must be one of the user's organizations on every request
+      // (getUserOrgs, the predicate both org-switch routes use). Otherwise the stored choice is
+      // cleared and the request acts where a fresh sign-in would: the first organization, or none.
+      if (currentOrgId !== undefined && currentOrgId !== '' && !userOrgs.some((org) => org.id === currentOrgId)) {
+        if (session.get('userId') === request.user.id && typeof session.set === 'function') {
+          session.set('currentOrgId', '');
+        }
+        currentOrgId = undefined;
+      }
       if ((currentOrgId === undefined || currentOrgId === '') && userOrgs.length > 0) {
         currentOrgId = userOrgs[0].id;
       }
@@ -1131,12 +1168,28 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     if (!CSRF_METHODS.has(request.method)) return;
     const path = request.url.split('?')[0];
     if (!requiresCookieCsrf(request.method, path, authService.hasValidApiCredential(request))) return;
-    await new Promise<void>((resolve, reject) => {
-      server.csrfProtection(request, reply, (err?: Error) => {
-        if (err) reject(err);
-        else resolve();
+    try {
+      await new Promise<void>((resolve, reject) => {
+        // csrfProtection answers a refusal itself, through reply.send(error), and calls next only when
+        // the token holds. On the sign-in path the refusal is taken as a rejection instead, so it can
+        // be answered below; every other path is answered by csrfProtection as before.
+        const answering = path === '/login' ? refusalAsRejection(reply, reject) : reply;
+        server.csrfProtection(request, answering, () => resolve());
       });
-    });
+    } catch (err) {
+      // A sign-in sent from a page that is no longer current (its token belongs to a session that has
+      // since changed, or there is no session) is answered with a page, never with JSON and never
+      // with a sign-in: the route does not run. Any other refusal is sent as csrfProtection would.
+      const code = (err as { code?: unknown }).code;
+      if (request.method === 'POST' && path === '/login' && (code === 'FST_CSRF_INVALID_TOKEN' || code === 'FST_CSRF_MISSING_SECRET')) {
+        const session = request.session as { get?(key: string): unknown } | undefined;
+        const signedIn = typeof session?.get === 'function' && session.get('userId') !== undefined;
+        const returnTo = (request.body as { returnTo?: unknown } | undefined)?.returnTo;
+        await reply.redirect(staleSignInTarget(signedIn, returnTo));
+        return reply;
+      }
+      return reply.send(err);
+    }
   });
 
   // (Org context + permissions already loaded in earlier preHandler hook)

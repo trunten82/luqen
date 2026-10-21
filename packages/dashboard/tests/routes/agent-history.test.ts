@@ -218,7 +218,7 @@ describe('/agent/conversations* — Phase 35 Plan 03', () => {
 
   it('list: empty state returns items=[] nextOffset=null', async () => {
     // Soft-delete the seeded conversation so list is truly empty.
-    await ctx.storage.conversations.softDeleteConversation(ctx.conversationId, ctx.orgId);
+    await ctx.storage.conversations.softDeleteConversation(ctx.conversationId, ctx.orgId, ctx.userId);
     const res = await ctx.server.inject({
       method: 'GET',
       url: '/agent/conversations',
@@ -234,7 +234,7 @@ describe('/agent/conversations* — Phase 35 Plan 03', () => {
       { role: 'user', content: 'hi' },
       { role: 'assistant', content: 'hello' },
     ]);
-    await ctx.storage.conversations.renameConversation(ctx.conversationId, ctx.orgId, 'Chat A');
+    await ctx.storage.conversations.renameConversation(ctx.conversationId, ctx.orgId, 'Chat A', ctx.userId);
 
     const res = await ctx.server.inject({
       method: 'GET',
@@ -278,7 +278,7 @@ describe('/agent/conversations* — Phase 35 Plan 03', () => {
       userId: ctx.userId,
       orgId: ctx.orgId,
     });
-    await ctx.storage.conversations.softDeleteConversation(extra.id, ctx.orgId);
+    await ctx.storage.conversations.softDeleteConversation(extra.id, ctx.orgId, ctx.userId);
     const res = await ctx.server.inject({
       method: 'GET',
       url: '/agent/conversations',
@@ -309,7 +309,7 @@ describe('/agent/conversations* — Phase 35 Plan 03', () => {
 
   it('search: title match returns matchField=title', async () => {
     await ctx.storage.conversations.renameConversation(
-      ctx.conversationId, ctx.orgId, 'WCAG question',
+      ctx.conversationId, ctx.orgId, 'WCAG question', ctx.userId,
     );
     const res = await ctx.server.inject({
       method: 'GET',
@@ -344,7 +344,7 @@ describe('/agent/conversations* — Phase 35 Plan 03', () => {
       orgId: ctx.otherOrgId,
     });
     await ctx.storage.conversations.renameConversation(
-      foreignConv.id, ctx.otherOrgId, 'UniqueNeedleAAA',
+      foreignConv.id, ctx.otherOrgId, 'UniqueNeedleAAA', ctx.userId,
     );
     const res = await ctx.server.inject({
       method: 'GET',
@@ -370,7 +370,7 @@ describe('/agent/conversations* — Phase 35 Plan 03', () => {
   });
 
   it('get: soft-deleted returns 404', async () => {
-    await ctx.storage.conversations.softDeleteConversation(ctx.conversationId, ctx.orgId);
+    await ctx.storage.conversations.softDeleteConversation(ctx.conversationId, ctx.orgId, ctx.userId);
     const res = await ctx.server.inject({
       method: 'GET',
       url: `/agent/conversations/${ctx.conversationId}`,
@@ -427,7 +427,7 @@ describe('/agent/conversations* — Phase 35 Plan 03', () => {
   });
 
   it('rename: soft-deleted → 404', async () => {
-    await ctx.storage.conversations.softDeleteConversation(ctx.conversationId, ctx.orgId);
+    await ctx.storage.conversations.softDeleteConversation(ctx.conversationId, ctx.orgId, ctx.userId);
     const res = await ctx.server.inject({
       method: 'POST',
       url: `/agent/conversations/${ctx.conversationId}/rename`,

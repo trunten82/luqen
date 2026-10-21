@@ -95,6 +95,15 @@ async function createE2EServer(): Promise<E2EContext> {
     await authGuard(request, reply);
   });
 
+  // ── Org-context hook (mirrors server.ts: the request acts in the session's stored org) ──
+  server.addHook('preHandler', async (request: FastifyRequest) => {
+    if (request.user === undefined) return;
+    const stored = (request.session as { get(key: string): unknown }).get('currentOrgId');
+    if (typeof stored === 'string' && stored !== '') {
+      request.user = { ...request.user, currentOrgId: stored };
+    }
+  });
+
   // ── Permission-loading hook (mirrors server.ts) ────────────────────────
   server.addHook('preHandler', async (request: FastifyRequest) => {
     if (request.user === undefined) return;

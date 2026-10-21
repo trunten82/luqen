@@ -5,16 +5,16 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: Completed 91-17g-PLAN.md (PR3 re-review fix: scan deletes remove the report file first and only from the reports directory, keeping the scan when it is not removed; the preview selector bound is 8192; a confirm whose tool run fails is closed and audited; agent audit rows store secret arguments as [redacted])
-last_updated: "2026-10-19T19:28:00.000Z"
+stopped_at: Completed 91-22h-PLAN.md (PR4 plan 10: an edit, a retry or a delete that lands while the assistant is still answering ends that turn and the store refuses every later row of the withdrawn answer, the result of an action resolved meanwhile included; no status writer moves a superseded row; edit and retry decide on the conversation's newest rows in one transaction each, retry only of the last message when it is a reply (409 otherwise), and only that reply offers Retry in the panel; the message read, edit form and share work in conversations of any length; 29 breaks MATCH; final PR4 gates green, UAT GREEN 238; not pushed)
+last_updated: "2026-10-21T03:30:00.000Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
-state_head: 371367d5481073906f3ab845b825ddebfb08abf1
+state_head: 06b9b6a6bbe413ad618eff2b4e31afa592c93647
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 34
-  completed_plans: 33
+  total_plans: 44
+  completed_plans: 44
   percent: 33
 ---
 
@@ -128,9 +128,9 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 ## Current Position
 
 Phase: 91 (Dismissal and permission hardening) — EXECUTING
-Plan: 18 of 18
+Plan: 22h of 23
 Status: Ready to execute
-Last activity: 2026-10-15 — Phase 91 execution started
+Last activity: 2026-10-20 - Completed quick task 261020-izd: fix-suggestion route admits issues.fix (PR #12)
 
 ## Phase Map (v3.9.0 — Dismissal follow-through)
 
@@ -202,6 +202,7 @@ measures a candidate model — that is explicitly next-milestone work.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 261008-fs4 | Deploy waits for in-flight scans before restarting the dashboard (incident: deploy killed a customer scan); live break-test passed | 2026-10-08 | a36b2c16 | [261008-fs4-deploy-waits-for-in-flight-scans-before-](./quick/261008-fs4-deploy-waits-for-in-flight-scans-before-/) |
+| 261020-izd | Fix-suggestion route admits issues.fix; AI only with llm.view (UAT 91 PR3 check 7); shipped alone as PR #12 | 2026-10-20 | d5f85148 | [261020-izd-fix-suggestion-route-admits-issues-fix-a](./quick/261020-izd-fix-suggestion-route-admits-issues-fix-a/) |
 | 261008-dd4 | Drop htmlcs/axe contrast false positives on non-rendered noscript/video/audio fallback content (customer report); PR #97 deployed | 2026-10-08 | d18cbe66 | [261008-dd4-htmlcs-false-positives-on-noscript-video](./quick/261008-dd4-htmlcs-false-positives-on-noscript-video/) |
 | 260601-fte | Manual-test evidence artifacts (screenshots/documents) in the VPAT/ACR report (web + PDF) | 2026-06-01 | 1304877 | [260601-fte-vpat-evidence-artifacts](./quick/260601-fte-vpat-evidence-artifacts/) |
 | 260601-njq | Per-org legal/company identity on VPAT/ACR reports (web + PDF + share); migration 082, optional StorageAdapter field | 2026-06-01 | c3cc788 | [260601-njq-vpat-org-legal-identity](./quick/260601-njq-vpat-org-legal-identity/) |
@@ -219,10 +220,10 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-19T19:28:00.000Z
-Stopped at: Completed 91-17g-PLAN.md (PR3 re-review fix: scan deletes remove the report file first and only from the reports directory, keeping the scan when it is not removed; the preview selector bound is 8192; a confirm whose tool run fails is closed and audited; agent audit rows store secret arguments as [redacted])
+Last session: 2026-10-21T03:30:00.000Z
+Stopped at: Completed 91-22h-PLAN.md (PR4 plan 10: an edit, a retry or a delete that lands while the assistant is still answering ends that turn and the store refuses every later row of the withdrawn answer, the result of an action resolved meanwhile included; no status writer moves a superseded row; edit and retry decide on the conversation's newest rows in one transaction each, retry only of the last message when it is a reply (409 otherwise), and only that reply offers Retry in the panel; the message read, edit form and share work in conversations of any length; 29 breaks MATCH; final PR4 gates green, UAT GREEN 238; not pushed)
 Resume file: None
-Next action: none until the owner opens a new milestone. If woken with one, start with `/gsd-new-milestone`.
+Next action: Phase 91 PR4 continues with the focused re-review of the 91-22h delta, then 91-23 (branch fix/v3.9.0-phase-91-session-freshness).
 
 ## Operator Next Steps
 
@@ -289,6 +290,17 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 | Phase 91 P17e | ~42min | 3 tasks | 21 files |
 | Phase 91 P17f | ~146min | 3 tasks | 46 files |
 | Phase 91 P17g | ~71min | 3 tasks | 28 files |
+| Phase 91 P18 | ~33min | 2 tasks | 0 files |
+| Phase 91 P19 | ~70min | 3 tasks | 8 files |
+| Phase 91 P20 | ~45min | 3 tasks | 25 files |
+| Phase 91 P21 | ~46min | 3 tasks | 15 files |
+| Phase 91 P22b | ~55min | 3 tasks | 23 files |
+| Phase 91 P22c | ~85min | 3 tasks | 17 files |
+| Phase 91 P22d | ~95min | 3 tasks | 21 files |
+| Phase 91 P22e | ~75min | 3 tasks | 36 files |
+| Phase 91 P22f | ~80min | 3 tasks | 33 files |
+| Phase 91 P22g | ~125min | 3 tasks | 18 files |
+| Phase 91 P22h | ~135min | 3 tasks | 23 files |
 
 ## Decisions
 
@@ -348,6 +360,16 @@ Next action: none until the owner opens a new milestone. If woken with one, star
 - [Phase 91]: Phase 91 P17e: the dashboard assistant runs only the tools offered to the model in that iteration, and its in-process dispatcher resolves the stored user's permissions once per call, refuses a tool whose permission that user does not hold before it runs, and hands that set to the handler in the conversation's organization; confirming or declining a paused action is limited to the conversation's user, a confirmation checks again that the user may still run the tool (403 otherwise, the action stays pending), and every confirm attempt that reaches that check is recorded in the agent audit
 - [Phase 91]: Phase 91 P17f: an MCP token and the assistant act in an organization only while the stored user belongs to it (a member of the organization or of one of its teams; global administrators everywhere; a token without an organization answers from the global role), refused 401 invalid_token not_member otherwise; a dismissal selector is classified by its length before its shape, once per preview, with a linear whole-page check and a 16384-character request bound; every scan delete path removes the stored report file through one function; the report page's fix hint carries element markup only for reports.view_technical holders; MCP clients and the assistant act for a dashboard user account
 - [Phase 91]: Phase 91 P17g: a scan delete removes the stored report file first and the row second; only an already removed file is ignored, and any other failure keeps the scan, writes one warning without the path and answers a server error so the delete can be retried; a stored report file is removed only when its resolved path is inside the configured reports directory (an outside path is never removed; the scan is kept when a file exists there); the dismissal preview bounds the selector at 8192 characters, inside the 16 KiB request header limit (431 above that limit after encoding); a confirm whose tool run fails is closed as failed, recorded in the agent audit as an error and answered 500; agent audit rows store arguments named like a password, secret, token, API key, authorization or credential as [redacted] at any depth, in the repository write
+- [Phase 91]: Phase 91 P18: PR3 shipped as PR 11 with a merge commit after every pre-merge production gate passed (migration 092 dry-run on a replay of the production schema and ledger, permission read-back with the scoped UAT persona exemption, stored report paths all inside the reports directory, agent forensics unchanged, preflight, no scans in flight); migration 092 is applied on production with every existing dismissal row NULL
+- [Phase 91]: Phase 91 P19: a signed-in session answers every request for its stored principal: the stored dashboard user (an inactive or deleted user's session is cleared and answered as unauthenticated; the stored role and username answer, so a role change applies on the next request), the API key a key session names (checked by id with the sign-in predicate, read without writing), or, for a compliance-service or SSO session without a stored user, the values given at sign-in; any other session is refused, and each refused request writes one session.ended audit row with the reason code; the session organization must be one of the user's organizations on every request (otherwise the first organization, or none); one primary-key read per session request, no cache
+- [Phase 91]: Phase 91 P20: one MCP rule (resolveMcpCaller: the stored-caller rule, then no permission, then no mcp.use) is asked by /api/v1/mcp on every request (403 insufficient_scope, no_mcp_use), by the refresh grant before the chain rotates and by the code exchange before minting (400 invalid_grant; a refused refresh writes nothing and its refresh token works again once access is restored); OAuth consent acts in and names the organization the request acts in ('system' when none), offers to switch only to the user's organizations with the stored role, and needs a stored dashboard user (403 dashboard_user_required); the in-dashboard assistant does not require mcp.use (its tools follow the stored user's permissions), pinned in behaviour and in the server wiring
+- [Phase 91]: Phase 91 P21: the assistant's context hints are read with the stored user's permissions in the conversation's organization, resolved once for the turn (no hints without a permission there; recent scans need reports.view and an organization; brand guideline names need branding.view); conversation tool calls store secret-named arguments as [redacted], except that a paused action keeps its arguments as given until the write that confirms or declines it stores them redacted, and a confirmation the dispatcher refuses returns the action to pending with its arguments; destructive tools that may carry a secret argument are pinned by a test
+- [Phase 91]: Phase 91 P22c: the consent page carries a binding of the signed-in user and the organization it names (HMAC under a per-process key) and the approval recomputes it from its own request, so a code is minted only for the organization its page named (400 invalid_request organization_changed otherwise, nothing written); a recorded consent covers only the organization stored with it (migration 093, nullable org_id; NULL covers none, so earlier consents show their page once more); a refresh token presented by a client it was not issued to is answered 400 invalid_grant before anything is written, whatever its row state; the code exchange consumes the code before asking the access rule and the docs say a deleted user's refresh tokens are removed with the user
+- [Phase 91]: Phase 91 P22d: the dispatcher answers a tool call whose secret-named argument holds the redaction marker with redacted_argument (key paths only, never a value) before argument parsing and the handler, and the assistant loop answers a destructive call holding it the same way instead of pausing it, so the model is told to ask the user for the value again; the shared conversation view renders stored tool calls with secret-named values redacted (the stored rows are unchanged) and only the owner of a conversation creates a share link for it (404 conversation_not_found otherwise); confirm, decline, the 24-hour expiry sweep (run when the server starts and every hour, unref'd, cleared on close) and a conversation delete all leave pending_confirmation through one conditional claim (claimPendingMessage: the status change and the redaction of the stored call in one UPDATE, changes = 1 wins, the rest answer 409 not_pending), and a refused confirmation restores only the row it claimed; the destructive-tool schema walk recognises patternProperties and open values
+- [Phase 91]: Phase 91 P22e: the seven conversation routes (open, message, edit form, retry, edit and resend, rename, delete) answer only the user who started the conversation through one helper (404 conversation_not_found for anyone else, a global administrator included, before any message is read or anything is written) and the repository renames and deletes only for the owner's user id; resolveTrustedProxies refuses a list whose entries together trust every IPv4 or every IPv6 address, decided on the addresses covered (an IPv6 range holding the IPv4-mapped block counts for IPv4, named ranges counted as the addresses they hold, sizes computed not written); the consent fast path issues a code only when the remembered consent names the organization of the request; confirming a paused action older than 24 hours declines it through the sweep's claim, result row and summary audit row and answers 409 expired; beginSession starts from an empty session (regenerate) so nothing an earlier sign-in left carries over; the idle hook records activity only on the paths the session guard checks (one predicate decides both); the redaction marker is recognised in any letter case, with surrounding space and in square, angle, round and curly bracket forms or as the bare word
+- [Phase 91]: Phase 91 P22f: resolveTrustedProxies refuses a list whose entries together trust more than one /8 of public IPv4 addresses (2^24, after removing the this-network, private-use, shared, loopback, link-local and multicast-and-reserved blocks, which are written as octet numbers and prefix lengths) or more than one /16 of global IPv6 addresses (inside 2000::/3), decided on the addresses covered (an IPv6 range holding the IPv4-mapped block counts for IPv4; named ranges add nothing), which replaces the every-address rule it contains; the share page renders the active branch only up to and including the shared answer (rows created at or before it), and a link whose anchor is absent from the active branch or null answers 404 share_not_found (no revoke route is built); POST /login with a refused page token is answered by a redirect from cookieCsrfPreHandler (the plugin sends the refusal itself, so the sign-in path takes it as a rejection through a reply facade): to /login?stale=1 (keeping a safe returnTo) with a translated notice when signed out, to the safe requested page when already signed in, and the route never runs; the session expiry hook records activity only when the guard checks the path and no valid API key header answers the request; the panel resolves the conversation through the owner lookup and answers every unresolved id with an empty panel and x-conversation-id empty; a 409 approval answer closes the dialog with the expired or already-resolved text (dialog data attributes, six locales) and no Retry; recordPendingExpired takes an optional subject so the confirm-time row names the acting user and the message while the sweep row is unchanged
+- [Phase 91]: Phase 91 P22g: safeReturnTo (exported) answers the home page for a value that holds an ASCII control character or a backslash, does not start with a slash, resolves against a fixed reserved base to another origin, or resolves to a path starting with two slashes, and otherwise the resolved path with its query and fragment; refererReturnTo holds the language change and the organization switch to the same rule (a relative Referer as given, an absolute one only on the request's own host, reduced to its path); a 409 approval answer reloads the panel and then appends a warning notice with the localized sentence to the messages list, a polite log, without writing the status line; agent.js?v=1.2.7; edit-resend supersedes the question and every active row after it and lists them in the audit row (supersededMessageIds); markMessagesSuperseded stores the call of a row it moves out of pending_confirmation redacted, in one transaction; retry is unchanged
+- [Phase 91]: Phase 91 P22h: appendMessage takes followsMessageId and writes the row only while the followed row is active, of the same conversation, in a conversation that is not deleted (WithdrawnAnswerError otherwise, nothing written); every row a turn writes follows the row it wrote before and a refused row ends the turn with done aborted; confirmation, decline and expiry results follow the paused row; updateMessageStatus and markMessageStopped never move a superseded row; edit-resend, retry and delete cancel the running turn after their change and a turn's end removes only its own registry entry; conversation-branch.ts holds the one insert, the one supersede, the tail reads and the edit and retry transactions (retry only of the last message when it is a reply, 409 not_last_message); the share view shows the 200 active rows ending at the answer; the panel renders Retry only on the last reply and a new answer's stream removes an earlier Retry (agent-actions.js?v=1.0.1); the panel renderer registers its per-message partials
 
 ### Blockers
 

@@ -69,3 +69,21 @@ describe('HARD-19 agent stored caller wiring', () => {
     expect(helper).toMatch(/\bresolveStoredCaller\s*\(\s*storage\s*,\s*userId\s*,\s*orgId\s*\)/);
   });
 });
+
+describe('HARD-21 the assistant does not ask the MCP use permission', () => {
+  it('HARD-21 the assistant wiring asks no MCP use permission', () => {
+    // The assistant is offered and runs tools under each tool's own required permission; the MCP use
+    // permission governs external MCP clients only (src/auth/stored-caller.ts resolveMcpCaller).
+    const closures = {
+      'ToolDispatcher resolveScopes': closureIn('ToolDispatcher', 'resolveScopes'),
+      'AgentService resolvePermissions': closureIn('AgentService', 'resolvePermissions'),
+    };
+    for (const [name, body] of Object.entries(closures)) {
+      expect(body, name).toMatch(/\bstoredPermissionsOrNone\s*\(/); // positive control: the closure was found
+      expect(body, name).not.toMatch(/mcp\.use|MCP_USE|resolveMcpCaller/);
+    }
+    const helper = withoutComments(balancedFrom(STORED_CALLER, STORED_CALLER.indexOf('export async function storedPermissionsOrNone(')));
+    expect(helper).toMatch(/\bresolveStoredCaller\s*\(/);
+    expect(helper).not.toMatch(/mcp\.use|MCP_USE|resolveMcpCaller/);
+  });
+});

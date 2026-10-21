@@ -4,8 +4,12 @@
      DOM-recovery when the panel partial renders a tool bubble with data-pending="true".
      Autofocus on Cancel so Enter never defaults to the destructive action (T-32-07-08).
      All text via {{t}} keys. No inline handlers — CSP-safe, data-action
-     dispatched by agent.js click-delegation. --}}
-<dialog id="agent-confirm-dialog" aria-labelledby="agent-confirm-title">
+     dispatched by agent.js click-delegation. The two data-*-text attributes hold the messages agent.js
+     shows when the server answers an approval with 409 (expired, or already resolved); attributes,
+     because the HTML parser decodes what {{t}} escapes. --}}
+<dialog id="agent-confirm-dialog" aria-labelledby="agent-confirm-title"
+        data-expired-text="{{t "agent.confirm.expired"}}"
+        data-not-pending-text="{{t "agent.confirm.notPending"}}">
   <form method="dialog">
     <div class="modal__header">
       <h3 class="modal__title" id="agent-confirm-title">{{t "agent.confirm.title"}}</h3>

@@ -2,14 +2,13 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../db/index.js';
 import { HtmlPageSchema, ErrorEnvelope } from '../api/schemas/envelope.js';
+import { refererReturnTo } from './auth.js';
 
 const OrgsCurrentResponse = Type.Object({}, { additionalProperties: true });
 
-function safeRedirect(referer: string | undefined): string {
-  if (referer == null || referer === '') return '/';
-  // Only allow relative paths starting with /
-  if (referer.startsWith('/') && !referer.startsWith('//')) return referer;
-  return '/';
+/** Back to the page the switch was made on, when the Referer names a page of the dashboard (refererReturnTo). */
+function switchReturnTarget(request: FastifyRequest): string {
+  return refererReturnTo(request.headers.referer, request.headers.host);
 }
 
 export async function orgRoutes(
@@ -34,7 +33,7 @@ export async function orgRoutes(
     // Clear org context when orgId is 'system' or empty
     if (orgId === undefined || orgId === '' || orgId === 'system') {
       session.set('currentOrgId', '');
-      const redirectTo = safeRedirect(request.headers.referer as string | undefined);
+      const redirectTo = switchReturnTarget(request);
       await reply.redirect(redirectTo);
       return;
     }
@@ -49,7 +48,7 @@ export async function orgRoutes(
     }
 
     session.set('currentOrgId', orgId);
-    const redirectTo = safeRedirect(request.headers.referer as string | undefined);
+    const redirectTo = switchReturnTarget(request);
     await reply.redirect(redirectTo);
   });
 
@@ -63,11 +62,9 @@ export async function orgRoutes(
 
     // The organization this request acts in: the request middleware's resolution (the stored
     // session org, or the user's first organization when the session stores none, as right after
-    // sign-in). The stored session org is read only when the request carries no resolved org,
-    // which the middleware never leaves unset while the session stores one.
-    const session = request.session as { get(key: string): unknown } | undefined;
-    const sessionOrgId = typeof session?.get === 'function' ? (session.get('currentOrgId') as string | undefined) : undefined;
-    const currentOrgId = user.currentOrgId ?? sessionOrgId ?? '';
+    // sign-in; for an API key header, the key's organization or the one X-Org-Id names). A cookie
+    // that rides along with a key header is not consulted.
+    const currentOrgId = user.currentOrgId ?? '';
     const currentOrg = currentOrgId !== '' ? await storage.organizations.getOrg(currentOrgId) : null;
     const userOrgs = await storage.organizations.getUserOrgs(user.id);
 

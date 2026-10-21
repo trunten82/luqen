@@ -207,8 +207,8 @@ export async function resolveEffectivePermissions(
   const resolved = withoutDarkPermissions(await roleRepository.getEffectivePermissions(userId, orgId), opts.darkPermissions);
   // The global-only ids (admin.system, admin.users) come from the stored global 'admin' role only:
   // for every other role value the result never carries them, whichever role row or storage adapter
-  // produced it. Every caller passes the role it holds (the session's, the API key's, or the stored
-  // user's on the MCP endpoint and in the agent), so a global admin always arrives here as 'admin'.
+  // produced it. Every caller passes the stored role (the stored user's, or the API key's), so a
+  // global admin always arrives here as 'admin'.
   return withoutGlobalOnlyPermissions(resolved);
 }
 

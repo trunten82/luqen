@@ -3,10 +3,13 @@
      in agent.js (delegated listener pattern, same as 36-04).
      Hover-revealed on desktop, always-visible on touch via CSS.
      Phase 37 Plan 03 Task 3: wrapped in {{#unless readOnly}} so the
-     read-only share-view template can suppress all action buttons. --}}
+     read-only share-view template can suppress all action buttons.
+     Retry renders unless olderReply: the panel marks every reply that is not the
+     conversation's last message, which the server would refuse to retry. --}}
 {{#unless readOnly}}
 {{#if (eq role "assistant")}}
   <div class="agent-msg__actions" role="group" aria-label="{{t "agent.actions.assistantGroupLabel"}}">
+    {{#unless olderReply}}
     <button type="button" class="agent-msg__action agent-msg__action--retry"
             data-action="retryAssistant"
             data-message-id="{{id}}"
@@ -14,6 +17,7 @@
             title="{{t "agent.actions.retry"}}">
       <svg aria-hidden="true" focusable="false" width="14" height="14" viewBox="0 0 24 24"><path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" fill="currentColor"/></svg>
     </button>
+    {{/unless}}
     <button type="button" class="agent-msg__action agent-msg__action--copy"
             data-action="copyAssistant"
             data-message-id="{{id}}"

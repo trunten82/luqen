@@ -22,8 +22,8 @@ and `Tab` cycles through the controls.
 ### Asking a question
 
 Type into the message box and press **Send** (or `Ctrl+Enter`). The agent
-takes your turn together with a small slice of context (recent scans and
-your active brand guideline) and replies in the conversation transcript
+takes your turn together with a small slice of context (see
+[Context hints](#context-hints)) and replies in the conversation transcript
 above.
 
 While a response is streaming, the **Send** button switches to a **Stop**
@@ -72,7 +72,18 @@ can approve or cancel an action paused in your conversation, and Approve
 checks again that your role still allows the tool: if it no longer does,
 nothing runs and the dialog reports the error. Every approval is recorded
 in the agent audit. If the approved tool fails to run, the action is closed
-as failed and recorded in the agent audit as an error.
+as failed and recorded in the agent audit as an error. A paused action runs
+once: a second confirmation of it, or a confirmation after a decline, is
+answered with a conflict and nothing runs. An action you neither approve nor
+cancel within 24 hours is declined, and deleting its conversation declines it
+too. Approving an action after those 24 hours declines it instead of running
+it, and the assistant panel shows a notice that it expired, so you can ask for
+it again; an approval for an action that was already approved or declined shows
+a notice too. Neither shows a Retry button. Editing the question of an answer
+that paused an action withdraws that action: it can no longer be approved. An
+action the assistant would still have asked you to confirm when you edited its
+question, or deleted its conversation, is withdrawn the same way and never
+offered.
 
 ### Multi-step tool transparency
 
@@ -91,6 +102,10 @@ the first user prompt, the conversation start time, and a turn count.
 Click an entry to resume the conversation in place — the transcript
 re-renders from the database and the agent picks up where you left off.
 
+Only the user who started a conversation can open, rename, retry, edit and
+resend, delete or share it: another member of the organization, and a global
+administrator who did not start it, get a "not found" answer.
+
 You can search conversation titles and soft-delete conversations you
 don't want to keep. Soft-deleted conversations are recoverable for a
 short window — see [agent-history.md](./agent-history.md).
@@ -99,8 +114,10 @@ short window — see [agent-history.md](./agent-history.md).
 
 Every conversation has a **Share** action that produces a permalink.
 Anyone with the link who has access to your org can open the read-only
-transcript at `/agent/share/<id>`. Permalinks are revocable from the
-conversation menu.
+transcript at `/agent/share/<id>`. The page shows the conversation up to and
+including the answer you shared; later messages are not shown. A link stops
+resolving when it expires, when you retry that answer or edit its question, or
+when the conversation is deleted.
 
 For the share semantics and revocation model see
 [streaming-share-links.md](./streaming-share-links.md).
@@ -138,9 +155,13 @@ The recognition language follows `navigator.language`, falling back to
 ### Context hints
 
 The agent sees a small, automatically generated context bundle on every
-turn: your most recent scans and the active brand guideline. You don't
-need to paste in URLs or report IDs — ask "what changed in my last scan?"
-and the agent already knows which scan you mean.
+turn, read with your permissions in the conversation's organisation: the
+organisation's name, its most recent scans when your role can view reports
+there (`reports.view`), and its brand guideline names when your role can
+view branding there (`branding.view`). A user who holds no permission in
+the organisation gets no context bundle. You don't need to paste in URLs or
+report IDs — ask "what changed in my last scan?" and the agent already
+knows which scan you mean.
 
 Context hints are visible in the transcript as a faint "context"
 indicator above your first turn — click it to expand the exact bundle
@@ -155,8 +176,8 @@ happened.
 
 The agent is available to every signed-in user; there is no separate
 "agent on/off" toggle, and the `mcp.use` permission governs connecting
-external MCP clients (the OAuth consent screen), not the in-dashboard
-agent. What the agent can do follows the user's permissions in the
+external MCP clients (the OAuth consent screen and every MCP request), not
+the in-dashboard agent. What the agent can do follows the user's permissions in the
 organisation: tools are offered and run only when the user's role holds
 the tool's permission, re-checked at every step, so removing a permission
 removes the tools that need it from the agent's next step.
@@ -199,7 +220,13 @@ Every agent turn produces audit entries:
 - Each tool call, with arguments and outcome (`success`, `error`,
   `denied`, `timeout`). An argument named like a password, secret, token,
   API key, authorization value or credential is stored as `[redacted]`,
-  at any depth
+  at any depth, in the agent audit and in the conversation's stored
+  messages. An action awaiting your confirmation keeps its arguments as
+  given, so it runs exactly as shown; once it is confirmed, declined or
+  withdrawn by an edit of its question, its stored arguments are redacted
+  too. When a tool call carries `[redacted]` in place of a secret value, the
+  assistant does not run it and asks you for the value again; the text you
+  type is stored as you typed it
 - Token-budget compaction events
 - Soft-delete and share-link operations on conversations
 

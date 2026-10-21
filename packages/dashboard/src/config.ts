@@ -1,6 +1,7 @@
 import { readFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { z } from 'zod';
+import { resolveTrustedProxies } from './auth/trusted-proxies.js';
 
 const ConfigSchema = z.object({
   port: z.number().int().min(1).max(65535).default(5000),
@@ -30,6 +31,7 @@ const ConfigSchema = z.object({
   webserviceUrls: z.array(z.string().url()).optional(),
   jwtPublicKey: z.string().optional(),
   selfScanId: z.string().optional(),
+  trustedProxies: z.array(z.string()).optional(),
 }).strict();
 
 export interface DashboardConfig {
@@ -91,6 +93,12 @@ export interface DashboardConfig {
    * /reports/<id>/public. Optional; unset = no badge shown.
    */
   readonly selfScanId?: string;
+  /**
+   * Addresses, CIDRs or named ranges (loopback, linklocal, uniquelocal) whose X-Forwarded-For
+   * entries are believed; the single word `none` trusts no proxy. A configured list replaces the
+   * default (loopback, linklocal, uniquelocal). Set via DASHBOARD_TRUSTED_PROXIES (comma list).
+   */
+  readonly trustedProxies?: readonly string[];
 }
 
 const DEFAULTS: DashboardConfig = {
@@ -188,6 +196,11 @@ function applyEnvOverrides(config: DashboardConfig): DashboardConfig {
       ? process.env['DASHBOARD_JWT_PUBLIC_KEY'].replace(/\\n/g, '\n')
       : config.jwtPublicKey,
     selfScanId: process.env['DASHBOARD_SELF_SCAN_ID'] ?? config.selfScanId,
+    // An empty value (a compose pass-through) is unset, so the default list applies.
+    trustedProxies:
+      process.env['DASHBOARD_TRUSTED_PROXIES'] !== undefined && process.env['DASHBOARD_TRUSTED_PROXIES'].trim() !== ''
+        ? process.env['DASHBOARD_TRUSTED_PROXIES'].split(',').map((entry) => entry.trim())
+        : config.trustedProxies,
   };
 }
 
@@ -213,6 +226,9 @@ export function validateConfig(config: DashboardConfig): void {
   if (isNaN(config.maxPages) || config.maxPages < 1 || config.maxPages > 1000) {
     throw new Error(`Invalid maxPages: ${config.maxPages}. Must be between 1 and 1000.`);
   }
+
+  // Refuses a setting that would trust every forwarded address, naming the entry.
+  resolveTrustedProxies(config.trustedProxies);
 
   try {
     new URL(config.complianceUrl);

@@ -36,6 +36,9 @@ import { Value } from '@sinclair/typebox/value';
 import { LuqenResponse, ErrorEnvelope } from '../api/schemas/envelope.js';
 
 import type { StorageAdapter } from '../db/index.js';
+import { redactArgumentsJson } from '../db/agent-audit-redaction.js';
+import { isWithdrawnAnswer } from '../db/interfaces/conversation-repository.js';
+import { expirePendingAction, pendingConfirmationCutoff, recordPendingExpired } from '../agent/pending-expiry.js';
 import { writeFrame, type SseFrame } from '../agent/sse-frames.js';
 import type { AgentService } from '../agent/agent-service.js';
 import type {
@@ -672,12 +675,35 @@ export async function registerAgentRoutes(
           // Idempotent: replay-confirm on a resolved row is a no-op 409.
           return reply.code(409).send({ error: 'not_pending' });
         }
+        // A paused action older than 24 hours never runs: the confirmation declines it exactly as the
+        // hourly sweep does (the same claim, the same expired result row, a summary audit row) and
+        // answers 409 expired. Losing the claim means it was resolved a moment earlier.
+        const confirmedAt = new Date();
+        if (pending.createdAt < pendingConfirmationCutoff(confirmedAt)) {
+          if (!(await expirePendingAction(storage, request.log, pending))) {
+            return reply.code(409).send({ error: 'not_pending' });
+          }
+          await recordPendingExpired(storage, request.log, 1, 'confirm', confirmedAt, {
+            actor: user.username,
+            actorId: user.id,
+            resourceId: messageId,
+            orgId,
+          });
+          return reply.code(409).send({ error: 'expired' });
+        }
+
         const call = safeParseCall(pending.toolCallJson);
         if (call === null) {
           return reply.code(400).send({ error: 'malformed_tool_call' });
         }
 
-        await storage.conversations.updateMessageStatus(messageId, 'sent');
+        // The action leaves pending_confirmation through one conditional claim: of any number of
+        // confirmations or declines that arrive together exactly one wins, so the action runs once.
+        // Its stored arguments become redacted in the claiming write, and the dispatch below runs
+        // `call`, the arguments it was paused with.
+        if (!(await storage.conversations.claimPendingMessage(messageId, 'sent'))) {
+          return reply.code(409).send({ error: 'not_pending' });
+        }
         const agentGroupId = readAgentGroupCookie(request.headers.cookie);
         const startedAt = Date.now();
         let result: Awaited<ReturnType<typeof dispatcher.dispatch>>;
@@ -717,21 +743,29 @@ export async function registerAgentRoutes(
           latencyMs: Date.now() - startedAt,
         });
         // The dispatcher resolves the confirming user's permissions now: a user who may no
-        // longer use the tool gets 403, nothing runs, and the action stays pending (it can
-        // still be declined).
+        // longer use the tool gets 403, nothing runs, and the action returns to pending with the
+        // arguments it was paused with (it can still be confirmed later or declined).
         if (audited.outcome === 'denied') {
-          await storage.conversations.updateMessageStatus(messageId, 'pending_confirmation');
+          await storage.conversations.reopenPendingMessage(messageId, pending.toolCallJson ?? JSON.stringify(call));
           return reply.code(403).send({ error: 'denied' });
         }
         // Persist the dispatched tool result as a NEW tool row so the loop
         // can resume on the next SSE turn. Truncation mirrors AgentService.
-        await storage.conversations.appendMessage({
-          conversationId: pending.conversationId,
-          role: 'tool',
-          toolCallJson: JSON.stringify(call),
-          toolResultJson: JSON.stringify(result),
-          status: 'sent',
-        });
+        // The result follows the paused row and is written only while that row is on the active
+        // branch: the action was approved and ran, and when its question was edited or its
+        // conversation deleted meanwhile, nothing of it is added to the conversation (still 202).
+        try {
+          await storage.conversations.appendMessage({
+            conversationId: pending.conversationId,
+            role: 'tool',
+            toolCallJson: JSON.stringify(call),
+            toolResultJson: JSON.stringify(result),
+            status: 'sent',
+            followsMessageId: messageId,
+          });
+        } catch (err) {
+          if (!isWithdrawnAnswer(err)) throw err;
+        }
         return reply.code(202).send({ ok: true });
       },
     );
@@ -763,17 +797,27 @@ export async function registerAgentRoutes(
         }
         const call = safeParseCall(pending.toolCallJson);
 
-        await storage.conversations.updateMessageStatus(messageId, 'denied');
-        await storage.conversations.appendMessage({
-          conversationId: pending.conversationId,
-          role: 'tool',
-          toolCallJson: call !== null ? JSON.stringify(call) : '{}',
-          toolResultJson: JSON.stringify({
-            error: 'user_denied',
-            message: 'User declined the action.',
-          }),
-          status: 'sent',
-        });
+        // The same claim a confirmation takes: only one of any number of declines resolves the action.
+        if (!(await storage.conversations.claimPendingMessage(messageId, 'denied'))) {
+          return reply.code(409).send({ error: 'not_pending' });
+        }
+        // The decline's result follows the paused row and is written only while that row is on the
+        // active branch; when its question was edited meanwhile nothing is added (still 202).
+        try {
+          await storage.conversations.appendMessage({
+            conversationId: pending.conversationId,
+            role: 'tool',
+            toolCallJson: call !== null ? JSON.stringify(call) : '{}',
+            toolResultJson: JSON.stringify({
+              error: 'user_denied',
+              message: 'User declined the action.',
+            }),
+            status: 'sent',
+            followsMessageId: messageId,
+          });
+        } catch (err) {
+          if (!isWithdrawnAnswer(err)) throw err;
+        }
         return reply.code(202).send({ ok: true });
       },
     );
@@ -956,9 +1000,13 @@ export async function registerAgentRoutes(
     // HTML fragment (no layout wrapping) that agent.js swaps into
     // #agent-messages via DOMParser + importNode.
     //
-    // If no conversation exists yet, renders the empty-state (first-open
-    // greeting). If a conversation exists but belongs to a different org,
-    // returns 404 (org isolation — same invariant as /agent/message).
+    // The panel shows the requester's own conversation in the organization the request acts in
+    // (ownConversation, anyOrg off). Every non-empty id that does not resolve to such a row — an
+    // unknown id, a deleted conversation, another member's, another organization's — is answered
+    // alike: the empty-state greeting and `x-conversation-id: ''`, so the page cannot tell them
+    // apart and the client forgets the id. With no id the empty-state greeting is sent without the
+    // header. After an organization change a page reload therefore forgets a conversation of the
+    // earlier organization; it stays in that organization's History.
     scope.get('/panel', async (request: FastifyRequest, reply: FastifyReply) => {
       const user = request.user;
       if (user === undefined) {
@@ -970,9 +1018,6 @@ export async function registerAgentRoutes(
       }
       const q = (request.query ?? {}) as Record<string, unknown>;
       const conversationId = typeof q['conversationId'] === 'string' ? q['conversationId'] : '';
-      // Resolve the rolling window — empty if the conversation is new or
-      // doesn't yet belong to the user. getConversation returns null for a
-      // foreign org so we only call getWindow when the org check passes.
       let messages: ReadonlyArray<{
         readonly id: string;
         readonly role: 'user' | 'assistant' | 'tool';
@@ -983,35 +1028,11 @@ export async function registerAgentRoutes(
         readonly images?: ReadonlyArray<{ readonly mediaType: string; readonly data: string }> | null;
       }> = [];
       if (conversationId.length > 0) {
-        const conv = await storage.conversations.getConversation(conversationId, orgId);
-        // Bug #3 (agent-chat-ui-cluster): treat soft-deleted conversations as
-        // missing here so the drawer doesn't render a chat that the history
-        // panel deliberately hides. Without this, users who delete the
-        // conversation they're currently chatting in still see all the
-        // messages on refresh — but the conversation is absent from history,
-        // matching the "open chat not in history" symptom.
-        //
-        // SECURITY (agent-conversation-leak-cross-user): the panel auto-mount
-        // path MUST enforce per-user ownership in addition to per-org. The
-        // repository's getConversation only filters by org_id (see
-        // conversation-repository.ts:96), so without this guard a user in the
-        // same org can render another user's window via a stale localStorage
-        // conversationId carried across a logout/login boundary on the same
-        // browser. The explicit GET /agent/conversations/:id route is the
-        // sanctioned cross-user/cross-org admin path; the panel is not.
-        // Foreign-user ids are treated identically to soft-deleted: empty
-        // panel + x-conversation-id:'' so the client wipes its localStorage.
-        const isForeignUser = conv !== null && conv.userId !== user.id;
-        if (conv === null || conv.isDeleted || isForeignUser) {
-          // Either the id is unknown / from another org / soft-deleted /
-          // belongs to another user. Treat all four as empty panel — the
-          // user's next message POST will auto-create a fresh conversation
-          // row. Signal the client via x-conversation-id: '' so it can clear
-          // its localStorage and start a new conversation cleanly.
-          messages = [];
-          if (conv?.isDeleted === true || isForeignUser) {
-            void reply.header('x-conversation-id', '');
-          }
+        const conv = await ownConversation(storage, { id: conversationId, orgId, userId: user.id, anyOrg: false });
+        if (conv === null) {
+          // The user's next message POST creates a fresh conversation row; x-conversation-id: ''
+          // tells the client to clear its stored id and start a new conversation cleanly.
+          void reply.header('x-conversation-id', '');
         } else {
           messages = await storage.conversations.getWindow(conversationId);
         }
@@ -1139,14 +1160,13 @@ export async function registerAgentRoutes(
       if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
 
       const { id } = request.params as { id: string };
-      // Phase 38 (AORG-04): admin.system bypasses the org-scope check so
-      // global admins can open any conversation cross-org. Non-admins keep
-      // the org-scoped lookup.
-      let conv = await storage.conversations.getConversation(id, orgId);
-      if (conv === null && permissions.has('admin.system')) {
-        conv = await loadConversationAnyOrg(storage, id);
-      }
-      if (conv === null || conv.isDeleted) {
+      const conv = await ownConversation(storage, {
+        id,
+        orgId,
+        userId: user.id,
+        anyOrg: permissions.has('admin.system'),
+      });
+      if (conv === null) {
         return reply.code(404).send({ error: 'conversation_not_found' });
       }
       const messages = await storage.conversations.getFullHistory(id);
@@ -1185,14 +1205,15 @@ export async function registerAgentRoutes(
         const { id } = request.params as { id: string };
 
         // Capture old title for audit meta before the update.
-        const before = await storage.conversations.getConversation(id, orgId);
-        if (before === null || before.isDeleted) {
+        const before = await ownConversation(storage, { id, orgId, userId: user.id, anyOrg: false });
+        if (before === null) {
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
         const updated = await storage.conversations.renameConversation(
           id,
           orgId,
           parsed.data.title,
+          user.id,
         );
         if (updated === null) {
           // Race: soft-deleted between read and write.
@@ -1240,18 +1261,23 @@ export async function registerAgentRoutes(
         // conversation's actual orgId, not the admin's currently resolved org,
         // otherwise softDeleteConversation writes 0 rows → 404 → DOM li stays →
         // "respawn on refresh" symptom.
-        let effectiveOrgId = orgId;
-        if (permissions.has('admin.system')) {
-          const conv = await loadConversationAnyOrg(storage, id);
-          if (conv !== null && !conv.isDeleted) {
-            effectiveOrgId = conv.orgId;
-          }
+        const conv = await ownConversation(storage, {
+          id,
+          orgId,
+          userId: user.id,
+          anyOrg: permissions.has('admin.system'),
+        });
+        if (conv === null) {
+          return reply.code(404).send({ error: 'conversation_not_found' });
         }
-        const deleted = await storage.conversations.softDeleteConversation(id, effectiveOrgId);
+        const effectiveOrgId = conv.orgId;
+        const deleted = await storage.conversations.softDeleteConversation(id, effectiveOrgId, user.id);
         if (!deleted) {
           // Idempotent: second call + wrong org + unknown id all map to 404.
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
+        // A deleted conversation's running turn ends; the store refuses any row it would still write.
+        turnRegistry.cancel(id);
         await storage.agentAudit.append({
           userId: user.id,
           orgId: effectiveOrgId,
@@ -1267,14 +1293,19 @@ export async function registerAgentRoutes(
     );
     // ── Phase 37 Plan 03 Task 2 — retry / edit-resend / share ─────────
     //
+    // Every route under /agent/conversations/:id answers only the user who started the conversation:
+    // open, rename, delete, read a message, open the edit form, retry, edit and resend, share.
+    // Another member of the organization, and a global administrator, get 404 conversation_not_found
+    // before any message is read and before anything is written (ownConversation).
+    //
     // All three endpoints share the same auth + org-resolve + conversation
     // -guard preamble used above. Pattern:
     //   1. resolveAgentOrgId or 401/400
-    //   2. getConversation or 404
-    //   3. Load active-branch messages (excludes superseded by default)
-    //   4. Validate the target is the most-recent of its role
-    //   5. Apply markMessagesSuperseded / appendMessage / createShareLink
-    //   6. Audit row (toolName per behaviour block)
+    //   2. ownConversation or 404
+    //   3. Read the target and the conversation's newest active rows (by id or from the
+    //      conversation's tail, however long it is; superseded rows are never active)
+    //   4. Edit and retry decide and write in one repository transaction
+    //   5. Audit row (toolName per behaviour block)
     //
     // Streaming kick-off for retry / edit-resend is delegated to the client
     // re-opening GET /agent/stream/:cid (see SSE handler above) — the route
@@ -1301,13 +1332,13 @@ export async function registerAgentRoutes(
         const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
         if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
         const { cid, mid } = request.params as { cid: string; mid: string };
-        const conv = await storage.conversations.getConversation(cid, orgId);
-        if (conv === null || conv.isDeleted) {
+        const conv = await ownConversation(storage, { id: cid, orgId, userId: user.id, anyOrg: false });
+        if (conv === null) {
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
-        const active = await storage.conversations.getFullHistory(cid);
-        const target = active.find((m) => m.id === mid);
-        if (target === undefined) {
+        // The message is read by id among the conversation's active rows, however long it is.
+        const target = await storage.conversations.getActiveMessage(cid, mid);
+        if (target === null) {
           return reply.code(404).send({ error: 'message_not_found' });
         }
         void reply.type('application/json');
@@ -1328,22 +1359,22 @@ export async function registerAgentRoutes(
         const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
         if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
         const { cid, mid } = request.params as { cid: string; mid: string };
-        const conv = await storage.conversations.getConversation(cid, orgId);
-        if (conv === null || conv.isDeleted) {
+        const conv = await ownConversation(storage, { id: cid, orgId, userId: user.id, anyOrg: false });
+        if (conv === null) {
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
-        const active = await storage.conversations.getFullHistory(cid);
-        const target = active.find((m) => m.id === mid);
-        if (target === undefined) {
+        const target = await storage.conversations.getActiveMessage(cid, mid);
+        if (target === null) {
           return reply.code(404).send({ error: 'message_not_found' });
         }
         // Most-recent-user-message guard: client UI is convenience, server
-        // is the security boundary (T-37-19).
+        // is the security boundary (T-37-19). The latest question is read from the
+        // conversation's newest active rows, however long the conversation is.
         if (target.role !== 'user') {
           return reply.code(400).send({ error: 'not_user_message' });
         }
-        const lastUser = [...active].reverse().find((m) => m.role === 'user');
-        if (lastUser === undefined || lastUser.id !== mid) {
+        const lastUser = await storage.conversations.getLastActiveMessage(cid, 'user');
+        if (lastUser === null || lastUser.id !== mid) {
           return reply.code(400).send({ error: 'not_most_recent_user' });
         }
         const html = renderAgentMsgEditPartial({
@@ -1365,31 +1396,23 @@ export async function registerAgentRoutes(
         if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
         const { cid, mid } = request.params as { cid: string; mid: string };
 
-        const conv = await storage.conversations.getConversation(cid, orgId);
-        if (conv === null || conv.isDeleted) {
+        const conv = await ownConversation(storage, { id: cid, orgId, userId: user.id, anyOrg: false });
+        if (conv === null) {
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
-        // Active-branch read excludes superseded rows (Plan 01 contract).
-        // If mid is not present in the active branch (unknown id, foreign,
-        // or already-superseded) treat as 404. If it's present but not
-        // the latest assistant, return 400 not_most_recent_assistant.
-        const active = await storage.conversations.getFullHistory(cid);
-        const present = active.some((m) => m.id === mid);
-        if (!present) {
-          return reply.code(404).send({ error: 'message_not_found' });
+        // Only the conversation's last message is retried, when it is a reply, decided on the
+        // conversation's newest active rows and superseded in the same transaction: a row that is not
+        // active (unknown, of another conversation or organization, already superseded) answers 404, an
+        // older reply 400 not_most_recent_assistant, and the latest reply followed by a later row (a tool
+        // result, an action awaiting confirmation) 409 not_last_message. A refusal changes nothing and
+        // leaves a running turn to finish.
+        const retried = await storage.conversations.supersedeLatestAnswer({ conversationId: cid, orgId, messageId: mid });
+        if (!retried.ok) {
+          const code = retried.reason === 'message_not_found' ? 404 : retried.reason === 'not_last_message' ? 409 : 400;
+          return reply.code(code).send({ error: retried.reason });
         }
-        const lastAssistant = [...active].reverse().find((m) => m.role === 'assistant');
-        if (lastAssistant === undefined || lastAssistant.id !== mid) {
-          return reply.code(400).send({ error: 'not_most_recent_assistant' });
-        }
-        const updated = await storage.conversations.markMessagesSuperseded(
-          [mid],
-          cid,
-          orgId,
-        );
-        if (updated === 0) {
-          return reply.code(404).send({ error: 'message_not_found' });
-        }
+        // A retried answer's running turn ends; the store refuses any row it would still write.
+        turnRegistry.cancel(cid);
         await storage.agentAudit.append({
           userId: user.id,
           orgId,
@@ -1419,32 +1442,31 @@ export async function registerAgentRoutes(
         }
         const { cid, mid } = request.params as { cid: string; mid: string };
 
-        const conv = await storage.conversations.getConversation(cid, orgId);
-        if (conv === null || conv.isDeleted) {
+        const conv = await ownConversation(storage, { id: cid, orgId, userId: user.id, anyOrg: false });
+        if (conv === null) {
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
-        const active = await storage.conversations.getFullHistory(cid);
-        const lastUser = [...active].reverse().find((m) => m.role === 'user');
-        if (lastUser === undefined || lastUser.id !== mid) {
-          return reply.code(400).send({ error: 'not_most_recent_user' });
-        }
-        // Identify the assistant reply that immediately followed :mid (if any).
-        const userIdx = active.findIndex((m) => m.id === mid);
-        const followingAssistant = active
-          .slice(userIdx + 1)
-          .find((m) => m.role === 'assistant');
-        const toSupersede = followingAssistant !== undefined
-          ? [mid, followingAssistant.id]
-          : [mid];
-        await storage.conversations.markMessagesSuperseded(toSupersede, cid, orgId);
-
-        // Persist the new edited user message.
-        const newUser = await storage.conversations.appendMessage({
+        // The latest question is read from the conversation's newest active rows, in the same transaction
+        // that supersedes it with its whole answer (the assistant's tool-call rows, the tool results, an
+        // action awaiting confirmation, the final answer, in branch order) and stores the new question; when
+        // the new question cannot be stored nothing is superseded. A share link to that answer ends with it,
+        // and an action awaiting confirmation in it can no longer be approved (confirm and decline answer 409
+        // not_pending; its arguments are stored redacted) and is never seen by the expiry sweep.
+        const replaced = await storage.conversations.replaceLatestQuestion({
           conversationId: cid,
-          role: 'user',
+          orgId,
+          messageId: mid,
           content: parsed.data.content,
-          status: 'sent',
         });
+        if (!replaced.ok) {
+          return replaced.reason === 'conversation_not_found'
+            ? reply.code(404).send({ error: 'conversation_not_found' })
+            : reply.code(400).send({ error: 'not_most_recent_user' });
+        }
+        const newUser = replaced.newMessage;
+        const { supersededMessageIds, firstAssistantId } = replaced;
+        // The replaced answer's running turn ends; the store refuses any row it would still write.
+        turnRegistry.cancel(cid);
 
         await storage.agentAudit.append({
           userId: user.id,
@@ -1454,9 +1476,10 @@ export async function registerAgentRoutes(
           argsJson: JSON.stringify({
             originalUserMessageId: mid,
             newUserMessageId: newUser.id,
-            ...(followingAssistant !== undefined
-              ? { supersededAssistantId: followingAssistant.id }
+            ...(firstAssistantId !== null
+              ? { supersededAssistantId: firstAssistantId }
               : {}),
+            supersededMessageIds,
           }),
           outcome: 'success',
           latencyMs: 0,
@@ -1480,14 +1503,15 @@ export async function registerAgentRoutes(
         const { cid, mid } = request.params as { cid: string; mid: string };
 
         const conv = await storage.conversations.getConversation(cid, orgId);
-        if (conv === null || conv.isDeleted) {
+        // Only the conversation's owner can share it. Another member of the organization gets the
+        // answer a missing conversation gets, so the conversation's existence is not revealed.
+        if (conv === null || conv.isDeleted || conv.userId !== user.id) {
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
-        // Default getFullHistory excludes superseded — superseded targets
-        // resolve to "not found" without a separate branch.
-        const active = await storage.conversations.getFullHistory(cid);
-        const target = active.find((m) => m.id === mid);
-        if (target === undefined) {
+        // The answer is read by id among the conversation's active rows, however long it is; a
+        // superseded answer resolves to "not found".
+        const target = await storage.conversations.getActiveMessage(cid, mid);
+        if (target === null) {
           return reply.code(404).send({ error: 'message_not_found' });
         }
         if (target.role !== 'assistant') {
@@ -1518,10 +1542,17 @@ export async function registerAgentRoutes(
 
     // ── GET /agent/share/:shareId — Phase 37 Plan 03 Task 3 ───────────
     //
-    // Read-only conversation snapshot. Auth required + same-org gate
-    // (T-37-12). Three failure modes:
-    //   401 unauthenticated, 400 no_org, 404 unknown/revoked, 403
-    //   foreign-org, 404 conversation soft-deleted.
+    // Read-only snapshot of the conversation up to and including the answer it was shared from.
+    // Auth required + same-org gate (T-37-12). Failure modes:
+    //   401 unauthenticated, 400 no_org, 404 unknown/revoked, 403 foreign-org, 404 conversation
+    //   soft-deleted, 404 share_not_found when the link has no shared answer or that answer is no
+    //   longer on the conversation's active branch (it was retried, or its question was edited).
+    //
+    // The page holds the active branch's rows created at or before the shared answer (rows written in
+    // the same millisecond are its own turn), the 200 newest of them in a longer conversation; nothing
+    // the owner typed or received afterwards is on it. The page is shown to members of the organization other than the conversation's owner, so
+    // every stored tool call it renders (a paused action's included) has its secret-named argument
+    // values replaced by the redaction marker first; the stored rows are not changed.
     scope.get(
       '/share/:shareId',
       async (request: FastifyRequest, reply: FastifyReply) => {
@@ -1542,8 +1573,17 @@ export async function registerAgentRoutes(
         if (conv === null || conv.isDeleted) {
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
-        // Active branch only — superseded rows excluded by default.
-        const messages = await storage.conversations.getFullHistory(link.conversationId);
+        // Active branch only: the shared answer, found by id however long the conversation is, and the
+        // 200 active rows that end with it (superseded rows are never active).
+        const branch = link.anchorMessageId === null
+          ? null
+          : await storage.conversations.getActiveBranchUpTo(link.conversationId, link.anchorMessageId);
+        if (branch === null) {
+          return reply.code(404).send({ error: 'share_not_found' });
+        }
+        const messages = branch.messages.map((m) => (
+          m.toolCallJson === null ? m : { ...m, toolCallJson: redactArgumentsJson(m.toolCallJson) }
+        ));
         const creator = await storage.users.getUserById(link.createdByUserId);
         const createdByDisplayName = creator?.username ?? 'unknown';
         const org = await storage.organizations.getOrg(link.orgId);
@@ -1611,10 +1651,28 @@ async function fetchMessageCounts(
 // ---------------------------------------------------------------------------
 
 /**
- * Phase 38 — load a conversation row by id ignoring org-scope. Used by
- * GET /agent/conversations/:id when the caller has admin.system, so global
- * admins can open any conversation cross-org. Falls back to null when the
- * raw-database hatch is unavailable (non-SQLite adapters).
+ * The conversation a conversation route acts on, for its requester: the row exists, is not deleted
+ * and was started by `lookup.userId`. This is the one owner comparison of the conversation routes;
+ * another member of the organization and a missing conversation get the same answer (null), so the
+ * existence of someone else's conversation is not revealed. The lookup is in the organization the
+ * request acts in, and, when `anyOrg` is set (a global administrator on the two routes that offer
+ * it), in any organization; either way the row must be the requester's own.
+ */
+async function ownConversation(
+  storage: StorageAdapter,
+  lookup: { readonly id: string; readonly orgId: string; readonly userId: string; readonly anyOrg: boolean },
+): Promise<import('../db/interfaces/conversation-repository.js').Conversation | null> {
+  let conv = await storage.conversations.getConversation(lookup.id, lookup.orgId);
+  if (conv === null && lookup.anyOrg) conv = await loadConversationAnyOrg(storage, lookup.id);
+  return conv === null || conv.isDeleted || conv.userId !== lookup.userId ? null : conv;
+}
+
+/**
+ * Phase 38 — load a conversation row by id ignoring org-scope. ownConversation uses it, for a
+ * global administrator on GET /agent/conversations/:id and on delete, to find the administrator's
+ * own conversation in another organization; the row must still be the administrator's own, which
+ * ownConversation checks. Falls back to null when the raw-database hatch is unavailable
+ * (non-SQLite adapters).
  */
 async function loadConversationAnyOrg(
   storage: StorageAdapter,
@@ -1717,7 +1775,7 @@ async function findPendingMessage(
   storage: StorageAdapter,
   messageId: string,
   orgId: string,
-): Promise<{ id: string; conversationId: string; userId: string; status: string; toolCallJson: string | null } | null> {
+): Promise<{ id: string; conversationId: string; userId: string; status: string; toolCallJson: string | null; createdAt: string } | null> {
   // ConversationRepository has no direct-by-id lookup; walk the user's
   // conversations and check full history. Small price in exchange for no
   // new query surface in Phase 31's repo. If this becomes hot, extract a
@@ -1732,13 +1790,13 @@ async function findPendingMessage(
   if (raw === undefined) return null;
   const row = raw
     .prepare(
-      `SELECT m.id, m.conversation_id, c.user_id, m.status, m.tool_call_json
+      `SELECT m.id, m.conversation_id, c.user_id, m.status, m.tool_call_json, m.created_at
          FROM agent_messages m
          INNER JOIN agent_conversations c ON c.id = m.conversation_id
          WHERE m.id = ? AND c.org_id = ?`,
     )
     .get(messageId, orgId) as
-      | { id: string; conversation_id: string; user_id: string; status: string; tool_call_json: string | null }
+      | { id: string; conversation_id: string; user_id: string; status: string; tool_call_json: string | null; created_at: string }
       | undefined;
   if (row === undefined) return null;
   return {
@@ -1747,6 +1805,7 @@ async function findPendingMessage(
     userId: row.user_id,
     status: row.status,
     toolCallJson: row.tool_call_json,
+    createdAt: row.created_at,
   };
 }
 
@@ -1806,8 +1865,12 @@ function compileAgentMessagesTemplate(): HandlebarsTemplateDelegate {
   const messagesSrc = readFileSync(join(viewsDir, 'partials', 'agent-messages.hbs'), 'utf-8');
   const messageSrc = readFileSync(join(viewsDir, 'partials', 'agent-message.hbs'), 'utf-8');
   cachedAgentMessageTemplate = Handlebars.compile(messageSrc);
-  // Register the child partial so {{> agent-message}} resolves.
+  // Register the child partial so {{> agent-message}} resolves, and the per-message partials it
+  // renders (agent-msg-actions, agent-msg-stopped-chip), so the panel and the share view render
+  // without depending on the view engine having registered them first.
   Handlebars.registerPartial('agent-message', messageSrc);
+  Handlebars.registerPartial('agent-msg-actions', readFileSync(join(viewsDir, 'partials', 'agent-msg-actions.hbs'), 'utf-8'));
+  Handlebars.registerPartial('agent-msg-stopped-chip', readFileSync(join(viewsDir, 'partials', 'agent-msg-stopped-chip.hbs'), 'utf-8'));
   cachedAgentMessagesTemplate = Handlebars.compile(messagesSrc);
   return cachedAgentMessagesTemplate;
 }
@@ -1830,9 +1893,13 @@ function renderAgentMessagesFragment(args: {
     }
     return null;
   })();
+  // Retry is offered only on the conversation's last message, when it is a reply (the server refuses
+  // every other retry): every other reply is marked olderReply and renders no Retry.
+  const lastId = args.messages.length > 0 ? args.messages[args.messages.length - 1]!.id : null;
   const enriched = args.messages.map((m) => ({
     ...m,
     isMostRecentUserMessage: m.role === 'user' && m.id === lastUserId,
+    olderReply: m.role === 'assistant' && m.id !== lastId,
   }));
   return tpl({
     messages: enriched,
@@ -1866,31 +1933,14 @@ function renderAgentMsgEditPartial(args: {
 // ---------------------------------------------------------------------------
 
 let cachedShareViewTemplate: HandlebarsTemplateDelegate | null = null;
-let cachedShareViewPartialsRegistered = false;
 
 function compileAgentShareViewTemplate(): HandlebarsTemplateDelegate {
   if (cachedShareViewTemplate !== null) return cachedShareViewTemplate;
   // Reuse the message-fragment helper bootstrap (eq, t fallback) and the
-  // agent-message partial registration. compileAgentMessagesTemplate is
-  // idempotent and registers `agent-message`.
+  // partial registrations (agent-message and its per-message partials;
+  // the {{#unless readOnly}} guard inside agent-msg-actions.hbs is the
+  // read-only suppression). compileAgentMessagesTemplate is idempotent.
   compileAgentMessagesTemplate();
-  if (!cachedShareViewPartialsRegistered) {
-    const viewsDir = resolveViewsDir();
-    // Register the per-message child partials referenced by agent-message
-    // (agent-msg-actions, agent-msg-stopped-chip). The {{#unless readOnly}}
-    // guard inside agent-msg-actions.hbs is the read-only suppression.
-    const actionsSrc = readFileSync(
-      join(viewsDir, 'partials', 'agent-msg-actions.hbs'),
-      'utf-8',
-    );
-    const stoppedSrc = readFileSync(
-      join(viewsDir, 'partials', 'agent-msg-stopped-chip.hbs'),
-      'utf-8',
-    );
-    Handlebars.registerPartial('agent-msg-actions', actionsSrc);
-    Handlebars.registerPartial('agent-msg-stopped-chip', stoppedSrc);
-    cachedShareViewPartialsRegistered = true;
-  }
   const viewsDir = resolveViewsDir();
   const viewSrc = readFileSync(join(viewsDir, 'agent-share-view.hbs'), 'utf-8');
   cachedShareViewTemplate = Handlebars.compile(viewSrc);

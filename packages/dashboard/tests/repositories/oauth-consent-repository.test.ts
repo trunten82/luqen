@@ -17,6 +17,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { rmSync, existsSync } from 'node:fs';
 
+const ORG = 'org-fabrikam';
+
 let storage: SqliteStorageAdapter;
 let dbPath: string;
 let userId: string;
@@ -51,6 +53,7 @@ describe('SqliteOauthConsentRepository — recordConsent (upsert)', () => {
   it('inserts a row for a new (user,client) pair', async () => {
     const c = await storage.oauthConsents.recordConsent({
       userId,
+      orgId: ORG,
       clientId,
       scopes: ['read', 'write'],
       resources: ['https://x/mcp'],
@@ -68,6 +71,7 @@ describe('SqliteOauthConsentRepository — recordConsent (upsert)', () => {
   it('upserts existing (user,client) rows — replaces scopes + resources', async () => {
     await storage.oauthConsents.recordConsent({
       userId,
+      orgId: ORG,
       clientId,
       scopes: ['read'],
       resources: ['https://x/mcp'],
@@ -75,6 +79,7 @@ describe('SqliteOauthConsentRepository — recordConsent (upsert)', () => {
 
     const second = await storage.oauthConsents.recordConsent({
       userId,
+      orgId: ORG,
       clientId,
       scopes: ['read', 'write'],
       resources: ['https://x/mcp', 'https://y/mcp'],
@@ -89,10 +94,27 @@ describe('SqliteOauthConsentRepository — recordConsent (upsert)', () => {
   });
 });
 
+describe('SqliteOauthConsentRepository — organization', () => {
+  it('HARD-21 recordConsent stores the organization and a consent in another organization moves the row', async () => {
+    const first = await storage.oauthConsents.recordConsent({
+      userId, clientId, orgId: ORG, scopes: ['read'], resources: ['https://x/mcp'],
+    });
+    expect(first.orgId).toBe(ORG);
+    const second = await storage.oauthConsents.recordConsent({
+      userId, clientId, orgId: 'org-northwind', scopes: ['read'], resources: ['https://x/mcp'],
+    });
+    expect(second.orgId).toBe('org-northwind');
+    const all = await storage.oauthConsents.listByUser(userId);
+    expect(all).toHaveLength(1);
+    expect(all[0]!.orgId).toBe('org-northwind');
+  });
+});
+
 describe('SqliteOauthConsentRepository — checkCoverage', () => {
   it('returns covered:true when requested scopes and resources are subsets', async () => {
     await storage.oauthConsents.recordConsent({
       userId,
+      orgId: ORG,
       clientId,
       scopes: ['read', 'write'],
       resources: ['https://x/mcp'],
@@ -100,6 +122,7 @@ describe('SqliteOauthConsentRepository — checkCoverage', () => {
 
     const result = await storage.oauthConsents.checkCoverage({
       userId,
+      orgId: ORG,
       clientId,
       requestedScopes: ['read'],
       requestedResources: ['https://x/mcp'],
@@ -114,6 +137,7 @@ describe('SqliteOauthConsentRepository — checkCoverage', () => {
   it('returns covered:false with missingScopes when a new scope is requested', async () => {
     await storage.oauthConsents.recordConsent({
       userId,
+      orgId: ORG,
       clientId,
       scopes: ['read', 'write'],
       resources: ['https://x/mcp'],
@@ -121,6 +145,7 @@ describe('SqliteOauthConsentRepository — checkCoverage', () => {
 
     const result = await storage.oauthConsents.checkCoverage({
       userId,
+      orgId: ORG,
       clientId,
       requestedScopes: ['read', 'write', 'admin.system'],
       requestedResources: ['https://x/mcp'],
@@ -134,6 +159,7 @@ describe('SqliteOauthConsentRepository — checkCoverage', () => {
   it('returns covered:false with missingResources when a new resource is requested', async () => {
     await storage.oauthConsents.recordConsent({
       userId,
+      orgId: ORG,
       clientId,
       scopes: ['read'],
       resources: ['https://x/mcp'],
@@ -141,6 +167,7 @@ describe('SqliteOauthConsentRepository — checkCoverage', () => {
 
     const result = await storage.oauthConsents.checkCoverage({
       userId,
+      orgId: ORG,
       clientId,
       requestedScopes: ['read'],
       requestedResources: ['https://y/mcp'],
@@ -154,6 +181,7 @@ describe('SqliteOauthConsentRepository — checkCoverage', () => {
   it('returns covered:false with full missing lists when no consent exists', async () => {
     const result = await storage.oauthConsents.checkCoverage({
       userId,
+      orgId: ORG,
       clientId,
       requestedScopes: ['read'],
       requestedResources: ['https://x/mcp'],
@@ -179,6 +207,7 @@ describe('SqliteOauthConsentRepository — listByUser', () => {
 
     const first = await storage.oauthConsents.recordConsent({
       userId,
+      orgId: ORG,
       clientId,
       scopes: ['read'],
       resources: ['https://x/mcp'],
@@ -188,6 +217,7 @@ describe('SqliteOauthConsentRepository — listByUser', () => {
 
     const second = await storage.oauthConsents.recordConsent({
       userId,
+      orgId: ORG,
       clientId: reg2.clientId,
       scopes: ['read'],
       resources: ['https://y/mcp'],
@@ -205,6 +235,7 @@ describe('SqliteOauthConsentRepository — revoke', () => {
   it('deletes the consent row', async () => {
     await storage.oauthConsents.recordConsent({
       userId,
+      orgId: ORG,
       clientId,
       scopes: ['read'],
       resources: ['https://x/mcp'],

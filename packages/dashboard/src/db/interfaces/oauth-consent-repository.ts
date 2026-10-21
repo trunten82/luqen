@@ -14,6 +14,11 @@
  * `requestedResources ⊄ consentedResources`, `covered=false` and the
  * /oauth/authorize handler re-shows the consent screen highlighting the
  * new permissions.
+ *
+ * Organization: a consent covers only the organization it was given in
+ * (`orgId`, stored by `recordConsent`). `checkCoverage` is `covered=false` for
+ * any other organization, and for a consent whose `orgId` is null. Re-consenting
+ * in another organization moves the (user, client) row to it.
  */
 
 export interface Consent {
@@ -22,6 +27,8 @@ export interface Consent {
   readonly clientId: string;
   readonly scopes: readonly string[];
   readonly resources: readonly string[];
+  /** The organization the consent was given in; null for a consent recorded without one. */
+  readonly orgId: string | null;
   readonly consentedAt: string;
   readonly updatedAt: string;
 }
@@ -29,6 +36,8 @@ export interface Consent {
 export interface RecordConsentInput {
   readonly userId: string;
   readonly clientId: string;
+  /** The organization the code is minted for. */
+  readonly orgId: string;
   readonly scopes: readonly string[];
   readonly resources: readonly string[];
 }
@@ -36,6 +45,8 @@ export interface RecordConsentInput {
 export interface CheckCoverageInput {
   readonly userId: string;
   readonly clientId: string;
+  /** The organization the request acts in. */
+  readonly orgId: string;
   readonly requestedScopes: readonly string[];
   readonly requestedResources: readonly string[];
 }

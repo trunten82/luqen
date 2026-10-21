@@ -113,6 +113,72 @@ export interface AppendMessageInput {
   readonly status?: MessageStatus;
   /** Phase 83 multimodal: images attached to a `role='user'` message. */
   readonly images?: readonly ImageInput[];
+  /**
+   * The row this one follows in its answer (the turn's question, or the row the turn wrote last; the
+   * paused action for the result of resolving it). When given, the row is written only while the
+   * followed row is on the active branch (not superseded) of a conversation that is not deleted;
+   * otherwise nothing is written and {@link WithdrawnAnswerError} is thrown. Absent at the start of a
+   * turn (a question).
+   */
+  readonly followsMessageId?: string;
+}
+
+/**
+ * Thrown by `appendMessage` when the row a new row follows is superseded, belongs to a deleted
+ * conversation or does not exist: the answer it belongs to was replaced or withdrawn, and nothing was written.
+ */
+export class WithdrawnAnswerError extends Error {
+  constructor() {
+    super("the row this one follows is no longer on the conversation's active branch");
+    this.name = 'WithdrawnAnswerError';
+  }
+}
+
+/** Whether `err` is a {@link WithdrawnAnswerError} (recognised by name, so it holds across module copies). */
+export function isWithdrawnAnswer(err: unknown): boolean {
+  return err instanceof Error && err.name === 'WithdrawnAnswerError';
+}
+
+/** An edit of the conversation's latest question (`replaceLatestQuestion`). */
+export interface ReplaceQuestionInput {
+  readonly conversationId: string;
+  readonly orgId: string;
+  /** The question being edited; it must be the conversation's newest active user row. */
+  readonly messageId: string;
+  /** The new question. */
+  readonly content: string;
+}
+
+export type ReplaceQuestionResult =
+  | {
+      readonly ok: true;
+      readonly newMessage: Message;
+      /** Every row superseded, the question first, in branch order. */
+      readonly supersededMessageIds: readonly string[];
+      /** The first assistant row among them, or null. */
+      readonly firstAssistantId: string | null;
+    }
+  | { readonly ok: false; readonly reason: 'conversation_not_found' | 'not_most_recent_user' };
+
+/** A retry of the conversation's latest answer (`supersedeLatestAnswer`). */
+export interface RetryAnswerInput {
+  readonly conversationId: string;
+  readonly orgId: string;
+  readonly messageId: string;
+}
+
+export type RetryAnswerResult =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly reason: 'message_not_found' | 'not_most_recent_assistant' | 'not_last_message' };
+
+/** A paused action (a `pending_confirmation` row) with the conversation it belongs to. */
+export interface PendingMessageRef {
+  readonly id: string;
+  readonly conversationId: string;
+  readonly orgId: string;
+  readonly userId: string;
+  readonly toolCallJson: string | null;
+  readonly createdAt: string;
 }
 
 export interface ListConversationsOptions {
@@ -143,13 +209,25 @@ export interface ConversationRepository {
    * Appends a message and bumps the parent conversation's `updated_at` +
    * `last_message_at` in a single transaction. When `role === 'user'`,
    * also maintains the rolling-window flag on older messages.
+   *
+   * `toolCallJson` is stored with secret-named argument values redacted, by
+   * the rule the agent audit uses (src/db/agent-audit-redaction.ts), except
+   * on a `pending_confirmation` row: a paused action keeps its arguments as
+   * given until the write that resolves it (`updateMessageStatus`).
+   *
+   * With `followsMessageId` the row is written only while that row is on the active branch of a
+   * conversation that is not deleted, checked in the same transaction; otherwise it throws
+   * {@link WithdrawnAnswerError} and writes nothing.
    */
   appendMessage(input: AppendMessageInput): Promise<Message>;
 
   /**
    * Transitions a message's status. The optional `toolResultJson` is
    * persisted via `COALESCE(?, tool_result_json)` so callers may update
-   * status without touching an existing result payload.
+   * status without touching an existing result payload. A transition that
+   * moves a `pending_confirmation` row to any other status stores its
+   * `toolCallJson` with secret-named argument values redacted, in the same
+   * write. A superseded row is never moved: its status stays superseded.
    *
    * NOTE: no userId / orgId guard — Phase 32's AgentService is
    * responsible for verifying the caller owns the message (T-31-03).
@@ -160,6 +238,27 @@ export interface ConversationRepository {
     toolResultJson?: string,
   ): Promise<void>;
 
+  /**
+   * Claims a paused action: the one write that takes a row out of `pending_confirmation`.
+   * Answers true only for the caller whose write moved the row; a row that is not paused (a
+   * second confirmation, a decline that arrived first, an expiry) answers false and changes
+   * nothing, so exactly one caller wins however many arrive together. The same write stores the
+   * row's `toolCallJson` with secret-named argument values redacted.
+   */
+  claimPendingMessage(messageId: string, status: 'sent' | 'denied'): Promise<boolean>;
+
+  /** Paused actions created before `createdBefore` (ISO timestamp), oldest first. */
+  listPendingMessagesBefore(createdBefore: string): Promise<readonly PendingMessageRef[]>;
+
+  /**
+   * Returns a paused action whose confirmation did not run (the dispatcher
+   * refused it) to `pending_confirmation`, with the arguments it was paused
+   * with (`toolCallJson`, as read from the paused row before the attempt).
+   * Only a row the confirmation claimed (status `sent`) is restored; any
+   * other row is left as it is.
+   */
+  reopenPendingMessage(messageId: string, toolCallJson: string): Promise<void>;
+
   /** Rolling-window read: `in_window = 1` only, ordered `created_at ASC`. */
   getWindow(conversationId: string): Promise<Message[]>;
 
@@ -168,6 +267,43 @@ export interface ConversationRepository {
     conversationId: string,
     options?: ListConversationsOptions,
   ): Promise<Message[]>;
+
+  /** The message `messageId` when it is an active (not superseded) row of the conversation, else null. */
+  getActiveMessage(conversationId: string, messageId: string): Promise<Message | null>;
+
+  /**
+   * The conversation's newest active row (of `role` when given), by created_at then insert order,
+   * however long the conversation is.
+   */
+  getLastActiveMessage(conversationId: string, role?: MessageRole): Promise<Message | null>;
+
+  /**
+   * The anchor (an active row of the conversation) and the `limit` (default 200) newest active rows
+   * created at or before it, oldest first; rows of the anchor's millisecond are included. Null unless
+   * the anchor is an active row of the conversation.
+   */
+  getActiveBranchUpTo(
+    conversationId: string,
+    anchorMessageId: string,
+    limit?: number,
+  ): Promise<{ readonly anchor: Message; readonly messages: readonly Message[] } | null>;
+
+  /**
+   * Edits the conversation's latest question in one transaction: the conversation is in `orgId`
+   * (else conversation_not_found), its newest active user row is `messageId` (else
+   * not_most_recent_user), the question and every active row after it are superseded (a paused
+   * action among them stored redacted) and the new question is stored. A refusal writes nothing;
+   * when the new question cannot be stored nothing is superseded.
+   */
+  replaceLatestQuestion(input: ReplaceQuestionInput): Promise<ReplaceQuestionResult>;
+
+  /**
+   * Retries the conversation's latest answer in one transaction: `messageId` is an active row of the
+   * conversation (else message_not_found), its newest assistant row (else not_most_recent_assistant)
+   * and its newest row of any role (else not_last_message); it is superseded only in `orgId` (else
+   * message_not_found). A refusal writes nothing.
+   */
+  supersedeLatestAnswer(input: RetryAnswerInput): Promise<RetryAnswerResult>;
 
   /**
    * Phase 33-03: flip every message row older than `beforeCreatedAt` to
@@ -192,22 +328,27 @@ export interface ConversationRepository {
   ): Promise<ConversationSearchHit[]>;
 
   /**
-   * Phase 35 Plan 01 (AHIST-03): Update conversation title. Org-guarded:
-   * mismatched orgId returns null and does not write. Soft-deleted
-   * conversations cannot be renamed.
+   * Phase 35 Plan 01 (AHIST-03): Update conversation title. Only the owner's
+   * `userId` renames: a mismatched orgId or a userId that did not start the
+   * conversation returns null and does not write. Soft-deleted conversations
+   * cannot be renamed.
    */
   renameConversation(
     id: string,
     orgId: string,
     title: string,
+    userId: string,
   ): Promise<Conversation | null>;
 
   /**
    * Phase 35 Plan 01 (AHIST-04): Soft-delete a conversation. Sets
-   * is_deleted=1, deleted_at=now(). Returns true on success, false if
-   * already deleted, not found, or wrong org.
+   * is_deleted=1, deleted_at=now(). Only the owner's `userId` deletes. Returns
+   * true on success, false if already deleted, not found, wrong org, or
+   * `userId` did not start the conversation. The conversation's paused
+   * actions are declined in the same transaction, through the claim, so
+   * their stored arguments are redacted.
    */
-  softDeleteConversation(id: string, orgId: string): Promise<boolean>;
+  softDeleteConversation(id: string, orgId: string, userId: string): Promise<boolean>;
 
   /**
    * Phase 37 Plan 01 (AUX-01): Mark an in-flight message as stopped by
@@ -216,7 +357,7 @@ export interface ConversationRepository {
    * stopped rows stay visible in the UI.
    *
    * Org-guarded: the message must belong to a conversation in `orgId`.
-   * Returns true on update, false on miss / wrong org.
+   * A superseded row is not touched. Returns true on update, false on miss / wrong org / superseded.
    */
   markMessageStopped(
     messageId: string,
@@ -231,6 +372,7 @@ export interface ConversationRepository {
    * `superseded_at=now()` for rows currently in
    * ('streaming','final','stopped','sent','pending_confirmation','approved','denied','failed').
    * Already-superseded rows are skipped (idempotent).
+   * A row moved out of 'pending_confirmation' here stores its tool-call arguments redacted.
    *
    * Org-guarded: only rows whose parent conversation is in `orgId` are
    * touched. Returns the number of rows actually updated.

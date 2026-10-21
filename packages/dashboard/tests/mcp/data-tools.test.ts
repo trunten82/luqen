@@ -43,7 +43,7 @@ import type {
   ServiceConnection,
   ServiceConnectionsRepository,
 } from '../../src/db/service-connections-repository.js';
-import { storedCallerOrgs, storedCallerUsers } from '../helpers/stored-caller-stub.js';
+import { storedCallerOrgs, storedCallerUsers, mcpCallerPermissions } from '../helpers/stored-caller-stub.js';
 
 // Hermetic DNS for the start-URL check: every host resolves to a public documentation address.
 vi.mock('../../src/services/host-resolver.js', () => ({
@@ -96,7 +96,8 @@ function makeStubStorage(o: StubOverrides = {}): StorageAdapter {
     // The token's subject belongs to the token organizations used in this file.
     organizations: storedCallerOrgs('org-1') as unknown as StorageAdapter['organizations'],
     roles: {
-      getEffectivePermissions: o.getEffectivePermissions ?? (async () => perms),
+      getEffectivePermissions: async (userId: string, orgId?: string) =>
+        mcpCallerPermissions(await (o.getEffectivePermissions ?? (async () => perms))(userId, orgId)),
     } as unknown as StorageAdapter['roles'],
     schedules: empty as StorageAdapter['schedules'],
     assignments: empty as StorageAdapter['assignments'],
@@ -771,7 +772,7 @@ describe('Phase 30 data tools — dashboard_list_reports strips jsonReport (2604
     const bloatedRows: ScanRecord[] = [
       {
         id: 'scan-a',
-        siteUrl: 'https://www.sky.it',
+        siteUrl: 'https://www.fabrikam.example',
         status: 'completed',
         standard: 'WCAG2AA',
         jurisdictions: [],
@@ -836,7 +837,7 @@ describe('Phase 30 data tools — dashboard_list_reports strips jsonReport (2604
     // Specific-row sanity
     const scanA = parsed.data.find((r) => r['id'] === 'scan-a');
     expect(scanA?.['totalIssues']).toBe(205);
-    expect(scanA?.['siteUrl']).toBe('https://www.sky.it');
+    expect(scanA?.['siteUrl']).toBe('https://www.fabrikam.example');
   });
 });
 

@@ -27,10 +27,16 @@ devices (`@media (hover: none)`) it is always visible underneath the bubble.
 
 ### Retry the last assistant turn
 
-- The **Retry** action only appears on the **most-recent assistant turn**.
+- The **Retry** action only appears on the **most-recent assistant turn**. Only
+  the conversation's last message can be retried, when it is a reply: a reply
+  followed by a tool result or by an action awaiting confirmation is answered
+  with a conflict (`409`) and nothing changes.
 - Clicking it marks the previous reply as **superseded** (soft-deleted from the
   visible thread, retained in DB for audit) and re-streams a fresh reply against
-  the same user message and the same context window.
+  the same user message and the same context window. The tool results of that
+  turn stay, so the assistant is given them again; a tool runs again only if the
+  assistant asks for it. A reply still being written when it is retried is
+  ended, and nothing more of it is kept.
 - The visible drawer thread stays linear — superseded rows are hidden from the
   user, but `/admin/audit` still shows them.
 
@@ -39,10 +45,16 @@ devices (`@media (hover: none)`) it is always visible underneath the bubble.
 - The pencil icon on the **most-recent user bubble** opens an inline editor
   (textarea pre-filled with the current text + Save / Cancel).
 - On Save:
-  1. The original user message and the assistant reply that followed it are
-     marked **superseded**.
+  1. The original user message and its whole answer (the assistant's replies,
+     its tool calls and their results, and an action awaiting confirmation) are
+     marked **superseded**. An action awaiting confirmation in that answer can no
+     longer be approved, and its stored arguments are redacted. A reply still
+     being written when the question is edited is ended, and nothing more of it
+     is kept. An action approved before the edit still runs, and its result is
+     not added to the conversation.
   2. The edited text is persisted as a **new row** in the same conversation —
-     not an UPDATE, so the audit trail keeps the original wording.
+     not an UPDATE, so the audit trail keeps the original wording. It is stored
+     together with step 1, so an edit that cannot be stored changes nothing.
   3. The agent streams a fresh reply against the new user message + prior
      conversation state.
 - Earlier user messages do **not** carry an edit affordance — only the
@@ -61,12 +73,21 @@ devices (`@media (hover: none)`) it is always visible underneath the bubble.
 ### Share a conversation via permalink
 
 - The **Share** action creates a permalink of the form `/agent/share/:shareId` and
-  copies that URL to your clipboard.
+  copies that URL to your clipboard. Only the conversation's owner can share it;
+  another member of the org gets a not-found answer.
 - The link is **scoped to your org**: anyone in the same org with a valid login
   can open the URL and see a read-only render of the conversation. Users outside
   the org get a `403`. There are no public, unauthenticated share links.
 - The shared view shows the conversation thread with **no composer and no
   actions** — it is a snapshot for review, not a hand-off into a live session.
+  Tool call details in it show the values of secret-named arguments (password,
+  secret, token, API key, authorization, credential) as `[redacted]`, including
+  those of an action still awaiting confirmation.
+- The snapshot ends with the answer the link was created from, which it
+  includes: messages written after that answer are not shown. In a
+  conversation longer than 200 messages the page shows the 200 messages that
+  end with the shared answer. Retrying that
+  answer or editing its question ends the link, which then answers not found.
 
 ### Permalink expiry
 

@@ -5,7 +5,7 @@ import {
   type McpTokenPayload,
   type McpTokenVerifier,
 } from '../../src/mcp/middleware.js';
-import { storedCallerUsers } from '../helpers/stored-caller-stub.js';
+import { storedCallerUsers, mcpCallerPermissions } from '../helpers/stored-caller-stub.js';
 
 // Phase 31.2 Plan 04 Task 2 step 3 — D-20 bullet 3 middleware revoked-client check.
 // Covers Tests H (reject revoked), I (allow active), J (back-compat for pre-31.2
@@ -55,7 +55,7 @@ function makeStorage(
     storage: {
       users: storedCallerUsers('user'),
       roles: {
-        getEffectivePermissions: vi.fn(async (): Promise<Set<string>> => new Set(['reports.view'])),
+        getEffectivePermissions: vi.fn(async (): Promise<Set<string>> => mcpCallerPermissions(['reports.view'])),
       },
       oauthClients: { findByClientId },
     },

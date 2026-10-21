@@ -42,6 +42,14 @@ async function createTestServer(userId = 'test-user-id'): Promise<TestContext> {
     request.user = { id: userId, username: 'testuser', role: 'user' };
   });
 
+  // The request's organization is the one the session stores (server.ts resolves it the same way).
+  server.addHook('preHandler', async (request) => {
+    const stored = (request.session as { get(key: string): unknown }).get('currentOrgId');
+    if (request.user !== undefined && typeof stored === 'string' && stored !== '') {
+      request.user = { ...request.user, currentOrgId: stored };
+    }
+  });
+
   await orgRoutes(server, storage);
   await server.ready();
 
@@ -149,6 +157,42 @@ describe('POST /orgs/switch', () => {
 
     expect(response.statusCode).toBe(302);
     expect(response.headers['location']).toBe('/home');
+  });
+
+  it('HARD-21 an organization switch returns only to a page of the dashboard', async () => {
+    const org = await ctx.storage.organizations.createOrg({ name: 'Fabrikam', slug: 'fabrikam' });
+    await ctx.storage.organizations.addMember(org.id, 'test-user-id', 'member');
+    const dashboard = 'http://dash.example';
+    const send = async (referer: string): Promise<{ status: number; location: string }> => {
+      const response = await ctx.server.inject({
+        method: 'POST',
+        url: '/orgs/switch',
+        payload: `orgId=${org.id}`,
+        headers: { 'content-type': 'application/x-www-form-urlencoded', host: 'dash.example', referer },
+      });
+      return { status: response.statusCode, location: String(response.headers['location']) };
+    };
+    // Positive control: a path of the dashboard is returned to.
+    expect(await send('/reports?x=1')).toEqual({ status: 302, location: '/reports?x=1' });
+    const table: ReadonlyArray<readonly [string, string]> = [
+      [`${dashboard}/reports?x=1#h`, '/reports?x=1#h'],
+      ['/\t/evil.example/x', '/'],
+      ['/\\evil.example/x', '/'],
+      ['//evil.example/x', '/'],
+      ['/..//evil.example/x', '/'],
+      [`${dashboard}//evil.example/x`, '/'],
+      [`${dashboard}/\t/evil.example/x`, '/'],
+      ['https://evil.example/x', '/'],
+      ['evil.example/x', '/'],
+    ];
+    const differing: string[] = [];
+    for (const [referer, want] of table) {
+      const { status, location } = await send(referer);
+      if (status !== 302 || location !== want || new URL(location, `${dashboard}/`).origin !== dashboard) {
+        differing.push(`${JSON.stringify(referer)} -> ${status} ${JSON.stringify(location)}`);
+      }
+    }
+    expect(differing, differing.join(' | ')).toEqual([]);
   });
 
   it('persists org context across requests via session', async () => {

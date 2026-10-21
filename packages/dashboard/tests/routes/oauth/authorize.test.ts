@@ -8,14 +8,15 @@
  *   - Temp-file SQLite (matches the Wave 1 repo-test style).
  *   - Fastify.inject() — no real HTTP.
  *   - @fastify/secure-session + @fastify/formbody + @fastify/csrf-protection.
- *   - A preHandler stub attaches request.user + request.permissions + a
- *     session "orgId" so the route sees an authenticated dashboard user
- *     without running the full AuthService.
+ *   - A preHandler stub attaches request.user (with currentOrgId, as the
+ *     org-context preHandler resolves it) + request.permissions so the route
+ *     sees an authenticated dashboard user without running the full
+ *     AuthService.
  *   - `reply.view` is decorated to return { template, data } JSON for
  *     non-HTMX rendering assertions.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import Fastify, { FastifyInstance, FastifyReply } from 'fastify';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
@@ -96,22 +97,13 @@ async function buildCtx(opts: {
   // Attach test user + permissions + csrfToken to session.
   let capturedCsrfToken = '';
   server.addHook('preHandler', async (request, reply) => {
-    request.user = { id: userId, username: `user-${userId}`, role };
+    // The organization the request acts in, as the org-context preHandler sets it.
+    request.user = { id: userId, username: `user-${userId}`, role, currentOrgId: 'org-test' };
     const permissions =
       opts.adminPermissions === false
         ? new Set<string>(['reports.view']) // no admin.system
         : new Set(ALL_PERMISSION_IDS);
     (request as unknown as Record<string, unknown>)['permissions'] = permissions;
-
-    const session = request.session as {
-      get?: (k: string) => unknown;
-      set?: (k: string, v: unknown) => void;
-    };
-    if (typeof session.set === 'function') {
-      session.set('currentOrgId', 'org-test');
-      // Expose orgId at top-level for handler convenience.
-      session.set('orgId', 'org-test');
-    }
 
     // Make csrfToken available to the handler via reply.generateCsrf()
     capturedCsrfToken = reply.generateCsrf();
@@ -135,7 +127,7 @@ async function buildCtx(opts: {
 // secure-session cookies must be URL-encoded when round-tripping through a
 // `Cookie:` header, otherwise the session fails to decode and the stored CSRF
 // secret appears missing.
-async function primeCsrf(ctx: TestCtx): Promise<{ csrf: string; cookie: string }> {
+async function primeCsrf(ctx: TestCtx): Promise<{ csrf: string; cookie: string; binding: string }> {
   const verifier = 'a'.repeat(50);
   const url = `/oauth/authorize?response_type=code&client_id=${ctx.clientId}&redirect_uri=${encodeURIComponent(
     ctx.redirectUri,
@@ -146,8 +138,8 @@ async function primeCsrf(ctx: TestCtx): Promise<{ csrf: string; cookie: string }
   const rawSetCookie = res.headers['set-cookie'];
   const setCookie = Array.isArray(rawSetCookie) ? rawSetCookie[0] : (rawSetCookie ?? '');
   const cookie = setCookie.split(';')[0] ?? '';
-  const body = JSON.parse(res.body) as { data: { csrfToken: string } };
-  return { csrf: body.data.csrfToken, cookie };
+  const body = JSON.parse(res.body) as { data: { csrfToken: string; consentBinding?: string } };
+  return { csrf: body.data.csrfToken, cookie, binding: body.data.consentBinding ?? '' };
 }
 
 // ── GET /oauth/authorize ────────────────────────────────────────────────────
@@ -279,6 +271,7 @@ describe('GET /oauth/authorize — Test 7 (covered consent auto-redirects with c
     await ctx.storage.oauthConsents.recordConsent({
       userId: ctx.userId,
       clientId: ctx.clientId,
+      orgId: 'org-test',
       scopes: ['read', 'write'],
       resources: ['https://svc/mcp'],
     });
@@ -300,6 +293,65 @@ describe('GET /oauth/authorize — Test 7 (covered consent auto-redirects with c
   });
 });
 
+// ── GET /oauth/authorize: a remembered consent names its organization ──────
+
+describe('GET /oauth/authorize: remembered consent and the organization', () => {
+  let ctx: TestCtx;
+  beforeEach(async () => { ctx = await buildCtx(); });
+  afterEach(async () => { await ctx.cleanup(); });
+
+  const authorizeUrl = (): string => {
+    const verifier = 'a'.repeat(50);
+    return `/oauth/authorize?response_type=code&client_id=${ctx.clientId}&redirect_uri=${encodeURIComponent(
+      ctx.redirectUri,
+    )}&scope=read&resource=${encodeURIComponent('https://svc/mcp')}&code_challenge=${s256(verifier)}&code_challenge_method=S256&state=abc`;
+  };
+
+  /** What an adapter that does not apply the organization rule would answer: covered, whatever the consent names. */
+  function adapterAnswers(consentOrgId: string | null | 'none'): void {
+    const now = new Date().toISOString();
+    vi.spyOn(ctx.storage.oauthConsents, 'checkCoverage').mockResolvedValue({
+      covered: true,
+      missingScopes: [],
+      missingResources: [],
+      existingConsent: consentOrgId === 'none' ? null : {
+        id: randomUUID(), userId: ctx.userId, clientId: ctx.clientId, scopes: ['read'], resources: ['https://svc/mcp'],
+        orgId: consentOrgId, consentedAt: now, updatedAt: now,
+      },
+    });
+  }
+
+  function codeCount(): number {
+    const row = ctx.storage.getRawDatabase().prepare('SELECT COUNT(*) AS n FROM oauth_authorization_codes').get() as { n: number };
+    return row.n;
+  }
+
+  it('HARD-21 a remembered consent answers without a page only in the organization it names', async () => {
+    for (const answer of ['org-other', 'none'] as const) {
+      adapterAnswers(answer);
+
+      const res = await ctx.server.inject({ method: 'GET', url: authorizeUrl() });
+
+      expect(res.statusCode, answer).toBe(200);
+      const body = JSON.parse(res.body) as { template: string };
+      expect(body.template, answer).toBe('oauth-consent');
+      expect(codeCount(), answer).toBe(0);
+    }
+  });
+
+  it('HARD-21 a remembered consent for the active organization answers with a code', async () => {
+    adapterAnswers('org-test');
+
+    const res = await ctx.server.inject({ method: 'GET', url: authorizeUrl() });
+
+    expect(res.statusCode).toBe(302);
+    expect(res.headers.location as string).toContain(`${ctx.redirectUri}?code=`);
+    expect(codeCount()).toBe(1);
+    const row = ctx.storage.getRawDatabase().prepare('SELECT org_id FROM oauth_authorization_codes').get() as { org_id: string };
+    expect(row.org_id).toBe('org-test');
+  });
+});
+
 // ── POST /oauth/authorize/consent ───────────────────────────────────────────
 
 describe('POST /oauth/authorize/consent — Test 8 (approve inserts consent + code + redirects)', () => {
@@ -308,7 +360,7 @@ describe('POST /oauth/authorize/consent — Test 8 (approve inserts consent + co
   afterEach(async () => { await ctx.cleanup(); });
 
   it('writes consent + authorization code (TTL 60s) + 302 with code', async () => {
-    const { csrf, cookie } = await primeCsrf(ctx);
+    const { csrf, cookie, binding } = await primeCsrf(ctx);
     const verifier = 'a'.repeat(50);
     const res = await ctx.server.inject({
       method: 'POST',
@@ -324,6 +376,7 @@ describe('POST /oauth/authorize/consent — Test 8 (approve inserts consent + co
         code_challenge: s256(verifier),
         code_challenge_method: 'S256',
         approved: 'true',
+        consent_binding: binding,
       }).toString(),
     });
     expect(res.statusCode).toBe(302);
@@ -360,7 +413,7 @@ describe('POST /oauth/authorize/consent — Test 9 (deny redirects with access_d
   afterEach(async () => { await ctx.cleanup(); });
 
   it('redirects with ?error=access_denied&state=... and writes no row', async () => {
-    const { csrf, cookie } = await primeCsrf(ctx);
+    const { csrf, cookie, binding } = await primeCsrf(ctx);
     const verifier = 'a'.repeat(50);
     const res = await ctx.server.inject({
       method: 'POST',
@@ -376,6 +429,7 @@ describe('POST /oauth/authorize/consent — Test 9 (deny redirects with access_d
         code_challenge: s256(verifier),
         code_challenge_method: 'S256',
         approved: 'false',
+        consent_binding: binding,
       }).toString(),
     });
     expect(res.statusCode).toBe(302);
@@ -698,7 +752,7 @@ describe('POST /oauth/authorize/consent — Phase 31.2 Test G (31.1 SMOKE step 3
   afterEach(async () => { await ctx.cleanup(); });
 
   it('admin + scope=read+write + DCR client → consent Allow → 302 redirect with ?code=&state=', async () => {
-    const { csrf, cookie } = await primeCsrf(ctx);
+    const { csrf, cookie, binding } = await primeCsrf(ctx);
     const verifier = 'a'.repeat(50);
     const res = await ctx.server.inject({
       method: 'POST',
@@ -714,6 +768,7 @@ describe('POST /oauth/authorize/consent — Phase 31.2 Test G (31.1 SMOKE step 3
         code_challenge: s256(verifier),
         code_challenge_method: 'S256',
         approved: 'true',
+        consent_binding: binding,
       }).toString(),
     });
     expect(res.statusCode).toBe(302);
@@ -736,7 +791,7 @@ describe('POST /oauth/authorize/consent — Phase 31.2 Task 1 Test 4 (first-cons
     const preBackfill = await ctx.storage.oauthClients.findByClientId(ctx.clientId);
     expect(preBackfill!.registeredByUserId).toBeNull();
 
-    const { csrf, cookie } = await primeCsrf(ctx);
+    const { csrf, cookie, binding } = await primeCsrf(ctx);
     const verifier = 'a'.repeat(50);
     const res = await ctx.server.inject({
       method: 'POST',
@@ -752,6 +807,7 @@ describe('POST /oauth/authorize/consent — Phase 31.2 Task 1 Test 4 (first-cons
         code_challenge: s256(verifier),
         code_challenge_method: 'S256',
         approved: 'true',
+        consent_binding: binding,
       }).toString(),
     });
     expect(res.statusCode).toBe(302);

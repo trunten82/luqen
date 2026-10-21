@@ -137,7 +137,8 @@
     "invalidApiKey": "Invalid API key.",
     "usernameRequired": "Username is required.",
     "passwordRequired": "Password is required.",
-    "invalidCredentials": "Invalid username or password."
+    "invalidCredentials": "Invalid username or password.",
+    "signInPageExpired": "This sign-in page expired. Please sign in again."
   },
   "users": {
     "title": "Dashboard Users",
@@ -1809,6 +1810,8 @@
   "agent.confirm.approveFailedTitle": "Approval failed",
   "agent.confirm.approveFailedBody": "The server could not confirm this action. Try again, or cancel to abort.",
   "agent.confirm.approveRetry": "Retry approval",
+  "agent.confirm.expired": "This action was not approved within 24 hours, so it was declined. Ask the assistant again if you still want it.",
+  "agent.confirm.notPending": "This action was already approved or declined, so it cannot be approved here.",
   "agent.newChat.label": "Start a new conversation",
   "agent.newChat.button": "New chat",
   "agent.history.open": "History",

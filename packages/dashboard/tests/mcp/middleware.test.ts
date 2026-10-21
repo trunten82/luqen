@@ -6,7 +6,7 @@ import {
   type McpTokenVerifier,
 } from '../../src/mcp/middleware.js';
 import { ALL_PERMISSION_IDS } from '../../src/permissions.js';
-import { storedCallerOrgs, storedCallerUsers } from '../helpers/stored-caller-stub.js';
+import { storedCallerOrgs, storedCallerUsers, mcpCallerPermissions } from '../helpers/stored-caller-stub.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -56,7 +56,7 @@ function makeStubStorage(
     users: users as ReturnType<typeof storedCallerUsers>,
     roles: {
       getEffectivePermissions: vi.fn(async (_userId: string, _orgId?: string): Promise<Set<string>> => {
-        return new Set(perms);
+        return mcpCallerPermissions(perms);
       }),
     },
     oauthClients: {

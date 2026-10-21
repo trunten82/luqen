@@ -131,7 +131,7 @@ async function seedAndShare(ctx: Ctx): Promise<{ shareId: string; assistantId: s
     status: 'final',
   });
   await ctx.storage.conversations.renameConversation(
-    ctx.conversationId, ctx.orgId, 'Contrast question',
+    ctx.conversationId, ctx.orgId, 'Contrast question', ctx.userId,
   );
   const link = await ctx.storage.shareLinks.createShareLink({
     conversationId: ctx.conversationId,
@@ -199,7 +199,7 @@ describe('GET /agent/share/:shareId — Phase 37 Plan 03 Task 3', () => {
 
   it('404 conversation soft-deleted after share created', async () => {
     const { shareId } = await seedAndShare(ctx);
-    await ctx.storage.conversations.softDeleteConversation(ctx.conversationId, ctx.orgId);
+    await ctx.storage.conversations.softDeleteConversation(ctx.conversationId, ctx.orgId, ctx.userId);
     const res = await ctx.server.inject({
       method: 'GET',
       url: `/agent/share/${shareId}`,

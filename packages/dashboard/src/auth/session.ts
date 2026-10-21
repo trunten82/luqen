@@ -83,10 +83,11 @@ export function isSessionExpired(
     return false;
   }
 
-  const lastActivity = session.get('lastActivity') as number | undefined;
-  if (lastActivity === undefined) {
-    // No lastActivity set means the session predates this feature — not expired
-    return false;
+  const lastActivity = session.get('lastActivity');
+  if (typeof lastActivity !== 'number') {
+    // Every sign-in records an activity time, so a signed-in session without one is expired;
+    // a session that has no user yet (the sign-in page's anonymous session) is not.
+    return session.get('userId') !== undefined;
   }
 
   return Date.now() - lastActivity > expiryMs;
@@ -94,10 +95,20 @@ export function isSessionExpired(
 
 /**
  * Create a preHandler hook that:
- * 1. Checks session expiry and invalidates expired sessions
- * 2. Updates lastActivity timestamp on each request
+ * 1. Checks session expiry and invalidates expired sessions, on every path
+ * 2. Updates the lastActivity timestamp, on the paths `recordsActivity` accepts
+ *
+ * `recordsActivity` is the predicate of the requests the session answers: the requests the session
+ * guard checks (the server passes guardChecksSession) that no API key header authenticates. The guard
+ * clears a session it refuses on the same request, so a refused session never gains activity; a
+ * request to a page the guard does not check (the sign-in page, static files, health, public
+ * reports) and a request answered by an API key header (Bearer or X-API-Key) cannot keep a session
+ * alive.
  */
-export function createSessionExpiryHook(expiryMs: number) {
+export function createSessionExpiryHook(
+  expiryMs: number,
+  recordsActivity: (path: string, request: FastifyRequest) => boolean,
+) {
   return async function sessionExpiryHook(
     request: FastifyRequest,
     reply: FastifyReply,
@@ -135,8 +146,8 @@ export function createSessionExpiryHook(expiryMs: number) {
       return;
     }
 
-    // Update last activity timestamp
-    if (typeof session.set === 'function') {
+    // Update last activity timestamp, only on requests the session answers
+    if (typeof session.set === 'function' && recordsActivity(request.url.split('?')[0] as string, request)) {
       session.set('lastActivity', Date.now());
     }
   };

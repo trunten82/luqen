@@ -18,6 +18,7 @@ import { createServer as createNetServer } from 'node:net';
 import { createHash, randomBytes } from 'node:crypto';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { createServer } from '../../src/server.js';
+import type { DashboardConfig } from '../../src/config.js';
 import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { createDashboardSigner } from '../../src/auth/oauth-signer.js';
 
@@ -90,6 +91,10 @@ const REDIRECT_URI = 'https://mcp-client.example/callback';
 /** createServer defaults encryptionKey to sessionSecret; the harness passes this sessionSecret. */
 const SESSION_SECRET = 'm'.repeat(32);
 
+/** The consent page's organization binding (a hidden input), which a browser posts back with Allow. */
+const bindingOf = (html: string): string | undefined =>
+  /name="consent_binding"\s+value="([^"]+)"/.exec(html)?.[1];
+
 const tokenOf = (html: string): string | undefined =>
   /name="csrf-token" content="([^"]+)"/.exec(html)?.[1] ?? /name="_csrf" value="([^"]+)"/.exec(html)?.[1];
 
@@ -132,8 +137,10 @@ function parseRpc(body: string): Record<string, unknown> {
   return dataLine === undefined ? {} : (JSON.parse(dataLine.slice('data:'.length).trim()) as Record<string, unknown>);
 }
 
-/** Boot the real server on a free 127.0.0.1 port. Call close() in afterAll. */
-export async function startMcpOauthHarness(tag: string): Promise<McpOauthHarness> {
+/** Boot the real server on a free 127.0.0.1 port; `opts.config` is merged into the server config. Call close() in afterAll. */
+export async function startMcpOauthHarness(
+  tag: string, opts: { readonly config?: Partial<DashboardConfig> } = {},
+): Promise<McpOauthHarness> {
   const priorPublicUrl = process.env['DASHBOARD_PUBLIC_URL'];
   const priorJwksUri = process.env['DASHBOARD_JWKS_URI'];
   const restoreEnv = (): void => {
@@ -162,6 +169,7 @@ export async function startMcpOauthHarness(tag: string): Promise<McpOauthHarness
     app = (await createServer({
       dbPath, reportsDir, sessionSecret: SESSION_SECRET,
       catalogueUrl: '', catalogueCacheTtl: 0, redisUrl: '', maxConcurrentScans: 1,
+      ...(opts.config ?? {}),
     } as never)) as FastifyInstance;
     await app.listen({ host: '127.0.0.1', port });
     seed = new SqliteStorageAdapter(dbPath);
@@ -182,8 +190,9 @@ export async function startMcpOauthHarness(tag: string): Promise<McpOauthHarness
       headers: { 'x-csrf-token': first.csrf }, payload: { username, password },
     });
     const loggedIn = stepOf('login', res, first);
-    // A page token issued for the authenticated session (the login page token belongs to the anonymous one).
-    const home = await server.inject({ method: 'GET', url: '/admin/teams', cookies: { session: loggedIn.session.cookie } });
+    // A page token issued for the authenticated session (the login page token belongs to the anonymous one,
+    // and a sign-in starts a new session). The account page renders for every signed-in user.
+    const home = await server.inject({ method: 'GET', url: '/account', cookies: { session: loggedIn.session.cookie } });
     return { ...loggedIn, session: nextSession(home, loggedIn.session) };
   };
 
@@ -250,6 +259,7 @@ export async function startMcpOauthHarness(tag: string): Promise<McpOauthHarness
         payload: formBody({
           _csrf: pageToken, client_id: id, redirect_uri: REDIRECT_URI, scope, resource, state: 'harness',
           code_challenge: s256(verifier), code_challenge_method: 'S256', approved: 'true',
+          ...(bindingOf(authorize.body) !== undefined ? { consent_binding: bindingOf(authorize.body)! } : {}),
         }),
       });
       steps.push({ step: 'consent', status: consent.statusCode });

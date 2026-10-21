@@ -6,8 +6,10 @@
  *   (resolveScopes = storedPermissionsOrNone, the real OAuth signer) -> AgentService
  *   (resolvePermissions = storedPermissionsOrNone)
  *
- * Only the model is scripted: each step returns text and tool calls, and the model records the tool
- * list it was offered. The service-connection repository is a spy on every method, and the scan
+ * Only the model is scripted: each step returns text and tool calls (or is a function of the messages
+ * the provider received, so a scripted model can copy its own earlier call from the history), and the
+ * model records the tool list it was offered, the context hints block it received and the messages it
+ * was given. The service-connection repository is a spy on every method, and the scan
  * service is a real ScanService over a spy storage and orchestrator with its own start limiter, so a
  * test can see whether a scan start was attempted, created and metered.
  *
@@ -28,7 +30,7 @@ import { createDashboardMcpServer } from '../../src/mcp/server.js';
 import { DASHBOARD_TOOL_METADATA } from '../../src/mcp/metadata.js';
 import { bridgeMcpToolsForAgent } from '../../src/agent/mcp-bridge.js';
 import { ToolDispatcher, type ToolCallInput } from '../../src/agent/tool-dispatch.js';
-import { AgentService, type AgentStreamInput, type AgentStreamTurn } from '../../src/agent/agent-service.js';
+import { AgentService, type AgentStreamInput, type AgentStreamOptions, type AgentStreamTurn } from '../../src/agent/agent-service.js';
 import { ActiveTurnRegistry } from '../../src/agent/active-turn-registry.js';
 import { ScanService, createScanStartLimiter } from '../../src/services/scan-service.js';
 import type { ScanOrchestrator } from '../../src/scanner/orchestrator.js';
@@ -43,6 +45,12 @@ export interface ScriptStep {
   readonly text: string;
   readonly toolCalls: readonly ToolCallInput[];
 }
+
+/**
+ * A scripted step, or a function of the messages the provider receives (and of the provider's options,
+ * its abort signal and frame callback) that returns one or a promise of one, which the model awaits.
+ */
+export type ScriptEntry = ScriptStep | ((history: readonly unknown[], options: AgentStreamOptions) => ScriptStep | Promise<ScriptStep>);
 
 export interface ToolRow {
   readonly status: string;
@@ -67,8 +75,14 @@ export interface AgentChain {
   readonly storage: SqliteStorageAdapter;
   readonly dispatcher: ToolDispatcher;
   readonly service: AgentService;
+  /** The registry of running turns the service uses. */
+  readonly turnRegistry: ActiveTurnRegistry;
   /** Tool names offered to the model, one entry per model call (in call order). */
   readonly offered: string[][];
+  /** The context hints block the model received, one entry per model call (in call order). */
+  readonly hints: string[];
+  /** The messages the model received, one entry per model call (in call order). */
+  readonly history: unknown[][];
   readonly serviceConnections: {
     readonly list: ReturnType<typeof vi.fn>;
     readonly get: ReturnType<typeof vi.fn>;
@@ -83,7 +97,7 @@ export interface AgentChain {
   /** The scan service's start-limiter store: key -> start timestamps. */
   readonly startStore: Map<string, readonly number[]>;
   /** Queue the model's next steps. */
-  script(steps: readonly ScriptStep[]): void;
+  script(steps: readonly ScriptEntry[]): void;
   createOrg(name: string): Promise<string>;
   /** A user with `globalRole`, in a team of `orgId` bound to the org role named `orgRoleName`. */
   addOrgUser(orgId: string, username: string, globalRole: string, orgRoleName: string): Promise<{ userId: string; teamId: string }>;
@@ -144,15 +158,22 @@ export async function buildAgentChain(): Promise<AgentChain> {
     resolveScopes: async (userId, orgId) => [...(await storedPermissionsOrNone(storage, userId, orgId))],
   });
 
-  const queue: ScriptStep[] = [];
+  const queue: ScriptEntry[] = [];
   const offered: string[][] = [];
+  const hints: string[] = [];
+  const history: unknown[][] = [];
   const llm = {
-    streamAgentConversation: async (input: AgentStreamInput): Promise<AgentStreamTurn> => {
+    streamAgentConversation: async (input: AgentStreamInput, options: AgentStreamOptions): Promise<AgentStreamTurn> => {
       offered.push(input.tools.map((t) => t.name));
-      const next = queue.shift() ?? { text: 'done', toolCalls: [] };
+      hints.push(input.contextHintsBlock ?? '');
+      history.push([...input.messages]);
+      const entry = queue.shift();
+      const produced = entry === undefined ? { text: 'done', toolCalls: [] } : typeof entry === 'function' ? entry(input.messages, options) : entry;
+      const next = produced instanceof Promise ? await produced : produced;
       return { text: next.text, toolCalls: [...next.toolCalls] } as AgentStreamTurn;
     },
   };
+  const turnRegistry = new ActiveTurnRegistry();
   const service = new AgentService({
     storage,
     llm: llm as never,
@@ -164,7 +185,7 @@ export async function buildAgentChain(): Promise<AgentChain> {
     titleGenerator: async () => {
       throw new Error('no title in the agent chain');
     },
-    turnRegistry: new ActiveTurnRegistry(),
+    turnRegistry,
   });
 
   const raw = storage.getRawDatabase();
@@ -179,7 +200,10 @@ export async function buildAgentChain(): Promise<AgentChain> {
     storage,
     dispatcher,
     service,
+    turnRegistry,
     offered,
+    hints,
+    history,
     serviceConnections,
     scanService,
     scanStart,
