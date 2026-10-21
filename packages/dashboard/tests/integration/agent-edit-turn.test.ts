@@ -5,14 +5,17 @@
  * the replaced rows, a paused action of it can no longer be approved (and keeps its arguments
  * redacted), and the edit's audit row lists every replaced row. Retrying an answer replaces that answer
  * only: its link ends and the turn's tool results stay, so the new answer is written from them without
- * running a tool again.
+ * running a tool again. Only the conversation's last message can be retried, when it is a reply, and only
+ * that reply offers Retry in the panel: a reply followed by a tool result or by an action awaiting
+ * confirmation is refused (409 not_last_message) and the action can still be approved. An edit whose new
+ * question cannot be stored changes nothing.
  *
  * The routes are the real ones over the real in-process assistant (tests/helpers/agent-route-chain.ts);
  * only the model is scripted. Member A owns the conversation, member B is a colleague in the same
  * organization who opens the link.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { buildRouteHarness, type RouteHarness, type StoredRow } from '../helpers/agent-route-chain.js';
+import { buildRouteHarness, ROUTE_SITE, type RouteHarness, type StoredRow } from '../helpers/agent-route-chain.js';
 
 const TOOL_QUESTION = 'TOOL-TURN-QUESTION';
 const TOOL_ANSWER = 'TOOL-TURN-ANSWER';
@@ -200,5 +203,80 @@ describe('HARD-21 an edited question replaces its whole answer', () => {
     const input = lastModelInput();
     expect(input.some((m) => m.role === 'tool')).toBe(true);
     expect(JSON.stringify(input)).not.toContain(TOOL_ANSWER);
+  });
+
+  it('HARD-21 retrying a reply followed by an action awaiting confirmation is refused and the action can still be approved', async () => {
+    const { ownerId } = await members();
+    h.chain.script([
+      { text: 'LISTING-FIRST', toolCalls: [{ id: 'l1', name: 'dashboard_list_reports', args: {} }] },
+      { text: '', toolCalls: [{ id: 's1', name: 'dashboard_scan_site', args: { siteUrl: ROUTE_SITE } }] },
+    ]);
+    const turn = await h.chain.runTurn(ownerId, h.orgId, 'LISTING-QUESTION');
+    const rows = h.rows(turn.conversationId);
+    // Fixture premise (recorded in the evidence): question, tool calls, tool result, paused action.
+    expect(rows.map((r) => `${r.role}:${r.status}`)).toEqual(['user:sent', 'assistant:sent', 'tool:sent', 'tool:pending_confirmation']);
+
+    const retried = await h.post(`/agent/conversations/${turn.conversationId}/messages/${rows[1]!.id}/retry`, ownerId);
+
+    expect(retried.status).toBe(409);
+    expect(retried.body['error']).toBe('not_last_message');
+    expect(h.row(rows[1]!.id)?.status).toBe('sent');
+    expect(h.row(rows[3]!.id)?.status).toBe('pending_confirmation');
+    const confirm = await h.post(`/agent/confirm/${rows[3]!.id}`, ownerId);
+    expect(confirm.status).toBe(202);
+    expect(h.chain.scanStart).toHaveBeenCalledTimes(1);
+  });
+
+  it('HARD-21 an edit whose new question cannot be stored leaves the conversation as it was', async () => {
+    const turn = await toolTurn();
+    const url = await share(turn);
+    const raw = h.chain.storage.getRawDatabase();
+    raw.exec(`CREATE TRIGGER refuse_unstorable_question BEFORE INSERT ON agent_messages
+              WHEN NEW.content = 'UNSTORABLE-QUESTION' BEGIN SELECT RAISE(ABORT, 'refused by the test'); END`);
+    try {
+      const res = await h.post(`/agent/conversations/${turn.conversationId}/messages/${turn.questionId}/edit-resend`, turn.ownerId, {
+        body: { content: 'UNSTORABLE-QUESTION' },
+      });
+      expect(res.status).toBe(500);
+    } finally {
+      raw.exec('DROP TRIGGER IF EXISTS refuse_unstorable_question');
+    }
+
+    for (const r of turn.rows) expect(h.row(r.id)?.status, `${r.role} ${r.id}`).toBe('sent');
+    const link = await h.get(url, turn.colleagueId);
+    expect(link.status).toBe(200);
+    expect(link.text).toContain(TOOL_ANSWER);
+    const edits = raw
+      .prepare("SELECT COUNT(*) AS n FROM agent_audit_log WHERE conversation_id = ? AND tool_name = 'message_edit_resend'")
+      .get(turn.conversationId) as { n: number };
+    expect(edits.n).toBe(0);
+  });
+
+  it('HARD-21 only the last message of a conversation offers retry and only when it is a reply', async () => {
+    const { ownerId } = await members();
+    const retryIds = (html: string): string[] =>
+      [...html.matchAll(/data-action="retryAssistant"\s+data-message-id="([^"]+)"/g)].map((m) => m[1]!);
+    h.chain.script([{ text: 'FIRST-REPLY', toolCalls: [] }]);
+    const first = await h.chain.runTurn(ownerId, h.orgId, 'FIRST-QUESTION');
+    h.chain.script([{ text: 'SECOND-REPLY', toolCalls: [] }]);
+    await h.chain.runTurn(ownerId, h.orgId, 'SECOND-QUESTION', first.conversationId);
+    const rows = h.rows(first.conversationId);
+    expect(rows.map((r) => `${r.role}:${r.status}`)).toEqual(['user:sent', 'assistant:sent', 'user:sent', 'assistant:sent']);
+
+    const panel = await h.get(`/agent/panel?conversationId=${first.conversationId}`, ownerId);
+    expect(panel.status).toBe(200);
+    expect(panel.text).toContain('FIRST-REPLY');
+    expect(retryIds(panel.text)).toEqual([rows[3]!.id]);
+
+    h.chain.script([
+      { text: 'LISTING-FIRST', toolCalls: [{ id: 'l1', name: 'dashboard_list_reports', args: {} }] },
+      { text: '', toolCalls: [{ id: 's1', name: 'dashboard_scan_site', args: { siteUrl: ROUTE_SITE } }] },
+    ]);
+    await h.chain.runTurn(ownerId, h.orgId, 'THIRD-QUESTION', first.conversationId);
+    const paused = await h.get(`/agent/panel?conversationId=${first.conversationId}`, ownerId);
+    expect(paused.status).toBe(200);
+    expect(paused.text).toContain('LISTING-FIRST');
+    expect(paused.text).toContain('data-pending="true"');
+    expect(retryIds(paused.text)).toEqual([]);
   });
 });

@@ -476,4 +476,25 @@ describe('HARD-21 a withdrawn answer gains no row and keeps its status', () => {
     expect(await storage.conversations.claimPendingMessage(pausedForClaim.id, 'sent'), 'claimPendingMessage answer').toBe(false);
     expect(statusOf(pausedForClaim.id), 'claimPendingMessage').toBe('superseded');
   });
+
+  it('HARD-21 an edit or a retry of a conversation of another organization writes nothing', async () => {
+    const conv = await storage.conversations.createConversation({ userId, orgId: orgA });
+    const question = await storage.conversations.appendMessage({ conversationId: conv.id, role: 'user', content: 'q' });
+    const answer = await storage.conversations.appendMessage({ conversationId: conv.id, role: 'assistant', content: 'a' });
+    const snapshot = (): unknown[] => storage.getRawDatabase()
+      .prepare('SELECT id, status, content FROM agent_messages WHERE conversation_id = ? ORDER BY created_at, rowid')
+      .all(conv.id);
+    const before = snapshot();
+
+    const edited = await storage.conversations.replaceLatestQuestion({
+      conversationId: conv.id, orgId: orgB, messageId: question.id, content: 'edited elsewhere',
+    });
+    const retried = await storage.conversations.supersedeLatestAnswer({
+      conversationId: conv.id, orgId: orgB, messageId: answer.id,
+    });
+
+    expect(edited.ok).toBe(false);
+    expect(retried.ok).toBe(false);
+    expect(snapshot()).toEqual(before);
+  });
 });

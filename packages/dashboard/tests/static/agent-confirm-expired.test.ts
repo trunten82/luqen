@@ -167,7 +167,7 @@ afterEach(() => {
 });
 
 describe('HARD-21 an approval the server refuses as no longer pending', () => {
-  it('HARD-21 an expired approval closes the dialog with the expired message and no retry', async () => {
+  it('HARD-21 an expired approval closes the dialog and offers no retry', async () => {
     const h = setup(() => response({ error: 'expired' }, 409));
 
     await approve(h);
@@ -180,7 +180,7 @@ describe('HARD-21 an approval the server refuses as no longer pending', () => {
     expect(h.doc.querySelector('[data-action="agentConfirmApprove"]')?.hasAttribute('disabled')).toBe(false);
   });
 
-  it('HARD-21 an approval already resolved elsewhere closes the dialog without retry', async () => {
+  it('HARD-21 an approval already resolved elsewhere closes the dialog and offers no retry', async () => {
     const h = setup(() => response({ error: 'not_pending' }, 409));
 
     await approve(h);
@@ -251,5 +251,27 @@ describe('HARD-21 an approval the server refuses as no longer pending', () => {
     expect(nearestLiveRegion(notice!)).toBe(h.doc.getElementById('agent-messages'));
     // Announced once: the status line does not repeat the sentence.
     expect(h.doc.getElementById('agent-aria-status')?.textContent ?? '').not.toContain(EXPIRED_TEXT);
+  });
+
+  it('HARD-21 a second refused approval replaces the earlier notice in the panel', async () => {
+    // The panel answers '' so its reload replaces nothing: an earlier notice stays unless the new one removes it.
+    const answers = [() => response({ error: 'expired' }, 409), () => response({ error: 'not_pending' }, 409)];
+    let calls = 0;
+    const h = setup(() => answers[Math.min(calls++, answers.length - 1)]!());
+    const noticeHolding = async (text: string): Promise<void> => {
+      const present = (): boolean => [...h.doc.querySelectorAll('[data-agent-notice]')].some((n) => (n.textContent ?? '').includes(text));
+      for (let i = 0; i < 2000 && !present(); i++) await Promise.resolve();
+      expect(present(), text).toBe(true);
+    };
+
+    await approve(h);
+    await noticeHolding(EXPIRED_TEXT);
+    await approve(h);
+    await noticeHolding(RESOLVED_TEXT);
+
+    const notices = h.doc.querySelectorAll('[data-agent-notice]');
+    expect(notices).toHaveLength(1);
+    expect(isVisibleInPanel(h, notices[0]!)).toBe(true);
+    expect((notices[0]!.textContent ?? '').trim()).toBe(RESOLVED_TEXT);
   });
 });

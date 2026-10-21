@@ -15,6 +15,8 @@ import { buildRouteHarness, type RouteHarness } from '../helpers/agent-route-cha
 const EDITED_QUESTION = 'EDITED-QUESTION';
 const EDITED_ANSWER = 'EDITED-ANSWER';
 const HOUR = 60 * 60 * 1000;
+/** How long a test waits, in wall-clock time, for a request to reach its held step before it fails. */
+const WAIT_MS = 4000;
 
 interface Paused {
   readonly ownerId: string;
@@ -60,7 +62,8 @@ describe('HARD-21 a paused action resolved while its question is edited adds not
   }
 
   async function waitUntil(ready: () => boolean, what: string): Promise<void> {
-    for (let i = 0; i < 5000 && !ready(); i++) await new Promise((r) => setImmediate(r));
+    const deadline = Date.now() + WAIT_MS;
+    while (!ready() && Date.now() < deadline) await new Promise((r) => setImmediate(r));
     if (!ready()) throw new Error(`the request did not reach ${what}`);
   }
 

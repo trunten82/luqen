@@ -358,6 +358,19 @@ describe('agent.js delegated action handlers — Task 2', () => {
     expect(h.eventSourceCalls.some((u) => u.includes('/agent/stream/c1'))).toBe(true);
   });
 
+  it('HARD-21 a new answer being written removes the retry control of the earlier reply', async () => {
+    const h = setupHarness({ initialMessages: makeAssistantBubble('a1') });
+    // Positive control: the reply rendered as the conversation's last message offers Retry.
+    expect(h.doc.querySelectorAll('[data-action="retryAssistant"]')).toHaveLength(1);
+    // The stream of a new answer opens, the way agent.js opens it after a question is sent.
+    (h.win as unknown as { __luqenAgent: { openStream(cid: string): void } }).__luqenAgent.openStream('c1');
+    await flush();
+    expect(h.eventSourceCalls.some((u) => u.includes('/agent/stream/c1'))).toBe(true);
+    expect(h.doc.querySelectorAll('[data-action="retryAssistant"]')).toHaveLength(0);
+    expect(h.doc.querySelectorAll('[data-action="copyAssistant"]')).toHaveLength(1);
+    expect(h.doc.querySelectorAll('[data-action="shareAssistant"]')).toHaveLength(1);
+  });
+
   it('8. retryAssistant failure re-enables button and announces error', async () => {
     const h = setupHarness({ initialMessages: makeAssistantBubble('a1') });
     h.fetchStub.mockResolvedValueOnce(jsonResponse({ error: 'nope' }, 400));

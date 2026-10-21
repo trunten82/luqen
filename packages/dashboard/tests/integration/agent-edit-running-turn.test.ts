@@ -25,6 +25,8 @@ const OLD_ANSWER = 'OLD-ANSWER';
 const PARTIAL_OLD = 'PARTIAL-OLD';
 const FORCED_OLD_ANSWER = 'FORCED-OLD-ANSWER';
 const RETRIED_ANSWER = 'RETRIED-ANSWER';
+/** How long a test waits for a turn to reach its held step before it fails. */
+const WAIT_MS = 4000;
 
 interface Gate {
   readonly promise: Promise<void>;
@@ -82,9 +84,10 @@ function listReports(id: string, text = ''): ScriptStep {
   return { text, toolCalls: [{ id, name: 'dashboard_list_reports', args: {} }] };
 }
 
-/** Waits, bounded in event-loop turns, until `ready` holds. */
+/** Waits, bounded by WAIT_MS of wall-clock time (not a count of event-loop turns, which a loaded host spends quickly), until `ready` holds. */
 async function waitUntil(ready: () => boolean, what: string): Promise<void> {
-  for (let i = 0; i < 5000 && !ready(); i++) await new Promise((r) => setImmediate(r));
+  const deadline = Date.now() + WAIT_MS;
+  while (!ready() && Date.now() < deadline) await new Promise((r) => setImmediate(r));
   if (!ready()) throw new Error(`the turn did not reach ${what}`);
 }
 
@@ -354,5 +357,29 @@ describe('HARD-21 a change that lands while the assistant answers ends the turn 
     expect(h.rows(conversationId).filter((r) => r.status === 'pending_confirmation')).toEqual([]);
     expect(turn.frames.filter((f) => f.type === 'pending_confirmation')).toEqual([]);
     expect(h.chain.scanStart).not.toHaveBeenCalled();
+  });
+
+  it('HARD-21 a refused retry leaves the running turn to finish its answer', async () => {
+    const { ownerId, conversationId } = await start();
+    const step = streamingStep({ text: 'RUNNING-ANSWER', toolCalls: [] });
+    h.chain.script([listReports('l1', 'CHECKING-FIRST'), step.entry]);
+    const running = h.chain.runTurn(ownerId, h.orgId, QUESTION, conversationId);
+    try {
+      await waitUntil(() => step.options() !== undefined, 'the model step after the tool result');
+      // Fixture premise (recorded in the evidence): question, tool calls, tool result.
+      expect(shape(conversationId)).toEqual(['user:sent', 'assistant:sent', 'tool:sent']);
+      const toolCallRow = h.rows(conversationId)[1]!;
+      const retried = await h.post(`/agent/conversations/${conversationId}/messages/${toolCallRow.id}/retry`, ownerId);
+      expect(retried.status).toBe(409);
+      expect(retried.body['error']).toBe('not_last_message');
+      expect(step.options()!.signal.aborted).toBe(false);
+    } finally {
+      step.release();
+      await running;
+    }
+
+    expect(contentRows(conversationId).map((r) => `${r.role}:${r.status}:${r.content}`)).toEqual([
+      `user:sent:${QUESTION}`, 'assistant:sent:CHECKING-FIRST', 'tool:sent:', 'assistant:sent:RUNNING-ANSWER',
+    ]);
   });
 });
