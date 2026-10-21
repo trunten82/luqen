@@ -37,7 +37,7 @@
  */
 
 import type { StorageAdapter } from '../db/index.js';
-import type { Message } from '../db/interfaces/conversation-repository.js';
+import { isWithdrawnAnswer, WithdrawnAnswerError, type Message } from '../db/interfaces/conversation-repository.js';
 import type { ToolMetadata } from '@luqen/core/mcp';
 import type { SseFrame } from './sse-frames.js';
 import { parsePlanBlock } from './plan-parser.js';
@@ -364,18 +364,23 @@ export class AgentService {
     // the same turn skips the second persist — acceptable trade-off (and
     // exceedingly rare; same-prompt repeats are typically separated by an
     // assistant reply, which makes them a NEW turn with non-matching window).
+    //
+    // Every row the turn writes follows the row it wrote before (the first one follows the question,
+    // the most recent window row of the turn's text) and is written only while that row is on the
+    // conversation's active branch: once an edit, a retry or a delete withdraws the answer, the store
+    // refuses the turn's next row (WithdrawnAnswerError) and the turn ends without writing more.
     const preWindow = await this.storage.conversations.getWindow(conversationId);
-    const alreadyPersisted = preWindow.some(
+    const storedQuestion = [...preWindow].reverse().find(
       (row) => row.role === 'user' && (row.content ?? '') === userMessage,
     );
-    if (!alreadyPersisted) {
-      await this.storage.conversations.appendMessage({
-        conversationId,
-        role: 'user',
-        content: userMessage,
-        status: 'sent',
-      });
-    }
+    let lastRowId = storedQuestion !== undefined
+      ? storedQuestion.id
+      : (await this.storage.conversations.appendMessage({
+          conversationId,
+          role: 'user',
+          content: userMessage,
+          status: 'sent',
+        })).id;
 
     const agentDisplayName = await this.resolveDisplayName(orgId);
 
@@ -452,12 +457,13 @@ export class AgentService {
           this.config.modelId,
         );
         if (this.config.agent_compaction !== false && shouldCompact(estimate, this.config.modelMaxTokens)) {
-          await this.compactOldestTurns({
+          lastRowId = await this.compactOldestTurns({
             conversationId,
             orgId,
             userId,
             agentDisplayName,
             signal,
+            followsMessageId: lastRowId,
           });
           window = await this.storage.conversations.getWindow(conversationId);
           messages = windowToChatMessages(window);
@@ -512,6 +518,7 @@ export class AgentService {
             role: 'assistant',
             content: assistantText,
             status: 'sent',
+            followsMessageId: lastRowId,
           });
           // Phase 35 Plan 03 — post-first-assistant-turn title hook (D-02/D-03).
           // Fire-and-forget so SSE `done` latency is unaffected. Only triggers
@@ -547,7 +554,7 @@ export class AgentService {
         if (destructive !== undefined) {
           const notOffered = turn.toolCalls.filter((c) => !isOffered(c.name));
           if (notOffered.length > 0) {
-            await this.dispatchBatchAndPersist({
+            lastRowId = await this.dispatchBatchAndPersist({
               turn: { ...turn, toolCalls: notOffered },
               conversationId,
               userId,
@@ -556,6 +563,7 @@ export class AgentService {
               emit,
               retryBudget,
               isOffered,
+              followsMessageId: lastRowId,
             });
           }
           const meta = this.allTools.find((t) => t.name === destructive.name);
@@ -567,6 +575,7 @@ export class AgentService {
             role: 'tool',
             status: 'pending_confirmation',
             toolCallJson: JSON.stringify(destructive),
+            followsMessageId: lastRowId,
           });
           emit({
             type: 'pending_confirmation',
@@ -584,16 +593,17 @@ export class AgentService {
         //     user → assistant(tool_calls) → tool (per call) order that
         //     Ollama / OpenAI / Anthropic all require for conversation
         //     history. See Plan 32.1-08.
-        await this.storage.conversations.appendMessage({
+        lastRowId = (await this.storage.conversations.appendMessage({
           conversationId,
           role: 'assistant',
           content: assistantText,
           status: 'sent',
           toolCallJson: JSON.stringify(turn.toolCalls),
-        });
+          followsMessageId: lastRowId,
+        })).id;
         // Phase 36 ATOOL-01/02/04 — parallel dispatch with rationale capture,
         // retry budget management, and per-tool SSE lifecycle frames.
-        await this.dispatchBatchAndPersist({
+        lastRowId = await this.dispatchBatchAndPersist({
           turn,
           conversationId,
           userId,
@@ -602,6 +612,7 @@ export class AgentService {
           emit,
           retryBudget,
           isOffered,
+          followsMessageId: lastRowId,
           ...(input.groupId !== undefined ? { groupId: input.groupId } : {}),
         });
         // Fall through to next iteration.
@@ -627,6 +638,7 @@ export class AgentService {
         emit,
         signal,
         agentDisplayName,
+        followsMessageId: lastRowId,
       });
       await this.storage.agentAudit.append({
         userId,
@@ -639,6 +651,16 @@ export class AgentService {
         latencyMs: 0,
       });
     } catch (err) {
+      // The answer was replaced or withdrawn (an edit, a retry or a delete) while the turn ran: the store
+      // refused the turn's next row, so the turn ends here, writing nothing more and no error row.
+      if (isWithdrawnAnswer(err)) {
+        try {
+          emit({ type: 'done', aborted: true });
+        } catch {
+          /* stream gone; nothing to do */
+        }
+        return;
+      }
       // Phase 37 Plan 03 (AUX-01) — distinguish abort-by-user from
       // genuine errors. When the route's AbortController fires (user
       // hit the stop button or closed the SSE), persist the partial
@@ -653,6 +675,7 @@ export class AgentService {
           userId,
           accumulatedText,
           turnStartMs: turnStart,
+          followsMessageId: lastRowId,
         });
         // Phase 43 Plan 02 — emit a terminal aborted-done so the client
         // can render the cancelled-state UI. Best-effort: emit() may
@@ -675,19 +698,27 @@ export class AgentService {
         message,
         retryable: false,
       });
-      await this.storage.conversations.appendMessage({
-        conversationId,
-        role: 'assistant',
-        content: `Error: ${message}`,
-        status: 'failed',
-      });
+      try {
+        await this.storage.conversations.appendMessage({
+          conversationId,
+          role: 'assistant',
+          content: `Error: ${message}`,
+          status: 'failed',
+          followsMessageId: lastRowId,
+        });
+      } catch (appendErr) {
+        // An error row of a withdrawn answer is not written.
+        if (!isWithdrawnAnswer(appendErr)) throw appendErr;
+      }
     } finally {
       // Phase 43 Plan 02 — always evict the registry entry so the next
       // turn starts with a clean controller. Detach the input.signal
       // forwarder so a late abort on the route's controller doesn't
       // fire on a discarded turn controller after we've already returned.
       input.signal.removeEventListener('abort', forwardAbort);
-      this.turnRegistry.cleanup(conversationId);
+      // Only this turn's own entry: a newer turn of the conversation keeps its entry, so an edit, a
+      // retry or a delete still ends it.
+      this.turnRegistry.cleanup(conversationId, turnController);
     }
   }
 
@@ -711,13 +742,23 @@ export class AgentService {
     readonly userId: string;
     readonly accumulatedText: string;
     readonly turnStartMs: number;
+    /** The row the turn wrote last; the stopped reply follows it. */
+    readonly followsMessageId: string;
   }): Promise<void> {
-    const row = await this.storage.conversations.appendMessage({
-      conversationId: args.conversationId,
-      role: 'assistant',
-      content: args.accumulatedText,
-      status: 'streaming',
-    });
+    let row: Message;
+    try {
+      row = await this.storage.conversations.appendMessage({
+        conversationId: args.conversationId,
+        role: 'assistant',
+        content: args.accumulatedText,
+        status: 'streaming',
+        followsMessageId: args.followsMessageId,
+      });
+    } catch (err) {
+      // The answer was replaced or withdrawn: no stopped reply of it is kept and no stop is recorded.
+      if (isWithdrawnAnswer(err)) return;
+      throw err;
+    }
     await this.storage.conversations.markMessageStopped(
       row.id,
       args.conversationId,
@@ -756,8 +797,10 @@ export class AgentService {
     readonly userId: string;
     readonly agentDisplayName: string;
     readonly signal: AbortSignal;
-  }): Promise<void> {
-    const { conversationId, orgId, userId, agentDisplayName, signal } = args;
+    /** The row the turn wrote last; the summary follows it. */
+    readonly followsMessageId: string;
+  }): Promise<string> {
+    const { conversationId, orgId, userId, agentDisplayName, signal, followsMessageId } = args;
 
     const window = await this.storage.conversations.getWindow(conversationId);
     // Identify user-anchored turn boundaries.
@@ -766,10 +809,10 @@ export class AgentService {
       if (m.role === 'user') userIndices.push(i);
     });
     // Need MIN_KEEP_TURNS + 1 user messages to have something older to summarise.
-    if (userIndices.length <= MIN_KEEP_TURNS) return;
+    if (userIndices.length <= MIN_KEEP_TURNS) return followsMessageId;
 
     const tailStartIdx = userIndices[userIndices.length - MIN_KEEP_TURNS];
-    if (tailStartIdx === undefined || tailStartIdx === 0) return;
+    if (tailStartIdx === undefined || tailStartIdx === 0) return followsMessageId;
 
     const olderRows = window.slice(0, tailStartIdx);
     const boundaryCreatedAt = window[tailStartIdx].createdAt;
@@ -804,20 +847,21 @@ export class AgentService {
     } catch {
       // If summarisation fails, abort compaction — do NOT drop rows out of
       // the window without a replacement summary (that would lose context).
-      return;
+      return followsMessageId;
     }
 
-    if (summaryText.length === 0) return;
+    if (summaryText.length === 0) return followsMessageId;
     const prefixed = summaryText.startsWith('[summary]')
       ? summaryText
       : `[summary] ${summaryText}`;
 
     // Persist the summary FIRST so the new row's created_at > boundary.
-    await this.storage.conversations.appendMessage({
+    const summary = await this.storage.conversations.appendMessage({
       conversationId,
       role: 'assistant',
       content: prefixed,
       status: 'sent',
+      followsMessageId,
     });
 
     // Flip the older rows out of the window.
@@ -833,6 +877,7 @@ export class AgentService {
       outcome: 'success',
       latencyMs: 0,
     });
+    return summary.id;
   }
 
   /**
@@ -906,7 +951,9 @@ export class AgentService {
     readonly isOffered: (name: string) => boolean;
     /** Phase 62.4 — forwarded to dispatch so fleet tools default group_id. */
     readonly groupId?: string;
-  }): Promise<void> {
+    /** The row the turn wrote last; the first result follows it, each later result the one before. */
+    readonly followsMessageId: string;
+  }): Promise<string> {
     const { turn, conversationId, userId, orgId, signal, emit, retryBudget, isOffered, groupId } = args;
     const calls = turn.toolCalls;
 
@@ -1008,7 +1055,11 @@ export class AgentService {
     );
 
     // (d) Persist results + audit rows in input order. Apply retry guidance
-    //     from the shared budget; decrement per non-success outcome.
+    //     from the shared budget; decrement per non-success outcome. Each result follows the row
+    //     before it; once one is refused (the answer was withdrawn) no further result is written,
+    //     while every tool that ran keeps its audit row, and the refusal ends the turn.
+    let lastRowId = args.followsMessageId;
+    let withdrawn = false;
     for (const s of settled) {
       // buildRetryGuidance treats anything without an `error` sentinel as
       // success → null. Failed handler-thrown sentinels (resultToStore =
@@ -1028,13 +1079,21 @@ export class AgentService {
             ? { ...(s.result as Record<string, unknown>), _guidance: guidance }
             : { value: s.result, _guidance: guidance });
       const stored = truncateResultForStorage(persistedShape);
-      await this.storage.conversations.appendMessage({
-        conversationId,
-        role: 'tool',
-        toolCallJson: JSON.stringify(s.call),
-        toolResultJson: stored,
-        status: s.outcome === 'success' ? 'sent' : 'failed',
-      });
+      if (!withdrawn) {
+        try {
+          lastRowId = (await this.storage.conversations.appendMessage({
+            conversationId,
+            role: 'tool',
+            toolCallJson: JSON.stringify(s.call),
+            toolResultJson: stored,
+            status: s.outcome === 'success' ? 'sent' : 'failed',
+            followsMessageId: lastRowId,
+          })).id;
+        } catch (err) {
+          if (!isWithdrawnAnswer(err)) throw err;
+          withdrawn = true;
+        }
+      }
       await this.storage.agentAudit.append({
         userId,
         orgId,
@@ -1047,6 +1106,8 @@ export class AgentService {
         latencyMs: s.latencyMs,
       });
     }
+    if (withdrawn) throw new WithdrawnAnswerError();
+    return lastRowId;
   }
 
   private async forceFinalAnswer(args: {
@@ -1056,8 +1117,10 @@ export class AgentService {
     readonly emit: (f: SseFrame) => void;
     readonly signal: AbortSignal;
     readonly agentDisplayName: string;
+    /** The row the turn wrote last; the final answer follows it. */
+    readonly followsMessageId: string;
   }): Promise<void> {
-    const { conversationId, emit, signal, agentDisplayName, orgId, userId } = args;
+    const { conversationId, emit, signal, agentDisplayName, orgId, userId, followsMessageId } = args;
     const window = await this.storage.conversations.getWindow(conversationId);
     const messages: AgentChatMessage[] = [
       ...windowToChatMessages(window),
@@ -1081,6 +1144,7 @@ export class AgentService {
       role: 'assistant',
       content: turn.text,
       status: 'sent',
+      followsMessageId,
     });
     emit({ type: 'done' });
   }

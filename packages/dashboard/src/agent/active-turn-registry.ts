@@ -18,9 +18,11 @@
  *     `false` when no entry was present. Idempotent: a second cancel
  *     for the same id is a no-op false.
  *
- *   - `cleanup(conversationId)` evicts the entry without aborting.
- *     `runTurn` calls this from its `finally` block on natural
- *     completion so the next turn's registration starts clean.
+ *   - `cleanup(conversationId, owner?)` evicts the entry without aborting.
+ *     Given `owner`, it evicts only when the entry is that controller, so
+ *     a turn that ends after a newer turn of the same conversation
+ *     registered leaves the newer turn's entry in place. `runTurn` calls
+ *     it with its own controller from its `finally` block.
  *
  *   - `isActive(conversationId)` is a read-only probe used by tests
  *     and future diagnostics.
@@ -54,7 +56,8 @@ export class ActiveTurnRegistry {
     return true;
   }
 
-  cleanup(conversationId: string): void {
+  cleanup(conversationId: string, owner?: AbortController): void {
+    if (owner !== undefined && this.turns.get(conversationId) !== owner) return;
     this.turns.delete(conversationId);
   }
 

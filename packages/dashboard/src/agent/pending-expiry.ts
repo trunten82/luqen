@@ -22,6 +22,7 @@
 
 import type { FastifyBaseLogger } from 'fastify';
 import type { StorageAdapter } from '../db/index.js';
+import { isWithdrawnAnswer } from '../db/interfaces/conversation-repository.js';
 
 /** A paused action not confirmed or declined within this long is declined. */
 export const PENDING_CONFIRMATION_TTL_MS = 24 * 60 * 60 * 1000;
@@ -44,9 +45,11 @@ export function pendingConfirmationCutoff(now: Date): string {
 /**
  * Declines one paused action as expired: the row leaves pending through the conditional claim (its
  * arguments stored redacted), then a tool row carrying `{ error: 'expired' }` is appended so the
- * conversation's history stays well formed. Returns false when the claim was lost (the action was
- * resolved a moment earlier). A tool row that cannot be written is logged at warn; the action is
- * declined all the same, so the answer is still true.
+ * conversation's history stays well formed. The tool row follows the paused row and is written only
+ * while that row is on the active branch, so when its question was edited meanwhile nothing is added.
+ * Returns false when the claim was lost (the action was resolved a moment earlier). A tool row that
+ * cannot be written for any other reason is logged at warn; the action is declined all the same, so
+ * the answer is still true.
  */
 export async function expirePendingAction(
   storage: StorageAdapter,
@@ -61,9 +64,10 @@ export async function expirePendingAction(
       toolCallJson: row.toolCallJson ?? '{}',
       toolResultJson: EXPIRED_RESULT,
       status: 'sent',
+      followsMessageId: row.id,
     });
   } catch (err) {
-    log.warn({ err, messageId: row.id }, 'pending action expiry could not write its result row');
+    if (!isWithdrawnAnswer(err)) log.warn({ err, messageId: row.id }, 'pending action expiry could not write its result row');
   }
   return true;
 }

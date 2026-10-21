@@ -113,6 +113,30 @@ export interface AppendMessageInput {
   readonly status?: MessageStatus;
   /** Phase 83 multimodal: images attached to a `role='user'` message. */
   readonly images?: readonly ImageInput[];
+  /**
+   * The row this one follows in its answer (the turn's question, or the row the turn wrote last; the
+   * paused action for the result of resolving it). When given, the row is written only while the
+   * followed row is on the active branch (not superseded) of a conversation that is not deleted;
+   * otherwise nothing is written and {@link WithdrawnAnswerError} is thrown. Absent at the start of a
+   * turn (a question).
+   */
+  readonly followsMessageId?: string;
+}
+
+/**
+ * Thrown by `appendMessage` when the row a new row follows is superseded, belongs to a deleted
+ * conversation or does not exist: the answer it belongs to was replaced or withdrawn, and nothing was written.
+ */
+export class WithdrawnAnswerError extends Error {
+  constructor() {
+    super("the row this one follows is no longer on the conversation's active branch");
+    this.name = 'WithdrawnAnswerError';
+  }
+}
+
+/** Whether `err` is a {@link WithdrawnAnswerError} (recognised by name, so it holds across module copies). */
+export function isWithdrawnAnswer(err: unknown): boolean {
+  return err instanceof Error && err.name === 'WithdrawnAnswerError';
 }
 
 /** A paused action (a `pending_confirmation` row) with the conversation it belongs to. */
@@ -158,6 +182,10 @@ export interface ConversationRepository {
    * the rule the agent audit uses (src/db/agent-audit-redaction.ts), except
    * on a `pending_confirmation` row: a paused action keeps its arguments as
    * given until the write that resolves it (`updateMessageStatus`).
+   *
+   * With `followsMessageId` the row is written only while that row is on the active branch of a
+   * conversation that is not deleted, checked in the same transaction; otherwise it throws
+   * {@link WithdrawnAnswerError} and writes nothing.
    */
   appendMessage(input: AppendMessageInput): Promise<Message>;
 
@@ -167,7 +195,7 @@ export interface ConversationRepository {
    * status without touching an existing result payload. A transition that
    * moves a `pending_confirmation` row to any other status stores its
    * `toolCallJson` with secret-named argument values redacted, in the same
-   * write.
+   * write. A superseded row is never moved: its status stays superseded.
    *
    * NOTE: no userId / orgId guard — Phase 32's AgentService is
    * responsible for verifying the caller owns the message (T-31-03).
@@ -260,7 +288,7 @@ export interface ConversationRepository {
    * stopped rows stay visible in the UI.
    *
    * Org-guarded: the message must belong to a conversation in `orgId`.
-   * Returns true on update, false on miss / wrong org.
+   * A superseded row is not touched. Returns true on update, false on miss / wrong org / superseded.
    */
   markMessageStopped(
     messageId: string,

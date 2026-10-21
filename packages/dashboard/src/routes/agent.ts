@@ -37,6 +37,7 @@ import { LuqenResponse, ErrorEnvelope } from '../api/schemas/envelope.js';
 
 import type { StorageAdapter } from '../db/index.js';
 import { redactArgumentsJson } from '../db/agent-audit-redaction.js';
+import { isWithdrawnAnswer } from '../db/interfaces/conversation-repository.js';
 import { expirePendingAction, pendingConfirmationCutoff, recordPendingExpired } from '../agent/pending-expiry.js';
 import { writeFrame, type SseFrame } from '../agent/sse-frames.js';
 import type { AgentService } from '../agent/agent-service.js';
@@ -750,13 +751,21 @@ export async function registerAgentRoutes(
         }
         // Persist the dispatched tool result as a NEW tool row so the loop
         // can resume on the next SSE turn. Truncation mirrors AgentService.
-        await storage.conversations.appendMessage({
-          conversationId: pending.conversationId,
-          role: 'tool',
-          toolCallJson: JSON.stringify(call),
-          toolResultJson: JSON.stringify(result),
-          status: 'sent',
-        });
+        // The result follows the paused row and is written only while that row is on the active
+        // branch: the action was approved and ran, and when its question was edited or its
+        // conversation deleted meanwhile, nothing of it is added to the conversation (still 202).
+        try {
+          await storage.conversations.appendMessage({
+            conversationId: pending.conversationId,
+            role: 'tool',
+            toolCallJson: JSON.stringify(call),
+            toolResultJson: JSON.stringify(result),
+            status: 'sent',
+            followsMessageId: messageId,
+          });
+        } catch (err) {
+          if (!isWithdrawnAnswer(err)) throw err;
+        }
         return reply.code(202).send({ ok: true });
       },
     );
@@ -792,16 +801,23 @@ export async function registerAgentRoutes(
         if (!(await storage.conversations.claimPendingMessage(messageId, 'denied'))) {
           return reply.code(409).send({ error: 'not_pending' });
         }
-        await storage.conversations.appendMessage({
-          conversationId: pending.conversationId,
-          role: 'tool',
-          toolCallJson: call !== null ? JSON.stringify(call) : '{}',
-          toolResultJson: JSON.stringify({
-            error: 'user_denied',
-            message: 'User declined the action.',
-          }),
-          status: 'sent',
-        });
+        // The decline's result follows the paused row and is written only while that row is on the
+        // active branch; when its question was edited meanwhile nothing is added (still 202).
+        try {
+          await storage.conversations.appendMessage({
+            conversationId: pending.conversationId,
+            role: 'tool',
+            toolCallJson: call !== null ? JSON.stringify(call) : '{}',
+            toolResultJson: JSON.stringify({
+              error: 'user_denied',
+              message: 'User declined the action.',
+            }),
+            status: 'sent',
+            followsMessageId: messageId,
+          });
+        } catch (err) {
+          if (!isWithdrawnAnswer(err)) throw err;
+        }
         return reply.code(202).send({ ok: true });
       },
     );
@@ -1260,6 +1276,8 @@ export async function registerAgentRoutes(
           // Idempotent: second call + wrong org + unknown id all map to 404.
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
+        // A deleted conversation's running turn ends; the store refuses any row it would still write.
+        turnRegistry.cancel(id);
         await storage.agentAudit.append({
           userId: user.id,
           orgId: effectiveOrgId,
@@ -1403,6 +1421,8 @@ export async function registerAgentRoutes(
         if (updated === 0) {
           return reply.code(404).send({ error: 'message_not_found' });
         }
+        // A retried answer's running turn ends; the store refuses any row it would still write.
+        turnRegistry.cancel(cid);
         await storage.agentAudit.append({
           userId: user.id,
           orgId,
@@ -1460,6 +1480,8 @@ export async function registerAgentRoutes(
           content: parsed.data.content,
           status: 'sent',
         });
+        // The replaced answer's running turn ends; the store refuses any row it would still write.
+        turnRegistry.cancel(cid);
 
         await storage.agentAudit.append({
           userId: user.id,

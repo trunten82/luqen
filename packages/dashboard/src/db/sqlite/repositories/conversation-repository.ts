@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
 import { redactArgumentsJson } from '../../agent-audit-redaction.js';
+import { WithdrawnAnswerError } from '../../interfaces/conversation-repository.js';
 import type {
   AppendMessageInput,
   Conversation,
@@ -216,7 +217,22 @@ export class SqliteConversationRepository implements ConversationRepository {
         AND status NOT IN ('pending_confirmation', 'streaming')
     `);
 
+    // A row of an answer is written after the row it follows, and only while that row is on the active
+    // branch (not superseded) of a conversation that is not deleted; otherwise nothing is written.
+    const followedRow = this.db.prepare(`
+      SELECT 1 FROM agent_messages m
+      JOIN agent_conversations c ON c.id = m.conversation_id
+      WHERE m.id = @followsMessageId
+        AND m.conversation_id = @conversationId
+        AND m.status != 'superseded'
+        AND c.is_deleted = 0
+    `);
+
     this.db.transaction(() => {
+      if (input.followsMessageId !== undefined
+        && followedRow.get({ followsMessageId: input.followsMessageId, conversationId: input.conversationId }) === undefined) {
+        throw new WithdrawnAnswerError();
+      }
       insertMsg.run({
         id,
         conversationId: input.conversationId,
@@ -260,12 +276,14 @@ export class SqliteConversationRepository implements ConversationRepository {
     toolResultJson?: string,
   ): Promise<void> {
     const read = this.db.prepare('SELECT status, tool_call_json FROM agent_messages WHERE id = ?');
+    // A superseded row keeps its status: a write that arrives after its answer was replaced moves nothing.
     const write = this.db.prepare(
       `UPDATE agent_messages
        SET status = @status,
            tool_result_json = COALESCE(@toolResultJson, tool_result_json),
            tool_call_json = COALESCE(@resolvedCallJson, tool_call_json)
-       WHERE id = @messageId`,
+       WHERE id = @messageId
+         AND status != 'superseded'`,
     );
     this.db.transaction(() => {
       const row = read.get(messageId) as { status: string; tool_call_json: string | null } | undefined;
@@ -523,7 +541,8 @@ export class SqliteConversationRepository implements ConversationRepository {
     orgId: string,
     finalContent: string,
   ): Promise<boolean> {
-    // Org-guarded via JOIN-style EXISTS subquery on agent_conversations.org_id.
+    // Org-guarded via JOIN-style EXISTS subquery on agent_conversations.org_id. A superseded row keeps
+    // its status and content.
     const result = this.db
       .prepare(
         `UPDATE agent_messages
@@ -531,6 +550,7 @@ export class SqliteConversationRepository implements ConversationRepository {
              content = @finalContent
          WHERE id = @messageId
            AND conversation_id = @conversationId
+           AND status != 'superseded'
            AND EXISTS (
              SELECT 1 FROM agent_conversations c
              WHERE c.id = agent_messages.conversation_id
