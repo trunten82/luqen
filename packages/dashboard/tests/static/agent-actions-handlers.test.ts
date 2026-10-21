@@ -362,9 +362,16 @@ describe('agent.js delegated action handlers — Task 2', () => {
     const h = setupHarness({ initialMessages: makeAssistantBubble('a1') });
     // Positive control: the reply rendered as the conversation's last message offers Retry.
     expect(h.doc.querySelectorAll('[data-action="retryAssistant"]')).toHaveLength(1);
-    // The stream of a new answer opens, the way agent.js opens it after a question is sent.
-    (h.win as unknown as { __luqenAgent: { openStream(cid: string): void } }).__luqenAgent.openStream('c1');
-    await flush();
+    // The stream of a new answer opens, the way agent.js opens it after a question is sent. agent.js
+    // announces it with a CustomEvent of the page's realm, which this harness does not bridge by default.
+    const nodeCustomEvent = (globalThis as { CustomEvent?: unknown }).CustomEvent;
+    (globalThis as { CustomEvent?: unknown }).CustomEvent = h.win.CustomEvent;
+    try {
+      (h.win as unknown as { __luqenAgent: { openStream(cid: string): void } }).__luqenAgent.openStream('c1');
+      await flush();
+    } finally {
+      (globalThis as { CustomEvent?: unknown }).CustomEvent = nodeCustomEvent;
+    }
     expect(h.eventSourceCalls.some((u) => u.includes('/agent/stream/c1'))).toBe(true);
     expect(h.doc.querySelectorAll('[data-action="retryAssistant"]')).toHaveLength(0);
     expect(h.doc.querySelectorAll('[data-action="copyAssistant"]')).toHaveLength(1);
