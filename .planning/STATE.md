@@ -5,16 +5,16 @@ milestone_name: Dismissal follow-through
 current_phase: 91
 current_phase_name: Dismissal and permission hardening
 status: executing
-stopped_at: Completed 91-22g-PLAN.md (PR4 plan 9: a sign-in, a language change and an organization switch return only to a path of the dashboard, anything else to the home page; an expired or already-resolved approval shows a visible notice in the assistant panel, announced by the conversation log; editing a question replaces its whole answer, withdraws a paused action of it and stores that action's arguments redacted, while retry keeps the turn's tool results; 22 breaks MATCH; final PR4 gates green, UAT GREEN 238; not pushed)
-last_updated: "2026-10-21T00:30:00.000Z"
+stopped_at: Completed 91-22h-PLAN.md (PR4 plan 10: an edit, a retry or a delete that lands while the assistant is still answering ends that turn and the store refuses every later row of the withdrawn answer, the result of an action resolved meanwhile included; no status writer moves a superseded row; edit and retry decide on the conversation's newest rows in one transaction each, retry only of the last message when it is a reply (409 otherwise), and only that reply offers Retry in the panel; the message read, edit form and share work in conversations of any length; 29 breaks MATCH; final PR4 gates green, UAT GREEN 238; not pushed)
+last_updated: "2026-10-21T03:30:00.000Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 91 execution started
-state_head: 8e6886b106b85d93419d3f986dfe8d57dbb8fe60
+state_head: 06b9b6a6bbe413ad618eff2b4e31afa592c93647
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 43
-  completed_plans: 43
+  total_plans: 44
+  completed_plans: 44
   percent: 33
 ---
 
@@ -128,7 +128,7 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 ## Current Position
 
 Phase: 91 (Dismissal and permission hardening) — EXECUTING
-Plan: 22g of 23
+Plan: 22h of 23
 Status: Ready to execute
 Last activity: 2026-10-20 - Completed quick task 261020-izd: fix-suggestion route admits issues.fix (PR #12)
 
@@ -220,10 +220,10 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-21T00:30:00.000Z
-Stopped at: Completed 91-22g-PLAN.md (PR4 plan 9: a sign-in, a language change and an organization switch return only to a path of the dashboard, anything else to the home page; an expired or already-resolved approval shows a visible notice in the assistant panel, announced by the conversation log; editing a question replaces its whole answer, withdraws a paused action of it and stores that action's arguments redacted, while retry keeps the turn's tool results; 22 breaks MATCH; final PR4 gates green, UAT GREEN 238; not pushed)
+Last session: 2026-10-21T03:30:00.000Z
+Stopped at: Completed 91-22h-PLAN.md (PR4 plan 10: an edit, a retry or a delete that lands while the assistant is still answering ends that turn and the store refuses every later row of the withdrawn answer, the result of an action resolved meanwhile included; no status writer moves a superseded row; edit and retry decide on the conversation's newest rows in one transaction each, retry only of the last message when it is a reply (409 otherwise), and only that reply offers Retry in the panel; the message read, edit form and share work in conversations of any length; 29 breaks MATCH; final PR4 gates green, UAT GREEN 238; not pushed)
 Resume file: None
-Next action: Phase 91 PR4 continues with the focused re-review of the 91-22g delta, then 91-23 (branch fix/v3.9.0-phase-91-session-freshness).
+Next action: Phase 91 PR4 continues with the focused re-review of the 91-22h delta, then 91-23 (branch fix/v3.9.0-phase-91-session-freshness).
 
 ## Operator Next Steps
 
@@ -300,6 +300,7 @@ Next action: Phase 91 PR4 continues with the focused re-review of the 91-22g del
 | Phase 91 P22e | ~75min | 3 tasks | 36 files |
 | Phase 91 P22f | ~80min | 3 tasks | 33 files |
 | Phase 91 P22g | ~125min | 3 tasks | 18 files |
+| Phase 91 P22h | ~135min | 3 tasks | 23 files |
 
 ## Decisions
 
@@ -368,6 +369,7 @@ Next action: Phase 91 PR4 continues with the focused re-review of the 91-22g del
 - [Phase 91]: Phase 91 P22e: the seven conversation routes (open, message, edit form, retry, edit and resend, rename, delete) answer only the user who started the conversation through one helper (404 conversation_not_found for anyone else, a global administrator included, before any message is read or anything is written) and the repository renames and deletes only for the owner's user id; resolveTrustedProxies refuses a list whose entries together trust every IPv4 or every IPv6 address, decided on the addresses covered (an IPv6 range holding the IPv4-mapped block counts for IPv4, named ranges counted as the addresses they hold, sizes computed not written); the consent fast path issues a code only when the remembered consent names the organization of the request; confirming a paused action older than 24 hours declines it through the sweep's claim, result row and summary audit row and answers 409 expired; beginSession starts from an empty session (regenerate) so nothing an earlier sign-in left carries over; the idle hook records activity only on the paths the session guard checks (one predicate decides both); the redaction marker is recognised in any letter case, with surrounding space and in square, angle, round and curly bracket forms or as the bare word
 - [Phase 91]: Phase 91 P22f: resolveTrustedProxies refuses a list whose entries together trust more than one /8 of public IPv4 addresses (2^24, after removing the this-network, private-use, shared, loopback, link-local and multicast-and-reserved blocks, which are written as octet numbers and prefix lengths) or more than one /16 of global IPv6 addresses (inside 2000::/3), decided on the addresses covered (an IPv6 range holding the IPv4-mapped block counts for IPv4; named ranges add nothing), which replaces the every-address rule it contains; the share page renders the active branch only up to and including the shared answer (rows created at or before it), and a link whose anchor is absent from the active branch or null answers 404 share_not_found (no revoke route is built); POST /login with a refused page token is answered by a redirect from cookieCsrfPreHandler (the plugin sends the refusal itself, so the sign-in path takes it as a rejection through a reply facade): to /login?stale=1 (keeping a safe returnTo) with a translated notice when signed out, to the safe requested page when already signed in, and the route never runs; the session expiry hook records activity only when the guard checks the path and no valid API key header answers the request; the panel resolves the conversation through the owner lookup and answers every unresolved id with an empty panel and x-conversation-id empty; a 409 approval answer closes the dialog with the expired or already-resolved text (dialog data attributes, six locales) and no Retry; recordPendingExpired takes an optional subject so the confirm-time row names the acting user and the message while the sweep row is unchanged
 - [Phase 91]: Phase 91 P22g: safeReturnTo (exported) answers the home page for a value that holds an ASCII control character or a backslash, does not start with a slash, resolves against a fixed reserved base to another origin, or resolves to a path starting with two slashes, and otherwise the resolved path with its query and fragment; refererReturnTo holds the language change and the organization switch to the same rule (a relative Referer as given, an absolute one only on the request's own host, reduced to its path); a 409 approval answer reloads the panel and then appends a warning notice with the localized sentence to the messages list, a polite log, without writing the status line; agent.js?v=1.2.7; edit-resend supersedes the question and every active row after it and lists them in the audit row (supersededMessageIds); markMessagesSuperseded stores the call of a row it moves out of pending_confirmation redacted, in one transaction; retry is unchanged
+- [Phase 91]: Phase 91 P22h: appendMessage takes followsMessageId and writes the row only while the followed row is active, of the same conversation, in a conversation that is not deleted (WithdrawnAnswerError otherwise, nothing written); every row a turn writes follows the row it wrote before and a refused row ends the turn with done aborted; confirmation, decline and expiry results follow the paused row; updateMessageStatus and markMessageStopped never move a superseded row; edit-resend, retry and delete cancel the running turn after their change and a turn's end removes only its own registry entry; conversation-branch.ts holds the one insert, the one supersede, the tail reads and the edit and retry transactions (retry only of the last message when it is a reply, 409 not_last_message); the share view shows the 200 active rows ending at the answer; the panel renders Retry only on the last reply and a new answer's stream removes an earlier Retry (agent-actions.js?v=1.0.1); the panel renderer registers its per-message partials
 
 ### Blockers
 
