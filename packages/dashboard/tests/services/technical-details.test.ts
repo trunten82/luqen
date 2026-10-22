@@ -118,12 +118,32 @@ describe('reportForViewer strips issue copies at every location', () => {
     });
   }
 
-  it('D-08 reportForViewer leaves an errors entry and an object with a context key but no string code untouched', () => {
-    const report = {
-      errors: [{ url: 'https://fabrikam.test/x', message: 'timeout' }],
-      layout: { context: 'not an issue', selector: 'not an issue either' },
-      numericCode: { code: 7, selector: '#keep' },
-    };
+  const shapes: ReadonlyArray<readonly [string, Record<string, unknown>]> = [
+    ['an axe-style copy keyed by ruleId', { ruleId: 'color-contrast', message: MSG, selector: '#unit-selcanary-rule', context: '<p id="unit-ctxcanary-rule">x</p>' }],
+    ['a copy with a numeric code', { code: 7, message: MSG, selector: '#unit-selcanary-num', context: '<p id="unit-ctxcanary-num">x</p>' }],
+    ['a copy with no code at all', { message: MSG, selector: '#unit-selcanary-none', context: '<p id="unit-ctxcanary-none">x</p>' }],
+  ];
+  for (const [name, shape] of shapes) {
+    it(`D-08 reportForViewer strips selector and context from ${name}, nested at any depth`, () => {
+      const report = { findings: [shape], future: { nested: { copy: shape } } };
+      const out = reportForViewer(deepFreeze(report), false) as {
+        findings: Array<Record<string, unknown>>;
+        future: { nested: { copy: Record<string, unknown> } };
+      };
+      for (const obj of [out.findings[0]!, out.future.nested.copy]) {
+        expect('selector' in obj, 'selector key present').toBe(false);
+        expect('context' in obj, 'context key present').toBe(false);
+      }
+      const text = bodyOf(out);
+      expect(text).not.toContain('unit-selcanary');
+      expect(text).not.toContain('unit-ctxcanary');
+      expect(text).toContain(MSG);
+      expect(out.findings[0]).toEqual(withoutTechnicalFields(shape));
+    });
+  }
+
+  it('D-08 reportForViewer keeps an errors entry, which has neither key, unchanged', () => {
+    const report = { errors: [{ url: 'https://fabrikam.test/x', message: 'timeout' }] };
     expect(reportForViewer(deepFreeze(report), false)).toEqual(report);
   });
 

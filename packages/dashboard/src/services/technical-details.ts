@@ -78,28 +78,31 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-/** An issue copy: a plain object with a string `code` that carries a technical field. */
-function isIssueCopy(value: Record<string, unknown>): boolean {
-  return typeof value['code'] === 'string' && TECHNICAL_ISSUE_FIELDS.some((field) => field in value);
-}
+const TECHNICAL_KEYS: ReadonlySet<string> = new Set(TECHNICAL_ISSUE_FIELDS);
 
 function redactDeep(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(redactDeep);
   if (!isPlainObject(value)) return value;
   const walked: Record<string, unknown> = {};
-  for (const [key, child] of Object.entries(value)) walked[key] = redactDeep(child);
-  return isIssueCopy(walked) ? withoutTechnicalFields(walked) : walked;
+  for (const [key, child] of Object.entries(value)) {
+    if (TECHNICAL_KEYS.has(key)) continue;
+    walked[key] = redactDeep(child);
+  }
+  return walked;
 }
 
 /**
  * A raw scan report as a viewer may see it: the same reference for an entitled viewer, otherwise a
- * structural copy with the technical fields removed from EVERY issue copy, at any depth.
+ * structural copy in which NO plain object, at any depth, has a `selector` or `context` key.
  *
- * Generic on purpose: a nested copy nobody listed (a future shape) cannot carry a selector out.
- * The locations known today are `pages[].issues[]`, `templateIssues[]`, flat `issues[]`,
- * `results[].issues[]` and `compliance.annotatedIssues[].originalIssue` (report-service.ts,
- * filter-compliance.ts). An object counts as an issue copy when it has a string `code` and one of
- * the technical keys; `errors[]` entries and layout objects without a string code are left as they are.
+ * The rule does not look at what an object is: an issue keyed by `code`, by `ruleId`, with a
+ * numeric code or with no code at all loses both keys the same way. A stored report has no
+ * legitimate non-issue key of either name (the orchestrator writes scanId, siteUrl, standard,
+ * completedAt, summary, pages, errors, behaviorallyEvaluatedCriteria, compliance, complianceMatrix,
+ * regulationMatrix and branding), so nothing else is lost. The issue locations known today are
+ * `pages[].issues[]`, `templateIssues[]`, flat `issues[]`, `results[].issues[]` and
+ * `compliance.annotatedIssues[].originalIssue` (report-service.ts, filter-compliance.ts). Every
+ * other key and value is kept as it is.
  */
 export function reportForViewer<T>(report: T, viewTechnical: boolean): T {
   return viewTechnical ? report : (redactDeep(report) as T);
