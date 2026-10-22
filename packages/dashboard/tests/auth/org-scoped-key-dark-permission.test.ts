@@ -31,7 +31,8 @@ describe('org-scoped API keys after the issues.dismiss grant', () => {
 
   it('org-scoped non-admin api key does not gain issues.dismiss from the grant', async () => {
     const perms = await resolveEffectivePermissions(roleRepo, 'api-key', 'read-only', 'org-a', { orgScopedApiKey: true });
-    expect([...perms].sort()).toEqual(['reports.view', 'trends.view']);
+    // The repository's set, plus the one permission every read-only key resolves to (Phase 93).
+    expect([...perms].sort()).toEqual(['reports.view', 'reports.view_technical', 'trends.view']);
     expect(perms.has('issues.dismiss')).toBe(false);
   });
 });

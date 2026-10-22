@@ -178,6 +178,20 @@ export function hasPermission(request: unknown, permission: string): boolean {
   return perms?.has(permission) === true;
 }
 
+/** The id the auth layer gives every API key principal (see enforceApiKeyRole). */
+const API_KEY_USER_ID = 'api-key';
+
+/**
+ * Permissions an API key resolves to for the non-admin key roles. `reports.view_technical` keeps
+ * element selectors and markup in the REST and GraphQL responses for these keys, as before the
+ * technical-details rule; the key role guard (enforceApiKeyRole) still limits what a key may call.
+ * Admin keys resolve through the admin branches above.
+ */
+const API_KEY_ROLE_PERMISSIONS: Readonly<Record<string, ReadonlySet<string>>> = {
+  'read-only': new Set(['reports.view_technical']),
+  'scan-only': new Set(['reports.view_technical']),
+};
+
 /**
  * Resolve effective permissions for a user:
  *   effective = global_role.permissions UNION highest_org_role(user, org).permissions
@@ -202,9 +216,17 @@ export async function resolveEffectivePermissions(
     return new Set(ALL_PERMISSION_IDS);
   }
 
+  // An API key is not a stored user, so no role row resolves for it. The read-only and scan-only
+  // roles add exactly the permissions pinned in API_KEY_ROLE_PERMISSIONS to whatever the repository
+  // returns (API contract decision: they keep element selectors and markup, as before; only user
+  // sessions without the permission are stripped).
   // D-07: dark ids are filtered where permissions are RESOLVED, not only where
   // a role form is parsed, so a role row written by any other path stays dark.
-  const resolved = withoutDarkPermissions(await roleRepository.getEffectivePermissions(userId, orgId), opts.darkPermissions);
+  const keyGrant = userId === API_KEY_USER_ID ? API_KEY_ROLE_PERMISSIONS[userRole] ?? [] : [];
+  const resolved = withoutDarkPermissions(
+    [...(await roleRepository.getEffectivePermissions(userId, orgId)), ...keyGrant],
+    opts.darkPermissions,
+  );
   // The global-only ids (admin.system, admin.users) come from the stored global 'admin' role only:
   // for every other role value the result never carries them, whichever role row or storage adapter
   // produced it. Every caller passes the stored role (the stored user's, or the API key's), so a

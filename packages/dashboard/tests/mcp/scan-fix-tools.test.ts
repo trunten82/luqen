@@ -126,10 +126,18 @@ describe('dashboard_scan_page', () => {
       registerScanTools(server, { scanner });
     }));
 
-    const result = await client.callTool({
+    // Contract (phase 93): selector and context reach only a caller holding reports.view_technical.
+    const technicalCaller: ToolContext = {
+      orgId: 'org-fabrikam',
+      userId: 'user-northwind',
+      scopes: ['read'],
+      permissions: new Set<string>(['scans.create', 'reports.view_technical', 'mcp.use']),
+      authType: 'jwt',
+    };
+    const result = await runInToolContext(technicalCaller, () => client.callTool({
       name: 'dashboard_scan_page',
       arguments: { html: '<img src="logo.png">' },
-    });
+    }));
 
     expect(result.isError).toBeFalsy();
     const body = parseToolText(result);
@@ -309,6 +317,18 @@ describe('dashboard_generate_fix', () => {
     vi.restoreAllMocks();
   });
 
+  // Contract (phase 93): LLM output reaches only a caller holding llm.view.
+  // These tests exercise the AI path, so the caller holds issues.fix and llm.view.
+  const AI_FIX_CALLER: ToolContext = {
+    orgId: 'org-fabrikam',
+    userId: 'user-northwind',
+    scopes: ['read'],
+    permissions: new Set<string>(['issues.fix', 'llm.view', 'mcp.use']),
+    authType: 'jwt',
+  };
+  const callAsAiCaller = (c: Client, request: Parameters<Client['callTool']>[0]) =>
+    runInToolContext(AI_FIX_CALLER, () => c.callTool(request));
+
   afterEach(async () => {
     if (closeAll !== undefined) await closeAll();
     vi.restoreAllMocks();
@@ -360,7 +380,7 @@ describe('dashboard_generate_fix', () => {
       });
     }));
 
-    const result = await client.callTool({
+    const result = await callAsAiCaller(client, {
       name: 'dashboard_generate_fix',
       arguments: {
         wcagCriterion: '1.1.1',
@@ -398,7 +418,7 @@ describe('dashboard_generate_fix', () => {
       });
     }));
 
-    const result = await client.callTool({
+    const result = await callAsAiCaller(client, {
       name: 'dashboard_generate_fix',
       arguments: {
         wcagCriterion: '1.1.1',
@@ -442,7 +462,7 @@ describe('dashboard_generate_fix', () => {
       });
     }));
 
-    await client.callTool({
+    await callAsAiCaller(client, {
       name: 'dashboard_generate_fix',
       arguments: {
         wcagCriterion: '1.1.1',
@@ -464,7 +484,7 @@ describe('dashboard_generate_fix', () => {
       });
     }));
 
-    const result = await client.callTool({
+    const result = await callAsAiCaller(client, {
       name: 'dashboard_generate_fix',
       arguments: {
         wcagCriterion: '1.1.1',
@@ -901,7 +921,7 @@ describe('Agent MCP tools — authorized happy path (MCPFIX-01..04 + D-10)', () 
     }));
 
     app = await buildIntegrationApp({
-      permissions: ['scans.create', 'issues.fix'],
+      permissions: ['scans.create', 'issues.fix', 'llm.view'],
       complianceAccessReturns: { baseUrl: 'http://compliance', token: 'comp-tok' },
       llmAccessReturns: { baseUrl: 'http://llm', token: 'llm-tok' },
     });
@@ -946,7 +966,7 @@ describe('Agent MCP tools — authorized happy path (MCPFIX-01..04 + D-10)', () 
     }));
 
     app = await buildIntegrationApp({
-      permissions: ['scans.create', 'issues.fix'],
+      permissions: ['scans.create', 'issues.fix', 'llm.view'],
       complianceAccessReturns: null,  // no compliance configured
       llmAccessReturns: { baseUrl: 'http://llm', token: 'llm-tok' },
     });
@@ -1075,5 +1095,89 @@ describe('dashboard_scan_page scan start limit', () => {
     );
     expect(h.store.get(`user:${CALLER}`)).toBeUndefined();
     expect(h.scan).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ENT-02 (phase 93): the MCP HTTP endpoint keeps the fix tool listed for an issues.fix holder
+// without llm.view and answers it with the pattern hint; llm.view yields the AI answer.
+// ---------------------------------------------------------------------------
+
+describe('ENT-02 MCP endpoint entitlement', () => {
+  let app: FastifyInstance | null = null;
+  let fetchedUrls: string[] = [];
+
+  beforeEach(() => {
+    fetchedUrls = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      fetchedUrls.push(String(url));
+      if (String(url).includes('generate-fix')) {
+        return { ok: true, json: async () => FAKE_FIX_RESPONSE };
+      }
+      throw new Error('compliance unreachable');
+    }));
+  });
+
+  afterEach(async () => {
+    if (app !== null) {
+      await app.close();
+      app = null;
+    }
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  async function listToolNames(application: FastifyInstance): Promise<string[]> {
+    const resp = await application.inject({
+      method: 'POST',
+      url: '/api/v1/mcp',
+      headers: {
+        authorization: 'Bearer valid-jwt',
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+      },
+      payload: integrationRpc('tools/list'),
+    });
+    const result = integrationParseSseOrJson(resp.body)['result'] as { tools: Array<{ name: string }> };
+    return result.tools.map((t) => t.name);
+  }
+
+  const FIX_ARGS = {
+    wcagCriterion: '1.1.1',
+    issueMessage: 'Img element missing an alt attribute',
+    htmlContext: '<img src="logo.png">',
+  };
+
+  it('ENT-02 an issues.fix caller without llm.view sees the fix tool and gets the pattern hint over HTTP', async () => {
+    app = await buildIntegrationApp({
+      permissions: ['issues.fix'],
+      complianceAccessReturns: null,
+      llmAccessReturns: { baseUrl: 'http://llm', token: 'tok' },
+    });
+    expect(await listToolNames(app)).toContain('dashboard_generate_fix');
+
+    const parsed = await integrationCallTool(app, 'dashboard_generate_fix', FIX_ARGS);
+
+    expect((parsed['result'] as { isError?: boolean } | undefined)?.isError).not.toBe(true);
+    const body = integrationExtractText(parsed);
+    expect(body['source']).toBe('pattern');
+    expect(body['hint']).not.toBeNull();
+    expect(body['fixedHtml']).toBeUndefined();
+    expect(fetchedUrls.filter((u) => u.includes('generate-fix'))).toEqual([]);
+  });
+
+  it('ENT-02 an issues.fix and llm.view caller gets the AI answer over HTTP', async () => {
+    app = await buildIntegrationApp({
+      permissions: ['issues.fix', 'llm.view'],
+      complianceAccessReturns: null,
+      llmAccessReturns: { baseUrl: 'http://llm', token: 'tok' },
+    });
+
+    const parsed = await integrationCallTool(app, 'dashboard_generate_fix', FIX_ARGS);
+
+    const body = integrationExtractText(parsed);
+    expect(body['source']).toBe('ai');
+    expect(body['fixedHtml']).toBe(FAKE_FIX_RESPONSE.fixedHtml);
+    expect(fetchedUrls.filter((u) => u.includes('generate-fix'))).toHaveLength(1);
   });
 });

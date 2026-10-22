@@ -6,6 +6,8 @@
  * exactly which elements are failing for a given dimension.
  */
 
+import { withoutTechnicalFields, type TechnicalIssueField } from './technical-details.js';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -22,7 +24,7 @@ export interface DrilldownIssue {
 }
 
 /** A drilldown row with the element's selector and markup withheld (HARD-02). */
-export type DrilldownIssueSummary = Omit<DrilldownIssue, 'selector' | 'context'>;
+export type DrilldownIssueSummary = Omit<DrilldownIssue, TechnicalIssueField>;
 
 const VALID_DIMENSIONS: ReadonlySet<string> = new Set<string>([
   'color',
@@ -151,7 +153,5 @@ export function filterDrilldownIssues(
 export function withoutTechnicalDetails(
   issues: readonly DrilldownIssue[],
 ): readonly DrilldownIssueSummary[] {
-  return Object.freeze(
-    issues.map(({ message, code, matchDetail, strategy }) => ({ message, code, matchDetail, strategy })),
-  );
+  return Object.freeze(issues.map((issue) => withoutTechnicalFields(issue)));
 }

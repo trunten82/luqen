@@ -79,6 +79,7 @@ import { VERSION } from './version.js';
 import { buildFixSuggestionHint } from './fix-suggestions.js';
 import { dismissalRefusalReason, type DismissalRefusalReason } from './services/issue-dismissals/validate-input.js';
 import { ALL_PERMISSION_IDS, resolveEffectivePermissions } from './permissions.js';
+import { mayViewTechnicalDetails } from './services/technical-details.js';
 import { auditLogScope } from './services/audit-log-scope.js';
 import { roleRoutes } from './routes/admin/roles.js';
 import { teamRoutes } from './routes/admin/teams.js';
@@ -1108,7 +1109,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
           scansCreate: perms.has('scans.create'),
           scansSchedule: perms.has('scans.schedule'),
           reportsView: perms.has('reports.view'),
-          reportsViewTechnical: perms.has('reports.view_technical'),
+          reportsViewTechnical: mayViewTechnicalDetails(perms),
           reportsExport: perms.has('reports.export'),
           reportsDelete: perms.has('reports.delete'),
           reportsCompare: perms.has('reports.compare'),

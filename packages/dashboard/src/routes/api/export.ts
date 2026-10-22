@@ -23,6 +23,7 @@ import { flattenIssueOccurrences } from '../../services/issue-occurrences.js';
 import { withDisplayedActors } from '../../services/issue-dismissals/actor-label.js';
 import { applyActiveDismissals, type AppliedActiveDismissals } from '../../services/issue-dismissals/load-dismissed-report.js';
 import { t } from '../../i18n/index.js';
+import { requestMayViewTechnicalDetails } from '../../services/technical-details.js';
 import type { Locale } from '../../i18n/index.js';
 
 // Export endpoints stream binary buffers — schemas declare a string body and
@@ -137,24 +138,44 @@ function text(value: unknown): string {
 }
 
 /**
+ * Phase 93 (D-08): a new array without the entries at `dropped` positions. Columns are dropped from
+ * headers, widths and every row by the same index set, so they cannot drift apart; the inputs are
+ * never spliced.
+ */
+function withoutColumns<T>(values: readonly T[], dropped: ReadonlySet<number>): T[] {
+  return values.filter((_, i) => !dropped.has(i));
+}
+
+/**
  * The "Dismissed" worksheet (D-18): one row per dismissed occurrence with the
  * reason, actor and date of the dismissal that hid it. Name and headers are
  * translated for the request locale; every value is written as a plain string,
  * so a reason beginning with "=" is text, never a formula.
  */
-function addDismissedSheet(wb: ExcelJS.Workbook, applied: DismissedSheetSource, locale: Locale): void {
+function addDismissedSheet(
+  wb: ExcelJS.Workbook,
+  applied: DismissedSheetSource,
+  locale: Locale,
+  viewTechnical: boolean,
+): void {
   const ws = wb.addWorksheet(t('dismissalsExport.sheetName', locale));
-  ws.columns = DISMISSED_COLUMN_KEYS.map((key, i) => ({
+  // Phase 93 (D-08): the Selector column is dropped for a caller without the technical-details permission.
+  const dropped: ReadonlySet<number> = viewTechnical
+    ? new Set<number>()
+    : new Set<number>([DISMISSED_COLUMN_KEYS.indexOf('colSelector')]);
+  const keptKeys = withoutColumns(DISMISSED_COLUMN_KEYS, dropped);
+  const keptWidths = withoutColumns(DISMISSED_COLUMN_WIDTHS, dropped);
+  ws.columns = keptKeys.map((key, i) => ({
     header: t(`dismissalsExport.${key}`, locale),
     key: `col${i}`,
-    width: DISMISSED_COLUMN_WIDTHS[i] ?? 20,
+    width: keptWidths[i] ?? 20,
   }));
   styleHeaderRow(ws);
   const byId = new Map(applied.active.map((d) => [d.id, d]));
   for (const occurrence of applied.dismissed) {
     const dismissal = byId.get(occurrence.dismissalId);
     const issue = occurrence.issue as DismissedIssueFields;
-    ws.addRow([
+    ws.addRow(withoutColumns([
       occurrence.pageUrl,
       text(issue.code),
       text(issue.selector),
@@ -162,9 +183,9 @@ function addDismissedSheet(wb: ExcelJS.Workbook, applied: DismissedSheetSource, 
       dismissal?.reason ?? '',
       dismissal?.createdBy ?? '',
       dismissal?.createdAt ?? '',
-    ]);
+    ], dropped));
   }
-  ws.autoFilter = { from: 'A1', to: `${String.fromCharCode(64 + DISMISSED_COLUMN_KEYS.length)}1` };
+  ws.autoFilter = { from: 'A1', to: `${String.fromCharCode(64 + keptKeys.length)}1` };
   ws.views = [{ state: 'frozen', ySplit: 1 }];
 }
 
@@ -448,6 +469,19 @@ export async function exportRoutes(
 
       const filename = `luqen-issues-${siteSlug(scan.siteUrl)}-${todayStamp()}`;
 
+      // Phase 93 (D-08): the Selector and Context columns only for a caller holding the
+      // technical-details permission. Decided once; headers, widths and rows drop the same indices.
+      const viewTechnical = requestMayViewTechnicalDetails(request);
+      const droppedColumns: ReadonlySet<number> = viewTechnical
+        ? new Set<number>()
+        : new Set<number>(
+            headers.flatMap((h, i) => (h === 'Selector' || h === 'Context' ? [i] : [])),
+          );
+      const columnWidths = [8, 8, 10, 20, 40, 40, 30, 30, 40, 10, 20, 15, 30, 10];
+      const sheetHeaders = withoutColumns(headers, droppedColumns);
+      const sheetWidths = withoutColumns(columnWidths, droppedColumns);
+      const sheetRows = rows.map((row) => withoutColumns(row, droppedColumns));
+
       // Build workbook with a single 'Issues' sheet. Per-row severity/priority
       // colouring is specific to this sheet so it uses its own inline builder
       // rather than the shared buildXlsx helper. The Regulations column is
@@ -458,14 +492,14 @@ export async function exportRoutes(
       wb.creator = 'Luqen';
       wb.created = new Date();
       const ws = wb.addWorksheet('Issues');
-      ws.columns = headers.map((h, i) => ({
+      ws.columns = sheetHeaders.map((h, i) => ({
         header: h,
         key: `col${i}`,
-        width: [8, 8, 10, 20, 40, 40, 30, 30, 40, 10, 20, 15, 30, 10][i] ?? 20,
+        width: sheetWidths[i] ?? 20,
       }));
       styleHeaderRow(ws);
 
-      for (const row of rows) {
+      for (const row of sheetRows) {
         const dataRow = ws.addRow(row);
         const sev = row[0];
         if (sev === 'error') dataRow.getCell(1).font = { color: { argb: 'FF8B1A1A' }, bold: true };
@@ -475,12 +509,12 @@ export async function exportRoutes(
         else if (pri === 'High') dataRow.getCell(2).font = { color: { argb: 'FF7A4F00' }, bold: true };
       }
 
-      ws.autoFilter = { from: 'A1', to: `${String.fromCharCode(64 + headers.length)}1` };
+      ws.autoFilter = { from: 'A1', to: `${String.fromCharCode(64 + sheetHeaders.length)}1` };
       ws.views = [{ state: 'frozen', ySplit: 1 }];
 
       // D-18: the judgement lives on its own sheet, and only when something is dismissed (SC5).
       if (applied.dismissed.length > 0) {
-        addDismissedSheet(wb, applied, requestLocale(request));
+        addDismissedSheet(wb, applied, requestLocale(request), viewTechnical);
       }
 
       const buffer = await wb.xlsx.writeBuffer();

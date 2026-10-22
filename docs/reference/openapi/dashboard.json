@@ -35324,7 +35324,6 @@
                     "site_url",
                     "site_key",
                     "code",
-                    "selector",
                     "reason",
                     "status",
                     "created_by",
@@ -35355,6 +35354,7 @@
                       "type": "string"
                     },
                     "selector": {
+                      "description": "CSS selector of the dismissed element. Present only when the caller holds reports.view_technical; omitted otherwise.",
                       "type": "string"
                     },
                     "reason": {
@@ -38044,7 +38044,27 @@
                       "items": {
                         "additionalProperties": true,
                         "type": "object",
-                        "properties": {}
+                        "properties": {
+                          "id": {},
+                          "siteUrl": {},
+                          "status": {},
+                          "standard": {},
+                          "jurisdictions": {},
+                          "regulations": {},
+                          "createdAt": {},
+                          "orgId": {},
+                          "completedAt": {},
+                          "pagesScanned": {},
+                          "totalIssues": {},
+                          "errors": {},
+                          "warnings": {},
+                          "notices": {},
+                          "confirmedViolations": {},
+                          "jsonReport": {
+                            "description": "Raw report JSON (a string). Present only when the caller holds reports.view_technical; otherwise the key is absent from every list row. Use GET /api/v1/scans/{id} for the report without selector and context.",
+                            "type": "string"
+                          }
+                        }
                       }
                     },
                     "total": {
@@ -38113,7 +38133,27 @@
                     "data": {
                       "additionalProperties": true,
                       "type": "object",
-                      "properties": {}
+                      "properties": {
+                        "id": {},
+                        "siteUrl": {},
+                        "status": {},
+                        "standard": {},
+                        "jurisdictions": {},
+                        "regulations": {},
+                        "createdAt": {},
+                        "orgId": {},
+                        "completedAt": {},
+                        "pagesScanned": {},
+                        "totalIssues": {},
+                        "errors": {},
+                        "warnings": {},
+                        "notices": {},
+                        "confirmedViolations": {},
+                        "jsonReport": {
+                          "description": "Raw report JSON (a string). Its issue entries omit selector and context unless the caller holds reports.view_technical.",
+                          "type": "string"
+                        }
+                      }
                     }
                   }
                 }
@@ -38317,7 +38357,26 @@
                       "items": {
                         "additionalProperties": true,
                         "type": "object",
-                        "properties": {}
+                        "properties": {
+                          "criterion": {},
+                          "title": {},
+                          "description": {},
+                          "codeExample": {},
+                          "effort": {},
+                          "severity": {},
+                          "message": {},
+                          "selector": {
+                            "description": "CSS selector of the flagged element. Present only when the caller holds reports.view_technical; omitted otherwise.",
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        }
                       }
                     },
                     "total": {
@@ -38458,7 +38517,22 @@
                       "items": {
                         "additionalProperties": true,
                         "type": "object",
-                        "properties": {}
+                        "properties": {
+                          "type": {},
+                          "code": {},
+                          "message": {},
+                          "selector": {
+                            "description": "CSS selector of the flagged element. Present only when the caller holds reports.view_technical; omitted otherwise.",
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        }
                       }
                     },
                     "total": {
@@ -38858,7 +38932,6 @@
                           "site_url",
                           "site_key",
                           "code",
-                          "selector",
                           "reason",
                           "status",
                           "created_by",
@@ -38887,6 +38960,7 @@
                             "type": "string"
                           },
                           "selector": {
+                            "description": "CSS selector of the dismissed element. Present only when the caller holds reports.view_technical; omitted otherwise.",
                             "type": "string"
                           },
                           "reason": {

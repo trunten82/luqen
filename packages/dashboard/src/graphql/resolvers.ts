@@ -16,6 +16,7 @@ import { retagScansForSite } from '../services/branding-retag.js';
 import { applyActiveDismissals } from '../services/issue-dismissals/load-dismissed-report.js';
 import type { BrandingOrchestrator } from '../services/branding/branding-orchestrator.js';
 import { bypassesOrgScope } from '../permissions.js';
+import { assignmentForViewer, itemsForViewer, mayViewTechnicalDetails } from '../services/technical-details.js';
 import {
   getScanInOrg, getScanForAssignment, getAssignmentInOrg, getTeamInOrg,
   getGuidelineInOrg, requireGuidelineInOrg, requireBrandChildInOrg, requireCanManageUser, listOrgsInScope,
@@ -223,7 +224,7 @@ export const resolvers = {
       const totalCount = issues.length;
       const limit = clamp(args.limit, 1, 1000, 100);
       const offset = clamp(args.offset, 0, Number.MAX_SAFE_INTEGER, 0);
-      const nodes = issues.slice(offset, offset + limit);
+      const nodes = itemsForViewer(issues.slice(offset, offset + limit), mayViewTechnicalDetails(ctx.permissions));
 
       return {
         nodes,
@@ -241,12 +242,14 @@ export const resolvers = {
     ) => {
       requireAuth(ctx);
 
-      return await ctx.storage.assignments.listAssignments({
+      const rows = await ctx.storage.assignments.listAssignments({
         scanId: args.scanId ?? undefined,
         status: args.status as 'open' | 'assigned' | 'in-progress' | 'fixed' | 'verified' | undefined,
         assignedTo: args.assignedTo ?? undefined,
         orgId: ctx.orgId,
       });
+      const viewTechnical = mayViewTechnicalDetails(ctx.permissions);
+      return rows.map((row) => assignmentForViewer(row, viewTechnical));
     },
 
     // ── Trends ─────────────────────────────────────────────────────────
@@ -537,7 +540,7 @@ export const resolvers = {
 
       const id = randomUUID();
       const now = new Date().toISOString();
-      return await ctx.storage.assignments.createAssignment({
+      const created = await ctx.storage.assignments.createAssignment({
         id,
         scanId: args.input.scanId,
         issueFingerprint: args.input.issueFingerprint,
@@ -554,6 +557,7 @@ export const resolvers = {
         updatedAt: now,
         orgId: ctx.orgId,
       });
+      return assignmentForViewer(created, mayViewTechnicalDetails(ctx.permissions));
     },
 
     updateAssignment: async (
@@ -575,7 +579,7 @@ export const resolvers = {
       if (updated === null) {
         throw new Error(`Assignment not found after update: ${args.id}`);
       }
-      return updated;
+      return assignmentForViewer(updated, mayViewTechnicalDetails(ctx.permissions));
     },
 
     deleteAssignment: async (

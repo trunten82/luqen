@@ -41,6 +41,7 @@ import {
   ErrorResponse,
   ConflictResponse,
   DismissalMutationResponse,
+  RevokeMutationResponse,
   ListResponse,
   MarkBody,
   PreviewQuery,
@@ -58,6 +59,7 @@ import {
   type RevokePayload,
 } from './issue-dismissals-schemas.js';
 import { redactDismissalJson } from './issue-dismissals-redaction.js';
+import { itemsForViewer, requestMayViewTechnicalDetails, withoutTechnicalFields } from '../../services/technical-details.js';
 
 const NOT_SUPPORTED = 'Dismissals are not supported by this storage adapter';
 
@@ -229,7 +231,7 @@ export async function issueDismissalRoutes(
         params: IdParams,
         body: RevokeBody,
         response: {
-          200: DismissalMutationResponse,
+          200: RevokeMutationResponse,
           400: ErrorResponse,
           401: ErrorResponse,
           403: ErrorResponse,
@@ -263,7 +265,12 @@ export async function issueDismissalRoutes(
       }
       if (result.kind === 'not-found') return reply.code(404).send({ error: 'Dismissal not found' });
       const recomputed = await recomputeAndLog(request, storage, existing.orgId, existing.siteKey);
-      return reply.code(200).send(mutationToJson(result.dismissal, recomputed));
+      // Phase 93 (D-08): the caller named the dismissal by id, not its selector (mark differs: the
+      // caller typed it), so the selector is returned only to a technical-details holder.
+      const revoked = mutationToJson(result.dismissal, recomputed);
+      return reply.code(200).send(
+        requestMayViewTechnicalDetails(request) ? revoked : withoutTechnicalFields(revoked),
+      );
     },
   );
 
@@ -391,7 +398,10 @@ export async function issueDismissalRoutes(
       const visible = mayTouchDismissalOrg(request.user, scan.orgId)
         ? withEvents
         : withEvents.map(redactDismissalJson);
-      return reply.code(200).send({ dismissals: visible });
+      // Phase 93 (D-08): the element selector only for a caller holding the technical-details permission.
+      return reply.code(200).send({
+        dismissals: itemsForViewer(visible, requestMayViewTechnicalDetails(request)),
+      });
     },
   );
 }

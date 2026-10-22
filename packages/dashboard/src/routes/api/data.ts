@@ -14,14 +14,64 @@ import {
 } from '../../services/issue-dismissals/load-dismissed-report.js';
 import { toSiteKey } from '../../services/issue-dismissals/site-key.js';
 import type { IssueDismissal } from '../../db/interfaces/issue-dismissal-repository.js';
+import {
+  TECHNICAL_DETAILS_PERMISSION,
+  itemsForViewer,
+  reportBlobForViewer,
+  requestMayViewTechnicalDetails,
+} from '../../services/technical-details.js';
 
 // Data API responds with bare JSON ({ data, total } / { data, ... }) — schemas
 // mirror that shape directly rather than going through LuqenResponse.
-const ScanShape = Type.Object({}, { additionalProperties: true });
-const IssueShape = Type.Object({}, { additionalProperties: true });
+// The scan row embeds the whole raw report as `jsonReport`. Its issue entries carry selector and
+// markup only for a caller who holds the technical-details permission (D-10).
+const JSON_REPORT_DESCRIPTION =
+  `Raw report JSON (a string). Its issue entries omit selector and context unless the caller holds ${TECHNICAL_DETAILS_PERMISSION}.`;
+const JsonReportProperty = Type.Optional(Type.String({ description: JSON_REPORT_DESCRIPTION }));
+// D-10: the list carries the blob only for an entitled caller; anyone else reads it from /scans/:id.
+const LIST_JSON_REPORT_DESCRIPTION =
+  `Raw report JSON (a string). Present only when the caller holds ${TECHNICAL_DETAILS_PERMISSION}; ` +
+  'otherwise the key is absent from every list row. Use GET /api/v1/scans/{id} for the report without selector and context.';
+const ListJsonReportProperty = Type.Optional(Type.String({ description: LIST_JSON_REPORT_DESCRIPTION }));
+
+// D-10: the element selector is optional in the contract: it is present only for a caller who
+// holds the technical-details permission (the same rule the report page applies). A union, so a
+// stored null is never coerced to an empty string by the serializer.
+const SELECTOR_DESCRIPTION =
+  `CSS selector of the flagged element. Present only when the caller holds ${TECHNICAL_DETAILS_PERMISSION}; omitted otherwise.`;
+const SelectorProperty = Type.Optional(
+  Type.Union([Type.String(), Type.Null()], { description: SELECTOR_DESCRIPTION }),
+);
+// fast-json-stringify writes declared properties first, in declared order, then the rest. The keys
+// that precede `selector` in the emitted row are declared (as unconstrained values, so nothing is
+// coerced) to keep the serialised key order, and so the bytes an entitled caller receives, unchanged.
+const AnyValue = Type.Optional(Type.Unknown());
+// The scan row keys that precede `jsonReport` in the serialised row (ScanRecord order), for the same reason.
+const SCAN_LEADING_KEYS = [
+  'id', 'siteUrl', 'status', 'standard', 'jurisdictions', 'regulations', 'createdAt', 'orgId',
+  'completedAt', 'pagesScanned', 'totalIssues', 'errors', 'warnings', 'notices', 'confirmedViolations',
+] as const;
+const scanProperties = {
+  ...Object.fromEntries(SCAN_LEADING_KEYS.map((key) => [key, AnyValue])),
+  jsonReport: JsonReportProperty,
+};
+const ScanShape = Type.Object(
+  { ...scanProperties, jsonReport: ListJsonReportProperty },
+  { additionalProperties: true },
+);
+const IssueShape = Type.Object(
+  { type: AnyValue, code: AnyValue, message: AnyValue, selector: SelectorProperty },
+  { additionalProperties: true },
+);
 const TrendPointShape = Type.Object({}, { additionalProperties: true });
 const ComplianceSummaryShape = Type.Object({}, { additionalProperties: true });
-const FixShape = Type.Object({}, { additionalProperties: true });
+const FixShape = Type.Object(
+  {
+    criterion: AnyValue, title: AnyValue, description: AnyValue, codeExample: AnyValue,
+    effort: AnyValue, severity: AnyValue, message: AnyValue, selector: SelectorProperty,
+  },
+  { additionalProperties: true },
+);
 const ConnectedRepoShape = Type.Object({}, { additionalProperties: true });
 
 const ScansListResponseSchema = Type.Object(
@@ -29,7 +79,7 @@ const ScansListResponseSchema = Type.Object(
   { additionalProperties: true },
 );
 const ScanDetailResponseSchema = Type.Object(
-  { data: Type.Object({}, { additionalProperties: true }) },
+  { data: Type.Object(scanProperties, { additionalProperties: true }) },
   { additionalProperties: true },
 );
 const IssuesResponseSchema = Type.Object(
@@ -238,6 +288,12 @@ function parseRowBlob(scan: ScanRecord): JsonReport | null {
   }
 }
 
+/** A new scan record without the `jsonReport` key. */
+function withoutReportBlob(scan: ScanRecord): ScanRecord {
+  const { jsonReport: _blob, ...rest } = scan;
+  return rest;
+}
+
 /** Strip jsonReportPath and error from a scan record for external consumption. */
 function toPublicScan(scan: ScanRecord): Record<string, unknown> {
   const { jsonReportPath: _path, error: _err, createdBy: _cb, ...rest } = scan as ScanRecord & Record<string, unknown>;
@@ -330,14 +386,18 @@ export async function dataApiRoutes(
         activeBySite.set(key, looked);
         return looked;
       };
+      // D-10: a caller without the technical-details permission gets list rows with no `jsonReport`
+      // key. The blob is not parsed for them; `GET /api/v1/scans/:id` serves its redacted copy.
+      const viewTechnical = requestMayViewTechnicalDetails(request);
       const scans = await Promise.all(
         records.map(async (record) => {
+          if (!viewTechnical) return toPublicScan(withoutReportBlob(record));
           const active = await lookupActive(record);
           if (active.length === 0) return toPublicScan(record);
           const blob = parseRowBlob(record);
           // IN-01: a blob that cannot be parsed cannot be filtered, so it is not served (fail closed,
           // same as repos.ts); an absent blob has nothing to leak.
-          if (blob === null) return toPublicScan({ ...record, jsonReport: undefined });
+          if (blob === null) return toPublicScan(withoutReportBlob(record));
           return toPublicScan(withDismissalsInRawBlob(record, applyLoadedDismissals(record, active, blob)));
         }),
       );
@@ -378,7 +438,10 @@ export async function dataApiRoutes(
       const fsReport = await readReport(scan.jsonReportPath);
       const applied = await applyActiveDismissals(storage, scan, fsReport ?? parseRowBlob(scan));
       const report = fsReport === null ? null : applied.report;
-      const publicScan = toPublicScan(withDismissalsInRawBlob(scan, applied));
+      // API-02: the embedded raw report follows the viewer's entitlement, after the dismissal step.
+      const publicScan = toPublicScan(
+        reportBlobForViewer(withDismissalsInRawBlob(scan, applied), requestMayViewTechnicalDetails(request)),
+      );
 
       return reply.header('content-type', 'application/json').send({
         data: {
@@ -456,7 +519,11 @@ export async function dataApiRoutes(
       }
 
       const total = allIssues.length;
-      const paged = allIssues.slice(offset, offset + limit);
+      // Redaction comes after dismissal filtering and paging: both need the raw selectors.
+      const paged = itemsForViewer(
+        allIssues.slice(offset, offset + limit),
+        requestMayViewTechnicalDetails(request),
+      );
 
       return reply.header('content-type', 'application/json').send({
         data: paged,
@@ -683,8 +750,9 @@ export async function dataApiRoutes(
         }
       }
 
+      // The fingerprint dedup above ran on the raw selector; redaction is the last step.
       return reply.header('content-type', 'application/json').send({
-        data: fixes,
+        data: itemsForViewer(fixes, requestMayViewTechnicalDetails(request)),
         total: fixes.length,
         connectedRepo: connectedRepo !== null
           ? {

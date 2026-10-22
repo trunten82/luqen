@@ -13,6 +13,7 @@ import { registerSession } from '../../src/auth/session.js';
 import { createAuthGuard } from '../../src/auth/middleware.js';
 import { dataApiRoutes } from '../../src/routes/api/data.js';
 import { storeApiKey } from '../../src/auth/api-key.js';
+import { resolveEffectivePermissions } from '../../src/permissions.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -50,6 +51,18 @@ async function buildServer(storage: SqliteStorageAdapter, reportsDir: string): P
     const path = request.url.split('?')[0];
     if (path === '/health') return;
     await authGuard(request, reply);
+  });
+  // The permission set the production preHandler resolves for the authenticated identity (a system
+  // admin key resolves to every permission, selectors and markup included).
+  server.addHook('preHandler', async (request) => {
+    if (request.user === undefined) return;
+    (request as unknown as Record<string, unknown>)['permissions'] = await resolveEffectivePermissions(
+      storage.roles,
+      request.user.id,
+      request.user.role,
+      request.user.currentOrgId,
+      { orgScopedApiKey: request.user.orgScopedApiKey === true },
+    );
   });
 
   // Data API routes

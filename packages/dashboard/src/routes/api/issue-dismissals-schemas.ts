@@ -4,7 +4,7 @@
  * Deliberately contains NO `server.METHOD(...)` call so the RBAC matrix
  * generator (which scans route sources for such calls) is unaffected.
  */
-import { Type, type Static } from '@sinclair/typebox';
+import { Type, type Static, type TSchema } from '@sinclair/typebox';
 import type {
   IssueDismissal,
   IssueDismissalEvent,
@@ -16,6 +16,7 @@ import {
   DISMISSAL_REASON_MAX_LENGTH,
   DISMISSAL_SELECTOR_MAX_LENGTH,
 } from '../../services/issue-dismissals/validate-input.js';
+import { TECHNICAL_DETAILS_PERMISSION } from '../../services/technical-details.js';
 
 export const ErrorResponse = Type.Object({ error: Type.String() });
 
@@ -26,23 +27,34 @@ export const ConflictResponse = Type.Object({
 
 const NullableString = Type.Union([Type.String(), Type.Null()]);
 
-export const DismissalSchema = Type.Object({
-  id: Type.String(),
-  org_id: Type.String(),
-  site_url: Type.String(),
-  site_key: Type.String(),
-  code: Type.String(),
-  selector: Type.String(),
-  reason: Type.String(),
-  status: Type.String(),
-  created_by: Type.String(),
-  created_by_id: NullableString,
-  created_at: Type.String(),
-  revoked_by: NullableString,
-  revoked_by_id: NullableString,
-  revoked_at: NullableString,
-  revoke_comment: NullableString,
-});
+/**
+ * The dismissal's fields in emitted order. `selector` is a parameter so the list response can make
+ * it optional (D-10) without moving it: the serialiser writes declared properties in declared order.
+ */
+const LIST_SELECTOR_DESCRIPTION =
+  `CSS selector of the dismissed element. Present only when the caller holds ${TECHNICAL_DETAILS_PERMISSION}; omitted otherwise.`;
+
+function dismissalFields<S extends TSchema>(selector: S) {
+  return {
+    id: Type.String(),
+    org_id: Type.String(),
+    site_url: Type.String(),
+    site_key: Type.String(),
+    code: Type.String(),
+    selector,
+    reason: Type.String(),
+    status: Type.String(),
+    created_by: Type.String(),
+    created_by_id: NullableString,
+    created_at: Type.String(),
+    revoked_by: NullableString,
+    revoked_by_id: NullableString,
+    revoked_at: NullableString,
+    revoke_comment: NullableString,
+  };
+}
+
+export const DismissalSchema = Type.Object(dismissalFields(Type.String()));
 
 /**
  * The mark (201) and revoke (200) response: the dismissal plus the outcome of the same-request
@@ -59,6 +71,18 @@ export const DismissalMutationResponse = Type.Composite([
   }),
 ]);
 
+/**
+ * The revoke (200) response (D-10): the mark response with `selector` optional. A revoke names the
+ * dismissal by id, so the caller never supplied the selector; it is present only when the caller
+ * holds the technical-details permission. The mark response keeps it required: that caller typed it.
+ */
+export const RevokeMutationResponse = Type.Object({
+  ...dismissalFields(Type.Optional(Type.String({ description: LIST_SELECTOR_DESCRIPTION }))),
+  recomputed_scans: Type.Integer({ minimum: 0 }),
+  failed_scans: Type.Integer({ minimum: 0 }),
+  recompute_complete: Type.Boolean(),
+});
+
 export const DismissalEventSchema = Type.Object({
   id: Type.String(),
   action: Type.String(),
@@ -68,10 +92,16 @@ export const DismissalEventSchema = Type.Object({
   text: NullableString,
 });
 
-export const DismissalWithEventsSchema = Type.Composite([
-  DismissalSchema,
-  Type.Object({ events: Type.Array(DismissalEventSchema) }),
-]);
+/**
+ * A dismissal in the LIST response (D-10). `selector` is optional here: it is present only when the
+ * caller holds the technical-details permission, the rule the report page applies. The mark
+ * response keeps the required selector (DismissalSchema): it answers a caller who named it. Revoke
+ * uses RevokeMutationResponse, in which `selector` is optional.
+ */
+export const DismissalWithEventsSchema = Type.Object({
+  ...dismissalFields(Type.Optional(Type.String({ description: LIST_SELECTOR_DESCRIPTION }))),
+  events: Type.Array(DismissalEventSchema),
+});
 
 export const ListResponse = Type.Object({ dismissals: Type.Array(DismissalWithEventsSchema) });
 
