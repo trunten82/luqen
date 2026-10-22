@@ -260,7 +260,8 @@ describe('AUD-03 a refusal answers a browser with the dashboard error page', () 
     const res = await page(member, '/admin/audit-log', { accept: 'application/json' });
     expect(res.status).toBe(403);
     expect(res.contentType).toContain('application/json');
-    expect(() => JSON.parse(res.body)).not.toThrow();
+    // The dashboard's own error body (CHANGELOG), not the framework default.
+    expect(JSON.parse(res.body)).toEqual({ error: 'Forbidden' });
   });
 
   it('AUD-03 an HTMX caller without permission still gets a JSON 403', async () => {

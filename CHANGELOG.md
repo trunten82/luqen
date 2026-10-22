@@ -296,6 +296,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   in use instead of All actions; the Resource Type filter lists the dismissal
   resource and shows its filter too. Opening the page without permission shows
   the dashboard error page in a browser instead of raw JSON.
+- A caller of `/admin/audit-log` that does not ask for HTML and lacks View
+  audit log gets the dashboard's JSON error body, `403` `{"error":"Forbidden"}`,
+  which has no `statusCode` or `message` field.
 - The GraphQL `auditLog` query's `actor` field holds the same label as the
   Audit Log page's Actor column (`API key: <name> (Created <date>)` or
   `API key` for an API key), and an API key's `actorId` reads `api-key`; the
