@@ -9,9 +9,9 @@
  * assertions are over the WHOLE response body, and the message canary is the control that shows the
  * matcher can match.
  *
- * D-09: the permission set each API key role resolves to is pinned in ONE table (KEY_ROLES). If the
- * owner later rules that read-only keys keep selectors, the change is the permission set and the
- * selector flag of one row, not the helper.
+ * D-09: the permission set each API key role resolves to is pinned in ONE table (KEY_ROLES). The
+ * API contract decision: keys of every role keep selectors (read-only and scan-only keys resolve to
+ * reports.view_technical); only a user session without the permission is stripped.
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
@@ -60,10 +60,10 @@ interface KeyRole {
 }
 const KEY_ROLES: readonly KeyRole[] = [
   { label: 'org admin', role: 'admin', orgScoped: true, resolves: () => new Set(ORG_OWNER_PERMISSIONS), seesSelectors: true },
-  { label: 'org read-only', role: 'read-only', orgScoped: true, resolves: () => new Set<string>(), seesSelectors: false },
-  { label: 'org scan-only', role: 'scan-only', orgScoped: true, resolves: () => new Set<string>(), seesSelectors: false },
+  { label: 'org read-only', role: 'read-only', orgScoped: true, resolves: () => new Set(['reports.view_technical']), seesSelectors: true },
+  { label: 'org scan-only', role: 'scan-only', orgScoped: true, resolves: () => new Set(['reports.view_technical']), seesSelectors: true },
   { label: 'system admin', role: 'admin', orgScoped: false, resolves: () => new Set(ALL_PERMISSION_IDS), seesSelectors: true },
-  { label: 'system read-only', role: 'read-only', orgScoped: false, resolves: () => new Set<string>(), seesSelectors: false },
+  { label: 'system read-only', role: 'read-only', orgScoped: false, resolves: () => new Set(['reports.view_technical']), seesSelectors: true },
 ];
 
 function issue(): Record<string, unknown> {
@@ -292,6 +292,15 @@ describe('what an API key resolves to (D-09 pin)', () => {
   }
 });
 
+describe('the key-role grant reaches API keys only', () => {
+  it('API-04 a stored user id with a key role string resolves from its roles, not the key table', async () => {
+    const analyst = await seed.users.getUserByUsername('fabrikam-analyst');
+    const resolved = await resolveEffectivePermissions(seed.roles, analyst!.id, 'read-only', orgId);
+    expect(resolved.has('reports.view_technical')).toBe(false);
+    expect(resolved.has('reports.view')).toBe(true);
+  });
+});
+
 describe('GET /api/v1/scans/:id serves the embedded raw report', () => {
   it('API-02 an Analyst gets no selector or context canary anywhere and the message canary inside data.jsonReport', async () => {
     const res = await asSession('fabrikam-analyst', `/api/v1/scans/${scanId}`);
@@ -310,12 +319,12 @@ describe('GET /api/v1/scans/:id serves the embedded raw report', () => {
     expect((JSON.parse(res.body) as { data: { jsonReport: string } }).data.jsonReport).toBe(storedBlob);
   }, 60_000);
 
-  it('API-02 an API key without the permission gets no canary from the detail route', async () => {
+  it('API-02 a read-only API key keeps the selector and context in the detail route', async () => {
     const kr = KEY_ROLES.find((k) => k.label === 'org read-only')!;
     const res = await asKey(kr, '');
     expect(res.status).toBe(200);
-    expect(res.body).not.toContain(SELECTOR_ID);
-    expect(res.body).not.toContain(CONTEXT_ID);
+    expect(res.body).toContain(SELECTOR_ID);
+    expect(res.body).toContain(CONTEXT_ID);
     expect(res.body).toContain(MESSAGE);
   }, 60_000);
 });

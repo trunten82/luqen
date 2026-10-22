@@ -178,14 +178,15 @@ describe('GraphQL scanIssues', () => {
     expect(res.body).toContain(MESSAGE);
   }, 60_000);
 
-  it('API-04 a system read-only API key gets selector null and no canary', async () => {
+  it('API-04 a system read-only API key keeps the selector and context', async () => {
     const res = await gqlAsKey(systemReadOnlyKey, ISSUES_QUERY(systemScanId));
     expect(res.errors).toBeUndefined();
     const nodes = res.data!['scanIssues'].nodes as Array<Record<string, unknown>>;
     expect(nodes.length).toBeGreaterThan(0);
-    for (const node of nodes) expect(node['selector']).toBeNull();
-    expect(res.body).not.toContain(SELECTOR_ID);
-    expect(res.body).not.toContain(CONTEXT_ID);
+    for (const node of nodes) {
+      expect(node['selector']).toBe(SELECTOR);
+      expect(String(node['context'])).toContain(CONTEXT_ID);
+    }
     expect(res.body).toContain(MESSAGE);
   }, 60_000);
 });
