@@ -160,6 +160,21 @@ BRANDING_PUBLIC_URL=""
 LLM_PUBLIC_URL=""
 
 # ──────────────────────────────────────────────
+# Dashboard trusted proxies (Phase 96 / OPS-01)
+#
+# The list of proxy addresses whose X-Forwarded-For the dashboard trusts.
+# Given as --trusted-proxies LIST, as DASHBOARD_TRUSTED_PROXIES in the
+# installer's environment (this default honours the environment, like
+# MONITOR_PORT), or at the wizard prompt. The installer holds no parser and no
+# validator of its own: trusted_proxies_check runs the BUILT dashboard's
+# loadConfig and resolveTrustedProxies. Empty means "write nothing", so the
+# dashboard's code default stays the only default.
+# ──────────────────────────────────────────────
+DASHBOARD_TRUSTED_PROXIES="${DASHBOARD_TRUSTED_PROXIES:-}"
+TRUSTED_PROXIES_WRITE=""       # the checked canonical value; empty = write nothing
+CHECK_TRUSTED_PROXIES_ONLY="false"
+
+# ──────────────────────────────────────────────
 # OAuth signing-key rotation (Phase 31.1)
 # ──────────────────────────────────────────────
 OAUTH_KEY_MAX_AGE_DAYS="90"
@@ -346,6 +361,7 @@ while [[ $# -gt 0 ]]; do
     --compliance-public-url) COMPLIANCE_PUBLIC_URL="$2"; shift 2 ;;
     --branding-public-url)   BRANDING_PUBLIC_URL="$2"; shift 2 ;;
     --llm-public-url)        LLM_PUBLIC_URL="$2"; shift 2 ;;
+    --trusted-proxies)       DASHBOARD_TRUSTED_PROXIES="$2"; shift 2 ;;
     --oauth-key-max-age-days) OAUTH_KEY_MAX_AGE_DAYS="$2"; shift 2 ;;
     --ollama-base-url)  OLLAMA_BASE_URL="$2"; shift 2 ;;
     --uninstall)        UNINSTALL=true; shift ;;
@@ -437,6 +453,158 @@ validate_smtp() {
       sock.on('timeout', () => { sock.destroy(); process.exit(1); });
     });
   " 2>/dev/null
+}
+
+# ──────────────────────────────────────────────
+# Trusted-proxy list (Phase 96 / OPS-01, D-02)
+#
+# One gateway to the dashboard's own rules: trusted_proxies_check runs the BUILT
+# dashboard's loadConfig (config.ts's own split and trim of
+# DASHBOARD_TRUSTED_PROXIES) and resolveTrustedProxies (the rules: no trust-all
+# lists, the public-space ceiling, no hop counts). This file holds no second
+# parser and no second validator, so the installer cannot drift from the
+# dashboard. The value reaches node ONLY through the DASHBOARD_TRUSTED_PROXIES
+# environment variable of one process; it is never spliced into the script text
+# (validate_postgres does that, and it is the anti-pattern) and never appears in
+# any argv.
+#
+# Exit codes of the node helper:
+#   0  checked; stdout holds the answer for the mode
+#   2  the dashboard REFUSES the list; stderr holds its message verbatim
+#   3  the check could not be loaded or run; stderr holds the reason
+# ──────────────────────────────────────────────
+IFS= read -r -d '' TRUSTED_PROXIES_CHECK_JS <<'JS' || true
+import { pathToFileURL } from 'node:url';
+import { join } from 'node:path';
+
+const [dist, mode] = process.argv.slice(1);
+let loadConfig;
+let resolveTrustedProxies;
+try {
+  const cfgMod = await import(pathToFileURL(join(dist, 'config.js')).href);
+  const tpMod = await import(pathToFileURL(join(dist, 'auth', 'trusted-proxies.js')).href);
+  loadConfig = cfgMod.loadConfig;
+  resolveTrustedProxies = tpMod.resolveTrustedProxies;
+  if (typeof loadConfig !== 'function') throw new Error('config.js does not export loadConfig');
+  if (typeof resolveTrustedProxies !== 'function') throw new Error('trusted-proxies.js does not export resolveTrustedProxies');
+} catch (err) {
+  process.stderr.write(`cannot load the dashboard's trusted-proxy check from ${dist}: ${err && err.message ? err.message : err}\n`);
+  process.exit(3);
+}
+
+// A path under a character device never exists, so the file layer is empty and
+// the value is parsed by config.ts's own split and trim.
+let cfg;
+try {
+  cfg = loadConfig('/dev/null/luqen-no-config.json');
+} catch (err) {
+  process.stderr.write(`cannot load the dashboard's trusted-proxy check from ${dist}: loadConfig failed: ${err && err.message ? err.message : err}\n`);
+  process.exit(3);
+}
+
+let resolved;
+try {
+  resolved = resolveTrustedProxies(cfg.trustedProxies);
+} catch (err) {
+  process.stderr.write(`${err && err.message ? err.message : err}\n`);
+  process.exit(2);
+}
+
+const joined = resolved === false ? 'none' : resolved.join(',');
+if (mode === 'canonical') {
+  process.stdout.write(cfg.trustedProxies === undefined ? 'unset' : joined);
+} else if (mode === 'effective') {
+  process.stdout.write(joined);
+} else {
+  process.stderr.write(`unknown mode ${mode}\n`);
+  process.exit(3);
+}
+JS
+
+# trusted_proxies_check <dist-dir> <canonical|effective> <value>
+# Runs in a subshell that drops every exported DASHBOARD_* name first, so no
+# other dashboard setting can reach loadConfig, then hands the value over in the
+# one environment variable. `exec` makes node's exit status the function's.
+trusted_proxies_check() {
+  local dist="$1" mode="$2" value="$3"
+  (
+    local _name
+    while IFS= read -r _name; do
+      unset "${_name}"
+    done < <(compgen -e | grep '^DASHBOARD_' || true)
+    export DASHBOARD_TRUSTED_PROXIES="${value}"
+    exec node --input-type=module -e "${TRUSTED_PROXIES_CHECK_JS}" "${dist}" "${mode}"
+  )
+}
+
+# validate_trusted_proxies -- checks the operator's list with the built
+# dashboard's own code. Runs after install_and_build (the dist exists only then)
+# and before generate_secrets, so a refusal leaves no secret, configuration
+# file or service unit behind. Sets TRUSTED_PROXIES_WRITE to the canonical value
+# to write, or leaves it empty (write nothing).
+validate_trusted_proxies() {
+  TRUSTED_PROXIES_WRITE=""
+  if [ -z "${DASHBOARD_TRUSTED_PROXIES}" ]; then
+    info "Trusted proxies: none given, nothing written; the dashboard's default applies"
+    return 0
+  fi
+
+  local dist="${INSTALL_DIR}/packages/dashboard/dist"
+  local out="" err="" rc=0 errfile
+  errfile="$(mktemp)"
+  out="$(trusted_proxies_check "${dist}" canonical "${DASHBOARD_TRUSTED_PROXIES}" 2>"${errfile}")" && rc=0 || rc=$?
+  err="$(cat "${errfile}")"
+  rm -f "${errfile}"
+
+  if [ "${rc}" -ne 0 ]; then
+    error "Could not accept the trusted-proxy list: ${err}"
+    exit 1
+  fi
+  if [ "${out}" = "unset" ]; then
+    warn "The trusted-proxy value was blank; nothing is written and the dashboard's default applies"
+    return 0
+  fi
+  TRUSTED_PROXIES_WRITE="${out}"
+  success "Trusted proxies accepted by the dashboard's rules: ${TRUSTED_PROXIES_WRITE}"
+}
+
+# The Environment= line for the dashboard unit, or nothing. systemd treats % as a
+# specifier and DROPS the whole assignment when it meets an unknown one (measured:
+# "Failed to resolve specifiers ... Invalid slot"), so every % is doubled.
+# trusted_proxies_written_value undoes it.
+dashboard_trusted_proxies_unit_line() {
+  if [ -n "${TRUSTED_PROXIES_WRITE}" ]; then
+    printf 'Environment=DASHBOARD_TRUSTED_PROXIES=%s\n' "${TRUSTED_PROXIES_WRITE}"
+  fi
+}
+
+# trusted_proxies_written_value <systemd|state|dotenv> <file> -- prints the value
+# the dashboard will receive from a written file, or nothing when the line is
+# absent. The last matching line wins, as it does in systemd.
+trusted_proxies_written_value() {
+  local kind="$1" file="$2" line=""
+  case "${kind}" in
+    systemd)
+      line="$(grep '^Environment=DASHBOARD_TRUSTED_PROXIES=' "${file}" 2>/dev/null | tail -n 1 || true)"
+      line="${line#Environment=DASHBOARD_TRUSTED_PROXIES=}"
+      ;;
+    state|dotenv)
+      line="$(grep '^DASHBOARD_TRUSTED_PROXIES=' "${file}" 2>/dev/null | tail -n 1 || true)"
+      line="${line#DASHBOARD_TRUSTED_PROXIES=}"
+      ;;
+    *)
+      return 2
+      ;;
+  esac
+  printf '%s' "${line}"
+}
+
+# trusted_proxies_readback <kind> <file> -- the list the dashboard will actually
+# use for what is written in the file, resolved by the dashboard's own code.
+trusted_proxies_readback() {
+  local kind="$1" file="$2" value
+  value="$(trusted_proxies_written_value "${kind}" "${file}")"
+  trusted_proxies_check "${INSTALL_DIR}/packages/dashboard/dist" effective "${value}"
 }
 
 # ──────────────────────────────────────────────
@@ -1517,8 +1685,14 @@ WantedBy=multi-user.target
 UNIT
 }
 
-write_systemd_unit_dashboard() {
-  cat > /etc/systemd/system/luqen-dashboard.service <<UNIT
+# render_systemd_unit_dashboard -- prints the dashboard unit to stdout. Reads
+# node_path from the caller's scope, as create_systemd_services sets it. Split
+# from write_systemd_unit_dashboard so install.test.sh can render without
+# writing under /etc.
+render_systemd_unit_dashboard() {
+  local dashboard_trusted_proxies_env
+  dashboard_trusted_proxies_env="$(dashboard_trusted_proxies_unit_line)"
+  cat <<UNIT
 [Unit]
 Description=Luqen Dashboard
 After=network.target luqen-compliance.service luqen-branding.service luqen-llm.service
@@ -1536,6 +1710,7 @@ Environment=OAUTH_KEY_MAX_AGE_DAYS=${OAUTH_KEY_MAX_AGE_DAYS}
 Environment=COMPLIANCE_PUBLIC_URL=${COMPLIANCE_PUBLIC_URL}
 Environment=BRANDING_PUBLIC_URL=${BRANDING_PUBLIC_URL}
 Environment=LLM_PUBLIC_URL=${LLM_PUBLIC_URL}
+${dashboard_trusted_proxies_env}
 ExecStart=${node_path} ${INSTALL_DIR}/packages/dashboard/dist/cli.js serve --config ${CONFIG_FILE}
 Restart=always
 RestartSec=5
@@ -1543,6 +1718,10 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target
 UNIT
+}
+
+write_systemd_unit_dashboard() {
+  render_systemd_unit_dashboard > /etc/systemd/system/luqen-dashboard.service
 }
 
 write_systemd_unit_monitor() {
@@ -2153,6 +2332,31 @@ show_v3_whats_new() {
   printf "  %sMore detail:%s docs/deployment/installer-changelog.md\n\n" "${BOLD}" "${RESET}"
 }
 
+# run_bare_metal_install -- the full bare-metal sequence. A function so
+# install.test.sh can run it with every step stubbed and check the order.
+run_bare_metal_install() {
+  resolve_public_url_defaults  # Pre-step: fill in *_PUBLIC_URL defaults
+  check_prerequisites          # Step 1
+  clone_or_pull                # Step 2
+  install_and_build            # Step 3
+  validate_trusted_proxies     # Between 3 and 4: the dist exists, nothing is written yet (D-02)
+  generate_secrets             # Step 4
+  seed_data                    # Step 5
+  create_oauth_client          # Step 6
+  write_config                 # Step 7
+  create_systemd_services      # Step 8
+  start_services_and_post_install  # Step 9
+  show_summary_bare_metal      # Step 10
+  show_v3_whats_new            # Post: print v3.x changes summary
+}
+
+# Source mode: install.test.sh and scripts/compare-trusted-proxies.sh set
+# LUQEN_INSTALL_LIB_ONLY=1 and source this file to load the functions above
+# without installing anything.
+if [ "${LUQEN_INSTALL_LIB_ONLY:-}" = "1" ]; then
+  return 0 2>/dev/null || exit 0
+fi
+
 # ══════════════════════════════════════════════
 #  ENTRY POINT
 # ══════════════════════════════════════════════
@@ -2208,18 +2412,6 @@ case "${DEPLOY_MODE}" in
     printf "\n"
     ;;
   *)
-    # Full bare metal installation
-    resolve_public_url_defaults  # Pre-step: fill in *_PUBLIC_URL defaults
-    check_prerequisites          # Step 1
-    clone_or_pull                # Step 2
-    install_and_build            # Step 3
-    generate_secrets             # Step 4
-    seed_data                    # Step 5
-    create_oauth_client          # Step 6
-    write_config                 # Step 7
-    create_systemd_services      # Step 8
-    start_services_and_post_install  # Step 9
-    show_summary_bare_metal      # Step 10
-    show_v3_whats_new            # Post: print v3.x changes summary
+    run_bare_metal_install
     ;;
 esac
