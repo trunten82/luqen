@@ -39,6 +39,22 @@ export interface IssueDismissal {
 
 export type IssueDismissalAction = 'mark' | 'revoke';
 
+/**
+ * The audit actions the dismissal store writes (one audit row inside mark, one inside revoke), and
+ * the resource type of those rows. The Audit Log Action filter lists exactly these values, and a
+ * test fails when a dismissal action literal appears in src outside this constant, so a new action
+ * cannot be written without being declared here (Phase 95, AUD-02).
+ */
+export const ISSUE_DISMISSAL_AUDIT_ACTIONS = {
+  mark: 'issue_dismissal.mark',
+  revoke: 'issue_dismissal.revoke',
+} as const;
+
+export type IssueDismissalAuditAction =
+  (typeof ISSUE_DISMISSAL_AUDIT_ACTIONS)[keyof typeof ISSUE_DISMISSAL_AUDIT_ACTIONS];
+
+export const ISSUE_DISMISSAL_AUDIT_RESOURCE_TYPE = 'issue_dismissal';
+
 export interface IssueDismissalEvent {
   readonly id: string;
   readonly dismissalId: string;

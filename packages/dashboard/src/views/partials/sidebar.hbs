@@ -431,8 +431,9 @@
       </a>
       {{/if}}
 
+      {{!-- Audit Log — shown to every holder of the View audit log permission (the flag, never a role name
+           or the system-settings flag): an org Owner holds it, and the page stays scoped to their org. --}}
       {{#if perm.auditView}}
-      {{#if perm.adminSystem}}
       <a class="sidebar__item {{#if (startsWith currentPath '/admin/audit-log')}}is-active{{/if}}"
          href="/admin/audit-log"
          aria-current="{{#if (startsWith currentPath '/admin/audit-log')}}page{{/if}}">
@@ -442,7 +443,6 @@
         </svg>
         {{t "nav.auditLog"}}
       </a>
-      {{/if}}
       {{/if}}
     </details>
     {{/if}}

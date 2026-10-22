@@ -1,7 +1,7 @@
 /**
  * SC3 / ACT-01 (D-06): an API-key actor reads the same on every surface that names it. Measured
  * through the REAL createServer and the real cookie routes: the report page's Dismissed by cell and
- * the Excel export's Dismissed By cell. (Plan 95-02 extends this file with the Audit Log.)
+ * the Excel export's Dismissed By cell, and (plan 95-02, ACT-02) the Audit Log Actor cell.
  *
  * Public repo: Fabrikam labels only. One login per file (the login route is rate limited).
  */
@@ -22,10 +22,12 @@ import { toSiteKey } from '../../src/services/issue-dismissals/site-key.js';
 import {
   CODE_ALT,
   CODE_CONTRAST,
+  CODE_LINK,
   DISMISS_PARTIAL,
   DISMISS_WHOLE,
   FABRIKAM_SITE,
   REASON_TOKEN,
+  SEL_LINK,
   seedSurfaceScan,
 } from '../helpers/dismissal-surface-fixture.js';
 
@@ -107,7 +109,9 @@ async function keyCreatedAt(keyId: string): Promise<string> {
   return row.createdAt;
 }
 
-async function markAsKey(match: { code: string; selector: string }, label: string): Promise<{ keyId: string; createdAt: string }> {
+async function markAsKey(
+  match: { code: string; selector: string }, label: string,
+): Promise<{ keyId: string; createdAt: string; dismissalId: string }> {
   const keyId = await seed.apiKeys.storeKey(`placeholder-${Math.random()}-${label.length}`, label, orgId, 'admin');
   const createdAt = await keyCreatedAt(keyId);
   const result = await seed.issueDismissals!.mark({
@@ -117,7 +121,31 @@ async function markAsKey(match: { code: string; selector: string }, label: strin
     actorKeySnapshot: { label, keyCreatedAt: createdAt },
   });
   if (result.kind !== 'created') throw new Error('markAsKey: already active');
-  return { keyId, createdAt };
+  return { keyId, createdAt, dismissalId: result.dismissal.id };
+}
+
+let auditHtml = '';
+
+/** The Actor cell of the Audit Log row for the dismissal `dismissalId`, columns found by header text. */
+async function auditCell(dismissalId: string): Promise<string> {
+  const res = await app.inject({
+    method: 'GET', url: '/admin/audit-log?action=issue_dismissal.mark', cookies: { session: cookie },
+  });
+  expect(res.statusCode).toBe(200);
+  auditHtml = res.body;
+  const doc = new JSDOM(res.body).window.document;
+  const table = doc.querySelector('table');
+  expect(table, 'Audit Log table rendered').not.toBeNull();
+  const headers = [...table!.querySelectorAll('thead th')].map((th) => collapse(th.textContent ?? ''));
+  const actorCol = headers.indexOf(t('audit.actor', 'en'));
+  const idCol = headers.indexOf(t('audit.resourceId', 'en'));
+  expect(actorCol, 'Actor header found').toBeGreaterThanOrEqual(0);
+  expect(idCol, 'Resource ID header found').toBeGreaterThanOrEqual(0);
+  for (const tr of table!.querySelectorAll('tbody tr')) {
+    const cells = [...tr.querySelectorAll('td')];
+    if (collapse(cells[idCol]?.textContent ?? '') === dismissalId) return collapse(cells[actorCol]?.textContent ?? '');
+  }
+  throw new Error(`no Audit Log row for ${dismissalId}`);
 }
 
 const namedText = (label: string, createdAt: string): string =>
@@ -173,5 +201,42 @@ describe('an API-key actor reads the same on every surface', () => {
     expect(inExport).toBe(onPage);
     expect(reportHtml).not.toContain(keyId);
     expect(workbookText).not.toContain(keyId);
+  }, 60_000);
+});
+
+describe('the Audit Log Actor column reads the same label (ACT-02)', () => {
+  it('ACT-02 the Audit Log Actor column reads the same label as the report page and the Excel export', async () => {
+    // One dismissal of a real finding of the scan, read on all three surfaces.
+    const { createdAt, dismissalId } = await markAsKey({ code: CODE_LINK, selector: SEL_LINK }, 'Fabrikam Audit CI');
+    const inAudit = await auditCell(dismissalId);
+    const onPage = await reportCell(CODE_LINK);
+    const inExport = await exportCell(CODE_LINK);
+    expect(inAudit).toBe(namedText('Fabrikam Audit CI', createdAt));
+    expect(onPage).toBe(inAudit);
+    expect(inExport).toBe(inAudit);
+  }, 60_000);
+
+  it('ACT-02 the Audit Log names a deleted key from the dismissal snapshot', async () => {
+    const { keyId, createdAt, dismissalId } = await markAsKey({ code: CODE_ALT, selector: '#fabrikam-audit-deleted' }, 'Fabrikam Audit Deploy');
+    await seed.apiKeys.revokeKey(keyId, orgId);
+    expect(await seed.apiKeys.deleteKey(keyId, orgId)).toBe(true);
+    expect(await auditCell(dismissalId)).toBe(namedText('Fabrikam Audit Deploy', createdAt));
+  }, 60_000);
+
+  it('ACT-02 the Audit Log page carries no stored api-key identifier or key id', async () => {
+    const { keyId, dismissalId } = await markAsKey({ code: CODE_ALT, selector: '#fabrikam-audit-nightly' }, 'Fabrikam Audit Nightly');
+    await auditCell(dismissalId);
+    expect(auditHtml).not.toContain('api-key:');
+    expect(auditHtml).not.toContain(keyId);
+  }, 60_000);
+
+  it('ACT-02 a user actor still reads its user name in the Audit Log', async () => {
+    const result = await seed.issueDismissals!.mark({
+      orgId, siteUrl: FABRIKAM_SITE, siteKey: toSiteKey(FABRIKAM_SITE),
+      code: CODE_ALT, selector: '#fabrikam-user-mark', reason: REASON_TOKEN,
+      actor: ADMIN, actorId: 'fabrikam-parity-admin-id',
+    });
+    if (result.kind !== 'created') throw new Error('user mark: already active');
+    expect(await auditCell(result.dismissal.id)).toBe(ADMIN);
   }, 60_000);
 });
