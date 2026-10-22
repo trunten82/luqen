@@ -325,6 +325,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   running Chromium uses, and deletes nothing if it cannot read the process
   table. The sweep is the only cleanup for profiles created by plugins that
   launch puppeteer themselves (the axe scanner plugin).
+- An assistant action awaiting confirmation in a deleted conversation is never
+  offered again: a confirmation refused while the conversation was being
+  deleted no longer returns it to pending, and a confirmation or a decline of
+  it answers 404 `pending_not_found`.
+- The answer stream of a deleted conversation answers 404
+  `conversation_not_found` and runs nothing; the edit and retry operations
+  refuse a deleted conversation inside their own transactions, not only at the
+  route.
+- When a second answer stream of the same conversation starts while an answer
+  is still being written (another tab, or another dashboard process), the
+  earlier stream ends with `done {aborted:true}` and stores nothing more: no
+  tool result and no stopped reply. The history sent to the model leaves out an
+  assistant tool call that has no tool result. Migration 094 adds the nullable
+  column `agent_conversations.active_run_id` that holds the current stream's
+  token (no backfill).
 
 ### Security
 

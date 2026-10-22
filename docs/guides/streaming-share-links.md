@@ -24,6 +24,14 @@ devices (`@media (hover: none)`) it is always visible underneath the bubble.
   is marked `status = 'stopped'` and a small **"stopped"** chip renders below it
   so you can tell the reply was cut short.
 - An audit row records `outcome_detail = 'stopped_by_user'`.
+- A second answer stream of the same conversation ends the first one: when it
+  opens while a reply is being written (another tab, or another dashboard
+  process), the earlier stream ends with `done {aborted:true}` and nothing more
+  of its reply is stored: no stopped reply and no tool result. A stop by the
+  user, or a dropped connection with no second stream, keeps the partial text as
+  described above. The store decides which stream may write
+  (`agent_conversations.active_run_id`, see [Agent history](./agent-history.md)),
+  so this holds across dashboard processes too.
 
 ### Retry the last assistant turn
 

@@ -80,6 +80,9 @@ remove any past conversation from a searchable history panel inside the agent dr
   does **not** affect what is searchable or resumable from history.
 - Soft-deleted conversations remain in the DB with `is_deleted = 1` and
   `deleted_at` set; they are filtered out of every user-facing surface.
+  `GET /agent/stream/:id` of a soft-deleted conversation answers 404
+  `conversation_not_found`, and an answer turn begun on one runs no model and
+  stores nothing.
 
 ## For admins
 
@@ -89,6 +92,12 @@ remove any past conversation from a searchable history panel inside the agent dr
 - Soft-delete columns `is_deleted INTEGER NOT NULL DEFAULT 0` + `deleted_at TEXT`
   added in migration 056. A partial index supports list/search filtering on the
   active rows only.
+- `agent_conversations.active_run_id TEXT` (migration 094, nullable): the token
+  of the answer stream that may write the conversation now. Each stream takes it
+  when it begins (a newer stream replaces it), and the store does not store a
+  row from any other stream, nor from a stream of a deleted conversation. It is
+  NULL until the first stream after the upgrade; there is no backfill and no
+  index. The token never appears in a response or an SSE frame.
 - Indexes: `idx_agent_conversations_user_org_active_last` orders the user list by
   `last_message_at DESC`; message search uses `LIKE … ESCAPE '\\'` with `%`, `_`,
   and `\` escaped in user input.
