@@ -574,6 +574,7 @@
       "remove": "Remover",
       "noMembers": "Nenhum membro ainda. Adicione usuários do painel acima.",
       "noneGlobal": "Nenhuma (global)",
+      "currentOrgOption": "Organização atual ({{name}})",
       "noneRole": "Nenhum",
       "orgLinkDesc": "Vincule esta equipe a uma organização. Os membros da equipe herdarão a associação à organização vinculada.",
       "roleLinkDesc": "Atribua um papel com escopo de org a esta equipe. Todos os membros da equipe herdam as permissões do papel dentro da organização.",

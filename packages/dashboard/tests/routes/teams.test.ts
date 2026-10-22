@@ -193,11 +193,13 @@ describe('Team routes', () => {
 
     it('adds a member to the team and redirects', async () => {
       const team = await ctx.storage.teams.createTeam({ name: 'MemberTeam2', description: '', orgId: 'system' });
+      // The request accepts only an active user the Add Member list offers, so bob must exist.
+      const bob = await ctx.storage.users.createUser('bob', 'Fabrikam-Bob-42!', 'user');
       const response = await ctx.server.inject({
         method: 'POST',
         url: `/admin/teams/${team.id}/members`,
         headers: { 'content-type': 'application/x-www-form-urlencoded' },
-        payload: 'userId=bob',
+        payload: `userId=${bob.id}`,
       });
       // Non-HTMX request redirects to team detail
       expect(response.statusCode).toBe(302);

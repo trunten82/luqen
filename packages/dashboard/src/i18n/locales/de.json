@@ -574,6 +574,7 @@
       "remove": "Entfernen",
       "noMembers": "Noch keine Mitglieder. Fügen Sie oben Dashboard-Benutzer hinzu.",
       "noneGlobal": "Keiner (global)",
+      "currentOrgOption": "Aktuelle Organisation ({{name}})",
       "noneRole": "Keine",
       "orgLinkDesc": "Verknüpfe dieses Team mit einer Organisation. Teammitglieder erben die Mitgliedschaft in der verknüpften Organisation.",
       "roleLinkDesc": "Weise diesem Team eine org-bezogene Rolle zu. Alle Teammitglieder erben die Berechtigungen der Rolle innerhalb der Organisation.",

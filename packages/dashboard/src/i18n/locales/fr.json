@@ -574,6 +574,7 @@
       "remove": "Supprimer",
       "noMembers": "Aucun membre encore. Ajoutez des utilisateurs du tableau de bord ci-dessus.",
       "noneGlobal": "Aucune (globale)",
+      "currentOrgOption": "Organisation actuelle ({{name}})",
       "noneRole": "Aucun",
       "orgLinkDesc": "Liez cette équipe à une organisation. Les membres de l'équipe hériteront de l'appartenance à l'organisation liée.",
       "roleLinkDesc": "Attribuez un rôle limité à l'org à cette équipe. Tous les membres de l'équipe héritent des autorisations du rôle au sein de l'organisation.",

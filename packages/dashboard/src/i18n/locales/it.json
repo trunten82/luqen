@@ -574,6 +574,7 @@
       "remove": "Rimuovi",
       "noMembers": "Nessun membro ancora. Aggiungi utenti dashboard sopra.",
       "noneGlobal": "Nessuna (globale)",
+      "currentOrgOption": "Organizzazione corrente ({{name}})",
       "noneRole": "Nessuno",
       "orgLinkDesc": "Collega questo team a un'organizzazione. I membri del team erediteranno l'appartenenza all'organizzazione collegata.",
       "roleLinkDesc": "Assegna un ruolo con ambito org a questo team. Tutti i membri del team ereditano i permessi del ruolo nell'organizzazione.",

@@ -105,6 +105,64 @@ function sendBindingRefusal(request: FastifyRequest, reply: FastifyReply): Fasti
   return reply.code(403).send({ error: BUILT_IN_ROLE_BINDING_MESSAGE });
 }
 
+/**
+ * Who Add Member may bind to a team. The team page lists exactly these users and the add-member
+ * request accepts exactly these users (the second path uses the same rule, so a crafted request
+ * cannot bind a user the list does not offer).
+ *
+ * A caller who bypasses organization scope, or any caller on a `system` team, may bind every active
+ * user. Anyone else may bind the active users of the team's organization: those in one of its teams,
+ * and its direct members who are in no team at all. A teamless member who also belongs to another
+ * organization is left out: binding a user to a team lets this organization manage that user
+ * (canManageUser), and that must not reach another organization's member; a global administrator adds
+ * that person. Current members of the team are removed. Each user appears once, ordered by user name.
+ */
+const TEAM_MEMBER_SCOPE_MESSAGE = 'This user cannot be added to this team';
+
+type StoredTeam = NonNullable<Awaited<ReturnType<StorageAdapter['teams']['getTeam']>>>;
+type AddableUser = Awaited<ReturnType<StorageAdapter['users']['listUsers']>>[number];
+
+async function addableTeamUsers(
+  storage: StorageAdapter,
+  team: StoredTeam,
+  request: FastifyRequest,
+): Promise<AddableUser[]> {
+  const memberIds = new Set((team.members ?? []).map((m) => m.userId));
+  let candidates: AddableUser[];
+  if (bypassesOrgScope(request.user) || team.orgId === 'system') {
+    candidates = (await storage.users.listUsers()).filter((u) => u.active);
+  } else {
+    const teamed = (await storage.users.listUsersForOrg(team.orgId)).filter((u) => u.active);
+    const teamedIds = new Set(teamed.map((u) => u.id));
+    const teamless: AddableUser[] = [];
+    for (const direct of await storage.organizations.listMembers(team.orgId)) {
+      if (teamedIds.has(direct.userId)) continue;
+      const user = await storage.users.getUserById(direct.userId);
+      if (user === null || !user.active) continue;
+      if ((await storage.teams.listTeamMembershipsForUser(user.id)).length > 0) continue;
+      const orgs = await storage.organizations.getUserOrgs(user.id);
+      if (orgs.some((o) => o.id !== team.orgId)) continue;
+      teamless.push(user);
+    }
+    candidates = [...teamed, ...teamless];
+  }
+  const seen = new Set<string>();
+  return candidates
+    .filter((u) => {
+      if (memberIds.has(u.id) || seen.has(u.id)) return false;
+      seen.add(u.id);
+      return true;
+    })
+    .sort((a, b) => a.username.localeCompare(b.username));
+}
+
+function sendMemberScopeRefusal(request: FastifyRequest, reply: FastifyReply): FastifyReply {
+  if (request.headers['hx-request'] === 'true') {
+    return reply.code(403).type('text/html').send(toastHtml(TEAM_MEMBER_SCOPE_MESSAGE, 'error'));
+  }
+  return reply.code(403).send({ error: TEAM_MEMBER_SCOPE_MESSAGE });
+}
+
 interface CreateTeamBody {
   name?: string;
   description?: string;
@@ -317,15 +375,7 @@ export async function teamRoutes(
       }
 
       const isAdmin = bypassesOrgScope(request.user);
-      const memberIds = new Set((team.members ?? []).map((m) => m.userId));
-
-      // Org owners see unbound + own org users; admins see all
-      const allUsers = isAdmin
-        ? (await storage.users.listUsers()).filter((u) => u.active)
-        : team.orgId !== 'system'
-          ? (await storage.users.listUsersForOrg(team.orgId)).filter((u) => u.active)
-          : (await storage.users.listUsers()).filter((u) => u.active);
-      const availableUsers = allUsers.filter((u) => !memberIds.has(u.id));
+      const availableUsers = await addableTeamUsers(storage, team, request);
 
       // Org owners only see their own org
       let organizations: Awaited<ReturnType<typeof storage.organizations.listOrgs>>;
@@ -532,6 +582,11 @@ export async function teamRoutes(
         return reply.code(403).send({ error: 'Forbidden: team belongs to a different organization' });
       }
 
+      // Second path: the request accepts exactly the users the team page's list offers.
+      const addable = await addableTeamUsers(storage, team, request);
+      if (!addable.some((u) => u.id === userId)) return sendMemberScopeRefusal(request, reply);
+
+      const hadNoMembers = (team.members ?? []).length === 0;
       await storage.teams.addTeamMember(id, userId);
 
       // Return the new member row
@@ -539,7 +594,12 @@ export async function teamRoutes(
       const member = { userId, username: user?.username ?? userId, role: 'member' };
 
       if (request.headers['hx-request'] === 'true') {
-        return reply.type('text/html').send(memberRowHtml(id, member));
+        // The "No members yet." row sits in the same table body; an out-of-band delete (wrapped in
+        // <template> so the table parser keeps the <tr>) removes it after the first member is added.
+        const emptyRowRemoval = hadNoMembers
+          ? '\n<template><tr id="members-empty-row" hx-swap-oob="delete"></tr></template>'
+          : '';
+        return reply.type('text/html').send(`${memberRowHtml(id, member)}${emptyRowRemoval}`);
       }
 
       return reply.redirect(`/admin/teams/${id}`);

@@ -612,6 +612,7 @@
       "remove": "Remove",
       "noMembers": "No members yet. Add dashboard users above.",
       "noneGlobal": "None (global)",
+      "currentOrgOption": "Current organization ({{name}})",
       "noneRole": "None",
       "orgLinkDesc": "Link this team to an organization. Team members will inherit membership in the linked organization.",
       "roleLinkDesc": "Assign an org-scoped role to this team. All team members inherit the role's permissions within the organization.",
