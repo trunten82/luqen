@@ -83,9 +83,12 @@ a notice too. Neither shows a Retry button. Editing the question of an answer
 that paused an action withdraws that action: it can no longer be approved. An
 action the assistant would still have asked you to confirm when you edited its
 question, or deleted its conversation, is withdrawn the same way and never
-offered. An action of a deleted conversation cannot be approved or cancelled:
-both answer "not found" (404 `pending_not_found`) and nothing runs, even when
-the deletion lands while an approval is being decided.
+offered. Once a conversation is deleted, its actions cannot be approved or
+cancelled: both answer "not found" (404 `pending_not_found`). An approval that
+was accepted before the deletion landed still runs the action and answers 202,
+but its result is not stored in the deleted conversation. An approval refused
+while the deletion lands (for example because a permission changed) does not
+return the action to pending, so the action is not offered again.
 
 ### Multi-step tool transparency
 

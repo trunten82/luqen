@@ -339,8 +339,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   route.
 - When a second answer stream of the same conversation starts while an answer
   is still being written (another tab, or another dashboard process), the
-  earlier stream ends with `done {aborted:true}` and stores nothing more: no
-  tool result and no stopped reply. The history sent to the model leaves out an
+  earlier stream stores nothing more: no tool result, no stopped reply and no
+  error row. It normally ends with `done {aborted:true}`; when its model call
+  fails after it was replaced, it may still send an `error` frame first. The history sent to the model leaves out an
   assistant tool call that has no tool result. Migration 094 adds the nullable
   column `agent_conversations.active_run_id` that holds the current stream's
   token (no backfill).

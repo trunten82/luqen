@@ -26,12 +26,14 @@ devices (`@media (hover: none)`) it is always visible underneath the bubble.
 - An audit row records `outcome_detail = 'stopped_by_user'`.
 - A second answer stream of the same conversation ends the first one: when it
   opens while a reply is being written (another tab, or another dashboard
-  process), the earlier stream ends with `done {aborted:true}` and nothing more
-  of its reply is stored: no stopped reply and no tool result. A stop by the
+  process), nothing more of the earlier stream's reply is stored: no stopped
+  reply, no tool result and no error row. The earlier stream normally ends with
+  `done {aborted:true}`; when its model call fails after it was replaced, it may
+  still send an `error` frame first, and it still stores nothing. A stop by the
   user, or a dropped connection with no second stream, keeps the partial text as
   described above. The store decides which stream may write
   (`agent_conversations.active_run_id`, see [Agent history](./agent-history.md)),
-  so this holds across dashboard processes too.
+  so this holds across dashboard processes that share the database file too.
 
 ### Retry the last assistant turn
 
