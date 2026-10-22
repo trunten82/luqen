@@ -8,6 +8,7 @@ import { writeFile } from 'node:fs/promises';
 import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { registerSession } from '../../src/auth/session.js';
 import { dataApiRoutes } from '../../src/routes/api/data.js';
+import { ALL_PERMISSION_IDS } from '../../src/permissions.js';
 
 const TEST_SESSION_SECRET = 'test-session-secret-at-least-32b';
 
@@ -41,6 +42,9 @@ async function createTestServer(orgId = 'system'): Promise<TestContext> {
 
   server.addHook('preHandler', async (request) => {
     request.user = { id: 'user-1', username: 'alice', role: 'admin', currentOrgId: orgId };
+    // The set the server.ts preHandler resolves for a role admin user: every permission, so
+    // the data API serves selectors and markup (reports.view_technical) as production does for it.
+    (request as unknown as Record<string, unknown>)['permissions'] = new Set(ALL_PERMISSION_IDS);
   });
 
   await dataApiRoutes(server, storage);

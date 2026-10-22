@@ -76,6 +76,9 @@ export const API_ADMIN_PERMISSIONS = [
   'reports.compare',
   'repos.credentials',
   'issues.fix',
+  // The zero-dismissal goldens pin an entitled caller's output (selectors included); the redaction
+  // for a caller without this permission is pinned by tests/integration/technical-details-*.test.ts.
+  'reports.view_technical',
 ] as const;
 
 // ── Annotated report shape ───────────────────────────────────────────────────

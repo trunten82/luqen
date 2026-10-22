@@ -14,11 +14,31 @@ import {
 } from '../../services/issue-dismissals/load-dismissed-report.js';
 import { toSiteKey } from '../../services/issue-dismissals/site-key.js';
 import type { IssueDismissal } from '../../db/interfaces/issue-dismissal-repository.js';
+import {
+  TECHNICAL_DETAILS_PERMISSION,
+  itemsForViewer,
+  requestMayViewTechnicalDetails,
+} from '../../services/technical-details.js';
 
 // Data API responds with bare JSON ({ data, total } / { data, ... }) — schemas
 // mirror that shape directly rather than going through LuqenResponse.
 const ScanShape = Type.Object({}, { additionalProperties: true });
-const IssueShape = Type.Object({}, { additionalProperties: true });
+// D-10: the element selector is optional in the contract: it is present only for a caller who
+// holds the technical-details permission (the same rule the report page applies). A union, so a
+// stored null is never coerced to an empty string by the serializer.
+const SELECTOR_DESCRIPTION =
+  `CSS selector of the flagged element. Present only when the caller holds ${TECHNICAL_DETAILS_PERMISSION}; omitted otherwise.`;
+const SelectorProperty = Type.Optional(
+  Type.Union([Type.String(), Type.Null()], { description: SELECTOR_DESCRIPTION }),
+);
+// fast-json-stringify writes declared properties first, in declared order, then the rest. The keys
+// that precede `selector` in the emitted row are declared (as unconstrained values, so nothing is
+// coerced) to keep the serialised key order, and so the bytes an entitled caller receives, unchanged.
+const AnyValue = Type.Optional(Type.Unknown());
+const IssueShape = Type.Object(
+  { type: AnyValue, code: AnyValue, message: AnyValue, selector: SelectorProperty },
+  { additionalProperties: true },
+);
 const TrendPointShape = Type.Object({}, { additionalProperties: true });
 const ComplianceSummaryShape = Type.Object({}, { additionalProperties: true });
 const FixShape = Type.Object({}, { additionalProperties: true });
@@ -456,7 +476,11 @@ export async function dataApiRoutes(
       }
 
       const total = allIssues.length;
-      const paged = allIssues.slice(offset, offset + limit);
+      // Redaction comes after dismissal filtering and paging: both need the raw selectors.
+      const paged = itemsForViewer(
+        allIssues.slice(offset, offset + limit),
+        requestMayViewTechnicalDetails(request),
+      );
 
       return reply.header('content-type', 'application/json').send({
         data: paged,
