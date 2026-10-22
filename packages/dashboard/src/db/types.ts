@@ -520,6 +520,8 @@ export interface AuditEntry {
 
 export interface AuditQuery {
   readonly actor?: string;
+  /** Rows whose stored actor is any of these; used instead of `actor` when it holds a value. */
+  readonly actors?: readonly string[];
   readonly action?: string;
   readonly resourceType?: string;
   readonly from?: string;

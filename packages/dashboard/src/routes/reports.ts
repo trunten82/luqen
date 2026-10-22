@@ -3,18 +3,13 @@ import { mayTouchDismissalOrg, mayViewScanReport } from '../services/issue-dismi
 import { mayControlScan, SCAN_CREATE_PERMISSION } from '../services/scan-lifecycle.js';
 import { deleteScanAndFiles, scanDeleteRefusal } from '../services/scan-delete-access.js';
 import { toSiteKey } from '../services/issue-dismissals/site-key.js';
-import {
-  buildDismissalsView,
-  hasApiKeyActor,
-  type ScanOrgKeys,
-  type DismissalsView,
-} from '../services/issue-dismissals/dismissals-view.js';
-import type { IssueDismissal } from '../db/interfaces/issue-dismissal-repository.js';
+import { buildDismissalsView, type DismissalsView } from '../services/issue-dismissals/dismissals-view.js';
+import { hasApiKeyActor, orgKeyMap } from '../services/issue-dismissals/actor-label.js';
 import {
   DISMISSAL_COMMENT_MAX_LENGTH,
   DISMISSAL_REASON_MAX_LENGTH,
 } from '../services/issue-dismissals/validate-input.js';
-import type { FastifyBaseLogger, FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { requirePermission } from '../auth/middleware.js';
 import { Type } from '@sinclair/typebox';
 import { readFile } from 'node:fs/promises';
@@ -207,38 +202,6 @@ function sessionLocale(request: FastifyRequest): string {
     typeof session?.get === 'function' ? (session.get('locale') as string | undefined) : undefined,
   );
 }
-
-/**
- * 89-11 (D-15 Q1, D-12): the label and creation time of each API key the Dismissed section may
- * NAME (HARD-08 adds the creation time as the tag that tells same-label keys apart). Only the
- * SCAN org's own key rows are read, so a system key or another org's key is never named on
- * this org's report (it falls back to the generic "API key"). Read once, and only when a row
- * carries an API-key actor; a failed read degrades to generic labels, never drops the section.
- */
-async function scanOrgKeys(
-  storage: StorageAdapter,
-  scan: { readonly id: string; readonly orgId: string },
-  rows: readonly IssueDismissal[],
-  log: FastifyBaseLogger,
-): Promise<ScanOrgKeys> {
-  if (!hasApiKeyActor(rows)) return new Map();
-  try {
-    const keys = await storage.apiKeys.listKeys(scan.orgId);
-    return new Map(
-      keys
-        .filter((k) => k.orgId === scan.orgId)
-        .map((k) => [k.id, { label: k.label, createdAt: k.createdAt }] as const),
-    );
-  } catch (err) {
-    // Scan id and error NAME only: driver messages can quote their input.
-    log.warn(
-      { scanId: scan.id, errorName: err instanceof Error ? err.name : 'UnknownError' },
-      'Dismissed section: API key labels not readable, generic labels shown',
-    );
-    return new Map();
-  }
-}
-
 
 export async function reportRoutes(
   server: FastifyInstance,
@@ -669,7 +632,7 @@ export async function reportRoutes(
           // generic "API key", never another tenant's key names. showKeyNames is the switch; the
           // live rows are not even read for a viewer who may not see them.
           const showKeyNames = mayTouchDismissalOrg(request.user, scan.orgId);
-          const keys = showKeyNames ? await scanOrgKeys(storage, scan, rows, request.log) : new Map();
+          const keys = showKeyNames && hasApiKeyActor(rows) ? await orgKeyMap(storage, scan.orgId, request.log, scan.id) : new Map();
           // HARD-05: the section's dates read in the viewer's session UI language.
           dismissals = buildDismissalsView(rows, { keys, showKeyNames, locale: sessionLocale(request) });
         } catch (err) {

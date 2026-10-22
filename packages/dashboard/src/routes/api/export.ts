@@ -20,6 +20,7 @@ import {
 } from '../../services/vpat-share-service.js';
 import { ErrorEnvelope } from '../../api/schemas/envelope.js';
 import { flattenIssueOccurrences } from '../../services/issue-occurrences.js';
+import { withDisplayedActors } from '../../services/issue-dismissals/actor-label.js';
 import { applyActiveDismissals, type AppliedActiveDismissals } from '../../services/issue-dismissals/load-dismissed-report.js';
 import { t } from '../../i18n/index.js';
 import { requestMayViewTechnicalDetails } from '../../services/technical-details.js';
@@ -381,6 +382,8 @@ export async function exportRoutes(
       } catch {
         return reply.code(500).send({ error: 'Failed to read report data' });
       }
+      // The Dismissed sheet's Dismissed By reads the shared actor label (D-06), never the stored key id.
+      applied = { ...applied, active: await withDisplayedActors(storage, request.user, scan, applied.active, requestLocale(request), request.log) };
 
       // Use normalizeReportData as single source of truth for enriched
       // issues (includes WCAG metadata, regulation annotations, etc.)

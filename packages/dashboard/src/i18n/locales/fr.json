@@ -334,7 +334,10 @@
     "allActions": "Toutes les actions",
     "allResources": "Tous les types de ressource",
     "noEntries": "Aucune entrée dans le journal d'audit.",
-    "org": "Org"
+    "org": "Org",
+    "actionIssueDismissalMark": "Constat écarté comme faux positif",
+    "actionIssueDismissalRevoke": "Écartement révoqué",
+    "resourceIssueDismissal": "Écartement de constat"
   },
   "admin": {
     "branding": {
@@ -571,6 +574,7 @@
       "remove": "Supprimer",
       "noMembers": "Aucun membre encore. Ajoutez des utilisateurs du tableau de bord ci-dessus.",
       "noneGlobal": "Aucune (globale)",
+      "currentOrgOption": "Organisation actuelle ({{name}})",
       "noneRole": "Aucun",
       "orgLinkDesc": "Liez cette équipe à une organisation. Les membres de l'équipe hériteront de l'appartenance à l'organisation liée.",
       "roleLinkDesc": "Attribuez un rôle limité à l'org à cette équipe. Tous les membres de l'équipe héritent des autorisations du rôle au sein de l'organisation.",
@@ -1744,8 +1748,8 @@
         "ruleLabel": "Règle",
         "elementLabel": "Élément",
         "messageLabel": "Constat",
-        "scope": "Cet écartement s'applique à cette règle sur cet élément exact, sur toutes les pages de ce site, dans cette analyse et dans les analyses futures. Il cesse de correspondre si le sélecteur de l'élément change.",
-        "effect": "Les constats écartés ne comptent plus dans les totaux, les scores et les résultats de conformité. Les rapports de conformité (ACR) indiquent combien de constats ont été écartés comme faux positifs. Vous pouvez révoquer l'écartement plus tard depuis la section Constats écartés.",
+        "scope": "Cet écartement s'applique à cette règle sur cet élément exact, sur toutes les pages de ce site, dans cette analyse, dans les analyses antérieures terminées et dans les analyses futures. Il cesse de correspondre si le sélecteur de l'élément change.",
+        "effect": "Les constats écartés ne comptent plus dans les totaux et les scores. Dans les résultats de conformité, un critère cesse d'échouer uniquement lorsqu'il ne lui reste plus aucun constat. Les rapports de conformité (ACR) indiquent combien de constats ont été écartés comme faux positifs. Vous pouvez révoquer l'écartement plus tard depuis la section Constats écartés.",
         "reasonLabel": "Motif",
         "reasonHint": "Obligatoire. Expliquez pourquoi il s'agit d'un faux positif. Votre nom et ce motif sont visibles par toute personne pouvant consulter ce rapport.",
         "confirm": "Écarter comme faux positif",
@@ -1777,7 +1781,7 @@
     },
     "section": {
       "summary": "Constats écartés — actifs : {{active}}, révoqués : {{revoked}}",
-      "intro": "Constats écartés comme faux positifs pour ce site. Ils ne comptent pas dans les totaux, les scores ni les résultats de conformité. Chaque écartement correspond à une règle sur un élément exact.",
+      "intro": "Constats écartés comme faux positifs pour ce site. Ils ne comptent pas dans les totaux ni les scores, et dans les résultats de conformité un critère cesse d'échouer uniquement lorsqu'il ne lui reste plus aucun constat. Chaque écartement correspond à une règle sur un élément exact.",
       "activeHeading": "Écartements actifs",
       "revokedHeading": "Écartements révoqués",
       "noActive": "Aucun écartement actif."

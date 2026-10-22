@@ -170,7 +170,7 @@
 
     {{!-- ════ MORE ════ Admin chrome — identity, repos, integrations, system.
          Collapsed by default; honour browser-persisted state if user opens. --}}
-    {{#if (or perm.usersManageAny perm.adminTeams perm.adminRoles perm.adminOrg perm.adminPlugins perm.reposManage perm.adminSystem perm.llmView perm.auditView)}}
+    {{#if (or perm.usersManageAny perm.adminTeams perm.adminRoles perm.adminOrg perm.adminPlugins perm.reposManage perm.adminSystem perm.llmView perm.auditLogView)}}
     <details class="sidebar__more" {{#if isAdminPath}}open{{/if}}>
       <summary class="sidebar__section-label sidebar__section-label--summary">
         {{t "common.more"}}
@@ -412,9 +412,10 @@
 
       {{!-- Audit + agent trails — visible to users with audit view permission. --}}
       {{#if (or perm.adminSystem perm.adminOrg)}}
-      <a class="sidebar__item {{#if (startsWith currentPath '/admin/audit')}}is-active{{/if}}"
+      {{!-- /admin/audit and its sub-pages only: /admin/audit-log is its own entry below. --}}
+      <a class="sidebar__item {{#if (or (eq currentPath '/admin/audit') (startsWith currentPath '/admin/audit/'))}}is-active{{/if}}"
          href="/admin/audit"
-         aria-current="{{#if (startsWith currentPath '/admin/audit')}}page{{/if}}">
+         aria-current="{{#if (or (eq currentPath '/admin/audit') (startsWith currentPath '/admin/audit/'))}}page{{/if}}">
         <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
           <path d="M10 2a8 8 0 100 16 8 8 0 000-16zM10 6v4l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
@@ -431,8 +432,10 @@
       </a>
       {{/if}}
 
-      {{#if perm.auditView}}
-      {{#if perm.adminSystem}}
+      {{!-- Audit Log — shown to every holder of the View audit log permission (the flag, never a role name
+           or the system-settings flag): an org Owner holds it, and the page stays scoped to their org. A
+           caller in no organization has no rows to read, so the entry is not shown (perm.auditLogView). --}}
+      {{#if perm.auditLogView}}
       <a class="sidebar__item {{#if (startsWith currentPath '/admin/audit-log')}}is-active{{/if}}"
          href="/admin/audit-log"
          aria-current="{{#if (startsWith currentPath '/admin/audit-log')}}page{{/if}}">
@@ -442,7 +445,6 @@
         </svg>
         {{t "nav.auditLog"}}
       </a>
-      {{/if}}
       {{/if}}
     </details>
     {{/if}}

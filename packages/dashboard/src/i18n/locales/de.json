@@ -334,7 +334,10 @@
     "allActions": "Alle Aktionen",
     "allResources": "Alle Ressourcentypen",
     "noEntries": "Keine Audit-Protokolleinträge gefunden.",
-    "org": "Org"
+    "org": "Org",
+    "actionIssueDismissalMark": "Befund als Fehlalarm verworfen",
+    "actionIssueDismissalRevoke": "Verwerfen widerrufen",
+    "resourceIssueDismissal": "Verwerfen eines Befunds"
   },
   "admin": {
     "branding": {
@@ -571,6 +574,7 @@
       "remove": "Entfernen",
       "noMembers": "Noch keine Mitglieder. Fügen Sie oben Dashboard-Benutzer hinzu.",
       "noneGlobal": "Keiner (global)",
+      "currentOrgOption": "Aktuelle Organisation ({{name}})",
       "noneRole": "Keine",
       "orgLinkDesc": "Verknüpfe dieses Team mit einer Organisation. Teammitglieder erben die Mitgliedschaft in der verknüpften Organisation.",
       "roleLinkDesc": "Weise diesem Team eine org-bezogene Rolle zu. Alle Teammitglieder erben die Berechtigungen der Rolle innerhalb der Organisation.",
@@ -1744,8 +1748,8 @@
         "ruleLabel": "Regel",
         "elementLabel": "Element",
         "messageLabel": "Befund",
-        "scope": "Dieses Verwerfen gilt für diese Regel an genau diesem Element, auf jeder Seite dieser Website, in diesem Scan und in künftigen Scans. Es greift nicht mehr, wenn sich der Selektor des Elements ändert.",
-        "effect": "Verworfene Befunde zählen nicht mehr in Summen, Bewertungen und Compliance-Ergebnissen. Konformitätsberichte (ACR) geben an, wie viele Befunde als Fehlalarm verworfen wurden. Sie können das Verwerfen später im Abschnitt „Verworfene Befunde“ widerrufen.",
+        "scope": "Dieses Verwerfen gilt für diese Regel an genau diesem Element, auf jeder Seite dieser Website, in diesem Scan, in früheren abgeschlossenen Scans und in künftigen Scans. Es greift nicht mehr, wenn sich der Selektor des Elements ändert.",
+        "effect": "Verworfene Befunde zählen nicht mehr in Summen und Bewertungen. In den Compliance-Ergebnissen ist ein Kriterium nur dann nicht mehr verfehlt, wenn kein Befund dazu mehr übrig ist. Konformitätsberichte (ACR) geben an, wie viele Befunde als Fehlalarm verworfen wurden. Sie können das Verwerfen später im Abschnitt „Verworfene Befunde“ widerrufen.",
         "reasonLabel": "Begründung",
         "reasonHint": "Erforderlich. Geben Sie an, warum dies ein Fehlalarm ist. Ihr Name und diese Begründung sind für alle sichtbar, die diesen Bericht ansehen können.",
         "confirm": "Als Fehlalarm verwerfen",
@@ -1777,7 +1781,7 @@
     },
     "section": {
       "summary": "Verworfene Befunde — aktiv: {{active}}, widerrufen: {{revoked}}",
-      "intro": "Befunde, die für diese Website als Fehlalarm verworfen wurden. Sie zählen nicht in Summen, Bewertungen oder Compliance-Ergebnissen. Jedes Verwerfen gilt für eine Regel an genau einem Element.",
+      "intro": "Befunde, die für diese Website als Fehlalarm verworfen wurden. Sie zählen nicht in Summen oder Bewertungen, und in den Compliance-Ergebnissen ist ein Kriterium nur dann nicht mehr verfehlt, wenn kein Befund dazu mehr übrig ist. Jedes Verwerfen gilt für eine Regel an genau einem Element.",
       "activeHeading": "Aktive Verwerfungen",
       "revokedHeading": "Widerrufene Verwerfungen",
       "noActive": "Keine aktiven Verwerfungen."

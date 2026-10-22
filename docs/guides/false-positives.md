@@ -46,8 +46,8 @@ Steps:
 5. Find the criterion the finding is listed under, and click the criterion's title to expand it. Do not click the criterion number in front of the title: it is a link that opens the WCAG page in a new tab.
 6. On the finding you want to dismiss, click **Dismiss**.
    When the same finding is listed more than once (once for each page it is on), the rows look the same, because they do not show which page each one is on. Click **Dismiss** on any one of them: one dismissal covers them all. A finding that repeats on many pages as part of a shared component has the same **Dismiss** button on the **Templates** tab as well, once you click the component's name there to expand it.
-   If **Dismiss** is greyed out, the finding cannot be dismissed and clicking it does nothing. Point at the button to see why; the reasons are listed in [Which findings a dismissal covers](#which-findings-a-dismissal-covers).
-7. Check the dialog **Dismiss as false positive**: **Rule**, **Element** and **Finding** show the finding you chose. Wait until **Occurrences in this scan** and **Pages in this scan** show numbers. They count what the dismissal covers in this scan; when more than one occurrence is counted, all of them are dismissed together.
+   If **Dismiss** is greyed out, the finding cannot be dismissed and clicking it does nothing. The reason is written right under the button; the reasons are listed in [Which findings a dismissal covers](#which-findings-a-dismissal-covers).
+7. Check the dialog **Dismiss as false positive**: **Rule**, **Element** and **Finding** show the finding you chose. Wait until **Occurrences in this scan** and **Pages in this scan** show numbers. They count what the dismissal covers in this scan; when more than one occurrence is counted, all of them are dismissed together. The dialog also says that the dismissal applies in this scan, in earlier completed scans and in future scans, and, further down, that in the compliance results a criterion stops failing only when no finding behind it remains.
 8. Type your reason in **Reason**: say why the finding is a false positive, in up to 1000 characters.
    The reason is required because it is the record of the decision. Everyone who can open the site's reports sees it next to your name, and it also appears in the Excel export and in the audit log. The hint under the box says the same: your name and the reason are shown to everyone who can view the report.
 9. Click **Dismiss as false positive** at the bottom of the dialog, next to **Cancel**. The dialog's title uses the same words; the button is the one at the bottom. It stays unavailable until the counts have loaded and a reason is typed.
@@ -67,11 +67,11 @@ A dismissal matches a finding when all four of these are the same:
 - The site, which is the address the scan was started with. Two addresses are the same site when they have the same scheme, host name, path and query. Capitals in the host name, the default port and slashes at the end of the path make no difference. An `http://` address and an `https://` address are different sites, and so are `https://fabrikam.example/` and `https://fabrikam.example/shop`.
 - The organization that owns the scan. A scan of the same address by another organization is not affected.
 
-Within a scan, every occurrence that matches is dismissed together: the same finding on every page it is on, and its entry in the **Shared components — fix once, fix everywhere** block when the finding is part of a shared component. This is why the dialog shows **Occurrences in this scan** and **Pages in this scan** before you confirm.
+Within a scan, every occurrence that matches is dismissed together: the same finding on every page it is on, and its entry in the **Shared components — fix once, fix everywhere** block when the finding is part of a shared component. This is why the dialog shows **Occurrences in this scan** and **Pages in this scan** before you confirm. A dismissal also applies to the earlier completed scans of the site, whose stored counts and results are recomputed without the dismissed finding, and to future scans.
 
 The **Dismiss** button is next to each finding on the **Issues** tab, and next to each shared component's finding on the **Templates** tab, where you first click the component's name to expand it. The **Pages** tab has no **Dismiss** button.
 
-Some findings cannot be dismissed. Their **Dismiss** button is shown greyed out, and pointing at it shows one of these messages:
+Some findings cannot be dismissed. Their **Dismiss** button is shown greyed out, and the reason is written as text right under the button, on a phone as well, so nothing has to be pointed at. The text is one of these messages:
 
 | Message | Why |
 |---------|-----|
@@ -103,7 +103,7 @@ When a scan was run with jurisdictions or regulations, the report's **Compliance
 
 ### Exports
 
-**Export Excel** on the report downloads a workbook whose **Issues** sheet leaves the dismissed finding out. Whenever something on the report is dismissed, the workbook also has a sheet named **Dismissed**, with one row for each dismissed occurrence and these columns, in this order: **Page URL**, **Rule Code**, **Selector**, **Level**, **Reason**, **Dismissed By** and **Dismissed At**. **Dismissed By** says who dismissed the finding. **Dismissed At** is the date and time of the dismissal as stored, in UTC, written like `2026-10-21T09:30:00.000Z`.
+**Export Excel** on the report downloads a workbook whose **Issues** sheet leaves the dismissed finding out. Whenever something on the report is dismissed, the workbook also has a sheet named **Dismissed**, with one row for each dismissed occurrence and these columns, in this order: **Page URL**, **Rule Code**, **Selector**, **Level**, **Reason**, **Dismissed By** and **Dismissed At**. **Dismissed By** names a user by user name. It names an API key as the report page does: **API key: Fabrikam CI** followed in brackets by **Created** and the date the key was created, or only **API key** for a key that is not one of the organization's own; the key's stored identifier is never written. **Dismissed At** is the date and time of the dismissal as stored, in UTC, written like `2026-10-21T09:30:00.000Z`.
 
 **Download PDF** on the report leaves the dismissed finding out and has no section about dismissals.
 
@@ -260,7 +260,8 @@ Result: **Active dismissals** lists the dismissals in force, under the columns *
 
 - The **Element** column, which shows the element's selector, is shown only to people whose role holds **View technical details (selectors, context)**.
 - Dates and times are written in the language you use the dashboard in, and in the time zone of the server the dashboard runs on.
-- A dismissal made through the API with an API key of the scan's organization names the key, for example **API key: Fabrikam CI**, followed in brackets by **Created** and the date the key was created. The date tells apart two keys with the same name, and the name is kept after the key is deleted. A key that is not one of the organization's own is shown only as **API key**.
+- A dismissal made through the API with an API key of the scan's organization names the key, for example **API key: Fabrikam CI**, followed in brackets by **Created** and the date the key was created. The date tells apart two keys with the same name, and the name is kept after the key is deleted. A key that is not one of the organization's own is shown only as **API key**. The **Dismissed By** column of the Excel export and the **Actor** column of the audit log name a key the same way.
+- The section opens with a sentence that says the findings do not count in totals or scores, that in the compliance results a criterion stops failing only when no finding behind it remains, and that each dismissal matches one rule on one exact element.
 - The section is shown only in the dashboard. The public report, share links, the print view and conformance reports never show it.
 
 If it does not work: see [When the Dismiss button is missing or disabled](#when-the-dismiss-button-is-missing-or-disabled).
@@ -275,13 +276,17 @@ Before you start:
 
 Steps:
 
-1. In your browser's address bar, open your dashboard's address followed by `/admin/audit-log?action=issue_dismissal.mark`, for example `https://luqen.fabrikam.example/admin/audit-log?action=issue_dismissal.mark`. The **Audit Log** page lists the dismissals that were made.
-2. To list the revocations, open your dashboard's address followed by `/admin/audit-log?action=issue_dismissal.revoke` instead.
-3. The newest entries come first, 50 at a time. When the list ends with **Load More**, click **Load More** to see the next ones; the same filter stays applied.
+1. At the top left of the page, click the menu button **Open navigation menu**.
+2. Click **More**, near the end of the menu; the menu shows it in capital letters. More entries appear below it.
+3. Click **Audit Log**, near the end of the entries under **More**. The **Audit Log** page opens.
+4. Open the list under **Action** and choose **Finding dismissed as false positive** to list the dismissals that were made, or **Dismissal revoked** to list the revocations. Click **Filter**. The list under **Action** keeps showing your choice while it is applied; it shows **All actions** only when no action filter is applied.
+5. Instead of steps 1 to 4 you can open the page by its address: your dashboard's address followed by `/admin/audit-log?action=issue_dismissal.mark` for the dismissals, for example `https://luqen.fabrikam.example/admin/audit-log?action=issue_dismissal.mark`, or followed by `/admin/audit-log?action=issue_dismissal.revoke` for the revocations.
+6. The newest entries come first, 50 at a time. When the list ends with **Load More**, click **Load More** to see the next ones; the same filter and the same page size of 50 stay applied.
+7. To list one actor's entries, type in **Actor** and click **Filter**. A user is found by user name. An API key is found by its name (for example `Fabrikam CI`) or by the text the **Actor** column shows (`API key: Fabrikam CI`, with or without the part in brackets); this works for the keys of the organization you are working in (every key for a global administrator) while the key exists.
 
-Result: each entry shows **Timestamp**, **Actor**, **Action** (`issue_dismissal.mark` or `issue_dismissal.revoke`), **Resource Type** (`issue_dismissal`), **Resource ID**, **Details**, **IP Address** and **Org**. The page shows the column headings in capital letters. **Details** holds the site address, the rule code and the selector, with the reason of a dismissal or the comment of a revocation. Unless you are a global administrator, only the entries of the organization you are working in are listed.
+Result: each entry shows **Timestamp**, **Actor**, **Action** (`issue_dismissal.mark` or `issue_dismissal.revoke`), **Resource Type** (`issue_dismissal`), **Resource ID**, **Details**, **IP Address** and **Org**. The page shows the column headings in capital letters. **Actor** names a user by user name and an API key the way the report page does: **API key: Fabrikam CI** followed in brackets by **Created** and the date the key was created (the name is kept after the key is deleted), or only **API key** for a key that is not one of the organization's own; the key's stored identifier is never shown. **Details** holds the site address, the rule code and the selector, with the reason of a dismissal or the comment of a revocation. Unless you are a global administrator, only the entries of the organization you are working in are listed. A user who is in no organization reads no entries, and the menu does not show them the Audit Log; the GraphQL `auditLog` query answers the same way.
 
-If it does not work: when the address does not open the page and reports that access is forbidden, your role does not hold **View audit log**; ask an Owner of your organization. If something else goes wrong, see [When the Dismiss button is missing or disabled](#when-the-dismiss-button-is-missing-or-disabled) and [Messages you may see](#messages-you-may-see).
+If it does not work: when the menu has no **Audit Log** entry, or the page opened by its address shows **Access Denied**, your role does not hold **View audit log**; ask an Owner of your organization. If something else goes wrong, see [When the Dismiss button is missing or disabled](#when-the-dismiss-button-is-missing-or-disabled) and [Messages you may see](#messages-you-may-see).
 
 ### Through the API
 
@@ -297,7 +302,7 @@ Before you start:
 
 - You are an Owner of the organization or a global administrator. Creating a role needs **Manage roles** and changing teams needs **Manage teams**; the default Owner role holds both and the default Admin role neither.
 - You are working in the organization (see [Who can dismiss](#who-can-dismiss) for how to choose it).
-- The person already has an account in the dashboard. For an Owner, **Add Member** lists only people who are already in one of the organization's teams; a global administrator's list holds every active user. A person who is in none of the organization's teams is added by a global administrator (see step 20).
+- The person already has an account in the dashboard. For an Owner, **Add Member** lists the people who are already in one of the organization's teams and the organization's members who are in no team. It leaves out a member who also belongs to another organization, and a person who is already in this team. A global administrator's list holds every active user, and a global administrator adds a person an Owner's list leaves out (see step 20). The same rule applies wherever a person is added to a team: the organization's members page (add to team, move team) and the REST API accept the same people as **Add Member**.
 
 Steps:
 
@@ -316,13 +321,13 @@ Steps:
 13. If **Teams** is not listed in the menu, click **More**, near the end of the menu; the menu shows it in capital letters. More entries appear below it.
 14. Click **Teams**.
 15. In **Team Name**, type a name for a new team, for example *Accessibility reviewers*.
-16. In **Organization**, choose the organization you are working in.
+16. In **Organization**, leave the first entry, which reads **Current organization** followed by your organization's name in brackets, or choose the organization you are working in by name. Both place the team in the organization you are working in.
 17. In **Team Role**, choose the role you created.
 18. Click **Create Team**. The team is added to the list below.
 19. In the list, click the team's name. The team's page opens.
 20. In **Add Member**, choose the person. Each person is listed by user name, followed by their global role in brackets.
-   If you are an Owner and the person is not in the list, they are in none of the organization's teams. Ask a global administrator to add them: a global administrator opens this team's page through steps 12, 13, 14 and 19, and does this step and the next.
-21. Click the **Add Member** button next to the list. The person is added to the team's members. In the members table, the **Team Role** column (shown in capital letters) reads *member*: that is the person's place in the team, not the role. The role the team gives is the one named at the top of the page, under **Team Role**.
+   If you are an Owner and the person is not in the list, they are not a member of your organization, or they also belong to another organization. Ask a global administrator to add them: a global administrator opens this team's page through steps 12, 13, 14 and 19, and does this step and the next.
+21. Click the **Add Member** button next to the list. The person is added to the team's members, and the line **No members yet. Add dashboard users above.** disappears when this is the team's first member. In the members table, the **Team Role** column (shown in capital letters) reads *member*: that is the person's place in the team, not the role. The role the team gives is the one named at the top of the page, under **Team Role**.
 
 Result: the next page the person opens shows them **Dismiss** next to the findings on the organization's reports, and **Revoke** in the Dismissed findings section.
 
@@ -338,10 +343,10 @@ If it does not work: open the role again from **Roles** and check that the three
 |--------------|-----|------------|
 | No **Dismiss** button on any report. | Your role in the organization does not hold both **Mark findings as false positives** and **View technical details (selectors, context)**. The default **Member**, **Executive** and **Viewer** roles do not hold **Mark findings as false positives**. | Ask an Owner of your organization to give you a role that does; see [Let a custom role dismiss findings](#let-a-custom-role-dismiss-findings). |
 | **Dismiss** on one organization's reports, but not on a scan you can open. | The scan does not belong to the organization you are working in. A scan that belongs to no organization can be opened by everyone, but only a global administrator can dismiss on it. | Choose the scan's organization in the list under **Organization** at the bottom of the menu, then open the report again. |
-| **Dismiss** greyed out, and pointing at it shows **This finding has no specific element and cannot be dismissed.** | The finding is reported against the whole page or against no element. | Nothing: this finding cannot be dismissed. See [Which findings a dismissal covers](#which-findings-a-dismissal-covers). |
-| **Dismiss** greyed out, and pointing at it shows **This finding's element selector is too long to be dismissed.** | The element's selector is longer than 4000 characters. | Nothing: this finding cannot be dismissed. |
-| **Dismiss** greyed out, and pointing at it shows **This finding has no rule code and cannot be dismissed.** | The finding has no rule code. | Nothing: this finding cannot be dismissed. |
-| **Dismiss** greyed out, and pointing at it shows **This finding's rule code is too long to be dismissed.** | The rule code is longer than 300 characters. | Nothing: this finding cannot be dismissed. |
+| **Dismiss** greyed out, and the text under it reads **This finding has no specific element and cannot be dismissed.** | The finding is reported against the whole page or against no element. | Nothing: this finding cannot be dismissed. See [Which findings a dismissal covers](#which-findings-a-dismissal-covers). |
+| **Dismiss** greyed out, and the text under it reads **This finding's element selector is too long to be dismissed.** | The element's selector is longer than 4000 characters. | Nothing: this finding cannot be dismissed. |
+| **Dismiss** greyed out, and the text under it reads **This finding has no rule code and cannot be dismissed.** | The finding has no rule code. | Nothing: this finding cannot be dismissed. |
+| **Dismiss** greyed out, and the text under it reads **This finding's rule code is too long to be dismissed.** | The rule code is longer than 300 characters. | Nothing: this finding cannot be dismissed. |
 | No findings at all, only the scan's details and its status. | The scan has not completed. Only a completed scan lists findings. | Wait until the scan is complete, then open its report again. |
 | No **Dismiss** on the **Pages** tab. | The **Pages** tab has no **Dismiss** button. | Use the **Issues** tab, or the **Templates** tab for a shared component. |
 | No **Revoke** button in the Dismissed findings section. | Revoking needs the same permissions and the same organization as dismissing. | See the first two rows of this table. |

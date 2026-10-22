@@ -94,11 +94,11 @@ describe('migration 091: grant issues.dismiss to existing orgs\' Owner and Admin
     const mig = DASHBOARD_MIGRATIONS.find((m) => m.id === '091');
     expect(mig).toBeDefined();
     expect(mig!.name).toBe('grant-issues-dismiss-to-org-owner-admin');
-    // Only 092 and 093 (one nullable column each, on issue_dismissals and oauth_user_consents; no role rows) are registered after the grant,
+    // Only 092, 093 and 094 (one nullable column each, on issue_dismissals, oauth_user_consents and agent_conversations; no role rows) are registered after the grant,
     // so the "existing DB" model below (every migration except 091 first) still runs 091 against the
     // same role rows. A further migration must be checked against that model before it is added here.
     const after = DASHBOARD_MIGRATIONS.slice(DASHBOARD_MIGRATIONS.findIndex((m) => m.id === '091') + 1);
-    expect(after.map((m) => m.id)).toEqual(['092', '093']);
+    expect(after.map((m) => m.id)).toEqual(['092', '093', '094']);
   });
 
   it('existing orgs\' Owner and Admin roles receive issues.dismiss', () => {

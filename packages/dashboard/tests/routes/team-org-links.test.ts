@@ -128,19 +128,38 @@ describe('GET /api/v1/teams/:teamId/members', () => {
 // ─── POST /api/v1/teams/:teamId/members ───────────────────────────────────
 describe('POST /api/v1/teams/:teamId/members', () => {
   it('admin.org of home org succeeds and writes audit', async () => {
-    await seedOrg('org_a');
+    const orgA = await seedOrg('org_a');
     const teamId = await seedTeam('alpha', 'org_a');
+    // Team membership follows organization membership: the user is a member of the team's organization.
+    const user = await storage.users.createUser('fabrikam-api-member', 'Fabrikam-Api-42!', 'user');
+    await storage.organizations.addMember(orgA, user.id, 'member');
     server = await buildServer({ perms: ['admin.org'], orgId: orgIds.get('org_a') ?? 'org_a' });
     const r = await server.inject({
       method: 'POST',
       url: `/api/v1/teams/${teamId}/members`,
-      payload: { user_id: 'u-new', role: 'editor' },
+      payload: { user_id: user.id, role: 'editor' },
     });
     expect(r.statusCode).toBe(200);
     expect(r.json()).toEqual({ ok: true });
     const audit = await storage.audit.query({ action: 'team_role.granted' });
     expect(audit.entries.length).toBe(1);
     expect(audit.entries[0].resourceId).toBe(teamId);
+  });
+
+  it('admin.org of home org cannot add a user who is not in the organization', async () => {
+    await seedOrg('org_a');
+    const teamId = await seedTeam('alpha', 'org_a');
+    const outsider = await storage.users.createUser('northwind-api-outsider', 'Northwind-Api-42!', 'user');
+    server = await buildServer({ perms: ['admin.org'], orgId: orgIds.get('org_a') ?? 'org_a' });
+    const r = await server.inject({
+      method: 'POST',
+      url: `/api/v1/teams/${teamId}/members`,
+      payload: { user_id: outsider.id, role: 'editor' },
+    });
+    expect(r.statusCode).toBe(403);
+    expect(r.json()).toEqual({ error: 'This user cannot be added to this team' });
+    expect(await storage.teams.listTeamMembers(teamId)).toEqual([]);
+    expect((await storage.audit.query({ action: 'team_role.granted' })).entries).toEqual([]);
   });
 
   it('admin.org of a different org returns 403', async () => {

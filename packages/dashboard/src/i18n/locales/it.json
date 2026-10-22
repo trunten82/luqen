@@ -334,7 +334,10 @@
     "allActions": "Tutte le azioni",
     "allResources": "Tutti i tipi di risorsa",
     "noEntries": "Nessuna voce nel registro audit trovata.",
-    "org": "Org"
+    "org": "Org",
+    "actionIssueDismissalMark": "Rilevamento escluso come falso positivo",
+    "actionIssueDismissalRevoke": "Esclusione revocata",
+    "resourceIssueDismissal": "Esclusione di rilevamento"
   },
   "admin": {
     "branding": {
@@ -571,6 +574,7 @@
       "remove": "Rimuovi",
       "noMembers": "Nessun membro ancora. Aggiungi utenti dashboard sopra.",
       "noneGlobal": "Nessuna (globale)",
+      "currentOrgOption": "Organizzazione corrente ({{name}})",
       "noneRole": "Nessuno",
       "orgLinkDesc": "Collega questo team a un'organizzazione. I membri del team erediteranno l'appartenenza all'organizzazione collegata.",
       "roleLinkDesc": "Assegna un ruolo con ambito org a questo team. Tutti i membri del team ereditano i permessi del ruolo nell'organizzazione.",
@@ -1753,8 +1757,8 @@
         "ruleLabel": "Regola",
         "elementLabel": "Elemento",
         "messageLabel": "Rilevamento",
-        "scope": "Questa esclusione si applica a questa regola su questo elemento esatto, in tutte le pagine di questo sito, in questa scansione e nelle scansioni future. Smette di corrispondere se il selettore dell'elemento cambia.",
-        "effect": "I rilevamenti esclusi non vengono più conteggiati nei totali, nei punteggi e nei risultati di conformità. I report di conformità (ACR) indicano quanti rilevamenti sono stati esclusi come falsi positivi. Puoi revocare l'esclusione in seguito dalla sezione Rilevamenti esclusi.",
+        "scope": "Questa esclusione si applica a questa regola su questo elemento esatto, in tutte le pagine di questo sito, in questa scansione, nelle scansioni precedenti completate e nelle scansioni future. Smette di corrispondere se il selettore dell'elemento cambia.",
+        "effect": "I rilevamenti esclusi non vengono più conteggiati nei totali e nei punteggi. Nei risultati di conformità, un criterio smette di fallire solo quando non gli resta più alcun rilevamento. I report di conformità (ACR) indicano quanti rilevamenti sono stati esclusi come falsi positivi. Puoi revocare l'esclusione in seguito dalla sezione Rilevamenti esclusi.",
         "reasonLabel": "Motivo",
         "reasonHint": "Obbligatorio. Spiega perché si tratta di un falso positivo. Il tuo nome e questo motivo sono visibili a chiunque possa vedere questo report.",
         "confirm": "Escludi come falso positivo",
@@ -1786,7 +1790,7 @@
     },
     "section": {
       "summary": "Rilevamenti esclusi — attivi: {{active}}, revocati: {{revoked}}",
-      "intro": "Rilevamenti esclusi come falsi positivi per questo sito. Non vengono conteggiati nei totali, nei punteggi o nei risultati di conformità. Ogni esclusione corrisponde a una regola su un elemento esatto.",
+      "intro": "Rilevamenti esclusi come falsi positivi per questo sito. Non vengono conteggiati nei totali o nei punteggi, e nei risultati di conformità un criterio smette di fallire solo quando non gli resta più alcun rilevamento. Ogni esclusione corrisponde a una regola su un elemento esatto.",
       "activeHeading": "Esclusioni attive",
       "revokedHeading": "Esclusioni revocate",
       "noActive": "Nessuna esclusione attiva."

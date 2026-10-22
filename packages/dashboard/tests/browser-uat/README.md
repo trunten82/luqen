@@ -122,14 +122,15 @@ each naming its reason: no specific element, or a selector too long),
 400 copy in en/de/it through an intercepted request; and, on the over-long-selector scan, the disabled
 Dismiss's reason in the session language and a preview refused with 403 through an intercepted request
 showing that language's no-permission text),
-`theme` (dark), `keyboard` (real key presses, real Escape), `overflow` (150 rows), and the 89-11 gap
-scenarios (`dismissals/scenarios-gap.mjs`):
+`theme` (dark), `keyboard` (real key presses, real Escape), `overflow` (150 rows), the 89-11 gap
+scenarios (`dismissals/scenarios-gap.mjs`) and the Phase 95 `followups` scenario:
 
 | Scenario | What it proves |
 |----------|----------------|
 | `attribution` | Own seeded world: four API keys each mark one finding through the mark API (two org keys with the same label and different creation times, an org key that is then revoked and deleted, and a system key). The org keys read `API key: <label> (Created <date>)`, the deleted key still reads its label and creation time, the two same-label keys read differently, the system key reads `API key`, and the section HTML holds no `api-key:` identifier or key id. |
 | `twins` | Two page issues with the same rule and selector have two Dismiss buttons and are one dismissal; a dialog counting more than one occurrence (twins, a template item) says they are dismissed together; a single occurrence does not. |
 | `layout` | Both dialogs show Cancel and Confirm inside the viewport and the dialog, uncovered, measured right after opening with NO scroll call (1280x800 en/de/it, the 600-char selector, 375x812); the footer is opaque in light and dark; the Dismissed tables fit 1280 with the rule code on at most 2 lines; the assistant launcher covers nothing at the page bottom (1280 and 375). |
+| `followups` | Phase 95 (`dismissals/scenarios-followups.mjs`): the visible changes at 375 px and by keyboard, with screenshots `followups-*.png` under `.tmp/shots/`. The greyed Dismiss reason is ordinary on-screen text right under the button at 375 px (tapping opens nothing) and Tab reaches the button with the reason shown (Enter and Space open nothing); the dialog's scope sentence; an org Owner finds the Audit Log under More; the Audit Log shows the dismissal Action filter, names API keys like the report page (a deleted key from its snapshot) and keeps the page size on Load More; a viewer gets the Access Denied page; the team form's organization option reads `Current organization (Fabrikam)`, Add Member offers a member who is in no team and the No members yet row goes after the first add. Its world adds `apiKeyActors` and the `unteamed` persona. |
 
 `all` runs them in that order. The older `mobile`/`longtext` reachability checks scroll each button into
 view first: they prove a button CAN be reached, not that it is visible at open (that is `layout`).

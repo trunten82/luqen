@@ -1420,7 +1420,7 @@ Internet → Reverse Proxy (nginx/Caddy) → Luqen Dashboard (:5000)
 
 ## Audit log
 
-Luqen includes a built-in audit log that records security-relevant actions in the dashboard database via the `AuditRepository` (part of the StorageAdapter). Audit entries are queryable in the dashboard on the **Audit Log** page, at `/admin/audit-log` under your dashboard's address (requires `audit.view`; the menu lists the page under **More** for roles that also hold `admin.system`), and via the GraphQL API (`auditLog` query, requires `audit.view` permission). The page filters by an exact action given in its address, for example `/admin/audit-log?action=issue_dismissal.mark`.
+Luqen includes a built-in audit log that records security-relevant actions in the dashboard database via the `AuditRepository` (part of the StorageAdapter). Audit entries are queryable in the dashboard on the **Audit Log** page, at `/admin/audit-log` under your dashboard's address (requires `audit.view`; the menu lists the page under **More** for every role that holds `audit.view`, whatever else the role holds; without `audit.view`, a browser that opens the page gets the dashboard's HTML error page headed **Access Denied**, and a caller that does not ask for HTML gets a JSON `403`), and via the GraphQL API (`auditLog` query, requires `audit.view` permission). The query's `actor` field holds the same label as the page's **Actor** column: a user name, or for an API key `API key: <name> (Created <date>)` or `API key`; an API key's `actorId` reads `api-key`, and the stored key identifier is returned on neither surface. The page filters by an exact action given in its address, for example `/admin/audit-log?action=issue_dismissal.mark`.
 
 ### Logged events
 

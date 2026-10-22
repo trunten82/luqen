@@ -30,6 +30,8 @@ export const PERSONAS = {
   // Seeded only in the permissions world: a custom org role with issues.fix and reports.view but NOT
   // reports.view_technical (HARD-02: the fix hint carries no element markup).
   fixer: { user: 'uat-fixer', pass: PASS },
+  // Seeded only in the followups world: a direct member of the org who is in NO team (Phase 95, TEAM-01).
+  unteamed: { user: 'uat-unteamed', pass: PASS },
 };
 
 /** Remove everything under .tmp except the tracked .gitignore and the screenshot directory. */
@@ -147,7 +149,7 @@ async function seedFixer(storage, raw, bcrypt, orgId, now) {
   return [insertUser(raw, bcrypt, PERSONAS.fixer, 'uat-none', orgId, now), role.id];
 }
 
-export async function bootLocal({ keepShots = true, apiKeyActors = false, reviewer = false, overlongScan = false } = {}) {
+export async function bootLocal({ keepShots = true, apiKeyActors = false, reviewer = false, overlongScan = false, unteamed = false } = {}) {
   log('resetting .tmp workspace');
   resetWorkspace({ keepShots });
   const dbPath = await startDashboard();
@@ -176,6 +178,11 @@ export async function bootLocal({ keepShots = true, apiKeyActors = false, review
   raw.prepare("INSERT OR IGNORE INTO roles (id, name, description, is_system, org_id, created_at) VALUES ('uat-none','uat-none','No global permissions',1,'system',?)").run(now);
   const adminId = insertUser(raw, bcrypt, PERSONAS.admin, 'admin', orgId, now);
   raw.prepare("INSERT INTO org_members (org_id, user_id, role, joined_at) VALUES (?, ?, 'admin', ?)").run(orgId, adminId, now);
+  if (unteamed) {
+    // A direct member of the org with no team membership at all (the team page's Add Member must offer it).
+    const unteamedId = insertUser(raw, bcrypt, PERSONAS.unteamed, 'uat-none', orgId, now);
+    raw.prepare("INSERT INTO org_members (org_id, user_id, role, joined_at) VALUES (?, ?, 'member', ?)").run(orgId, unteamedId, now);
+  }
   const people = {
     owner: [insertUser(raw, bcrypt, PERSONAS.owner, 'uat-none', orgId, now), roleId('Owner')],
     member: [insertUser(raw, bcrypt, PERSONAS.member, 'uat-none', orgId, now), roleId('Member')],
@@ -219,7 +226,7 @@ export async function bootLocal({ keepShots = true, apiKeyActors = false, review
   await storage.disconnect();
   return {
     base: LOCAL_BASE, scanId, bigScanId, orgId, orgName: org.name, siteUrl: SITE, personas: PERSONAS,
-    ...(keyActors ? { keyActors } : {}), ...(overlongScanId ? { overlongScanId } : {}), reviewerSeeded: reviewer,
+    ...(keyActors ? { keyActors } : {}), ...(overlongScanId ? { overlongScanId } : {}), reviewerSeeded: reviewer, unteamedSeeded: unteamed,
   };
 }
 

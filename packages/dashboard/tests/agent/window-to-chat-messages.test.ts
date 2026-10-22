@@ -277,3 +277,64 @@ describe('windowToChatMessages', () => {
     expect(out[4]).toMatchObject({ role: 'tool' });
   });
 });
+
+describe('SESS-02 windowToChatMessages never sends a tool call that has no tool result', () => {
+  const call = (id: string): { id: string; name: string; args: Record<string, unknown> } => ({ id, name: 'tool_a', args: {} });
+  const toolRow = (id: string, result = '"ok"'): Message =>
+    msg({ role: 'tool', toolCallJson: JSON.stringify(call(id)), toolResultJson: result });
+
+  function counts(out: ReturnType<typeof windowToChatMessages>): { declared: number; results: number } {
+    let declared = 0;
+    let results = 0;
+    for (const m of out) {
+      if (m.role === 'assistant' && 'toolCalls' in m) declared += (m.toolCalls as unknown[]).length;
+      if (m.role === 'tool') results += 1;
+    }
+    return { declared, results };
+  }
+
+  it('SESS-02 a tool-call row with no answering tool row is not sent to the model', () => {
+    const unanswered = msg({ role: 'assistant', content: 'CHECKING', toolCallJson: JSON.stringify([call('l1')]) });
+    const out = windowToChatMessages([
+      msg({ role: 'user', content: 'Q' }),
+      unanswered,
+      msg({ role: 'assistant', content: 'T2' }),
+    ]);
+
+    expect(out.map((m) => `${m.role}:${m.content}`)).toEqual(['user:Q', 'assistant:T2']);
+    expect(out.some((m) => 'toolCalls' in m)).toBe(false);
+
+    // A window that ends at the unanswered tool-call row sends only the question.
+    const ending = windowToChatMessages([msg({ role: 'user', content: 'Q' }), unanswered]);
+    expect(ending.map((m) => `${m.role}:${m.content}`)).toEqual(['user:Q']);
+  });
+
+  it('SESS-02 a tool-call row is sent with only the calls that have an answering tool row', () => {
+    const out = windowToChatMessages([
+      msg({ role: 'user', content: 'Q' }),
+      msg({ role: 'assistant', content: '', toolCallJson: JSON.stringify([call('a1'), call('b2')]) }),
+      toolRow('a1'),
+    ]);
+
+    expect(out.map((m) => m.role)).toEqual(['user', 'assistant', 'tool']);
+    const sent = out[1] as { toolCalls: Array<{ id: string }> };
+    expect(sent.toolCalls.map((c) => c.id)).toEqual(['a1']);
+    const { declared, results } = counts(out);
+    expect(declared).toBe(results);
+  });
+
+  it('SESS-02 a late tool result after another reply is sent with its own preamble', () => {
+    const out = windowToChatMessages([
+      msg({ role: 'user', content: 'Q' }),
+      msg({ role: 'assistant', content: '', toolCallJson: JSON.stringify([call('l1')]) }),
+      msg({ role: 'assistant', content: 'T2' }),
+      toolRow('l1'),
+    ]);
+
+    expect(out.map((m) => m.role)).toEqual(['user', 'assistant', 'assistant', 'tool']);
+    expect(out[1]).toMatchObject({ role: 'assistant', content: 'T2' });
+    expect((out[2] as { toolCalls: Array<{ id: string }> }).toolCalls.map((c) => c.id)).toEqual(['l1']);
+    const { declared, results } = counts(out);
+    expect(declared).toBe(results);
+  });
+});
