@@ -270,6 +270,17 @@ Deployment profile (Phase 42):
   --without-llm               Skip llm service (dashboard profile).
   --monitor-port PORT         Monitor agent A2A port (default: 4300; 1024-65535).
 
+Reverse proxy (dashboard):
+  --trusted-proxies LIST      Proxy addresses whose X-Forwarded-For the dashboard trusts:
+                              addresses, CIDR ranges, loopback, linklocal, uniquelocal
+                              or none. REPLACES the dashboard default. Also read from
+                              DASHBOARD_TRUSTED_PROXIES in the installer's environment
+                              (the flag wins). The dashboard's own rules check it after
+                              the build; a refused list stops the install before
+                              anything is written. Default: nothing written.
+  --check-trusted-proxies     Check the list against the dashboard built in --install-dir,
+                              print what would be written, and install nothing.
+
 Uninstall:
   --uninstall                 Stop services, remove systemd units, delete install dir.
                               Combine with --purge to also delete data (DB, configs, logs).
@@ -646,6 +657,52 @@ trusted_proxies_readback() {
   trusted_proxies_check "${INSTALL_DIR}/packages/dashboard/dist" effective "${value}"
 }
 
+# trusted_proxies_summary_value <note> -- the pre-install summary value: the list
+# with how it will be checked, or "dashboard default" when none was given.
+trusted_proxies_summary_value() {
+  if [ -n "${DASHBOARD_TRUSTED_PROXIES}" ]; then
+    printf '%s (%s)' "${DASHBOARD_TRUSTED_PROXIES}" "$1"
+  else
+    printf 'dashboard default'
+  fi
+}
+
+# print_trusted_proxies_readback <kind> <file> -- closing-summary line. Reads the
+# FILE the installer wrote (never the in-memory value) and resolves it with the
+# dashboard's own code, so it reports what the dashboard will actually use.
+print_trusted_proxies_readback() {
+  local kind="$1" file="$2" written effective="" rc=0
+  if [ ! -r "${file}" ]; then
+    warn "Trusted proxies: could not read back ${file} (file not readable)"
+    return 0
+  fi
+  written="$(trusted_proxies_written_value "${kind}" "${file}")"
+  effective="$(trusted_proxies_readback "${kind}" "${file}" 2>&1)" && rc=0 || rc=$?
+  if [ "${rc}" -ne 0 ]; then
+    warn "Trusted proxies: could not read back ${file} through the dashboard's check: ${effective}"
+    return 0
+  fi
+  if [ -n "${written}" ]; then
+    printf "  Trusted proxies (read back from %s): %s (set by this install)\n" "${file}" "${effective}"
+  else
+    printf "  Trusted proxies (read back from %s): %s (dashboard default, nothing written)\n" "${file}" "${effective}"
+  fi
+}
+
+# print_docker_trusted_proxies_result -- the Docker closing line. A Docker
+# install has no host-side dashboard build, so this does NOT run the check: it
+# reports what was written to .env, which the dashboard container checks when it
+# starts (docker-compose.yml passes it to the dashboard service only).
+print_docker_trusted_proxies_result() {
+  local written
+  written="$(trusted_proxies_written_value dotenv "${INSTALL_DIR}/.env")"
+  if [ -n "${written}" ]; then
+    printf "  Trusted proxies: %s (written to .env; the dashboard container started with it)\n" "${written}"
+  else
+    printf "  Trusted proxies: nothing written; the dashboard default applies\n"
+  fi
+}
+
 # check_trusted_proxies_only -- the --check-trusted-proxies mode. Checks the
 # list against the dashboard built in --install-dir and prints what an install
 # would write. Installs nothing and runs no installer step. Exit 0 accepted or
@@ -722,6 +779,27 @@ ask_choice() {
   printf "\n    %sChoice [1]%s: " "${BOLD}" "${RESET}" >/dev/tty
   read -r choice </dev/tty
   echo "${choice:-1}"
+}
+
+# ask_trusted_proxies -- the wizard prompt for the dashboard's trusted-proxy list.
+# NOT built on `ask`, which runs eval on its input: the answer is read with
+# `read -r` into a local and stored as plain text. An empty answer keeps the
+# value already given by flag or environment. The dashboard's own rules check
+# the list after the build (validate_trusted_proxies).
+ask_trusted_proxies() {
+  local shown="${DASHBOARD_TRUSTED_PROXIES:-dashboard default}" answer=""
+  printf "\n  %sTrusted proxies%s (reverse proxy / load balancer)\n" "${BOLD}" "${RESET}" >/dev/tty
+  printf "  Set this when the dashboard sits behind a reverse proxy, load balancer or CDN\n" >/dev/tty
+  printf "  whose address is not loopback, link-local or unique-local. A list REPLACES the\n" >/dev/tty
+  printf "  default, so add loopback (and linklocal, uniquelocal) when a local proxy also\n" >/dev/tty
+  printf "  sits in front. Examples: 192.0.2.10, 198.51.100.0/24, loopback. Leave it empty to\n" >/dev/tty
+  printf "  keep the dashboard's default. The dashboard's own rules check the list after the\n" >/dev/tty
+  printf "  build, and a refused list stops the install before anything is written.\n" >/dev/tty
+  printf "  %sTrusted proxies%s %s[%s]%s: " "${BOLD}" "${RESET}" "${DIM}" "${shown}" "${RESET}" >/dev/tty
+  read -r answer </dev/tty || answer=""
+  if [ -n "${answer}" ]; then
+    DASHBOARD_TRUSTED_PROXIES="${answer}"
+  fi
 }
 
 # ──────────────────────────────────────────────
@@ -837,6 +915,16 @@ run_wizard_api_services() {
 # ──────────────────────────────────────────────
 derive_install_components() {
   PROFILE="${PROFILE:-dashboard}"
+
+  # Phase 96 / OPS-01 sink safety. A line break would start a new line in every
+  # file the list is written to, so it is refused in every mode, before any step.
+  case "${DASHBOARD_TRUSTED_PROXIES}" in
+    *$'\n'*|*$'\r'*)
+      error "--trusted-proxies (or DASHBOARD_TRUSTED_PROXIES) must not contain a line break."
+      exit 1
+      ;;
+  esac
+
   case "${PROFILE}" in
     cli)
       INSTALL_COMPONENTS=(core)
@@ -873,6 +961,23 @@ derive_install_components() {
      [[ " ${INSTALL_COMPONENTS[*]} " != *" docker "* ]]; then
     error "--trusted-proxies (or DASHBOARD_TRUSTED_PROXIES in the installer's environment) is a dashboard setting, and profile ${PROFILE} installs no dashboard. Remove it, or choose --profile dashboard or docker."
     exit 1
+  fi
+
+  # Docker writes the list to .env unchecked (no host-side dist exists, so the
+  # dashboard checks it when the container starts). compose rewrites # $ quotes
+  # backticks and backslashes in .env, and the dashboard can never accept any of
+  # them, so refusing them here is sink safety, NOT a second validator: it
+  # refuses only what the dashboard also refuses.
+  if [[ " ${INSTALL_COMPONENTS[*]} " == *" docker "* ]] && [ -n "${DASHBOARD_TRUSTED_PROXIES}" ]; then
+    local _bad
+    for _bad in '#' '$' "'" '"' '`' '\'; do
+      case "${DASHBOARD_TRUSTED_PROXIES}" in
+        *"${_bad}"*)
+          error "The trusted-proxy list contains ${_bad}: the dashboard would refuse it and compose would rewrite it in .env. Remove it and run the installer again."
+          exit 1
+          ;;
+      esac
+    done
   fi
 
   # T-42-06: --with-monitor requires compliance
@@ -935,6 +1040,7 @@ run_wizard_docker() {
   ask "Branding port" "${BRANDING_PORT}" BRANDING_PORT
   DASHBOARD_PORT=$(( COMPLIANCE_PORT + 1000 ))
   ask "Dashboard port" "${DASHBOARD_PORT}" DASHBOARD_PORT
+  ask_trusted_proxies
 
   # ── Admin user ───────────────────────────────
   header "3. Admin Account"
@@ -1188,6 +1294,9 @@ run_wizard_bare_metal() {
   ask "Branding port" "${BRANDING_PORT}" BRANDING_PORT
   DASHBOARD_PORT=$(( COMPLIANCE_PORT + 1000 ))
   ask "Dashboard port" "${DASHBOARD_PORT}" DASHBOARD_PORT
+  if [ "${PROFILE}" = "dashboard" ]; then
+    ask_trusted_proxies
+  fi
 
   # ── Install dir ──────────────────────────────
   ask "Installation directory" "${INSTALL_DIR}" INSTALL_DIR
@@ -1226,6 +1335,9 @@ print_summary_bare_metal() {
   printf "  %-22s %s\n" "Compliance port:" "${COMPLIANCE_PORT}"
   printf "  %-22s %s\n" "Branding port:" "${BRANDING_PORT}"
   printf "  %-22s %s\n" "Dashboard port:" "${DASHBOARD_PORT}"
+  if [ "${PROFILE}" = "dashboard" ]; then
+    printf "  %-22s %s\n" "Trusted proxies:" "$(trusted_proxies_summary_value "checked by the dashboard's rules after the build")"
+  fi
   printf "  %-22s %s\n" "Scanner:" "$([ "${PA11Y_MODE}" = "external" ] && echo "external (${PA11Y_URL})" || echo "built-in (pa11y library)")"
   printf "  %-22s %s\n" "Database:" "${DB_ADAPTER}"
   printf "  %-22s %s\n" "Authentication:" "${AUTH_PROVIDER}"
@@ -1259,6 +1371,7 @@ print_summary_docker() {
   printf "  %-22s %s\n" "Compliance port:" "${COMPLIANCE_PORT}"
   printf "  %-22s %s\n" "Branding port:" "${BRANDING_PORT}"
   printf "  %-22s %s\n" "Dashboard port:" "${DASHBOARD_PORT}"
+  printf "  %-22s %s\n" "Trusted proxies:" "$(trusted_proxies_summary_value "checked when the dashboard container starts")"
   printf "  %-22s %s\n" "Scanner:" "built-in (pa11y library)"
   printf "  %-22s %s\n" "Database:" "SQLite (container volume)"
   [ -n "${ADMIN_USERNAME}" ] && printf "  %-22s %s\n" "Admin user:" "${ADMIN_USERNAME}"
@@ -1632,6 +1745,11 @@ MONITOR_CLIENT_SECRET=${MONITOR_CLIENT_SECRET}
 MONITOR_CHECK_INTERVAL=${MONITOR_CHECK_INTERVAL:-manual}
 OAUTH_KEY_MAX_AGE_DAYS=${OAUTH_KEY_MAX_AGE_DAYS}
 STATE
+  # Only a value the dashboard's rules accepted (canonical, characters from
+  # [0-9A-Za-z.:/%,-]), so it is safe for `. .install-state` and for XML.
+  if [ -n "${TRUSTED_PROXIES_WRITE}" ]; then
+    printf 'DASHBOARD_TRUSTED_PROXIES=%s\n' "${TRUSTED_PROXIES_WRITE}" >> "${state_file}"
+  fi
   chmod 600 "${state_file}"
 }
 
@@ -2167,6 +2285,15 @@ show_summary_bare_metal() {
     printf "\n"
   fi
 
+  if [ "${has_dashboard}" = "1" ]; then
+    if command -v systemctl &>/dev/null && [ -f /etc/systemd/system/luqen-dashboard.service ]; then
+      print_trusted_proxies_readback systemd /etc/systemd/system/luqen-dashboard.service
+    else
+      print_trusted_proxies_readback state "${INSTALL_DIR}/.install-state"
+    fi
+    printf "\n"
+  fi
+
   if command -v systemctl &>/dev/null; then
     # Build space-separated list of installed unit names
     local _units=""
@@ -2218,6 +2345,60 @@ show_summary_bare_metal() {
 
 TOTAL_STEPS_DOCKER=5
 
+# render_docker_env -- prints the Docker Compose .env to stdout. Reads
+# SESSION_SECRET and the port / URL settings from the caller's scope. Split from
+# run_docker_install so install.test.sh can render it without Docker.
+render_docker_env() {
+  local docker_trusted_proxies_line=""
+  if [ -n "${DASHBOARD_TRUSTED_PROXIES}" ]; then
+    docker_trusted_proxies_line="DASHBOARD_TRUSTED_PROXIES=${DASHBOARD_TRUSTED_PROXIES}"
+  fi
+  cat <<ENVFILE
+# Luqen Docker Compose configuration
+# Generated by install.sh on $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+# Last reviewed for v3.1.0 (Phase 40 / DOC-03) — head migration 061
+COMPLIANCE_PORT=${COMPLIANCE_PORT}
+DASHBOARD_PORT=${DASHBOARD_PORT}
+DASHBOARD_SESSION_SECRET=${SESSION_SECRET}
+# OPTIONAL — at-rest AES key, independent of DASHBOARD_SESSION_SECRET above.
+# This installer documents this variable but never generates a value for it
+# (rotating it requires re-keying existing encrypted data first — see the
+# runbook). Defaults to DASHBOARD_SESSION_SECRET when left unset:
+# docs/guides/security-administration.md#rotating-the-session-secret-and-the-at-rest-encryption-key
+# DASHBOARD_ENCRYPTION_KEY=
+LUQEN_WEBSERVICE_URL=
+
+# ── Public URLs (Phase 30/31.1) ──
+# Override these with real hostnames for production installs.
+DASHBOARD_PUBLIC_URL=${DASHBOARD_PUBLIC_URL}
+COMPLIANCE_PUBLIC_URL=${COMPLIANCE_PUBLIC_URL}
+BRANDING_PUBLIC_URL=${BRANDING_PUBLIC_URL}
+LLM_PUBLIC_URL=${LLM_PUBLIC_URL}
+
+# ── OAuth signing key rotation (Phase 31.1) ──
+OAUTH_KEY_MAX_AGE_DAYS=${OAUTH_KEY_MAX_AGE_DAYS}
+
+# ── JWKS discovery (Phase 31.1) ──
+# Either set DASHBOARD_JWKS_URI / DASHBOARD_JWKS_URL (preferred) or
+# DASHBOARD_JWT_PUBLIC_KEY (PEM, "\n" allowed for single-line env form).
+DASHBOARD_JWKS_URI=${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json
+DASHBOARD_JWKS_URL=${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json
+# DASHBOARD_JWT_PUBLIC_KEY=
+
+# ── Optional: Ollama provider for the LLM service ──
+# OLLAMA_BASE_URL=http://localhost:11434
+
+# ── Reverse proxy: trusted proxies (Phase 96 / OPS-01) ──
+# DASHBOARD_TRUSTED_PROXIES lists the proxy addresses whose X-Forwarded-For the
+# dashboard trusts. Unset (the default) means the dashboard's own default
+# applies. A Docker install has no dashboard build on the host, so the
+# dashboard checks this list when its container starts; a refused list keeps the
+# container down and the installer prints the compose logs.
+# See docs/getting-started/installation.md.
+${docker_trusted_proxies_line}
+ENVFILE
+}
+
 run_docker_install() {
   # Step 1: Prerequisites
   step 1 $TOTAL_STEPS_DOCKER "Checking Docker prerequisites"
@@ -2258,41 +2439,7 @@ run_docker_install() {
   SESSION_SECRET=$(node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))" 2>/dev/null || openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | xxd -p 2>/dev/null | tr -d '\n')
 
   local ENV_FILE="${INSTALL_DIR}/.env"
-  cat > "${ENV_FILE}" <<ENVFILE
-# Luqen Docker Compose configuration
-# Generated by install.sh on $(date -u +"%Y-%m-%dT%H:%M:%SZ")
-# Last reviewed for v3.1.0 (Phase 40 / DOC-03) — head migration 061
-COMPLIANCE_PORT=${COMPLIANCE_PORT}
-DASHBOARD_PORT=${DASHBOARD_PORT}
-DASHBOARD_SESSION_SECRET=${SESSION_SECRET}
-# OPTIONAL — at-rest AES key, independent of DASHBOARD_SESSION_SECRET above.
-# This installer documents this variable but never generates a value for it
-# (rotating it requires re-keying existing encrypted data first — see the
-# runbook). Defaults to DASHBOARD_SESSION_SECRET when left unset:
-# docs/guides/security-administration.md#rotating-the-session-secret-and-the-at-rest-encryption-key
-# DASHBOARD_ENCRYPTION_KEY=
-LUQEN_WEBSERVICE_URL=
-
-# ── Public URLs (Phase 30/31.1) ──
-# Override these with real hostnames for production installs.
-DASHBOARD_PUBLIC_URL=${DASHBOARD_PUBLIC_URL}
-COMPLIANCE_PUBLIC_URL=${COMPLIANCE_PUBLIC_URL}
-BRANDING_PUBLIC_URL=${BRANDING_PUBLIC_URL}
-LLM_PUBLIC_URL=${LLM_PUBLIC_URL}
-
-# ── OAuth signing key rotation (Phase 31.1) ──
-OAUTH_KEY_MAX_AGE_DAYS=${OAUTH_KEY_MAX_AGE_DAYS}
-
-# ── JWKS discovery (Phase 31.1) ──
-# Either set DASHBOARD_JWKS_URI / DASHBOARD_JWKS_URL (preferred) or
-# DASHBOARD_JWT_PUBLIC_KEY (PEM, "\n" allowed for single-line env form).
-DASHBOARD_JWKS_URI=${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json
-DASHBOARD_JWKS_URL=${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json
-# DASHBOARD_JWT_PUBLIC_KEY=
-
-# ── Optional: Ollama provider for the LLM service ──
-# OLLAMA_BASE_URL=http://localhost:11434
-ENVFILE
+  render_docker_env > "${ENV_FILE}"
   chmod 600 "${ENV_FILE}"
   success ".env written at ${ENV_FILE}"
 
@@ -2354,6 +2501,8 @@ ENVFILE
   printf "    Compliance:  %s%shttp://localhost:${COMPLIANCE_PORT}%s\n" "${BOLD}" "${CYAN}" "${RESET}"
   printf "    Scanner:     built-in (pa11y library)\n"
   printf "\n"
+  print_docker_trusted_proxies_result
+  printf "\n"
 
   if [ -n "${ADMIN_USERNAME}" ]; then
     printf "  %sLogin:%s\n" "${BOLD}" "${RESET}"
@@ -2409,7 +2558,8 @@ show_v3_whats_new() {
   printf "  %sFor production deployments, set these env vars on the dashboard unit:%s\n" "${BOLD}" "${RESET}"
   printf "    DASHBOARD_PUBLIC_URL    External URL the dashboard advertises (OAuth issuer / MCP discovery)\n"
   printf "    DASHBOARD_JWKS_URI      JWKS endpoint (defaults to \${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json)\n"
-  printf "    OAUTH_KEY_MAX_AGE_DAYS  Signing-key rotation budget (default 90)\n\n"
+  printf "    OAUTH_KEY_MAX_AGE_DAYS  Signing-key rotation budget (default 90)\n"
+  printf "    DASHBOARD_TRUSTED_PROXIES  Proxy addresses whose X-Forwarded-For is trusted (install.sh --trusted-proxies; default: loopback, linklocal, uniquelocal)\n\n"
 
   printf "  %sMore detail:%s docs/deployment/installer-changelog.md\n\n" "${BOLD}" "${RESET}"
 }

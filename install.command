@@ -227,6 +227,10 @@ INSTALL_COMPONENTS=""
 MONITOR_CLIENT_ID=""
 MONITOR_CLIENT_SECRET=""
 MONITOR_CHECK_INTERVAL="manual"
+# Reset before .install-state is sourced: only a list install.sh checked with the
+# dashboard's own rules and wrote into .install-state may reach the plist. A value
+# in the caller's environment must not (it was never checked).
+DASHBOARD_TRUSTED_PROXIES=""
 if [ -f "${INSTALL_DIR}/.install-state" ]; then
     # shellcheck disable=SC1090
     . "${INSTALL_DIR}/.install-state"
@@ -321,14 +325,21 @@ for component in "${COMPONENTS_ARR[@]}"; do
                 --ARGS-- "${INSTALL_DIR}/packages/llm/dist/cli.js" "serve" "--port" "${LLM_PORT}"
             ;;
         dashboard)
+            dashboard_env=(
+                DASHBOARD_PUBLIC_URL "${DASHBOARD_PUBLIC_URL}"
+                DASHBOARD_JWKS_URI "${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json"
+                DASHBOARD_JWKS_URL "${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json"
+                OAUTH_KEY_MAX_AGE_DAYS "${OAUTH_KEY_MAX_AGE_DAYS}"
+                COMPLIANCE_PUBLIC_URL "${COMPLIANCE_PUBLIC_URL}"
+                BRANDING_PUBLIC_URL "${BRANDING_PUBLIC_URL}"
+                LLM_PUBLIC_URL "${LLM_PUBLIC_URL}"
+            )
+            # Only the list install.sh validated (from .install-state); empty = not set.
+            if [ -n "${DASHBOARD_TRUSTED_PROXIES}" ]; then
+                dashboard_env+=(DASHBOARD_TRUSTED_PROXIES "${DASHBOARD_TRUSTED_PROXIES}")
+            fi
             write_plist "io.luqen.dashboard" "${INSTALL_DIR}" \
-                DASHBOARD_PUBLIC_URL "${DASHBOARD_PUBLIC_URL}" \
-                DASHBOARD_JWKS_URI "${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json" \
-                DASHBOARD_JWKS_URL "${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json" \
-                OAUTH_KEY_MAX_AGE_DAYS "${OAUTH_KEY_MAX_AGE_DAYS}" \
-                COMPLIANCE_PUBLIC_URL "${COMPLIANCE_PUBLIC_URL}" \
-                BRANDING_PUBLIC_URL "${BRANDING_PUBLIC_URL}" \
-                LLM_PUBLIC_URL "${LLM_PUBLIC_URL}" \
+                "${dashboard_env[@]}" \
                 --ARGS-- "${INSTALL_DIR}/packages/dashboard/dist/cli.js" "serve" "--config" "${CONFIG_FILE}"
             ;;
         monitor)

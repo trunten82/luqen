@@ -486,6 +486,220 @@ effective: $(dist_default_list)"
   assert_eq "temp dir listing before and after" "${after}" "${before}"
 }
 
+# ── Task 3: wizard prompt, Docker, macOS, closing summary ────────────────────
+
+# Drive a function that reads from /dev/tty. script(1) gives the child a pty,
+# the answer is fed on stdin. A missing script(1) FAILs under
+# LUQEN_REQUIRE_SCRIPT=1 and otherwise SKIPs.
+require_script_or_skip() {
+  if ! command -v script >/dev/null 2>&1; then
+    if [ "${LUQEN_REQUIRE_SCRIPT:-}" = "1" ]; then die "script(1) is not installed"; fi
+    skip_case "script(1) is not installed"
+  fi
+}
+
+# prompt_answer <current-flag-value-or-empty> <answer> -- prints the value of
+# DASHBOARD_TRUSTED_PROXIES after ask_trusted_proxies has read <answer>.
+prompt_answer() {
+  local current="$1" answer="$2" driver="${TD}/driver.sh" result="${TD}/result"
+  : > "${result}"
+  {
+    printf '%s\n' 'set -euo pipefail'
+    printf '%s\n' 'export LUQEN_INSTALL_LIB_ONLY=1'
+    if [ -n "${current}" ]; then
+      printf '. %q --install-dir %q --trusted-proxies %q\n' "${INSTALL_SH}" "${TD}/install" "${current}"
+    else
+      printf '. %q --install-dir %q\n' "${INSTALL_SH}" "${TD}/install"
+    fi
+    printf '%s\n' 'ask_trusted_proxies'
+    printf 'printf %%s "${DASHBOARD_TRUSTED_PROXIES}" > %q\n' "${result}"
+  } > "${driver}"
+  printf '%s\n' "${answer}" | timeout 30 script -qec "bash ${driver}" /dev/null >"${TD}/script.out" 2>&1 || true
+  cat "${result}"
+}
+
+define_case wizard-prompt-sets-value
+case_wizard_prompt_sets_value() {
+  new_tmp; require_lib_mode; require_script_or_skip
+  assert_eq "typed answer is stored verbatim" "$(prompt_answer '' '198.51.100.0/24, loopback')" "198.51.100.0/24, loopback"
+  assert_eq "an empty answer keeps the value from the flag" "$(prompt_answer '192.0.2.10' '')" "192.0.2.10"
+  assert_eq "an empty answer with nothing given stays empty" "$(prompt_answer '' '')" ""
+  local marker="${TD}/pwned"
+  assert_eq "a command-substitution answer is stored literally" \
+    "$(prompt_answer '' "\$(touch ${marker})")" "\$(touch ${marker})"
+  [ ! -e "${marker}" ] || die "the prompt executed its answer: ${marker} exists"
+}
+
+define_case docker-env-written
+case_docker_env_written() {
+  load_installer --profile docker --trusted-proxies '192.0.2.10, 198.51.100.0/24'
+  SESSION_SECRET="test-session-secret"
+  render_docker_env > "${TD}/env"
+  assert_eq "lines beginning with the variable" "$(grep -c '^DASHBOARD_TRUSTED_PROXIES=' "${TD}/env" || true)" "1"
+  assert_eq "the written line" "$(grep '^DASHBOARD_TRUSTED_PROXIES=' "${TD}/env")" \
+    "DASHBOARD_TRUSTED_PROXIES=192.0.2.10, 198.51.100.0/24"
+}
+
+define_case docker-env-nothing-when-empty
+case_docker_env_nothing_when_empty() {
+  load_installer --profile docker
+  SESSION_SECRET="test-session-secret"
+  render_docker_env > "${TD}/env"
+  assert_eq "lines beginning with the variable" "$(grep -c '^DASHBOARD_TRUSTED_PROXIES=' "${TD}/env" || true)" "0"
+  grep -q '^# .*DASHBOARD_TRUSTED_PROXIES' "${TD}/env" || die "the commented explanation of DASHBOARD_TRUSTED_PROXIES is missing from .env"
+}
+
+define_case docker-env-charset-refused
+case_docker_env_charset_refused() {
+  local bad
+  for bad in 'loopback # note' 'a$b' "it's" 'say "x"' 'back`tick' 'back\slash'; do
+    load_installer --profile docker --trusted-proxies "${bad}"
+    run_rc derive_install_components
+    [ "${RC}" -eq 1 ] || die "value [${bad}]: expected exit 1 but got ${RC}"
+    assert_contains "value [${bad}]" "$(cat "${TD}/out")" "the dashboard would refuse it"
+    assert_contains "value [${bad}]" "$(cat "${TD}/out")" "compose would rewrite it"
+  done
+  # Characters the dashboard can accept are not refused here.
+  local good
+  for good in 'fe80::1%eth0' '2001:db8::/32, loopback'; do
+    load_installer --profile docker --trusted-proxies "${good}"
+    run_rc derive_install_components
+    [ "${RC}" -eq 0 ] || die "value [${good}]: expected exit 0 but got ${RC}: $(cat "${TD}/out")"
+  done
+}
+
+define_case docker-summary-says-what-was-written
+case_docker_summary_says_what_was_written() {
+  local calls line
+  calls="$(mktemp)"
+  load_installer --profile docker --trusted-proxies '192.0.2.10'
+  SESSION_SECRET="test-session-secret"
+  # A Docker install has no host-side dist: the closing line must not run the check.
+  trusted_proxies_check() { echo called >> "${calls}"; return 1; }
+  render_docker_env > "${TD}/install/.env"
+  line="$(print_docker_trusted_proxies_result)"
+  assert_contains "with a value" "${line}" "192.0.2.10"
+  assert_contains "with a value" "${line}" "the dashboard container started with it"
+  unset DASHBOARD_TRUSTED_PROXIES   # the first load left it set in this shell
+  load_installer --profile docker
+  SESSION_SECRET="test-session-secret"
+  trusted_proxies_check() { echo called >> "${calls}"; return 1; }
+  render_docker_env > "${TD}/install/.env"
+  line="$(print_docker_trusted_proxies_result)"
+  assert_contains "with nothing" "${line}" "nothing written; the dashboard default applies"
+  assert_eq "calls to the host-side check" "$(wc -l < "${calls}" | tr -d ' ')" "0"
+  rm -f "${calls}"
+}
+
+define_case newline-refused-before-any-sink
+case_newline_refused_before_any_sink() {
+  local prof val
+  for prof in dashboard docker api cli; do
+    for val in $'192.0.2.10\n198.51.100.1' $'192.0.2.10\r'; do
+      load_installer --profile "${prof}" --trusted-proxies "${val}"
+      run_rc derive_install_components
+      [ "${RC}" -eq 1 ] || die "profile ${prof}: a value with a line break was not refused (exit ${RC})"
+      assert_contains "profile ${prof}" "$(cat "${TD}/out")" "line break"
+    done
+  done
+}
+
+define_case compose-passes-to-dashboard-only
+case_compose_passes_to_dashboard_only() {
+  command -v python3 >/dev/null 2>&1 || die "python3 is not installed"
+  python3 - "${REPO_ROOT}/docker-compose.yml" <<'PYEOF' || die "compose check failed (see lines above)"
+import sys
+try:
+    import yaml
+except ImportError:
+    print("PyYAML is not installed"); sys.exit(1)
+d = yaml.safe_load(open(sys.argv[1]))
+want = "DASHBOARD_TRUSTED_PROXIES=${DASHBOARD_TRUSTED_PROXIES:-}"
+hits = {}
+for name, svc in (d.get("services") or {}).items():
+    env = svc.get("environment") or []
+    if isinstance(env, dict):
+        env = [f"{k}={v}" for k, v in env.items()]
+    found = [e for e in env if str(e).split("=", 1)[0] == "DASHBOARD_TRUSTED_PROXIES"]
+    if found:
+        hits[name] = found
+if hits != {"dashboard": [want]}:
+    print(f"expected exactly the dashboard service to carry [{want}]; found {hits}")
+    sys.exit(1)
+PYEOF
+  python3 "${REPO_ROOT}/tools/lint-compose.py" "${REPO_ROOT}/docker-compose.yml" >/dev/null \
+    || die "tools/lint-compose.py rejects docker-compose.yml"
+}
+
+define_case install-state-carries-validated-value
+case_install_state_carries_validated_value() {
+  load_installer --trusted-proxies '192.0.2.10, Loopback'
+  validate_trusted_proxies
+  INSTALL_COMPONENTS=(core dashboard)
+  write_install_state
+  assert_eq "value in .install-state" "$(trusted_proxies_written_value state "${TD}/install/.install-state")" "192.0.2.10,loopback"
+}
+
+define_case install-state-omits-when-empty
+case_install_state_omits_when_empty() {
+  load_installer
+  validate_trusted_proxies
+  INSTALL_COMPONENTS=(core dashboard)
+  write_install_state
+  assert_eq "lines naming the variable" "$(count_lines_matching 'DASHBOARD_TRUSTED_PROXIES' "${TD}/install/.install-state")" "0"
+}
+
+# Run a copy of install.command beside a stub install.sh, as on macOS: PATH-first
+# uname (Darwin) and launchctl stubs, a temp HOME, and an .install-state holding
+# <state-extra-lines>. The caller's environment is whatever the case exported.
+run_install_command() {
+  local state_extra="$1" mac="${TD}/mac"
+  mkdir -p "${mac}/bin" "${mac}/home" "${mac}/luqen/packages/dashboard/dist"
+  cp "${REPO_ROOT}/install.command" "${mac}/install.command"
+  printf '#!/usr/bin/env bash\nexit 0\n' > "${mac}/install.sh"
+  printf '#!/bin/sh\necho Darwin\n' > "${mac}/bin/uname"
+  printf '#!/bin/sh\nexit 0\n' > "${mac}/bin/launchctl"
+  chmod +x "${mac}/bin/uname" "${mac}/bin/launchctl" "${mac}/install.sh"
+  printf 'INSTALL_COMPONENTS=dashboard\n%s' "${state_extra}" > "${mac}/luqen/.install-state"
+  PLIST="${mac}/home/Library/LaunchAgents/io.luqen.dashboard.plist"
+  PATH="${mac}/bin:${PATH}" HOME="${mac}/home" LUQEN_INSTALL_DIR="${mac}/luqen" \
+    bash "${mac}/install.command" --non-interactive </dev/null >"${mac}/out" 2>&1 \
+    || die "install.command failed: $(tail -n 5 "${mac}/out")"
+  [ -f "${PLIST}" ] || die "no dashboard plist was written; install.command said: $(tail -n 5 "${mac}/out")"
+}
+
+define_case macos-plist-carries-value
+case_macos_plist_carries_value() {
+  new_tmp
+  run_install_command $'DASHBOARD_TRUSTED_PROXIES=192.0.2.10,loopback\n'
+  grep -qF '<key>DASHBOARD_TRUSTED_PROXIES</key><string>192.0.2.10,loopback</string>' "${PLIST}" \
+    || die "the dashboard plist does not carry the value from .install-state"
+}
+
+define_case macos-plist-ignores-caller-env
+case_macos_plist_ignores_caller_env() {
+  new_tmp
+  export DASHBOARD_TRUSTED_PROXIES='0.0.0.0/0'
+  run_install_command ''
+  assert_eq "plist lines naming the variable" "$(count_lines_matching 'DASHBOARD_TRUSTED_PROXIES' "${PLIST}")" "0"
+}
+
+define_case summary-reads-back-written-unit
+case_summary_reads_back_written_unit() {
+  load_installer --trusted-proxies '192.0.2.10,198.51.100.0/24'
+  validate_trusted_proxies
+  render_unit_to "${TD}/unit"
+  # Only a real read of the file can pass: memory now disagrees with the file.
+  TRUSTED_PROXIES_WRITE="198.51.100.99"
+  assert_eq "summary line for a unit with the setting" "$(print_trusted_proxies_readback systemd "${TD}/unit")" \
+    "  Trusted proxies (read back from ${TD}/unit): 192.0.2.10,198.51.100.0/24 (set by this install)"
+  # A unit without the line, with a non-empty value still in memory.
+  grep -v 'DASHBOARD_TRUSTED_PROXIES' "${TD}/unit" > "${TD}/unit-none"
+  TRUSTED_PROXIES_WRITE="198.51.100.99"
+  assert_eq "summary line for a unit without the setting" "$(print_trusted_proxies_readback systemd "${TD}/unit-none")" \
+    "  Trusted proxies (read back from ${TD}/unit-none): $(dist_default_list) (dashboard default, nothing written)"
+}
+
 # Always runs last, whatever cases were selected: nothing in the checkout may
 # differ after the run from before it.
 repo_snapshot() {
