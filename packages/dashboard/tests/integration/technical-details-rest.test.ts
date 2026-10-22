@@ -13,7 +13,7 @@
  * owner later rules that read-only keys keep selectors, the change is the permission set and the
  * selector flag of one row, not the helper.
  */
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -29,6 +29,17 @@ import {
 } from '../../src/permissions.js';
 import type { ApiKeyRole } from '../../src/db/types.js';
 import { seedSurfaceDismissal, seedSurfaceScan } from '../helpers/dismissal-surface-fixture.js';
+import * as technicalDetails from '../../src/services/technical-details.js';
+
+// Pass-through wrappers, so a test can see whether a route ran the blob redaction at all.
+vi.mock('../../src/services/technical-details.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/services/technical-details.js')>();
+  return {
+    ...actual,
+    reportBlobForViewer: vi.fn(actual.reportBlobForViewer),
+    reportForViewer: vi.fn(actual.reportForViewer),
+  };
+});
 
 const PASSWORD = 'Technical-Pass-123!';
 const CODE = 'WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail';
@@ -285,12 +296,23 @@ describe('GET /api/v1/scans lists rows with their raw report', () => {
   const rowFor = (body: string): Record<string, unknown> =>
     rowsOf(body).find((r) => r['id'] === scanId)!;
 
-  it('D-08 an Analyst gets no selector or context canary in any row', async () => {
+  it('D-10 an Analyst gets list rows with no jsonReport key, and the blob is never redacted for them', async () => {
+    await login('fabrikam-analyst');
+    vi.mocked(technicalDetails.reportBlobForViewer).mockClear();
+    vi.mocked(technicalDetails.reportForViewer).mockClear();
     const res = await asSession('fabrikam-analyst', '/api/v1/scans');
     expect(res.status).toBe(200);
+    // The rows themselves are served: the plain scan row and the row of a site with a dismissal.
+    for (const id of [scanId, dismissedScanId]) {
+      const row = rowsOf(res.body).find((r) => r['id'] === id);
+      expect(row, `row ${id} listed`).toBeDefined();
+      expect('jsonReport' in row!, 'jsonReport key present').toBe(false);
+    }
+    expect(res.body).not.toContain(MESSAGE);
     expect(res.body).not.toContain(SELECTOR_ID);
     expect(res.body).not.toContain(CONTEXT_ID);
-    expect(String(rowFor(res.body)['jsonReport'])).toContain(MESSAGE);
+    expect(technicalDetails.reportBlobForViewer).not.toHaveBeenCalled();
+    expect(technicalDetails.reportForViewer).not.toHaveBeenCalled();
   }, 60_000);
 
   it('D-08 an Owner gets the stored blob in the list row', async () => {
@@ -344,22 +366,12 @@ describe('the published OpenAPI document', () => {
     expect(describes(issues.properties?.['selector'])).toBe(true);
     expect(describes(fixes.properties?.['selector'])).toBe(true);
     expect(describes(list.properties?.['jsonReport'])).toBe(true);
+    expect(list.properties?.['jsonReport']?.description).toContain('GET /api/v1/scans/{id}');
     expect(describes(detail.properties?.['jsonReport'])).toBe(true);
   });
 });
 
 describe('rows whose site has an active dismissal', () => {
-  it('D-08 an Analyst gets no selector or context canary from the list row of a site with a dismissal', async () => {
-    const res = await asSession('fabrikam-analyst', '/api/v1/scans');
-    expect(res.status).toBe(200);
-    const row = rowsOf(res.body).find((r) => r['id'] === dismissedScanId)!;
-    const blob = String(row['jsonReport']);
-    expect(blob).toContain(MESSAGE);
-    expect(blob).not.toContain('dismissed-one');
-    expect(blob).not.toContain(SELECTOR_ID);
-    expect(blob).not.toContain(CONTEXT_ID);
-  }, 60_000);
-
   it('API-02 an Analyst gets no selector or context canary from the detail of a scan with a dismissal', async () => {
     const res = await asSession('fabrikam-analyst', `/api/v1/scans/${dismissedScanId}`);
     expect(res.status).toBe(200);

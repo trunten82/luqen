@@ -28,6 +28,11 @@ import {
 const JSON_REPORT_DESCRIPTION =
   `Raw report JSON (a string). Its issue entries omit selector and context unless the caller holds ${TECHNICAL_DETAILS_PERMISSION}.`;
 const JsonReportProperty = Type.Optional(Type.String({ description: JSON_REPORT_DESCRIPTION }));
+// D-10: the list carries the blob only for an entitled caller; anyone else reads it from /scans/:id.
+const LIST_JSON_REPORT_DESCRIPTION =
+  `Raw report JSON (a string). Present only when the caller holds ${TECHNICAL_DETAILS_PERMISSION}; ` +
+  'otherwise the key is absent from every list row. Use GET /api/v1/scans/{id} for the report without selector and context.';
+const ListJsonReportProperty = Type.Optional(Type.String({ description: LIST_JSON_REPORT_DESCRIPTION }));
 
 // D-10: the element selector is optional in the contract: it is present only for a caller who
 // holds the technical-details permission (the same rule the report page applies). A union, so a
@@ -50,7 +55,10 @@ const scanProperties = {
   ...Object.fromEntries(SCAN_LEADING_KEYS.map((key) => [key, AnyValue])),
   jsonReport: JsonReportProperty,
 };
-const ScanShape = Type.Object(scanProperties, { additionalProperties: true });
+const ScanShape = Type.Object(
+  { ...scanProperties, jsonReport: ListJsonReportProperty },
+  { additionalProperties: true },
+);
 const IssueShape = Type.Object(
   { type: AnyValue, code: AnyValue, message: AnyValue, selector: SelectorProperty },
   { additionalProperties: true },
@@ -280,6 +288,12 @@ function parseRowBlob(scan: ScanRecord): JsonReport | null {
   }
 }
 
+/** A new scan record without the `jsonReport` key. */
+function withoutReportBlob(scan: ScanRecord): ScanRecord {
+  const { jsonReport: _blob, ...rest } = scan;
+  return rest;
+}
+
 /** Strip jsonReportPath and error from a scan record for external consumption. */
 function toPublicScan(scan: ScanRecord): Record<string, unknown> {
   const { jsonReportPath: _path, error: _err, createdBy: _cb, ...rest } = scan as ScanRecord & Record<string, unknown>;
@@ -372,19 +386,19 @@ export async function dataApiRoutes(
         activeBySite.set(key, looked);
         return looked;
       };
-      // Redaction follows the dismissal step: it needs the raw selectors to match on.
+      // D-10: a caller without the technical-details permission gets list rows with no `jsonReport`
+      // key. The blob is not parsed for them; `GET /api/v1/scans/:id` serves its redacted copy.
       const viewTechnical = requestMayViewTechnicalDetails(request);
       const scans = await Promise.all(
         records.map(async (record) => {
+          if (!viewTechnical) return toPublicScan(withoutReportBlob(record));
           const active = await lookupActive(record);
-          if (active.length === 0) return toPublicScan(reportBlobForViewer(record, viewTechnical));
+          if (active.length === 0) return toPublicScan(record);
           const blob = parseRowBlob(record);
           // IN-01: a blob that cannot be parsed cannot be filtered, so it is not served (fail closed,
           // same as repos.ts); an absent blob has nothing to leak.
-          if (blob === null) return toPublicScan({ ...record, jsonReport: undefined });
-          return toPublicScan(
-            reportBlobForViewer(withDismissalsInRawBlob(record, applyLoadedDismissals(record, active, blob)), viewTechnical),
-          );
+          if (blob === null) return toPublicScan(withoutReportBlob(record));
+          return toPublicScan(withDismissalsInRawBlob(record, applyLoadedDismissals(record, active, blob)));
         }),
       );
 

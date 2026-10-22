@@ -228,9 +228,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - REST: the keys are absent (not null) in `GET /api/v1/scans/:id/issues`,
     `GET /api/v1/scans/:id/fixes` (`selector`) and
     `GET /api/v1/scans/:scanId/dismissals` (`selector`), and inside every
-    issue entry of `jsonReport` in `GET /api/v1/scans/:id` and
-    `GET /api/v1/scans`. For such a caller a `jsonReport` that cannot be parsed is
-    left out of the row (the `jsonReport` key is absent). The response of `POST /api/v1/dismissals/:id/revoke` has
+    issue entry of `jsonReport` in `GET /api/v1/scans/:id`. For such a caller
+    a `jsonReport` that cannot be parsed is left out of the response (the
+    `jsonReport` key is absent). The rows of `GET /api/v1/scans` carry no
+    `jsonReport` key at all for such a caller; it reads the report from
+    `GET /api/v1/scans/:id`. The response of `POST /api/v1/dismissals/:id/revoke` has
     its own schema in which `selector` is optional; the response of marking a
     dismissal is unchanged, because it returns the selector the caller sent.
   - Excel: `GET /api/v1/export/scans/:id/issues.xlsx` has no Selector and

@@ -610,7 +610,7 @@ All data API endpoints are rate limited to **60 requests per minute** per API ke
 
 List scans with optional filters. Returns paginated results.
 
-Without `reports.view_technical`, every issue entry inside each row's `jsonReport` has no `selector` and no `context` key, at any depth; a `jsonReport` that cannot be parsed is left out of the row.
+Without `reports.view_technical`, the rows carry no `jsonReport` key. Such a caller reads the report from [`GET /api/v1/scans/:id`](#get-apiv1scansid), whose `jsonReport` has no `selector` and no `context` key in any issue entry.
 
 **Query parameters:**
 
