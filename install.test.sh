@@ -26,7 +26,9 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-INSTALL_SH="${REPO_ROOT}/install.sh"
+# LUQEN_INSTALL_SH points the cases at another copy of the installer (used to
+# record a RED run against an older revision without touching the checkout).
+INSTALL_SH="${LUQEN_INSTALL_SH:-${REPO_ROOT}/install.sh}"
 DIST="${REPO_ROOT}/packages/dashboard/dist"
 
 PASS=0; FAILED=0; SKIPPED=0
@@ -81,11 +83,34 @@ require_lib_mode() {
 
 # Run a command the way the installer runs it (set -e on) and keep its status
 # and output. Sets RC and writes the combined output to ${TD}/out.
+#
+# The command runs with OUT=/dev/stdout, and its output is captured through a
+# pipe. Pointing the installer's messages at a regular file would not work: each
+# message opens /dev/stdout with `>`, which truncates a regular file, so only
+# the last message would survive.
 run_rc() {
+  local captured
   set +e
-  ( set -e; "$@" ) >"${TD}/out" 2>&1
-  RC=$?
+  captured="$( ( OUT=/dev/stdout; set -e; "$@" ) 2>&1; printf '\nRC=%s' "$?" )"
   set -e
+  RC="${captured##*$'\n'RC=}"
+  printf '%s' "${captured%$'\n'RC=*}" > "${TD}/out"
+}
+
+# Source install.sh against the temp install dir with the given extra flags.
+# The caller's DASHBOARD_TRUSTED_PROXIES (none, unless the case exports one
+# first) is read by the installer's default, as in a real run.
+load_installer() {
+  new_tmp; require_lib_mode
+  # The explicit arguments to `.` replace this function's positional
+  # parameters for the sourced file, so install.sh's flag loop reads only them.
+  . "${INSTALL_SH}" --install-dir "${TD}/install" "$@"
+  OUT=/dev/null   # run_rc and messages_of switch it to a pipe when a case reads messages
+}
+
+# The messages a function prints, with OUT pointed at a pipe (see run_rc).
+messages_of() {
+  ( OUT=/dev/stdout; "$@" ) 2>&1
 }
 
 render_unit_to() {
@@ -127,8 +152,8 @@ case_flag_written_and_read_back() {
   unset DASHBOARD_TRUSTED_PROXIES
   set --
   . "${INSTALL_SH}" --install-dir "${TD}/install" --trusted-proxies '192.0.2.10, 198.51.100.0/24'
-  OUT=/dev/stdout
-  validate_trusted_proxies >"${TD}/validate.out"
+  OUT=/dev/null
+  validate_trusted_proxies
   render_unit_to "${TD}/unit"
   assert_eq "unit lines naming the variable" "$(count_lines_matching 'DASHBOARD_TRUSTED_PROXIES' "${TD}/unit")" "1"
   assert_eq "the written line" "$(grep -- 'DASHBOARD_TRUSTED_PROXIES' "${TD}/unit")" \
@@ -143,8 +168,8 @@ case_nothing_given_nothing_written() {
   unset DASHBOARD_TRUSTED_PROXIES
   set --
   . "${INSTALL_SH}" --install-dir "${TD}/install"
-  OUT=/dev/stdout
-  validate_trusted_proxies >"${TD}/validate.out"
+  OUT=/dev/null
+  validate_trusted_proxies
   render_unit_to "${TD}/unit"
   assert_eq "unit lines naming the variable" "$(count_lines_matching 'DASHBOARD_TRUSTED_PROXIES' "${TD}/unit")" "0"
   local from_dist readback
@@ -160,8 +185,8 @@ case_env_var_input_written() {
   export DASHBOARD_TRUSTED_PROXIES='198.51.100.7'
   set --
   . "${INSTALL_SH}" --install-dir "${TD}/install"
-  OUT=/dev/stdout
-  validate_trusted_proxies >"${TD}/validate.out"
+  OUT=/dev/null
+  validate_trusted_proxies
   render_unit_to "${TD}/unit"
   assert_eq "the written line" "$(grep -- 'DASHBOARD_TRUSTED_PROXIES' "${TD}/unit")" \
     "Environment=DASHBOARD_TRUSTED_PROXIES=198.51.100.7"
@@ -173,11 +198,292 @@ case_flag_beats_env() {
   export DASHBOARD_TRUSTED_PROXIES='198.51.100.7'
   set --
   . "${INSTALL_SH}" --install-dir "${TD}/install" --trusted-proxies '192.0.2.10'
-  OUT=/dev/stdout
-  validate_trusted_proxies >"${TD}/validate.out"
+  OUT=/dev/null
+  validate_trusted_proxies
   render_unit_to "${TD}/unit"
   assert_eq "the written line" "$(grep -- 'DASHBOARD_TRUSTED_PROXIES' "${TD}/unit")" \
     "Environment=DASHBOARD_TRUSTED_PROXIES=192.0.2.10"
+}
+
+# ── Task 2: refusals, fail-closed, systemd, profile, check mode ──────────────
+
+# Every value in the list must be refused by validate_trusted_proxies with exit
+# 1, the dashboard's own phrase, and the installer's "nothing written" line.
+assert_refused() {
+  local phrase="$1"; shift
+  local val
+  for val in "$@"; do
+    DASHBOARD_TRUSTED_PROXIES="${val}"
+    run_rc validate_trusted_proxies
+    [ "${RC}" -eq 1 ] || die "value [${val}]: expected exit 1 but got ${RC}; output: $(cat "${TD}/out")"
+    assert_contains "value [${val}]" "$(cat "${TD}/out")" "Invalid trustedProxies"
+    assert_contains "value [${val}]" "$(cat "${TD}/out")" "${phrase}"
+    assert_contains "value [${val}]" "$(cat "${TD}/out")" "Nothing has been written yet"
+  done
+}
+
+define_case refuse-trust-all-word
+case_refuse_trust_all_word() {
+  load_installer --trusted-proxies 'true'
+  assert_refused "it would trust every forwarded address" 'true' '*'
+}
+
+define_case refuse-zero-length-range
+case_refuse_zero_length_range() {
+  load_installer --trusted-proxies '0.0.0.0/0'
+  assert_refused "a range of length 0 would trust every forwarded address" '0.0.0.0/0' '::/0'
+}
+
+define_case refuse-hop-count
+case_refuse_hop_count() {
+  load_installer --trusted-proxies '2'
+  assert_refused "hop counts are not accepted" '2'
+}
+
+define_case refuse-empty-entry
+case_refuse_empty_entry() {
+  load_installer --trusted-proxies '192.0.2.10,,198.51.100.1'
+  assert_refused "an empty entry" '192.0.2.10,,198.51.100.1'
+}
+
+define_case refuse-none-combined
+case_refuse_none_combined() {
+  load_installer --trusted-proxies 'none,loopback'
+  assert_refused "none cannot be combined with other entries" 'none,loopback'
+}
+
+define_case refuse-public-v4-ceiling
+case_refuse_public_v4_ceiling() {
+  load_installer --trusted-proxies '2.0.0.0/7'
+  assert_refused "more than one /8 of public IPv4 addresses" '2.0.0.0/7'
+}
+
+define_case refuse-global-v6-ceiling
+case_refuse_global_v6_ceiling() {
+  load_installer --trusted-proxies '2000::/15'
+  assert_refused "more than one /16 of global IPv6 addresses" '2000::/15'
+}
+
+BARE_METAL_STEPS="resolve_public_url_defaults check_prerequisites clone_or_pull install_and_build generate_secrets seed_data create_oauth_client write_config create_systemd_services start_services_and_post_install show_summary_bare_metal show_v3_whats_new"
+
+# Replace every step except validate_trusted_proxies with a stub that logs its
+# name. generate_secrets also records what validate left to write.
+stub_bare_metal_steps() {
+  STEP_LOG="${TD}/steps.log"; : > "${STEP_LOG}"
+  local f
+  for f in ${BARE_METAL_STEPS}; do
+    eval "${f}() { printf '%s\\n' ${f} >> \"\${STEP_LOG}\"; }"
+  done
+  generate_secrets() {
+    printf '%s\n' generate_secrets >> "${STEP_LOG}"
+    printf '%s' "${TRUSTED_PROXIES_WRITE}" > "${TD}/write-at-secrets"
+  }
+}
+
+define_case refused-install-writes-nothing
+case_refused_install_writes_nothing() {
+  load_installer --profile dashboard --trusted-proxies '0.0.0.0/0'
+  stub_bare_metal_steps
+  run_rc run_bare_metal_install
+  assert_eq "exit status of a refused install" "${RC}" "1"
+  assert_eq "steps that ran before the refusal" "$(cat "${STEP_LOG}")" \
+"resolve_public_url_defaults
+check_prerequisites
+clone_or_pull
+install_and_build"
+  [ ! -e "${TD}/write-at-secrets" ] || die "generate_secrets ran after a refusal"
+  assert_eq "install dir contents" "$(ls -A "${TD}/install")" "packages"
+  # And an accepted value lets every step run, with the canonical value set.
+  load_installer --profile dashboard --trusted-proxies '192.0.2.10, Loopback'
+  stub_bare_metal_steps
+  run_rc run_bare_metal_install
+  assert_eq "exit status of an accepted install" "${RC}" "0"
+  assert_eq "steps that ran for an accepted value" "$(cat "${STEP_LOG}" | tr '\n' ' ')" \
+    "resolve_public_url_defaults check_prerequisites clone_or_pull install_and_build generate_secrets seed_data create_oauth_client write_config create_systemd_services start_services_and_post_install show_summary_bare_metal show_v3_whats_new "
+  assert_eq "value held when secrets are generated" "$(cat "${TD}/write-at-secrets")" "192.0.2.10,loopback"
+}
+
+define_case accept-ceiling-boundaries
+case_accept_ceiling_boundaries() {
+  local val
+  for val in '11.0.0.0/8' '2000::/16'; do
+    load_installer --trusted-proxies "${val}"
+    validate_trusted_proxies
+    assert_eq "value written for [${val}]" "${TRUSTED_PROXIES_WRITE}" "${val}"
+  done
+}
+
+define_case none-written-as-none
+case_none_written_as_none() {
+  load_installer --trusted-proxies 'none'
+  validate_trusted_proxies
+  render_unit_to "${TD}/unit"
+  assert_eq "the written line" "$(grep -- 'DASHBOARD_TRUSTED_PROXIES' "${TD}/unit")" \
+    "Environment=DASHBOARD_TRUSTED_PROXIES=none"
+  assert_eq "read-back" "$(trusted_proxies_readback systemd "${TD}/unit")" "none"
+}
+
+define_case blank-value-writes-nothing
+case_blank_value_writes_nothing() {
+  load_installer --trusted-proxies '   '
+  validate_trusted_proxies
+  assert_contains "the warning" "$(messages_of validate_trusted_proxies)" "was blank"
+  assert_eq "value to write" "${TRUSTED_PROXIES_WRITE}" ""
+  render_unit_to "${TD}/unit"
+  assert_eq "unit lines naming the variable" "$(count_lines_matching 'DASHBOARD_TRUSTED_PROXIES' "${TD}/unit")" "0"
+  assert_eq "read-back is the default" "$(trusted_proxies_readback systemd "${TD}/unit")" "$(dist_default_list)"
+}
+
+# Run validate_trusted_proxies and keep what it left in TRUSTED_PROXIES_WRITE
+# even when it exits.
+validate_and_report() {
+  trap 'printf "%s" "${TRUSTED_PROXIES_WRITE}" > "${TD}/write"' EXIT
+  validate_trusted_proxies
+}
+
+define_case missing-validator-fails-closed
+case_missing_validator_fails_closed() {
+  load_installer --trusted-proxies '192.0.2.10'
+  rm "${TD}/install/packages"
+  run_rc validate_and_report
+  assert_eq "exit status" "${RC}" "1"
+  assert_contains "message" "$(cat "${TD}/out")" "Could not run the dashboard's trusted-proxy check"
+  assert_eq "value to write" "$(cat "${TD}/write")" ""
+  assert_eq "install dir contents" "$(ls -A "${TD}/install")" ""
+}
+
+define_case node-missing-fails-closed
+case_node_missing_fails_closed() {
+  load_installer --trusted-proxies '192.0.2.10'
+  mkdir -p "${TD}/bin"
+  printf '#!/usr/bin/env bash\necho "node: not found" >&2\nexit 127\n' > "${TD}/bin/node"
+  chmod +x "${TD}/bin/node"
+  PATH="${TD}/bin:${PATH}"
+  run_rc validate_and_report
+  assert_eq "exit status" "${RC}" "1"
+  assert_contains "message" "$(cat "${TD}/out")" "Could not run the dashboard's trusted-proxy check"
+  assert_eq "value to write" "$(cat "${TD}/write")" ""
+}
+
+define_case percent-doubled-for-systemd
+case_percent_doubled_for_systemd() {
+  load_installer --trusted-proxies 'fe80::1%eth0'
+  validate_trusted_proxies
+  render_unit_to "${TD}/unit"
+  assert_eq "the written line" "$(grep -- 'DASHBOARD_TRUSTED_PROXIES' "${TD}/unit")" \
+    "Environment=DASHBOARD_TRUSTED_PROXIES=fe80::1%%eth0"
+  assert_eq "read-back" "$(trusted_proxies_readback systemd "${TD}/unit")" "fe80::1%eth0"
+}
+
+# systemd-analyze verify exits 0 even when it ignores an assignment (measured),
+# so every assertion reads the output text.
+SYSTEMD_BAD_PATTERNS=("DASHBOARD_TRUSTED_PROXIES" "Invalid environment assignment" "Failed to resolve specifiers")
+
+systemd_verify_text() {
+  systemd-analyze verify "$1" 2>&1 || true
+}
+
+probe_unit_with_line() {
+  local dir="$1" line="$2"
+  mkdir -p "${dir}"
+  printf '[Unit]\nDescription=probe\n\n[Service]\nType=simple\nExecStart=/bin/true\n%s\n' "${line}" > "${dir}/luqen-dashboard.service"
+}
+
+define_case systemd-parses-written-line
+case_systemd_parses_written_line() {
+  new_tmp
+  local why=""
+  if ! command -v systemd-analyze >/dev/null 2>&1; then
+    why="systemd-analyze is not installed"
+  fi
+  if [ -z "${why}" ]; then
+    # Positive controls first: the check must be able to see both defects.
+    probe_unit_with_line "${TD}/ctl-space" 'Environment=DASHBOARD_TRUSTED_PROXIES=192.0.2.10, 198.51.100.0/24'
+    probe_unit_with_line "${TD}/ctl-pct" 'Environment=DASHBOARD_TRUSTED_PROXIES=fe80::1%eth0'
+    case "$(systemd_verify_text "${TD}/ctl-space/luqen-dashboard.service")" in
+      *"Invalid environment assignment"*) ;;
+      *) why="positive control blind: a raw spaced line produced no 'Invalid environment assignment' diagnostic" ;;
+    esac
+    case "$(systemd_verify_text "${TD}/ctl-pct/luqen-dashboard.service")" in
+      *"Failed to resolve specifiers"*) ;;
+      *) why="positive control blind: an undoubled % produced no 'Failed to resolve specifiers' diagnostic" ;;
+    esac
+  fi
+  if [ -n "${why}" ]; then
+    if [ "${LUQEN_REQUIRE_SYSTEMD_ANALYZE:-}" = "1" ]; then die "${why}"; fi
+    skip_case "${why}"
+  fi
+
+  require_lib_mode
+  local val dir text pat
+  for val in '192.0.2.10, 198.51.100.0/24' '192.0.2.10, Loopback' 'none' 'fe80::1%eth0'; do
+    dir="$(mktemp -d "${TD}/unit.XXXXXX")"
+    (
+      set --
+      . "${INSTALL_SH}" --install-dir "${TD}/install" --trusted-proxies "${val}"
+      OUT=/dev/null
+      validate_trusted_proxies
+      node_path="$(command -v node)"
+      CONFIG_FILE="${TD}/install/dashboard.config.json"
+      render_systemd_unit_dashboard > "${dir}/luqen-dashboard.service"
+    )
+    text="$(systemd_verify_text "${dir}/luqen-dashboard.service")"
+    # DUMP| lines are echoed by the runner even when the case passes, so the
+    # log shows what systemd-analyze said about each written line.
+    printf 'DUMP| systemd-analyze verify for [%s]:\n' "${val}"
+    if [ -n "${text}" ]; then printf '%s\n' "${text}" | sed 's/^/DUMP|   /'; else printf 'DUMP|   (no output)\n'; fi
+
+    for pat in "${SYSTEMD_BAD_PATTERNS[@]}"; do
+      case "${text}" in
+        *"${pat}"*) die "value [${val}]: systemd-analyze output contains [${pat}]" ;;
+      esac
+    done
+  done
+}
+
+define_case profile-without-dashboard-refused
+case_profile_without_dashboard_refused() {
+  local prof
+  for prof in api cli; do
+    load_installer --profile "${prof}" --trusted-proxies '192.0.2.10'
+    run_rc derive_install_components
+    [ "${RC}" -eq 1 ] || die "profile ${prof}: expected exit 1 but got ${RC}"
+    assert_contains "profile ${prof}" "$(cat "${TD}/out")" "--trusted-proxies"
+    assert_contains "profile ${prof}" "$(cat "${TD}/out")" "profile ${prof}"
+  done
+  load_installer --profile dashboard --trusted-proxies '192.0.2.10'
+  run_rc derive_install_components
+  assert_eq "dashboard profile exit status" "${RC}" "0"
+}
+
+define_case check-mode-installs-nothing
+case_check_mode_installs_nothing() {
+  new_tmp
+  local before after stdout_file="${TD}/stdout" stderr_file="${TD}/stderr" rc
+  : > "${stdout_file}"; : > "${stderr_file}"
+  before="$(find "${TD}" | sort | sha256sum)"
+  run_check() {
+    set +e
+    HOME="${TD}" bash "${INSTALL_SH}" "$@" --install-dir "${TD}/install" >"${stdout_file}" 2>"${stderr_file}" </dev/null
+    rc=$?
+    set -e
+  }
+  run_check --trusted-proxies '192.0.2.10, Loopback' --check-trusted-proxies
+  assert_eq "accepted exit status" "${rc}" "0"
+  assert_eq "accepted output" "$(cat "${stdout_file}")" \
+"accepted: 192.0.2.10,loopback
+systemd line: Environment=DASHBOARD_TRUSTED_PROXIES=192.0.2.10,loopback
+effective: 192.0.2.10,loopback"
+  run_check --check-trusted-proxies --trusted-proxies '0.0.0.0/0'
+  assert_eq "refused exit status" "${rc}" "2"
+  assert_contains "refused message" "$(cat "${stderr_file}")" "Invalid trustedProxies"
+  run_check --trusted-proxies '   ' --check-trusted-proxies
+  assert_eq "blank exit status" "${rc}" "0"
+  assert_eq "blank output" "$(cat "${stdout_file}")" \
+"blank: nothing would be written
+effective: $(dist_default_list)"
+  after="$(find "${TD}" | sort | sha256sum)"
+  assert_eq "temp dir listing before and after" "${after}" "${before}"
 }
 
 # Always runs last, whatever cases were selected: nothing in the checkout may
@@ -207,7 +513,8 @@ run_case() {
   set -e
   last="$(printf '%s\n' "${out}" | tail -n 1)"
   case "${rc}" in
-    0)  ok "${name}" ;;
+    0)  ok "${name}"
+        printf '%s\n' "${out}" | grep '^DUMP|' | sed 's/^DUMP|/    |/' || true ;;
     77) skip "${name}" "${last}" ;;
     *)  fail "${name}" "${last}"
         printf '%s\n' "${out}" | sed 's/^/    | /' ;;
@@ -232,6 +539,8 @@ main() {
     fi
   done
 
+  # A stray value in the caller's environment must not leak into the cases.
+  unset DASHBOARD_TRUSTED_PROXIES
   BASELINE_SNAPSHOT="$(repo_snapshot)"
   for name in "${selected[@]}"; do
     [ "${name}" = "repo-untouched" ] && continue

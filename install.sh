@@ -362,6 +362,7 @@ while [[ $# -gt 0 ]]; do
     --branding-public-url)   BRANDING_PUBLIC_URL="$2"; shift 2 ;;
     --llm-public-url)        LLM_PUBLIC_URL="$2"; shift 2 ;;
     --trusted-proxies)       DASHBOARD_TRUSTED_PROXIES="$2"; shift 2 ;;
+    --check-trusted-proxies) CHECK_TRUSTED_PROXIES_ONLY="true"; shift ;;
     --oauth-key-max-age-days) OAUTH_KEY_MAX_AGE_DAYS="$2"; shift 2 ;;
     --ollama-base-url)  OLLAMA_BASE_URL="$2"; shift 2 ;;
     --uninstall)        UNINSTALL=true; shift ;;
@@ -400,6 +401,11 @@ while [[ $# -gt 0 ]]; do
     *) error "Unknown option: $1"; show_help ;;
   esac
 done
+
+if [ "${CHECK_TRUSTED_PROXIES_ONLY}" = "true" ] && [ "${UNINSTALL:-false}" = "true" ]; then
+  error "--check-trusted-proxies installs nothing and cannot be combined with --uninstall"
+  exit 1
+fi
 
 if [ "${UNINSTALL:-false}" = "true" ]; then
   uninstall_luqen "$([ "${UNINSTALL_PURGE:-false}" = "true" ] && echo yes || echo no)"
@@ -556,8 +562,16 @@ validate_trusted_proxies() {
   err="$(cat "${errfile}")"
   rm -f "${errfile}"
 
+  # Fail closed, never re-prompt, loop or fall back to writing the value.
+  if [ "${rc}" -eq 2 ]; then
+    error "The dashboard refuses this trusted-proxy list:"
+    error "${err}"
+    error "Nothing has been written yet (no secrets, configuration or service units). Correct --trusted-proxies or DASHBOARD_TRUSTED_PROXIES and run the installer again."
+    exit 1
+  fi
   if [ "${rc}" -ne 0 ]; then
-    error "Could not accept the trusted-proxy list: ${err}"
+    error "Could not run the dashboard's trusted-proxy check in ${dist}: ${err}"
+    error "The install stops rather than write a list nothing has checked."
     exit 1
   fi
   if [ "${out}" = "unset" ]; then
@@ -574,7 +588,7 @@ validate_trusted_proxies() {
 # trusted_proxies_written_value undoes it.
 dashboard_trusted_proxies_unit_line() {
   if [ -n "${TRUSTED_PROXIES_WRITE}" ]; then
-    printf 'Environment=DASHBOARD_TRUSTED_PROXIES=%s\n' "${TRUSTED_PROXIES_WRITE}"
+    printf 'Environment=DASHBOARD_TRUSTED_PROXIES=%s\n' "${TRUSTED_PROXIES_WRITE//%/%%}"
   fi
 }
 
@@ -587,6 +601,7 @@ trusted_proxies_written_value() {
     systemd)
       line="$(grep '^Environment=DASHBOARD_TRUSTED_PROXIES=' "${file}" 2>/dev/null | tail -n 1 || true)"
       line="${line#Environment=DASHBOARD_TRUSTED_PROXIES=}"
+      line="${line//%%/%}"   # undo dashboard_trusted_proxies_unit_line's doubling
       ;;
     state|dotenv)
       line="$(grep '^DASHBOARD_TRUSTED_PROXIES=' "${file}" 2>/dev/null | tail -n 1 || true)"
@@ -605,6 +620,52 @@ trusted_proxies_readback() {
   local kind="$1" file="$2" value
   value="$(trusted_proxies_written_value "${kind}" "${file}")"
   trusted_proxies_check "${INSTALL_DIR}/packages/dashboard/dist" effective "${value}"
+}
+
+# check_trusted_proxies_only -- the --check-trusted-proxies mode. Checks the
+# list against the dashboard built in --install-dir and prints what an install
+# would write. Installs nothing and runs no installer step. Exit 0 accepted or
+# blank, 2 refused (the dashboard's message on stderr), 3 the check cannot run.
+check_trusted_proxies_only() {
+  local dist="${INSTALL_DIR}/packages/dashboard/dist"
+  local out="" err="" rc=0 errfile effective=""
+  errfile="$(mktemp)"
+  if [ -n "${DASHBOARD_TRUSTED_PROXIES}" ]; then
+    out="$(trusted_proxies_check "${dist}" canonical "${DASHBOARD_TRUSTED_PROXIES}" 2>"${errfile}")" && rc=0 || rc=$?
+  else
+    out="unset"
+  fi
+  err="$(cat "${errfile}")"
+  rm -f "${errfile}"
+
+  if [ "${rc}" -eq 2 ]; then
+    printf '%s\n' "${err}" >&2
+    exit 2
+  fi
+  if [ "${rc}" -ne 0 ]; then
+    printf '%s\n' "${err}" >&2
+    exit 3
+  fi
+  if [ "${out}" = "unset" ]; then
+    effective="$(trusted_proxies_check "${dist}" effective "")" && rc=0 || rc=$?
+    if [ "${rc}" -ne 0 ]; then
+      printf 'cannot read the dashboard default from %s\n' "${dist}" >&2
+      exit 3
+    fi
+    printf 'blank: nothing would be written\n'
+    printf 'effective: %s\n' "${effective}"
+    exit 0
+  fi
+  TRUSTED_PROXIES_WRITE="${out}"
+  effective="$(trusted_proxies_check "${dist}" effective "${out}")" && rc=0 || rc=$?
+  if [ "${rc}" -ne 0 ]; then
+    printf 'cannot read the effective list from %s\n' "${dist}" >&2
+    exit 3
+  fi
+  printf 'accepted: %s\n' "${out}"
+  printf 'systemd line: %s\n' "$(dashboard_trusted_proxies_unit_line)"
+  printf 'effective: %s\n' "${effective}"
+  exit 0
 }
 
 # ──────────────────────────────────────────────
@@ -792,6 +853,16 @@ derive_install_components() {
   esac
 
   [ "${WITH_MONITOR}" = "true" ] && INSTALL_COMPONENTS+=(monitor)
+
+  # Phase 96 / OPS-01: the trusted-proxy list is a dashboard setting. A profile
+  # that installs no dashboard cannot honour it, so say so rather than drop it
+  # silently (same precedent as --with-monitor below).
+  if [ -n "${DASHBOARD_TRUSTED_PROXIES}" ] && \
+     [[ " ${INSTALL_COMPONENTS[*]} " != *" dashboard "* ]] && \
+     [[ " ${INSTALL_COMPONENTS[*]} " != *" docker "* ]]; then
+    error "--trusted-proxies (or DASHBOARD_TRUSTED_PROXIES in the installer's environment) is a dashboard setting, and profile ${PROFILE} installs no dashboard. Remove it, or choose --profile dashboard or docker."
+    exit 1
+  fi
 
   # T-42-06: --with-monitor requires compliance
   if [[ " ${INSTALL_COMPONENTS[*]} " == *" monitor "* ]] && \
@@ -2355,6 +2426,13 @@ run_bare_metal_install() {
 # without installing anything.
 if [ "${LUQEN_INSTALL_LIB_ONLY:-}" = "1" ]; then
   return 0 2>/dev/null || exit 0
+fi
+
+# --check-trusted-proxies: dispatched here so every function is defined and
+# --install-dir is honoured whatever the flag order. Before the wizard, so it
+# never prompts and never installs.
+if [ "${CHECK_TRUSTED_PROXIES_ONLY}" = "true" ]; then
+  check_trusted_proxies_only
 fi
 
 # ══════════════════════════════════════════════

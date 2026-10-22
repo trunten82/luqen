@@ -72,3 +72,6 @@ jobs:
 
       - name: Installer syntax check
         run: bash -n install.sh
+
+      - name: Installer tests
+        run: bash -n install.command && LUQEN_REQUIRE_SYSTEMD_ANALYZE=1 LUQEN_REQUIRE_SCRIPT=1 bash install.test.sh
