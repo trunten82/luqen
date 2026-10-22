@@ -748,7 +748,7 @@ curl -H "X-API-Key: $LUQEN_API_KEY" \
 
 ### `GET /api/v1/scans/:id/fixes`
 
-Get AI-generated fix proposals for a scan. Requires connected repos to be configured.
+Get pattern-based fix suggestions for a scan's issues (deterministic hints, not AI output). The response also names the site's connected repository in `connectedRepo`; that field is `null` when none is connected.
 
 Without `reports.view_technical`, each fix row has no `selector` key.
 
