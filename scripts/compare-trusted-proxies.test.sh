@@ -295,9 +295,9 @@ case_compare_writes_nothing() {
   assert_eq "exit status" "${RC}" "0"
   after="$(listing)"
   git_after="$(git -C "${REPO_ROOT}" status --porcelain -- . ':(exclude).planning' | sha256sum)"
-  assert_eq "fixture listing (paths, sizes, mtimes)" "${after}" "${before}"
-  tmp_listing="$(ls -A "${TD}/tmp")"
-  assert_eq "TMPDIR given to the script" "${tmp_listing}" ""
+  tmp_listing="$(ls -A "${TD}/tmp" | wc -l | tr -d ' ')"
+  assert_eq "files the script left in the TMPDIR it was given" "${tmp_listing}" "0"
+  assert_eq "fixture listing (paths, sizes, mtimes), as a hash" "$(sha "${after}")" "$(sha "${before}")"
   assert_eq "git status of the checkout" "${git_after}" "${git_before}"
 }
 
