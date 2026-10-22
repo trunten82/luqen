@@ -37,6 +37,9 @@ const CONTEXT_ID = `ctxcanary${HEX}`;
 const MESSAGE = `msgcanary${HEX}`;
 const SCAN_SELECTOR_ID = `scancanary${HEX}`;
 const SCAN_CONTEXT_ID = `scanctx${HEX}`;
+/** Canaries inside a NESTED copy of an issue (IN-03): a raw row whose child object carries the fields. */
+const NESTED_SELECTOR_ID = `nestsel${HEX}`;
+const NESTED_CONTEXT_ID = `nestctx${HEX}`;
 const OWNER_TOKEN = 'owner-token';
 const ANALYST_TOKEN = 'analyst-token';
 
@@ -63,12 +66,23 @@ function flatReport(): Record<string, unknown> {
   return { issues: [issue()] };
 }
 
+function nestedCopy(): Record<string, unknown> {
+  return { note: 'a nested copy', selector: `#${NESTED_SELECTOR_ID}`, context: `<p id="${NESTED_CONTEXT_ID}">x</p>` };
+}
+
+/** The flat shape with a nested copy inside the issue row (IN-03). */
+function nestedFlatReport(): Record<string, unknown> {
+  return { issues: [{ ...issue(), related: [nestedCopy()] }] };
+}
+
 const scanner = {
-  scan: async () => ({
+  // A scan target whose HTML says "nested" returns a finding with a nested copy (IN-03).
+  scan: async (target: string) => ({
     url: 'data:text/html,x',
     issues: [{
       code: CODE, type: 'error', message: MESSAGE, runner: 'htmlcs',
       selector: `#${SCAN_SELECTOR_ID}`, context: `<p id="${SCAN_CONTEXT_ID}">x</p>`,
+      ...(target.includes('nested') ? { related: { copy: nestedCopy() } } : {}),
     }],
   }),
 } as unknown as DirectScanner;
@@ -79,6 +93,7 @@ let storage: SqliteStorageAdapter;
 let scanService: ScanService;
 let pagesScanId: string;
 let flatScanId: string;
+let nestedFlatScanId: string;
 let systemScanId: string;
 let ownerId: string;
 let analystId: string;
@@ -142,6 +157,7 @@ beforeAll(async () => {
   const siteUrl = `https://fabrikam.example/${HEX.slice(0, 8)}/`;
   pagesScanId = await seedSurfaceScan(storage, { orgId, siteUrl, report: pagesReport(siteUrl), location: 'both', reportsDir });
   flatScanId = await seedSurfaceScan(storage, { orgId, siteUrl: `${siteUrl}flat/`, report: flatReport(), location: 'both', reportsDir });
+  nestedFlatScanId = await seedSurfaceScan(storage, { orgId, siteUrl: `${siteUrl}nested/`, report: nestedFlatReport(), location: 'both', reportsDir });
   systemScanId = await seedSurfaceScan(storage, { orgId: 'system', siteUrl: `${siteUrl}system/`, report: pagesReport(siteUrl), location: 'both', reportsDir });
 
   scanService = new ScanService(storage, {} as ScanOrchestrator, {} as DashboardConfig);
@@ -235,6 +251,23 @@ describe('dashboard_query_issues', () => {
     expect(ownerRows.length).toBeGreaterThan(0);
     for (const row of ownerRows) expect(row['selector']).toBe(SELECTOR);
   }, 60_000);
+
+  it('IN-03 an Analyst gets no selector or context from a copy nested inside a row, and an Owner gets them', async () => {
+    const analyst = await callTool(ANALYST_TOKEN, 'dashboard_query_issues', { scanId: nestedFlatScanId });
+    const rows = (JSON.parse(analyst) as { data: Array<Record<string, unknown>> }).data;
+    expect(rows.length).toBeGreaterThan(0);
+    const nested = (rows[0]!['related'] as Array<Record<string, unknown>>)[0]!;
+    expect(nested['note']).toBe('a nested copy');
+    expect('selector' in nested, 'nested selector key present').toBe(false);
+    expect('context' in nested, 'nested context key present').toBe(false);
+    expect(analyst).not.toContain(NESTED_SELECTOR_ID);
+    expect(analyst).not.toContain(NESTED_CONTEXT_ID);
+    expectNoTechnical(analyst);
+
+    const owner = await callTool(OWNER_TOKEN, 'dashboard_query_issues', { scanId: nestedFlatScanId });
+    expect(owner).toContain(NESTED_SELECTOR_ID);
+    expect(owner).toContain(NESTED_CONTEXT_ID);
+  }, 60_000);
 });
 
 describe('dashboard_scan_page', () => {
@@ -257,6 +290,23 @@ describe('dashboard_scan_page', () => {
       expect(finding['selector']).toBe(`#${SCAN_SELECTOR_ID}`);
       expect(String(finding['context'])).toContain(SCAN_CONTEXT_ID);
     }
+  }, 60_000);
+
+  it('IN-03 an Analyst gets no selector or context from a copy nested inside a finding, and an Owner gets them', async () => {
+    const analyst = await callTool(ANALYST_TOKEN, 'dashboard_scan_page', { html: '<p>nested</p>' });
+    const findings = (JSON.parse(analyst) as { findings: Array<Record<string, unknown>> }).findings;
+    expect(findings.length).toBeGreaterThan(0);
+    const nested = (findings[0]!['related'] as { copy: Record<string, unknown> }).copy;
+    expect(nested['note']).toBe('a nested copy');
+    expect('selector' in nested, 'nested selector key present').toBe(false);
+    expect('context' in nested, 'nested context key present').toBe(false);
+    expect(analyst).not.toContain(NESTED_SELECTOR_ID);
+    expect(analyst).not.toContain(NESTED_CONTEXT_ID);
+    expect(analyst).toContain(MESSAGE);
+
+    const owner = await callTool(OWNER_TOKEN, 'dashboard_scan_page', { html: '<p>nested</p>' });
+    expect(owner).toContain(NESTED_SELECTOR_ID);
+    expect(owner).toContain(NESTED_CONTEXT_ID);
   }, 60_000);
 
   it('D-08 the published dashboard_scan_page description says selector and context need reports.view_technical', async () => {

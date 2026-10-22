@@ -29,8 +29,8 @@ import {
   type ScanValidationError,
 } from '../../services/scan-service.js';
 import {
-  itemsForViewer,
   mayViewTechnicalDetails,
+  reportForViewer,
   TECHNICAL_DETAILS_PERMISSION,
 } from '../../services/technical-details.js';
 
@@ -203,8 +203,9 @@ export function registerScanTools(
         });
 
         // Phase 93 (D-08): selector and markup only for a caller holding the technical-details
-        // permission; `ctx` is the tool context read above, and no context is not entitled.
-        const findings = itemsForViewer(result.issues, mayViewTechnicalDetails(ctx?.permissions));
+        // permission; `ctx` is the tool context read above, and no context is not entitled. The
+        // findings are whole raw scanner issues, so the deep report rule applies (nested copies too).
+        const findings = reportForViewer(result.issues, mayViewTechnicalDetails(ctx?.permissions));
         return okEnvelope({
           findings,
           meta: {

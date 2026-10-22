@@ -39,7 +39,6 @@ import {
 import { filterDismissedIssues } from '../../services/issue-dismissals/apply-dismissals.js';
 import { toSiteKey } from '../../services/issue-dismissals/site-key.js';
 import {
-  itemsForViewer,
   mayViewTechnicalDetails,
   reportBlobForViewer,
   reportForViewer,
@@ -596,9 +595,10 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
         }
         return true;
       });
-      // Phase 93 (D-08): the extracted rows carry selector and markup; same rule as every surface.
+      // Phase 93 (D-08): the extracted rows are whole raw issue objects, so they go through the deep
+      // report rule: a nested copy inside a row cannot carry a selector or markup out either.
       const viewTechnical = mayViewTechnicalDetails(getCurrentToolContext()?.permissions);
-      const limited = itemsForViewer(filtered.slice(0, args.limit ?? 100), viewTechnical);
+      const limited = reportForViewer(filtered.slice(0, args.limit ?? 100), viewTechnical);
       return {
         content: [
           {
