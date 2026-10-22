@@ -28,6 +28,11 @@ import {
   type ScanStartSubject,
   type ScanValidationError,
 } from '../../services/scan-service.js';
+import {
+  itemsForViewer,
+  mayViewTechnicalDetails,
+  TECHNICAL_DETAILS_PERMISSION,
+} from '../../services/technical-details.js';
 
 export const SCAN_TOOL_NAMES = ['dashboard_scan_page'] as const;
 
@@ -108,7 +113,7 @@ export function registerScanTools(
         [
           'Analyse a URL or raw HTML snippet for WCAG accessibility issues.',
           'Accepts either `url` (fetches and scans the live page) or `html` (scans the raw markup without a network request).',
-          'Returns a `findings` array with the same shape as the dashboard scan report: code, type, message, selector, context, runner.',
+          `Returns a \`findings\` array with the same shape as the dashboard scan report: code, type, message, selector, context, runner. selector and context are included only for callers holding the ${TECHNICAL_DETAILS_PERMISSION} permission; other callers get the findings without them.`,
           'Non-destructive — does NOT create a scan record or trigger any background scan job.',
           'SSRF protection: private/internal/loopback URLs (127.x, 10.x, 192.168.x, localhost, .local) are rejected.',
         ].join(' '),
@@ -197,8 +202,11 @@ export function registerScanTools(
           includeNotices: false,
         });
 
+        // Phase 93 (D-08): selector and markup only for a caller holding the technical-details
+        // permission; `ctx` is the tool context read above, and no context is not entitled.
+        const findings = itemsForViewer(result.issues, mayViewTechnicalDetails(ctx?.permissions));
         return okEnvelope({
-          findings: result.issues,
+          findings,
           meta: {
             count: result.issues.length,
             standard,

@@ -126,10 +126,18 @@ describe('dashboard_scan_page', () => {
       registerScanTools(server, { scanner });
     }));
 
-    const result = await client.callTool({
+    // Contract (phase 93): selector and context reach only a caller holding reports.view_technical.
+    const technicalCaller: ToolContext = {
+      orgId: 'org-fabrikam',
+      userId: 'user-northwind',
+      scopes: ['read'],
+      permissions: new Set<string>(['scans.create', 'reports.view_technical', 'mcp.use']),
+      authType: 'jwt',
+    };
+    const result = await runInToolContext(technicalCaller, () => client.callTool({
       name: 'dashboard_scan_page',
       arguments: { html: '<img src="logo.png">' },
-    });
+    }));
 
     expect(result.isError).toBeFalsy();
     const body = parseToolText(result);

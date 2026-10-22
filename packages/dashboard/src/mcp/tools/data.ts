@@ -38,6 +38,12 @@ import {
 } from '../../services/issue-dismissals/load-dismissed-report.js';
 import { filterDismissedIssues } from '../../services/issue-dismissals/apply-dismissals.js';
 import { toSiteKey } from '../../services/issue-dismissals/site-key.js';
+import {
+  itemsForViewer,
+  mayViewTechnicalDetails,
+  reportBlobForViewer,
+  reportForViewer,
+} from '../../services/technical-details.js';
 
 /**
  * Slim projection of ScanRecord for list responses. Explicitly OMITS the
@@ -428,6 +434,9 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
       // Phase 88 (FP-11, FP-12): the scan's own org + site dismissals. The row carries the
       // whole raw blob as `jsonReport`, so it follows the filtered report (D-05).
       const applied = await applyActiveDismissals(storage, lookup.scan, raw);
+      // Phase 93 (D-08): selector and markup only for a caller holding the technical-details
+      // permission; no tool context is not entitled (fail closed). Redaction is the last step.
+      const viewTechnical = mayViewTechnicalDetails(getCurrentToolContext()?.permissions);
       return {
         content: [
           {
@@ -436,8 +445,8 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
               {
                 status: 'completed',
                 scanId: args.scanId,
-                scan: withDismissalsInRawBlob(lookup.scan, applied),
-                report: applied.report,
+                scan: reportBlobForViewer(withDismissalsInRawBlob(lookup.scan, applied), viewTechnical),
+                report: reportForViewer(applied.report, viewTechnical),
               },
               null,
               2,
@@ -587,7 +596,9 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
         }
         return true;
       });
-      const limited = filtered.slice(0, args.limit ?? 100);
+      // Phase 93 (D-08): the extracted rows carry selector and markup; same rule as every surface.
+      const viewTechnical = mayViewTechnicalDetails(getCurrentToolContext()?.permissions);
+      const limited = itemsForViewer(filtered.slice(0, args.limit ?? 100), viewTechnical);
       return {
         content: [
           {

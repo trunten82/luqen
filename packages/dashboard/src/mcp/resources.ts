@@ -30,6 +30,11 @@ import {
   applyActiveDismissals,
   withDismissalsInRawBlob,
 } from '../services/issue-dismissals/load-dismissed-report.js';
+import {
+  mayViewTechnicalDetails,
+  reportBlobForViewer,
+  reportForViewer,
+} from '../services/technical-details.js';
 
 /**
  * Re-export of the @luqen/core/mcp ResourceMetadata interface so existing
@@ -102,7 +107,13 @@ export function registerResources(server: McpServer, opts: RegisterResourcesOpti
       const raw = await storage.scans.getReport(id);
       // Phase 88 (FP-11): the scan's own org + site dismissals; the row's raw blob follows the report.
       const applied = await applyActiveDismissals(storage, scan, raw);
-      const payload = { scan: withDismissalsInRawBlob(scan, applied), report: applied.report };
+      // Phase 93 (D-08): selector and markup only for a caller holding the technical-details
+      // permission; no tool context is not entitled (fail closed).
+      const viewTechnical = mayViewTechnicalDetails(getCurrentToolContext()?.permissions);
+      const payload = {
+        scan: reportBlobForViewer(withDismissalsInRawBlob(scan, applied), viewTechnical),
+        report: reportForViewer(applied.report, viewTechnical),
+      };
       return {
         contents: [
           {
