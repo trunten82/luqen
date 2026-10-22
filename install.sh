@@ -543,42 +543,66 @@ trusted_proxies_check() {
   )
 }
 
+# trusted_proxies_evaluate -- the one place that runs the dashboard's check on
+# DASHBOARD_TRUSTED_PROXIES and derives the value to write. validate_trusted_proxies
+# (the install) and check_trusted_proxies_only (--check-trusted-proxies) both call
+# it, so the two cannot disagree about what would be written.
+# Sets: TP_RC   0 checked, 2 refused, 3 or other = could not run the check
+#       TP_ERR  the check's stderr (the dashboard's message when TP_RC is 2)
+#       TP_BLANK  "true" when a non-empty value was blank after the dashboard's trim
+#       TRUSTED_PROXIES_WRITE  the canonical value to write, empty = write nothing
+trusted_proxies_evaluate() {
+  TRUSTED_PROXIES_WRITE=""
+  TP_RC=0
+  TP_ERR=""
+  TP_BLANK="false"
+  [ -n "${DASHBOARD_TRUSTED_PROXIES}" ] || return 0
+
+  local dist="${INSTALL_DIR}/packages/dashboard/dist"
+  local out="" errfile
+  errfile="$(mktemp)"
+  out="$(trusted_proxies_check "${dist}" canonical "${DASHBOARD_TRUSTED_PROXIES}" 2>"${errfile}")" && TP_RC=0 || TP_RC=$?
+  TP_ERR="$(cat "${errfile}")"
+  rm -f "${errfile}"
+  [ "${TP_RC}" -eq 0 ] || return 0
+
+  if [ "${out}" = "unset" ]; then
+    TP_BLANK="true"
+  else
+    TRUSTED_PROXIES_WRITE="${out}"
+  fi
+  return 0
+}
+
 # validate_trusted_proxies -- checks the operator's list with the built
 # dashboard's own code. Runs after install_and_build (the dist exists only then)
 # and before generate_secrets, so a refusal leaves no secret, configuration
 # file or service unit behind. Sets TRUSTED_PROXIES_WRITE to the canonical value
-# to write, or leaves it empty (write nothing).
+# to write, or leaves it empty (write nothing). Fails closed: it never
+# re-prompts, loops or falls back to writing the value.
 validate_trusted_proxies() {
-  TRUSTED_PROXIES_WRITE=""
   if [ -z "${DASHBOARD_TRUSTED_PROXIES}" ]; then
+    TRUSTED_PROXIES_WRITE=""
     info "Trusted proxies: none given, nothing written; the dashboard's default applies"
     return 0
   fi
 
-  local dist="${INSTALL_DIR}/packages/dashboard/dist"
-  local out="" err="" rc=0 errfile
-  errfile="$(mktemp)"
-  out="$(trusted_proxies_check "${dist}" canonical "${DASHBOARD_TRUSTED_PROXIES}" 2>"${errfile}")" && rc=0 || rc=$?
-  err="$(cat "${errfile}")"
-  rm -f "${errfile}"
-
-  # Fail closed, never re-prompt, loop or fall back to writing the value.
-  if [ "${rc}" -eq 2 ]; then
+  trusted_proxies_evaluate
+  if [ "${TP_RC}" -eq 2 ]; then
     error "The dashboard refuses this trusted-proxy list:"
-    error "${err}"
+    error "${TP_ERR}"
     error "Nothing has been written yet (no secrets, configuration or service units). Correct --trusted-proxies or DASHBOARD_TRUSTED_PROXIES and run the installer again."
     exit 1
   fi
-  if [ "${rc}" -ne 0 ]; then
-    error "Could not run the dashboard's trusted-proxy check in ${dist}: ${err}"
+  if [ "${TP_RC}" -ne 0 ]; then
+    error "Could not run the dashboard's trusted-proxy check in ${INSTALL_DIR}/packages/dashboard/dist: ${TP_ERR}"
     error "The install stops rather than write a list nothing has checked."
     exit 1
   fi
-  if [ "${out}" = "unset" ]; then
+  if [ "${TP_BLANK}" = "true" ]; then
     warn "The trusted-proxy value was blank; nothing is written and the dashboard's default applies"
     return 0
   fi
-  TRUSTED_PROXIES_WRITE="${out}"
   success "Trusted proxies accepted by the dashboard's rules: ${TRUSTED_PROXIES_WRITE}"
 }
 
@@ -628,42 +652,29 @@ trusted_proxies_readback() {
 # blank, 2 refused (the dashboard's message on stderr), 3 the check cannot run.
 check_trusted_proxies_only() {
   local dist="${INSTALL_DIR}/packages/dashboard/dist"
-  local out="" err="" rc=0 errfile effective=""
-  errfile="$(mktemp)"
-  if [ -n "${DASHBOARD_TRUSTED_PROXIES}" ]; then
-    out="$(trusted_proxies_check "${dist}" canonical "${DASHBOARD_TRUSTED_PROXIES}" 2>"${errfile}")" && rc=0 || rc=$?
-  else
-    out="unset"
-  fi
-  err="$(cat "${errfile}")"
-  rm -f "${errfile}"
+  local effective="" rc=0
 
-  if [ "${rc}" -eq 2 ]; then
-    printf '%s\n' "${err}" >&2
+  trusted_proxies_evaluate
+  if [ "${TP_RC}" -eq 2 ]; then
+    printf '%s\n' "${TP_ERR}" >&2
     exit 2
   fi
-  if [ "${rc}" -ne 0 ]; then
-    printf '%s\n' "${err}" >&2
+  if [ "${TP_RC}" -ne 0 ]; then
+    printf '%s\n' "${TP_ERR}" >&2
     exit 3
   fi
-  if [ "${out}" = "unset" ]; then
-    effective="$(trusted_proxies_check "${dist}" effective "")" && rc=0 || rc=$?
-    if [ "${rc}" -ne 0 ]; then
-      printf 'cannot read the dashboard default from %s\n' "${dist}" >&2
-      exit 3
-    fi
-    printf 'blank: nothing would be written\n'
-    printf 'effective: %s\n' "${effective}"
-    exit 0
-  fi
-  TRUSTED_PROXIES_WRITE="${out}"
-  effective="$(trusted_proxies_check "${dist}" effective "${out}")" && rc=0 || rc=$?
+
+  effective="$(trusted_proxies_check "${dist}" effective "${TRUSTED_PROXIES_WRITE}")" && rc=0 || rc=$?
   if [ "${rc}" -ne 0 ]; then
     printf 'cannot read the effective list from %s\n' "${dist}" >&2
     exit 3
   fi
-  printf 'accepted: %s\n' "${out}"
-  printf 'systemd line: %s\n' "$(dashboard_trusted_proxies_unit_line)"
+  if [ -z "${TRUSTED_PROXIES_WRITE}" ]; then
+    printf 'blank: nothing would be written\n'
+  else
+    printf 'accepted: %s\n' "${TRUSTED_PROXIES_WRITE}"
+    printf 'systemd line: %s\n' "$(dashboard_trusted_proxies_unit_line)"
+  fi
   printf 'effective: %s\n' "${effective}"
   exit 0
 }
