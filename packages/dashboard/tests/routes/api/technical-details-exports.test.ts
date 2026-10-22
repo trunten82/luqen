@@ -21,7 +21,7 @@ import { loadTranslations } from '../../../src/i18n/index.js';
 import { exportRoutes } from '../../../src/routes/api/export.js';
 import { issueDismissalRoutes } from '../../../src/routes/api/issue-dismissals.js';
 import { toSiteKey } from '../../../src/services/issue-dismissals/site-key.js';
-import { DismissalSchema, ListResponse } from '../../../src/routes/api/issue-dismissals-schemas.js';
+import { DismissalSchema, ListResponse, RevokeMutationResponse } from '../../../src/routes/api/issue-dismissals-schemas.js';
 import { ALL_PERMISSION_IDS } from '../../../src/permissions.js';
 import { seedSurfaceDismissal, seedSurfaceScan } from '../../helpers/dismissal-surface-fixture.js';
 
@@ -230,5 +230,39 @@ describe('the dismissals schema', () => {
     expect(item.required ?? []).not.toContain('selector');
     expect(item.properties.selector.description ?? '').toContain('reports.view_technical');
     expect((DismissalSchema as unknown as { required: string[] }).required).toContain('selector');
+  });
+});
+
+describe('POST /api/v1/dismissals/:id/revoke', () => {
+  async function revoke(who: string): Promise<{ body: string; json: Record<string, unknown> }> {
+    const site = `https://fabrikam.example/${HEX.slice(0, 8)}/revoke-${who}/`;
+    const dismissal = await seedSurfaceDismissal(storage, { orgId, siteUrl: site, match: { code: CODE, selector: DISMISSED_SELECTOR } });
+    const res = await server.inject({
+      method: 'POST', url: `/api/v1/dismissals/${dismissal.id}/revoke`, headers: { 'x-who': who }, payload: {},
+    });
+    expect(res.statusCode).toBe(200);
+    return { body: res.body, json: JSON.parse(res.body) as Record<string, unknown> };
+  }
+
+  it('D-08 an Analyst revoking by id gets no selector key and no selector canary', async () => {
+    const { body, json } = await revoke('analyst');
+    expect('selector' in json, 'selector key present').toBe(false);
+    expect(body).not.toContain(DISMISSED_ID);
+    expect(json['status']).toBe('revoked');
+    expect(json['code']).toBe(CODE);
+  }, 60_000);
+
+  it('D-08 an Owner revoking by id gets the selector', async () => {
+    const { json } = await revoke('owner');
+    expect(json['selector']).toBe(DISMISSED_SELECTOR);
+    expect(json['status']).toBe('revoked');
+  }, 60_000);
+
+  it('D-10 the revoke response declares selector optional while the mark response keeps it required', () => {
+    const revokeSchema = RevokeMutationResponse as unknown as {
+      required?: string[]; properties: { selector: { description?: string } };
+    };
+    expect(revokeSchema.required ?? []).not.toContain('selector');
+    expect(revokeSchema.properties.selector.description ?? '').toContain('reports.view_technical');
   });
 });

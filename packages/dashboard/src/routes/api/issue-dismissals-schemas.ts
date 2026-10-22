@@ -31,6 +31,9 @@ const NullableString = Type.Union([Type.String(), Type.Null()]);
  * The dismissal's fields in emitted order. `selector` is a parameter so the list response can make
  * it optional (D-10) without moving it: the serialiser writes declared properties in declared order.
  */
+const LIST_SELECTOR_DESCRIPTION =
+  `CSS selector of the dismissed element. Present only when the caller holds ${TECHNICAL_DETAILS_PERMISSION}; omitted otherwise.`;
+
 function dismissalFields<S extends TSchema>(selector: S) {
   return {
     id: Type.String(),
@@ -68,6 +71,18 @@ export const DismissalMutationResponse = Type.Composite([
   }),
 ]);
 
+/**
+ * The revoke (200) response (D-10): the mark response with `selector` optional. A revoke names the
+ * dismissal by id, so the caller never supplied the selector; it is present only when the caller
+ * holds the technical-details permission. The mark response keeps it required: that caller typed it.
+ */
+export const RevokeMutationResponse = Type.Object({
+  ...dismissalFields(Type.Optional(Type.String({ description: LIST_SELECTOR_DESCRIPTION }))),
+  recomputed_scans: Type.Integer({ minimum: 0 }),
+  failed_scans: Type.Integer({ minimum: 0 }),
+  recompute_complete: Type.Boolean(),
+});
+
 export const DismissalEventSchema = Type.Object({
   id: Type.String(),
   action: Type.String(),
@@ -82,8 +97,7 @@ export const DismissalEventSchema = Type.Object({
  * caller holds the technical-details permission, the rule the report page applies. The mark and
  * revoke responses keep the required selector (DismissalSchema): they answer a caller who named it.
  */
-const LIST_SELECTOR_DESCRIPTION =
-  `CSS selector of the dismissed element. Present only when the caller holds ${TECHNICAL_DETAILS_PERMISSION}; omitted otherwise.`;
+
 
 export const DismissalWithEventsSchema = Type.Object({
   ...dismissalFields(Type.Optional(Type.String({ description: LIST_SELECTOR_DESCRIPTION }))),
