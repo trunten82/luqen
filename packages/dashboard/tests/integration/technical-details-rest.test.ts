@@ -28,7 +28,7 @@ import {
   resolveEffectivePermissions,
 } from '../../src/permissions.js';
 import type { ApiKeyRole } from '../../src/db/types.js';
-import { seedSurfaceScan } from '../helpers/dismissal-surface-fixture.js';
+import { seedSurfaceDismissal, seedSurfaceScan } from '../helpers/dismissal-surface-fixture.js';
 
 const PASSWORD = 'Technical-Pass-123!';
 const CODE = 'WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail';
@@ -81,12 +81,19 @@ let systemScanId: string;
 let storedBlob: string;
 /** A scan whose findings the fix-suggestion engine recognises, so /fixes has rows. */
 let fixScanId: string;
+/** A scan with one active dismissal: the dismissal branch of the list and detail routes. */
+let dismissedScanId: string;
 const keys = new Map<string, string>();
 
 const tokenOf = (html: string): string | undefined =>
   /name="csrf-token" content="([^"]+)"/.exec(html)?.[1] ?? /name="_csrf" value="([^"]+)"/.exec(html)?.[1];
 
+/** One login per user: the login route is rate limited, and a session cookie serves every request. */
+const cookies = new Map<string, string>();
+
 async function login(username: string): Promise<string> {
+  const cached = cookies.get(username);
+  if (cached !== undefined) return cached;
   const loginPage = await app.inject({ method: 'GET', url: '/login' });
   const loginCookie = loginPage.cookies.find((c) => c.name === 'session')!.value;
   const res = await app.inject({
@@ -95,7 +102,9 @@ async function login(username: string): Promise<string> {
     payload: { username, password: PASSWORD },
   });
   expect(res.statusCode).toBe(302);
-  return res.cookies.find((c) => c.name === 'session')!.value;
+  const cookie = res.cookies.find((c) => c.name === 'session')!.value;
+  cookies.set(username, cookie);
+  return cookie;
 }
 
 async function asSession(username: string, url: string): Promise<{ status: number; body: string }> {
@@ -175,6 +184,14 @@ beforeAll(async () => {
   const report = canaryReport(siteUrl);
   scanId = await seedSurfaceScan(seed, { orgId, siteUrl, report, location: 'both', reportsDir });
   storedBlob = JSON.stringify(report);
+  const dismissedSite = `https://fabrikam.example/dismissed-${HEX.slice(0, 8)}/`;
+  const dismissedReport = canaryReport(dismissedSite);
+  (dismissedReport['pages'] as Array<{ issues: unknown[] }>)[0]!.issues.push({
+    type: 'error', code: CODE, message: 'a finding that gets dismissed', selector: '#dismissed-one', context: '<p>d</p>',
+  });
+  dismissedScanId = await seedSurfaceScan(seed, { orgId, siteUrl: dismissedSite, report: dismissedReport, location: 'both', reportsDir });
+  await seedSurfaceDismissal(seed, { orgId, siteUrl: dismissedSite, match: { code: CODE, selector: '#dismissed-one' } });
+
   const fixSite = `https://fabrikam.example/fix-${HEX.slice(0, 8)}/`;
   fixScanId = await seedSurfaceScan(seed, {
     orgId, siteUrl: fixSite, location: 'both', reportsDir,
@@ -329,4 +346,33 @@ describe('the published OpenAPI document', () => {
     expect(describes(list.properties?.['jsonReport'])).toBe(true);
     expect(describes(detail.properties?.['jsonReport'])).toBe(true);
   });
+});
+
+describe('rows whose site has an active dismissal', () => {
+  it('D-08 an Analyst gets no selector or context canary from the list row of a site with a dismissal', async () => {
+    const res = await asSession('fabrikam-analyst', '/api/v1/scans');
+    expect(res.status).toBe(200);
+    const row = rowsOf(res.body).find((r) => r['id'] === dismissedScanId)!;
+    const blob = String(row['jsonReport']);
+    expect(blob).toContain(MESSAGE);
+    expect(blob).not.toContain('dismissed-one');
+    expect(blob).not.toContain(SELECTOR_ID);
+    expect(blob).not.toContain(CONTEXT_ID);
+  }, 60_000);
+
+  it('API-02 an Analyst gets no selector or context canary from the detail of a scan with a dismissal', async () => {
+    const res = await asSession('fabrikam-analyst', `/api/v1/scans/${dismissedScanId}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toContain(MESSAGE);
+    expect(res.body).not.toContain('dismissed-one');
+    expect(res.body).not.toContain(SELECTOR_ID);
+    expect(res.body).not.toContain(CONTEXT_ID);
+  }, 60_000);
+
+  it('D-08 an Owner keeps the surviving selector in the list row of a site with a dismissal', async () => {
+    const res = await asSession('fabrikam-owner', '/api/v1/scans');
+    const row = rowsOf(res.body).find((r) => r['id'] === dismissedScanId)!;
+    expect(String(row['jsonReport'])).toContain(SELECTOR_ID);
+    expect(String(row['jsonReport'])).not.toContain('dismissed-one');
+  }, 60_000);
 });
