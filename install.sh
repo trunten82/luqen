@@ -670,9 +670,73 @@ trusted_proxies_summary_value() {
   fi
 }
 
+# A unit line that assigns DASHBOARD_TRUSTED_PROXIES (alone or among several
+# assignments on one Environment= line), and an environment-file line that does.
+TP_UNIT_ASSIGN_RE='^[[:space:]]*Environment=(.*[[:space:]"'"'"'])?DASHBOARD_TRUSTED_PROXIES='
+TP_ENVFILE_ASSIGN_RE='^[[:space:]]*(export[[:space:]]+)?DASHBOARD_TRUSTED_PROXIES='
+
+# trusted_proxies_overrides <unit-file|""> <config-file> -- one line per place
+# that can override what the installer wrote, by path and key name only (never
+# a value): a drop-in in <unit-file>.d that assigns DASHBOARD_TRUSTED_PROXIES
+# (systemd applies drop-ins after the unit), an EnvironmentFile= named by the
+# unit or a drop-in that sets it (systemd lets those override every
+# Environment= line), and a trustedProxies key in the dashboard config file
+# (the dashboard uses it whenever the variable is unset or blank). A file it
+# cannot read is reported as unknown. Prints nothing when nothing can override.
+trusted_proxies_overrides() {
+  local unit="$1" config="$2" f envf n rc
+  local -a unit_files=()
+  if [ -n "${unit}" ]; then
+    [ -r "${unit}" ] && unit_files+=("${unit}")
+    for f in "${unit}.d"/*.conf; do
+      [ -e "${f}" ] || continue
+      if [ ! -r "${f}" ]; then
+        printf 'drop-in %s cannot be read, so whether it sets DASHBOARD_TRUSTED_PROXIES is unknown\n' "${f}"
+        continue
+      fi
+      unit_files+=("${f}")
+      n="$(grep -cE -- "${TP_UNIT_ASSIGN_RE}" "${f}" || true)"
+      if [ "${n:-0}" -gt 0 ]; then
+        printf 'drop-in %s sets DASHBOARD_TRUSTED_PROXIES; it overrides %s\n' "${f}" "${unit}"
+      fi
+    done
+    for f in "${unit_files[@]+"${unit_files[@]}"}"; do
+      while IFS= read -r envf; do
+        envf="${envf%"${envf##*[![:space:]]}"}"
+        envf="${envf#-}"
+        [ -n "${envf}" ] || continue
+        if [ ! -r "${envf}" ]; then
+          printf 'EnvironmentFile %s (named in %s) cannot be read here, so whether it sets DASHBOARD_TRUSTED_PROXIES is unknown\n' "${envf}" "${f}"
+          continue
+        fi
+        n="$(grep -cE -- "${TP_ENVFILE_ASSIGN_RE}" "${envf}" || true)"
+        if [ "${n:-0}" -gt 0 ]; then
+          printf 'EnvironmentFile %s (named in %s) sets DASHBOARD_TRUSTED_PROXIES; it overrides every Environment= line\n' "${envf}" "${f}"
+        fi
+      done < <(sed -nE 's/^[[:space:]]*EnvironmentFile=[[:space:]]*//p' "${f}")
+    done
+  fi
+  if [ -n "${config}" ] && [ -e "${config}" ]; then
+    rc=0
+    node -e '
+      let c;
+      try { c = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")); } catch { process.exit(2); }
+      process.exit(c !== null && typeof c === "object" && Object.prototype.hasOwnProperty.call(c, "trustedProxies") ? 0 : 1);
+    ' "${config}" 2>/dev/null || rc=$?
+    case "${rc}" in
+      0) printf '%s sets the trustedProxies key; the dashboard uses it whenever DASHBOARD_TRUSTED_PROXIES is unset or blank\n' "${config}" ;;
+      1) ;;
+      *) printf '%s could not be read as JSON, so whether it sets the trustedProxies key is unknown\n' "${config}" ;;
+    esac
+  fi
+  return 0
+}
+
 # print_trusted_proxies_readback <kind> <file> -- closing-summary line. Reads the
 # FILE the installer wrote (never the in-memory value) and resolves it with the
-# dashboard's own code, so it reports what the dashboard will actually use.
+# dashboard's own code: it reports what THAT FILE sets. A drop-in, an
+# EnvironmentFile or the config file's trustedProxies key can override it;
+# trusted_proxies_overrides names each one, and a warning follows the line.
 print_trusted_proxies_readback() {
   local kind="$1" file="$2" written effective="" rc=0
   if [ ! -r "${file}" ]; then
@@ -690,6 +754,12 @@ print_trusted_proxies_readback() {
   else
     printf "  Trusted proxies (read back from %s): %s (dashboard default, nothing written)\n" "${file}" "${effective}"
   fi
+  local unit="" line
+  [ "${kind}" = "systemd" ] && unit="${file}"
+  while IFS= read -r line; do
+    [ -n "${line}" ] && warn "Trusted proxies: the line above may not be what the dashboard uses: ${line}"
+  done < <(trusted_proxies_overrides "${unit}" "${CONFIG_FILE:-${INSTALL_DIR}/dashboard.config.json}")
+  return 0
 }
 
 # print_docker_trusted_proxies_result -- the Docker closing line. A Docker

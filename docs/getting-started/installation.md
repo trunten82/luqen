@@ -382,7 +382,10 @@ proxies and open `/admin/audit-log?action=login.success`; the newest entry must 
 - It writes one `Environment=DASHBOARD_TRUSTED_PROXIES=` line into `luqen-dashboard.service`, in canonical form: no
   spaces, named ranges in lower case, and every `%` doubled (systemd reads `%` as a specifier and otherwise drops the
   whole line without an error).
-- The closing summary prints the list read back from that file, as the dashboard resolves it.
+- The closing summary prints the list read back from that file, as the dashboard resolves it. That is what the file
+  sets, not necessarily what the dashboard uses: the summary adds a warning, naming the path (never a value), for each
+  drop-in in `luqen-dashboard.service.d/` that sets `DASHBOARD_TRUSTED_PROXIES`, each `EnvironmentFile=` of the unit
+  that sets it, and a `trustedProxies` key in `dashboard.config.json` (used whenever the variable is unset or blank).
 - Docker: the installer writes the `DASHBOARD_TRUSTED_PROXIES=` line into `.env`, and `docker-compose.yml` passes it to
   the dashboard container only. A Docker install has no host-side build to check against, so the container start is
   the check, and it comes after `.env` is written and the containers are started: a refused list keeps the dashboard

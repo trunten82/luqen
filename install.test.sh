@@ -834,6 +834,41 @@ case_summary_reads_back_written_unit() {
     "  Trusted proxies (read back from ${TD}/unit-none): $(dist_default_list) (dashboard default, nothing written)"
 }
 
+define_case summary-warns-about-overrides
+case_summary_warns_about_overrides() {
+  load_installer --trusted-proxies '192.0.2.10'
+  validate_trusted_proxies
+  local unit="${TD}/sd/luqen-dashboard.service" msgs v
+  mkdir -p "${TD}/sd/luqen-dashboard.service.d"
+  render_unit_to "${unit}"
+  # Control: nothing can override, so no warning.
+  msgs="$(messages_of print_trusted_proxies_readback systemd "${unit}")"
+  assert_contains "control line" "${msgs}" "(set by this install)"
+  assert_not_contains "control" "${msgs}" "may not be what the dashboard uses"
+  # A drop-in, an EnvironmentFile and the config key, each setting a list; and a
+  # drop-in plus an EnvironmentFile that do not.
+  printf '[Service]\nEnvironment=NODE_ENV=production DASHBOARD_TRUSTED_PROXIES=198.51.100.91\n' > "${TD}/sd/luqen-dashboard.service.d/50-proxy.conf"
+  printf '[Service]\nEnvironment=OTHER=1\nEnvironmentFile=-%s\nEnvironmentFile=%s\n' "${TD}/sd/sets.env" "${TD}/sd/other.env" > "${TD}/sd/luqen-dashboard.service.d/60-envfile.conf"
+  printf 'OTHER=1\nDASHBOARD_TRUSTED_PROXIES=198.51.100.92\n' > "${TD}/sd/sets.env"
+  printf 'OTHER=1\n' > "${TD}/sd/other.env"
+  printf '{"sessionSecret":"x","trustedProxies":["198.51.100.93"]}\n' > "${CONFIG_FILE}"
+  msgs="$(messages_of print_trusted_proxies_readback systemd "${unit}")"
+  assert_contains "drop-in named" "${msgs}" "drop-in ${TD}/sd/luqen-dashboard.service.d/50-proxy.conf sets DASHBOARD_TRUSTED_PROXIES"
+  assert_contains "environment file named" "${msgs}" "EnvironmentFile ${TD}/sd/sets.env (named in ${TD}/sd/luqen-dashboard.service.d/60-envfile.conf) sets DASHBOARD_TRUSTED_PROXIES"
+  assert_contains "config key named" "${msgs}" "${CONFIG_FILE} sets the trustedProxies key"
+  assert_not_contains "a drop-in that sets nothing" "${msgs}" "60-envfile.conf sets"
+  assert_not_contains "an environment file that sets nothing" "${msgs}" "other.env"
+  for v in 198.51.100.91 198.51.100.92 198.51.100.93; do
+    assert_not_contains "no value printed" "${msgs}" "${v}"
+  done
+  # The macOS path (.install-state) checks only the config key.
+  INSTALL_COMPONENTS=(core dashboard)
+  write_install_state
+  msgs="$(messages_of print_trusted_proxies_readback state "${TD}/install/.install-state")"
+  assert_contains "state: config key named" "${msgs}" "${CONFIG_FILE} sets the trustedProxies key"
+  assert_not_contains "state: no drop-in check" "${msgs}" "drop-in"
+}
+
 # Always runs last, whatever cases were selected: nothing in the checkout may
 # differ after the run from before it.
 repo_snapshot() {
