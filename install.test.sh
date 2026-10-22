@@ -684,6 +684,65 @@ case_macos_plist_ignores_caller_env() {
   assert_eq "plist lines naming the variable" "$(count_lines_matching 'DASHBOARD_TRUSTED_PROXIES' "${PLIST}")" "0"
 }
 
+# run_install_command_mode <args...> -- runs a copy of install.command beside a
+# copy of the REAL install.sh, as on macOS: PATH-first uname (Darwin), a
+# launchctl that logs every call, and git, npm, systemctl and sudo stubs that
+# fail, so a mode that fell through to an install stops at its first step.
+# Sets RC, LAUNCHCTL_LOG, AGENTS_DIR and MAC_OUT.
+run_install_command_mode() {
+  local mac="${TD}/mac" t
+  mkdir -p "${mac}/bin" "${mac}/home"
+  cp "${REPO_ROOT}/install.command" "${mac}/install.command"
+  cp "${INSTALL_SH}" "${mac}/install.sh"
+  printf '#!/bin/sh\necho Darwin\n' > "${mac}/bin/uname"
+  LAUNCHCTL_LOG="${mac}/launchctl.log"; : > "${LAUNCHCTL_LOG}"
+  printf '#!/bin/sh\nprintf "%%s\\n" "$*" >> %q\nexit 0\n' "${LAUNCHCTL_LOG}" > "${mac}/bin/launchctl"
+  for t in git npm systemctl sudo; do
+    printf '#!/bin/sh\necho "stub %s: refused in this test" >&2\nexit 1\n' "${t}" > "${mac}/bin/${t}"
+  done
+  chmod +x "${mac}/bin/"*
+  # The stub must be able to log, or an empty log would prove nothing.
+  PATH="${mac}/bin:${PATH}" launchctl probe
+  [ "$(cat "${LAUNCHCTL_LOG}")" = "probe" ] || die "the launchctl stub does not log, so this case measures nothing"
+  : > "${LAUNCHCTL_LOG}"
+  AGENTS_DIR="${mac}/home/Library/LaunchAgents"
+  MAC_OUT="${mac}/out"
+  set +e
+  PATH="${mac}/bin:${PATH}" HOME="${mac}/home" LUQEN_INSTALL_DIR="${TD}/install" \
+    bash "${mac}/install.command" --non-interactive "$@" --install-dir "${TD}/install" </dev/null >"${MAC_OUT}" 2>&1
+  RC=$?
+  set -e
+}
+
+# entries_in <dir> -- how many entries the directory holds; 0 when it is absent.
+entries_in() {
+  if [ -d "$1" ]; then ls -A "$1" | wc -l | tr -d ' '; else printf '0'; fi
+}
+
+define_case macos-no-install-modes-leave-launchd-alone
+case_macos_no_install_modes_leave_launchd_alone() {
+  new_tmp
+  local plists
+  run_install_command_mode --check-trusted-proxies --trusted-proxies '192.0.2.10'
+  assert_eq "check mode exit status" "${RC}" "0"
+  assert_contains "check mode ran the real install.sh check" "$(cat "${MAC_OUT}")" "accepted: 192.0.2.10"
+  assert_eq "launchctl calls in check mode" "$(cat "${LAUNCHCTL_LOG}")" ""
+  plists="$(entries_in "${AGENTS_DIR}")"
+  assert_eq "plists written in check mode" "${plists}" "0"
+
+  run_install_command_mode --help
+  assert_eq "help exit status" "${RC}" "0"
+  assert_eq "launchctl calls for --help" "$(cat "${LAUNCHCTL_LOG}")" ""
+  plists="$(entries_in "${AGENTS_DIR}")"
+  assert_eq "plists written for --help" "${plists}" "0"
+
+  run_install_command_mode --no-such-option
+  assert_eq "unknown option exit status" "${RC}" "2"
+  assert_eq "launchctl calls for an unknown option" "$(cat "${LAUNCHCTL_LOG}")" ""
+  plists="$(entries_in "${AGENTS_DIR}")"
+  assert_eq "plists written for an unknown option" "${plists}" "0"
+}
+
 define_case summary-reads-back-written-unit
 case_summary_reads_back_written_unit() {
   load_installer --trusted-proxies '192.0.2.10,198.51.100.0/24'

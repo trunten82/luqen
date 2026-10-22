@@ -290,7 +290,7 @@ Uninstall:
                               dashboard.db, packages/compliance/compliance.db, ~/.luqen.
   --keep-data                 With --uninstall: preserve data files (default).
 EOF
-  exit 0
+  exit "${1:-0}"
 }
 
 uninstall_luqen() {
@@ -409,7 +409,10 @@ while [[ $# -gt 0 ]]; do
       fi
       MONITOR_PORT="$2"; shift 2 ;;
     --help|-h) show_help ;;
-    *) error "Unknown option: $1"; show_help ;;
+    # An unknown option installs nothing, so it does not exit 0: a caller (CI,
+    # or install.command, which registers launchd agents after an exit 0)
+    # would read that as a finished install.
+    *) error "Unknown option: $1"; show_help 2 ;;
   esac
 done
 

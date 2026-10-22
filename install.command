@@ -144,9 +144,14 @@ fi
 # install.sh, since install.sh handles systemd but not launchd.
 # ──────────────────────────────────────────────
 WANT_UNINSTALL=0
+# Modes in which install.sh installs nothing and exits 0: the trusted-proxy
+# check and the help. After them this wrapper must stop as well, because the
+# launchd block below rewrites every plist and reloads every agent.
+WANT_NO_INSTALL=0
 for arg in "$@"; do
     case "$arg" in
         --uninstall) WANT_UNINSTALL=1 ;;
+        --check-trusted-proxies|--help|-h) WANT_NO_INSTALL=1 ;;
     esac
 done
 
@@ -176,6 +181,12 @@ fi
 
 # Uninstall path exits early — skip the launchd registration block below.
 if [ "${WANT_UNINSTALL}" = "1" ]; then
+    exit 0
+fi
+
+# A mode that installed nothing (--check-trusted-proxies, --help) has nothing
+# to register: stop before the launchd block, which would restart every agent.
+if [ "${WANT_NO_INSTALL}" = "1" ]; then
     exit 0
 fi
 
