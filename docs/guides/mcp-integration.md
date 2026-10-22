@@ -287,6 +287,23 @@ Revoking a client at `/admin/clients` triggers an immediate
 `error="invalid_token", error_description="client_revoked"` on the next
 MCP call (no waiting for the token TTL).
 
+### Permissions that change tool output
+
+Some tools answer every caller who may invoke them, and shape the answer by
+a second permission. The shaping is the same as on the report page. The
+in-dashboard assistant calls these same tools with the signed-in user's
+permissions, so it follows the same rules.
+
+| Tool or resource | Needs to invoke | Extra permission | With it | Without it |
+|---|---|---|---|---|
+| `dashboard_generate_fix` | `issues.fix` | `llm.view` | AI draft, answer marked `source: "ai"` | Deterministic pattern hint, answer marked `source: "pattern"`; the LLM service is not called |
+| `dashboard_get_report`, `dashboard_query_issues`, `dashboard_scan_page`, resource `scan://report/{id}` | `reports.view` (`dashboard_scan_page`: `scans.create`) | `reports.view_technical` | Issue entries carry `selector` and `context` | Issue entries have no `selector` and no `context` key, at any depth of the report |
+
+An absent field means "not entitled", not "empty". A caller that needs the
+fields uses a user whose role holds `reports.view_technical`; a caller that
+needs AI drafts uses a user whose role holds `llm.view`. See the permission
+matrix in the [security administration guide](./security-administration.md).
+
 ## Troubleshooting
 
 | Symptom | Cause | Fix |

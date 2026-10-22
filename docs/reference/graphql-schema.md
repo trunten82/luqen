@@ -51,9 +51,9 @@ Resolvers enforce permissions identically to the REST endpoints:
 
 * **Scan** -- accessibility scan record (id, siteUrl, status, standard, issue counts, etc.)
 * **ScanConnection** -- paginated list of scans (`nodes`, `totalCount`, `pageInfo`)
-* **Issue** -- a single accessibility issue from a scan report
+* **Issue** -- a single accessibility issue from a scan report. `Issue.selector` (nullable) and `Issue.context` are `null` unless the caller holds `reports.view_technical`
 * **IssueConnection** -- paginated list of issues
-* **Assignment** -- issue assignment (assignee, status, notes)
+* **Assignment** -- issue assignment (assignee, status, notes). `Assignment.selector` and `Assignment.issueFingerprint` (nullable; the fingerprint embeds the selector) are `null` unless the caller holds `reports.view_technical`. This holds for `assignments`, `assignIssue` and `updateAssignment`
 * **TrendPoint** -- one data point for trend charts (scanId, date, issue counts)
 * **ComplianceEntry** -- latest scan summary per site URL
 * **DashboardUser** -- user account (id, username, role, active)
@@ -62,6 +62,10 @@ Resolvers enforce permissions identically to the REST endpoints:
 * **Role** -- role definition with permission list
 * **AuditEntry** / **AuditConnection** -- audit log entries
 * **HealthStatus** -- system health (status, version)
+
+### Technical details
+
+`selector`, `context` and the assignment fingerprint follow the same rule as the REST data API and the report page: they are returned only to a caller whose role holds `reports.view_technical`, and are `null` for everyone else. A client generated from the schema must accept `null` for `Issue.selector` and `Assignment.issueFingerprint` (both were non-null before this rule). API keys: organization admin and system admin keys hold the permission; read-only and scan-only keys hold no permissions and receive `null`. Input types are unchanged: `AssignIssueInput.issueFingerprint` stays required. See the [REST reference](api-reference.md#technical-details-selector-and-context).
 
 ### Input types
 
@@ -91,6 +95,8 @@ query {
 ```
 
 ### Get a single scan with its issues
+
+`selector` is `null` here unless the caller holds `reports.view_technical`.
 
 ```graphql
 query ($scanId: ID!) {

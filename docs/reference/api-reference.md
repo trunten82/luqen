@@ -399,13 +399,13 @@ Dismissals mark a finding (rule code plus selector) as not applicable on a site.
 
 | Endpoint | Permissions | Notes |
 |----------|-------------|-------|
-| `POST /api/v1/scans/:scanId/dismissals` (mark) | `issues.dismiss` and `reports.view` | Body `{ code, selector, reason }`; `201` with the dismissal |
+| `POST /api/v1/scans/:scanId/dismissals` (mark) | `issues.dismiss` and `reports.view` | Body `{ code, selector, reason }`; `201` with the dismissal, including the `selector` the caller sent |
 | `GET /api/v1/scans/:scanId/dismissals/preview` (preview) | `issues.dismiss` and `reports.view` | Query `code`, `selector`; a selector that cannot be dismissed answers `200` with `refused: true` and `reason` `selector` (whole page or no element) or `selector-too-long` (over 4000 characters, checked before the selector's shape); a selector over 8192 characters answers `400`. The selector travels in the URL: a request whose URL is over the server's 16 KB header limit after URL encoding is refused with `431` before validation, and a reverse proxy in front of the dashboard may set a lower URL limit of its own |
-| `POST /api/v1/dismissals/:id/revoke` (revoke) | `issues.dismiss` and `reports.view` | Body `{ comment? }` |
-| `GET /api/v1/scans/:scanId/dismissals` (list) | `reports.view` | Returns the rows the report's Dismissed section shows, each with its `selector` (the section shows the selector only to viewers holding `reports.view_technical`) and its `events`: the dismissal's history, each event with `action` (`mark` or `revoke`), `actor`, `at` and `text` (the reason or the comment) |
+| `POST /api/v1/dismissals/:id/revoke` (revoke) | `issues.dismiss` and `reports.view` | Body `{ comment? }`; the response carries `selector` only when the caller holds `reports.view_technical` (absent otherwise) |
+| `GET /api/v1/scans/:scanId/dismissals` (list) | `reports.view` | Returns the rows the report's Dismissed section shows, each with its `selector` when the caller holds `reports.view_technical` (the key is absent otherwise) and its `events`: the dismissal's history, each event with `action` (`mark` or `revoke`), `actor`, `at` and `text` (the reason or the comment) |
 
 - Mark, preview and revoke need both permissions; holding only one answers `403`. They act only on scans of the caller's current organization (a global admin on any); any other scan answers `404`.
-- The list follows the report page: a caller who may open the report receives exactly the rows its Dismissed section shows. Each row carries its `selector` for every `reports.view` holder; on the report page the selector is a technical detail shown only with `reports.view_technical`. A caller who may open the report but is not in the scan's organization (an organization user viewing a `system` scan) receives those rows with actor ids set to `null` and API-key actors named `api-key`, as the page shows them; a scan of another organization answers `404`.
+- The list follows the report page: a caller who may open the report receives exactly the rows its Dismissed section shows. Each row carries its `selector` only for a caller who also holds `reports.view_technical`, as on the report page; for any other caller the `selector` key is absent from every row. A caller who may open the report but is not in the scan's organization (an organization user viewing a `system` scan) receives those rows with actor ids set to `null` and API-key actors named `api-key`, as the page shows them; a scan of another organization answers `404`.
 - The name `api-key` is also the actor carried by dismissal rows recorded before per-key actors (`api-key:<key row id>`) were introduced. In both cases it means "an API key" and names no particular key.
 - `issues.dismiss` is held through an organization role, or by the built-in global administrator role, which holds every permission. A custom global role cannot carry it, and a team bound to a global role does not grant it.
 - Mark answers `409` with `existing_id` when the finding is already dismissed for the site; revoke answers `409` when the dismissal is already revoked. Mark and preview answer `422` when the scan has not completed or its stored report cannot be read, and mark also when the scan has no finding with that rule code and selector.
@@ -594,6 +594,12 @@ To obtain an API key:
 export LUQEN_API_KEY="your-api-key-here"
 ```
 
+### Technical details (`selector` and `context`)
+
+The issue fields `selector` (the CSS selector of the element) and `context` (the element's markup) are returned only to a caller whose role holds `reports.view_technical`, the permission that shows them on the report page. For any other caller the field is absent from the response: the key is not present, it is not `null`. "Absent" means "not entitled", not "the scan has no selector". Each endpoint below states which fields it affects. The same rule applies to GraphQL (the fields return `null`), the MCP tools and the Excel export (the columns are dropped); see the [GraphQL reference](graphql-schema.md), the [MCP guide](../guides/mcp-integration.md) and the [permission matrix](../guides/security-administration.md).
+
+API keys: an organization admin key holds the organization Owner permission set and a system admin key holds every permission, so both receive the fields. Read-only and scan-only keys hold no permissions and receive the fields omitted. A caller that needs them uses a credential whose role holds `reports.view_technical`.
+
 ### Rate limiting
 
 All data API endpoints are rate limited to **60 requests per minute** per API key. Exceeding the limit returns `429 Too Many Requests` with a `Retry-After` header.
@@ -603,6 +609,8 @@ All data API endpoints are rate limited to **60 requests per minute** per API ke
 ### `GET /api/v1/scans`
 
 List scans with optional filters. Returns paginated results.
+
+Without `reports.view_technical`, every issue entry inside each row's `jsonReport` has no `selector` and no `context` key, at any depth; a `jsonReport` that cannot be parsed is left out of the row.
 
 **Query parameters:**
 
@@ -653,6 +661,8 @@ curl -H "X-API-Key: $LUQEN_API_KEY" \
 
 Get full detail for a single scan.
 
+Without `reports.view_technical`, every issue entry inside `data.jsonReport` has no `selector` and no `context` key, at any depth; a `jsonReport` that cannot be parsed is left out of the response.
+
 **Example request:**
 
 ```bash
@@ -690,6 +700,8 @@ curl -H "X-API-Key: $LUQEN_API_KEY" \
 ### `GET /api/v1/scans/:id/issues`
 
 Get issues for a specific scan with optional severity and criterion filters.
+
+Without `reports.view_technical`, each issue has no `selector` and no `context` key.
 
 **Query parameters:**
 
@@ -737,6 +749,8 @@ curl -H "X-API-Key: $LUQEN_API_KEY" \
 ### `GET /api/v1/scans/:id/fixes`
 
 Get AI-generated fix proposals for a scan. Requires connected repos to be configured.
+
+Without `reports.view_technical`, each fix row has no `selector` key.
 
 **Query parameters:**
 
@@ -916,6 +930,8 @@ curl -H "X-API-Key: $LUQEN_API_KEY" \
 ### `GET /api/v1/export/scans/:id/issues.xlsx`
 
 Download an Excel (XLSX) workbook of all issues for a specific scan (`Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`). No query parameters. The legacy `.csv` URL is removed.
+
+Without `reports.view_technical`, the `Selector` and `Context` columns are not in the workbook, and the Dismissed sheet has no `Selector` column.
 
 ```bash
 curl -H "Authorization: Bearer $LUQEN_API_KEY" \
