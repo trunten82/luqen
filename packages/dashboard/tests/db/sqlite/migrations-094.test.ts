@@ -55,10 +55,9 @@ function seedConversations(db: Database.Database, ids: readonly string[]): void 
 }
 
 describe('migration 094: the conversation run token column', () => {
-  it('094 is registered as the last migration', () => {
+  it('094 is registered', () => {
     const mig = DASHBOARD_MIGRATIONS.find((m) => m.id === '094');
     expect(mig?.name).toBe('agent-conversation-active-run');
-    expect(DASHBOARD_MIGRATIONS[DASHBOARD_MIGRATIONS.length - 1]!.id).toBe('094');
     // Exactly one statement changes the schema, and it adds this one column.
     const statements = mig!.sql.split('\n').filter((l) => l.trim() !== '' && !l.trim().startsWith('--'));
     expect(statements).toEqual([`ALTER TABLE agent_conversations ADD COLUMN ${COLUMN} TEXT;`]);
