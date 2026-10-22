@@ -36,6 +36,7 @@ import type { LLMClient } from '../llm-client.js';
 import { resolveOrgLLMClient } from '../llm-client.js';
 import { t, type Locale } from '../i18n/index.js';
 import { filterDrilldownIssues, isValidDimension, withoutTechnicalDetails } from '../services/brand-drilldown.js';
+import { requestMayViewTechnicalDetails } from '../services/technical-details.js';
 import {
   loadVpatForScan,
   renderScanAcrHtml,
@@ -642,7 +643,7 @@ export async function reportRoutes(
       // reports.view_technical, the permission that shows selectors anywhere on this page.
       const dismissalControls =
         hasPermission(request, 'issues.dismiss') &&
-        hasPermission(request, 'reports.view_technical') &&
+        requestMayViewTechnicalDetails(request) &&
         mayTouchDismissalOrg(request.user, scan.orgId)
           ? { reasonMax: DISMISSAL_REASON_MAX_LENGTH, commentMax: DISMISSAL_COMMENT_MAX_LENGTH }
           : undefined;
@@ -1545,7 +1546,7 @@ export async function reportRoutes(
       // HARD-02: the element's raw selector and markup reach only a viewer holding
       // reports.view_technical, the permission that shows selectors on the report page this modal
       // opens from. Others get the rows without them, stripped here so the response never carries them.
-      const showElement = hasPermission(request, 'reports.view_technical');
+      const showElement = requestMayViewTechnicalDetails(request);
       const issues = showElement ? matched : withoutTechnicalDetails(matched);
 
       // Resolve dimension label via i18n
