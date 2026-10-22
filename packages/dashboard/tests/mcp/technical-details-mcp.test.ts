@@ -249,7 +249,32 @@ describe('dashboard_query_issues', () => {
     const owner = await callTool(OWNER_TOKEN, 'dashboard_query_issues', { scanId: flatScanId });
     const ownerRows = (JSON.parse(owner) as { data: Array<Record<string, unknown>> }).data;
     expect(ownerRows.length).toBeGreaterThan(0);
-    for (const row of ownerRows) expect(row['selector']).toBe(SELECTOR);
+    for (const row of ownerRows) {
+      expect(row['selector']).toBe(SELECTOR);
+      // The positive control for the Analyst's context assertions above: the tool serves the
+      // fixture's context canary to an entitled caller, so its absence for the Analyst is a redaction.
+      expect(String(row['context'])).toContain(CONTEXT_ID);
+    }
+  }, 60_000);
+
+  it('IN-09 on the pages shape every real scan writes, an Analyst gets no canary and the same rows as an Owner', async () => {
+    // The stored report carries the canaries in pages[].issues, templateIssues and compliance.
+    const stored = JSON.stringify(await storage.scans.getReport(pagesScanId));
+    expect(stored).toContain(SELECTOR_ID);
+    expect(stored).toContain(CONTEXT_ID);
+
+    const analyst = await callTool(ANALYST_TOKEN, 'dashboard_query_issues', { scanId: pagesScanId });
+    const owner = await callTool(OWNER_TOKEN, 'dashboard_query_issues', { scanId: pagesScanId });
+    const analystRows = (JSON.parse(analyst) as { data: unknown[] }).data;
+    const ownerRows = (JSON.parse(owner) as { data: unknown[] }).data;
+    expect(analyst).not.toContain(SELECTOR_ID);
+    expect(analyst).not.toContain(CONTEXT_ID);
+    expect(analystRows.length).toBe(ownerRows.length);
+    // Pre-existing reader finding (pinned by the golden 'mcp-query-issues-pages'): the tool reads
+    // only the flat and `results` shapes, so it returns no rows for this shape, for any caller. The
+    // redaction assertions above therefore cannot fail today. When the reader learns pages[].issues
+    // this line goes red: replace it with "the Owner's rows carry SELECTOR and CONTEXT_ID".
+    expect(ownerRows).toEqual([]);
   }, 60_000);
 
   it('IN-03 an Analyst gets no selector or context from a copy nested inside a row, and an Owner gets them', async () => {

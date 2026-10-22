@@ -137,6 +137,11 @@ function rowsOf(body: string): Array<Record<string, unknown>> {
   return (JSON.parse(body) as { data: Array<Record<string, unknown>> }).data;
 }
 
+/**
+ * The context canary check here is a redaction check only on a route that serves `context` to an
+ * entitled caller. /issues and /fixes project explicit fields and never serve it to anyone; the
+ * test 'IN-09 /issues and /fixes never serve context' pins that, so the check is not read as one.
+ */
 function expectNoTechnical(res: { status: number; body: string }): void {
   expect(res.status).toBe(200);
   const rows = rowsOf(res.body);
@@ -237,6 +242,29 @@ describe('GET /api/v1/scans/:id/issues for sessions', () => {
 
   it('API-01 an Owner session gets issue rows whose selector is the canary', async () => {
     expectSelector(await asSession('fabrikam-owner', `/api/v1/scans/${scanId}/issues`));
+  }, 60_000);
+});
+
+describe('IN-09 the context canary', () => {
+  it('IN-09 the stored fixture carries the context canary and an entitled caller is served it', async () => {
+    expect(storedBlob).toContain(CONTEXT_ID);
+    const res = await asSession('fabrikam-owner', `/api/v1/scans/${scanId}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toContain(CONTEXT_ID);
+  }, 60_000);
+
+  it('IN-09 /issues and /fixes never serve context, for an entitled caller either (their contract has no context field)', async () => {
+    for (const url of [`/api/v1/scans/${scanId}/issues`, `/api/v1/scans/${fixScanId}/fixes`]) {
+      const res = await asSession('fabrikam-owner', url);
+      expect(res.status).toBe(200);
+      const rows = rowsOf(res.body);
+      expect(rows.length).toBeGreaterThan(0);
+      for (const row of rows) {
+        expect(row['selector']).toBe(SELECTOR);
+        expect('context' in row, `context key present in ${url}`).toBe(false);
+      }
+      expect(res.body).not.toContain(CONTEXT_ID);
+    }
   }, 60_000);
 });
 
