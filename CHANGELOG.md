@@ -296,6 +296,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   in use instead of All actions; the Resource Type filter lists the dismissal
   resource and shows its filter too. Opening the page without permission shows
   the dashboard error page in a browser instead of raw JSON.
+- A user with View audit log who is in no organization reads no audit entries,
+  on the Audit Log page and through the GraphQL `auditLog` query, and the menu
+  does not show them the Audit Log.
 - Load More on the Audit Log, Regulations and Jurisdictions pages and the
   reports list pager keep the page size (the link carried no usable `limit`).
 - A greyed Dismiss button shows its reason as text under the button, on a phone

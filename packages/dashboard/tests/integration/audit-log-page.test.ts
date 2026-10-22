@@ -6,8 +6,10 @@
  * page stays scoped to the Owner's organization), AUD-02 (the Action filter), AUD-03 (the HTML error
  * page for a browser without permission, JSON for the others) and TEAM-02 (Load More carries the
  * page limit).
+ * A caller in no organization reads no audit rows, on the page or through GraphQL, and is not offered
+ * the menu entry.
  *
- * Public repo: Fabrikam and Northwind placeholders only. Logins per file: 3 (the login route is
+ * Public repo: Fabrikam and Northwind placeholders only. Logins per file: 4 (the login route is
  * rate limited).
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -23,6 +25,7 @@ let northwindOrgId: string;
 let owner: HarnessSession;
 let member: HarnessSession;
 let globalAdmin: HarnessSession;
+let noOrgAuditor: HarnessSession;
 
 interface PageResult {
   readonly status: number;
@@ -67,9 +70,15 @@ beforeAll(async () => {
   await h.seed.users.createUser('fabrikam-audit-admin', PASSWORD, 'admin');
   await h.seed.audit.log({ actor: 'fabrikam-owner', action: 'scan.create', resourceType: 'scan', resourceId: 'fabrikam-scan', orgId: fabrikamOrgId });
   await h.seed.audit.log({ actor: 'northwind-owner', action: 'scan.create', resourceType: 'scan', resourceId: 'northwind-scan', orgId: northwindOrgId });
+  // A row written without an organization (stored as 'system').
+  await h.seed.audit.log({ actor: 'fabrikam-audit-admin', action: 'scan.create', resourceType: 'scan', resourceId: 'system-scan' });
+  // A global custom role that holds View audit log, for a user in no organization.
+  await h.seed.roles.createRole({ name: 'fabrikam-auditor', description: '', permissions: ['audit.view', 'reports.view'], orgId: 'system' });
+  await h.seed.users.createUser('fabrikam-no-org-auditor', PASSWORD, 'fabrikam-auditor');
   owner = await signIn('fabrikam-audit-owner', fabrikamOrgId);
   member = await signIn('fabrikam-audit-member', fabrikamOrgId);
   globalAdmin = await signIn('fabrikam-audit-admin', null);
+  noOrgAuditor = await signIn('fabrikam-no-org-auditor', null);
 }, 120_000);
 
 afterAll(async () => {
@@ -100,6 +109,40 @@ describe('AUD-01 the Audit Log menu entry follows the audit view permission', ()
     expect(res.status).toBe(200);
     expect(res.body).toContain('fabrikam-scan');
     expect(res.body).not.toContain('northwind-scan');
+  });
+
+  it('AUD-01 a caller in no organization sees no Audit Log menu entry', async () => {
+    const res = await page(noOrgAuditor, '/home');
+    expect(res.status).toBe(200);
+    expect(menuHasAuditLog(res.body)).toBe(false);
+  });
+
+  it('AUD-01 a caller in no organization reads no rows on the Audit Log page', async () => {
+    const res = await page(noOrgAuditor, '/admin/audit-log');
+    expect(res.status).toBe(200);
+    for (const row of ['fabrikam-scan', 'northwind-scan', 'system-scan']) expect(res.body, row).not.toContain(row);
+    // Positive control: a global administrator's page lists all three rows.
+    const admin = await page(globalAdmin, '/admin/audit-log');
+    for (const row of ['fabrikam-scan', 'northwind-scan', 'system-scan']) expect(admin.body, row).toContain(row);
+  });
+
+  it('AUD-01 a caller in no organization reads no rows through GraphQL auditLog', async () => {
+    const query = async (session: HarnessSession) => {
+      const res = await h.app.inject({
+        method: 'POST', url: '/graphql', cookies: { session: session.cookie },
+        headers: { 'content-type': 'application/json' },
+        payload: { query: '{ auditLog(limit: 200) { totalCount nodes { resourceId } } }' },
+      });
+      expect(res.statusCode, res.body).toBe(200);
+      const data = (res.json() as { data?: { auditLog?: { totalCount: number; nodes: { resourceId: string | null }[] } } }).data;
+      return data?.auditLog;
+    };
+    const none = await query(noOrgAuditor);
+    expect(none).toEqual({ totalCount: 0, nodes: [] });
+    // Positive control: the Owner reads the Owner organization's row through the same query.
+    const ownerRows = (await query(owner))?.nodes.map((n) => n.resourceId) ?? [];
+    expect(ownerRows).toContain('fabrikam-scan');
+    expect(ownerRows).not.toContain('northwind-scan');
   });
 });
 

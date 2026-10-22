@@ -79,6 +79,7 @@ import { VERSION } from './version.js';
 import { buildFixSuggestionHint } from './fix-suggestions.js';
 import { dismissalRefusalReason, type DismissalRefusalReason } from './services/issue-dismissals/validate-input.js';
 import { ALL_PERMISSION_IDS, resolveEffectivePermissions } from './permissions.js';
+import { auditLogScope } from './services/audit-log-scope.js';
 import { roleRoutes } from './routes/admin/roles.js';
 import { teamRoutes } from './routes/admin/teams.js';
 import { emailReportRoutes } from './routes/admin/email-reports.js';
@@ -1136,6 +1137,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
           llmManage: perms.has('llm.manage') || perms.has('admin.system'),
           reposCredentials: perms.has('repos.credentials'),
           auditView: perms.has('audit.view'),
+          // The Audit Log menu entry: audit view, and an organization to read (services/audit-log-scope.ts).
+          auditLogView: perms.has('audit.view') && auditLogScope(request.user).kind !== 'none',
         },
         isExecutiveView: !perms.has('scans.create') && perms.has('trends.view'),
         pluginAdminPages: pluginManager.getActiveAdminPages().filter((p) => perms.has(p.permission)),

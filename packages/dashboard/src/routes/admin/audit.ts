@@ -1,4 +1,3 @@
-import { bypassesOrgScope } from '../../permissions.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { requirePermission } from '../../auth/middleware.js';
@@ -18,6 +17,7 @@ import {
 } from '../../services/issue-dismissals/actor-label.js';
 import { mayTouchDismissalOrg } from '../../services/issue-dismissals/scan-access.js';
 import { actionOptions, resourceTypeOptions } from './audit-filter-options.js';
+import { auditLogScope } from '../../services/audit-log-scope.js';
 
 // Phase 41.1-03 — TypeBox query shape for OpenAPI fidelity. Single HTML route
 // returns the audit-log page; only schema/querystring required.
@@ -133,19 +133,21 @@ export async function auditRoutes(
       const limit = Math.min(Math.max(parseInt(q.limit ?? '50', 10) || 50, 1), 200);
       const offset = Math.max(parseInt(q.offset ?? '0', 10) || 0, 0);
 
-      const isGlobalAdmin = bypassesOrgScope(request.user);
-      const orgId = isGlobalAdmin ? undefined : request.user?.currentOrgId;
-
-      const result = await storage.audit.query({
-        actor: q.actor || undefined,
-        action: q.action || undefined,
-        resourceType: q.resourceType || undefined,
-        from: q.from || undefined,
-        to: q.to || undefined,
-        orgId,
-        limit,
-        offset,
-      });
+      // A caller in no organization reads no rows; everyone else reads their organization's rows, and a
+      // global administrator reads them all (services/audit-log-scope.ts).
+      const scope = auditLogScope(request.user);
+      const result = scope.kind === 'none'
+        ? { entries: [] as AuditEntry[], total: 0 }
+        : await storage.audit.query({
+          actor: q.actor || undefined,
+          action: q.action || undefined,
+          resourceType: q.resourceType || undefined,
+          from: q.from || undefined,
+          to: q.to || undefined,
+          orgId: scope.kind === 'org' ? scope.orgId : undefined,
+          limit,
+          offset,
+        });
 
       const hasMore = offset + limit < result.total;
       const entries = await withActorLabels(storage, request.user, result.entries, sessionLocale(request), request.log);

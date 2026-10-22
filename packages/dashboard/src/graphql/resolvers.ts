@@ -21,6 +21,7 @@ import {
   getGuidelineInOrg, requireGuidelineInOrg, requireBrandChildInOrg, requireCanManageUser, listOrgsInScope,
 } from './org-scope.js';
 import { isLastActiveAdmin } from '../services/user-scope.js';
+import { auditLogScope } from '../services/audit-log-scope.js';
 import { deleteScanAndFiles, scanDeleteRefusal, SCAN_DELETE_PERMISSION } from '../services/scan-delete-access.js';
 
 // ---------------------------------------------------------------------------
@@ -368,6 +369,11 @@ export const resolvers = {
 
       const limit = clamp(args.limit, 1, 200, 50);
       const offset = clamp(args.offset, 0, Number.MAX_SAFE_INTEGER, 0);
+
+      // A caller in no organization reads no rows (services/audit-log-scope.ts, as the Audit Log page).
+      if (auditLogScope({ ...ctx.user, currentOrgId: ctx.orgId }).kind === 'none') {
+        return { nodes: [], totalCount: 0, pageInfo: buildPageInfo(0, limit, offset) };
+      }
 
       const result = await ctx.storage.audit.query({
         actor: args.actor,

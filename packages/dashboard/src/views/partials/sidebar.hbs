@@ -170,7 +170,7 @@
 
     {{!-- ════ MORE ════ Admin chrome — identity, repos, integrations, system.
          Collapsed by default; honour browser-persisted state if user opens. --}}
-    {{#if (or perm.usersManageAny perm.adminTeams perm.adminRoles perm.adminOrg perm.adminPlugins perm.reposManage perm.adminSystem perm.llmView perm.auditView)}}
+    {{#if (or perm.usersManageAny perm.adminTeams perm.adminRoles perm.adminOrg perm.adminPlugins perm.reposManage perm.adminSystem perm.llmView perm.auditLogView)}}
     <details class="sidebar__more" {{#if isAdminPath}}open{{/if}}>
       <summary class="sidebar__section-label sidebar__section-label--summary">
         {{t "common.more"}}
@@ -432,8 +432,9 @@
       {{/if}}
 
       {{!-- Audit Log — shown to every holder of the View audit log permission (the flag, never a role name
-           or the system-settings flag): an org Owner holds it, and the page stays scoped to their org. --}}
-      {{#if perm.auditView}}
+           or the system-settings flag): an org Owner holds it, and the page stays scoped to their org. A
+           caller in no organization has no rows to read, so the entry is not shown (perm.auditLogView). --}}
+      {{#if perm.auditLogView}}
       <a class="sidebar__item {{#if (startsWith currentPath '/admin/audit-log')}}is-active{{/if}}"
          href="/admin/audit-log"
          aria-current="{{#if (startsWith currentPath '/admin/audit-log')}}page{{/if}}">
