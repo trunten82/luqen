@@ -501,6 +501,16 @@ effective: $(dist_default_list)"
 
 # ── Task 3: wizard prompt, Docker, macOS, closing summary ────────────────────
 
+# feed_tty <answer> <done-file>: write the answer, then keep stdin open until the
+# driver writes <done-file> (bounded at 25 s). Some script(1) versions end the
+# session as soon as their stdin reaches EOF, before the child has read the
+# answer from the pty; holding stdin open makes the result independent of that.
+feed_tty() {
+  printf '%s\n' "$1"
+  local i=0
+  while [ ! -e "$2" ] && [ "$i" -lt 250 ]; do sleep 0.1; i=$((i + 1)); done
+}
+
 # Drive a function that reads from /dev/tty. script(1) gives the child a pty,
 # the answer is fed on stdin. A missing script(1) FAILs under
 # LUQEN_REQUIRE_SCRIPT=1 and otherwise SKIPs.
@@ -529,8 +539,10 @@ prompt_answer() {
     fi
     printf 'ask_trusted_proxies %s\n' "${timing}"
     printf 'printf %%s "${DASHBOARD_TRUSTED_PROXIES}" > %q\n' "${result}"
+    printf ': > %q\n' "${TD}/driver.done"
   } > "${driver}"
-  printf '%s\n' "${answer}" | timeout 30 script -qec "bash ${driver}" /dev/null >"${TD}/script.out" 2>&1 || true
+  rm -f "${TD}/driver.done"
+  feed_tty "${answer}" "${TD}/driver.done" | timeout 30 script -qec "bash ${driver}" /dev/null >"${TD}/script.out" 2>&1 || true
   cat "${result}"
 }
 
@@ -567,8 +579,10 @@ drive_prompt() {
     printf '%s\n' 'ANSWER=""'
     printf '%s\n' "${call}"
     printf 'if [ "${ANSWER}" = "$(cat %q)" ]; then printf same > %q; else printf differ > %q; fi\n' "${TD}/pexpected" "${result}" "${result}"
+    printf ': > %q\n' "${TD}/pdriver.done"
   } > "${driver}"
-  printf '%s\n' "${answer}" | timeout 30 script -qec "bash ${driver}" /dev/null >/dev/null 2>&1 || true
+  rm -f "${TD}/pdriver.done"
+  feed_tty "${answer}" "${TD}/pdriver.done" | timeout 30 script -qec "bash ${driver}" /dev/null >/dev/null 2>&1 || true
   cat "${result}"
 }
 
