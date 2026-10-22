@@ -423,7 +423,7 @@
         "tags": [
           "mcp-tool"
         ],
-        "description": "Generate an AI-powered remediation draft for a WCAG accessibility issue. Returns the fixed HTML snippet, a unified diff, WCAG criterion, effort estimate, legal context (EU/US by default), and a conservative draft disclaimer. Output is a DRAFT for human review — never auto-applied. Non-destructive: no file writes, no code commits. The caller must review, test, and merge manually.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "description": "Generate an AI-powered remediation draft for a WCAG accessibility issue. Returns the fixed HTML snippet, a unified diff, WCAG criterion, effort estimate, legal context (EU/US by default), and a conservative draft disclaimer. Output is a DRAFT for human review — never auto-applied. Non-destructive: no file writes, no code commits. The caller must review, test, and merge manually. AI output requires the llm.view permission and is marked source \"ai\". A caller with issues.fix but without llm.view receives the deterministic pattern-based hint the report page shows, marked source \"pattern\", and the LLM service is not called.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
         "requestBody": {
           "required": true,
           "content": {
@@ -1816,7 +1816,7 @@
         "tags": [
           "mcp-tool"
         ],
-        "description": "Analyse a URL or raw HTML snippet for WCAG accessibility issues. Accepts either `url` (fetches and scans the live page) or `html` (scans the raw markup without a network request). Returns a `findings` array with the same shape as the dashboard scan report: code, type, message, selector, context, runner. Non-destructive — does NOT create a scan record or trigger any background scan job. SSRF protection: private/internal/loopback URLs (127.x, 10.x, 192.168.x, localhost, .local) are rejected.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "description": "Analyse a URL or raw HTML snippet for WCAG accessibility issues. Accepts either `url` (fetches and scans the live page) or `html` (scans the raw markup without a network request). Returns a `findings` array with the same shape as the dashboard scan report: code, type, message, selector, context, runner. selector and context are included only for callers holding the reports.view_technical permission; other callers get the findings without them. Non-destructive — does NOT create a scan record or trigger any background scan job. SSRF protection: private/internal/loopback URLs (127.x, 10.x, 192.168.x, localhost, .local) are rejected.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
         "requestBody": {
           "required": true,
           "content": {

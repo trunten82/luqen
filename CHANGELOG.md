@@ -215,6 +215,48 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `LUQEN_UAT_EXPECT_SITE_HOST`; `--check-target-only` checks that rule without
   writing anything.
 - Tests: each dark-permission filter is covered by its own test.
+- AI-generated fix drafts need `llm.view` on every path. The report page's
+  "How to fix" already did; the MCP tool `dashboard_generate_fix` and the
+  in-dashboard assistant's fix tool now follow the same rule. A caller who
+  holds `issues.fix` but not `llm.view` still gets an answer: the
+  deterministic pattern hint, marked `source: "pattern"`, and the LLM service
+  is not called. An AI answer is marked `source: "ai"`.
+- API contract change: `selector` and `context` follow `reports.view_technical`
+  on every API surface, as they already did on the report page. A caller whose
+  role does not hold `reports.view_technical` receives issue-like objects
+  without those two fields:
+  - REST: the keys are absent (not null) in `GET /api/v1/scans/:id/issues`,
+    `GET /api/v1/scans/:id/fixes` (`selector`) and
+    `GET /api/v1/scans/:scanId/dismissals` (`selector`), and inside every
+    issue entry of `jsonReport` in `GET /api/v1/scans/:id` and
+    `GET /api/v1/scans`. For such a caller a `jsonReport` that cannot be parsed is
+    left out of the row (the `jsonReport` key is absent). The response of `POST /api/v1/dismissals/:id/revoke` has
+    its own schema in which `selector` is optional; the response of marking a
+    dismissal is unchanged, because it returns the selector the caller sent.
+  - Excel: `GET /api/v1/export/scans/:id/issues.xlsx` has no Selector and
+    Context columns, and its Dismissed sheet has no Selector column.
+  - GraphQL: `scanIssues` returns `null` for `Issue.selector` and
+    `Issue.context`; `assignments`, `assignIssue` and `updateAssignment`
+    return `null` for `Assignment.selector` and `Assignment.issueFingerprint`
+    (the fingerprint embeds the selector). `Issue.selector` and
+    `Assignment.issueFingerprint` are now nullable in the schema; clients that
+    generate code from the schema must accept `null`. The
+    `assignIssue` input is unchanged.
+  - MCP: `dashboard_get_report`, `dashboard_query_issues`,
+    `dashboard_scan_page` and the resource `scan://report/{id}`. The
+    in-dashboard assistant calls these tools with the signed-in user's
+    permissions and follows the same rule.
+  - API keys: an organization admin key holds the organization Owner
+    permission set and a system admin key holds every permission, so both
+    keep the fields. Read-only and scan-only keys hold no permissions, so
+    they no longer receive selectors or context. This applies to every
+    integration that reads these fields with such a key, the WordPress
+    plugin's selector matching included. The treatment of read-only and
+    scan-only keys is open for a later decision and this entry will be
+    amended if it changes. A caller that needs the fields uses a credential
+    whose role holds `reports.view_technical`.
+  - The OpenAPI snapshot lists `selector` as optional on these responses, with
+    a description naming the permission.
 
 ### Added
 
