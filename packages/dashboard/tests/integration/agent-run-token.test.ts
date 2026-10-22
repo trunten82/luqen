@@ -12,14 +12,14 @@
  * is the reason the run is recorded in the store and not in a map in memory.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { AgentService, type AgentStreamTurn } from '../../src/agent/agent-service.js';
+import { AgentService, type AgentStreamOptions, type AgentStreamTurn } from '../../src/agent/agent-service.js';
 import { ActiveTurnRegistry } from '../../src/agent/active-turn-registry.js';
 import { storedPermissionsOrNone } from '../../src/auth/stored-caller.js';
 import { DASHBOARD_TOOL_METADATA } from '../../src/mcp/metadata.js';
 import type { SseFrame } from '../../src/agent/sse-frames.js';
-import type { ScriptStep, TurnResult } from '../helpers/agent-chain.js';
+import type { ScriptEntry, ScriptStep, TurnResult } from '../helpers/agent-chain.js';
 import { buildRouteHarness, ROUTE_SITE, type RouteHarness } from '../helpers/agent-route-chain.js';
-import { heldStep, streamingStep, holdDispatchOnce, waitUntil } from '../helpers/agent-turn-holds.js';
+import { gate, heldStep, streamingStep, holdDispatchOnce, waitUntil } from '../helpers/agent-turn-holds.js';
 
 const SAME_QUESTION = 'SAME-QUESTION';
 
@@ -202,6 +202,115 @@ describe('SESS-02 an answer stream that a newer stream replaced writes nothing f
     expect(contentRows(conversationId).filter((r) => r.status === 'pending_confirmation')).toEqual([]);
     expect(turn.frames.filter((f) => f.type === 'pending_confirmation')).toEqual([]);
     expect(h.chain.scanStart).not.toHaveBeenCalled();
+    endsAborted(turn);
+  });
+
+  /** A service of this process with its own registry, a scripted model and `config` over the defaults. */
+  function serviceWith(entries: readonly ScriptEntry[], config: Record<string, unknown>): AgentService {
+    const queue = [...entries];
+    const llm = {
+      streamAgentConversation: async (_input: unknown, options: AgentStreamOptions): Promise<AgentStreamTurn> => {
+        const entry = queue.shift();
+        const next = entry === undefined
+          ? { text: 'done', toolCalls: [] }
+          : typeof entry === 'function' ? await entry([], options) : entry;
+        return { text: next.text, toolCalls: [...next.toolCalls] } as AgentStreamTurn;
+      },
+    };
+    return new AgentService({
+      storage: h.chain.storage,
+      llm: llm as never,
+      allTools: DASHBOARD_TOOL_METADATA,
+      dispatcher: h.chain.dispatcher,
+      resolvePermissions: (userId, orgId) => storedPermissionsOrNone(h.chain.storage, userId, orgId),
+      config: { agentDisplayNameDefault: 'Assistant', ...config },
+      titleGenerator: async () => {
+        throw new Error('no title in the run token tests');
+      },
+      turnRegistry: new ActiveTurnRegistry(),
+    });
+  }
+
+  it('SESS-02 a run replaced by another process writes no error row when its model call then fails', async () => {
+    const { ownerId, conversationId } = await start();
+    const failing = gate();
+    let reached = false;
+    h.chain.script([async () => {
+      reached = true;
+      await failing.promise;
+      throw new Error('FABRIKAM-PROVIDER-DOWN');
+    }]);
+    const first = h.chain.runTurn(ownerId, h.orgId, SAME_QUESTION, conversationId);
+    let turn: TurnResult | undefined;
+    try {
+      await waitUntil(() => reached, 'the held failing model step');
+      await runOther(otherProcess({ text: 'T2-OTHER-PROCESS', toolCalls: [] }), ownerId, conversationId);
+    } finally {
+      failing.open();
+      turn = await first;
+    }
+
+    expect(shapeWithText(conversationId)).toEqual([`user:sent:${SAME_QUESTION}`, 'assistant:sent:T2-OTHER-PROCESS']);
+    expect(contentRows(conversationId).filter((r) => r.status === 'failed')).toEqual([]);
+    // The replaced run may still send its error frame (the frame is sent before the refused row).
+    expect(turn.frames.filter((f) => f.type === 'error')).toHaveLength(1);
+  });
+
+  it('SESS-02 a run replaced by another process writes no compaction summary and moves no row out of the window', async () => {
+    const { ownerId, conversationId } = await start();
+    const conversations = h.chain.storage.conversations;
+    // Seven earlier turns, one more than compaction keeps, then the question of this turn.
+    for (let i = 1; i <= 7; i++) {
+      await conversations.appendMessage({ conversationId, role: 'user', content: `EARLIER-QUESTION-${i} ${'x'.repeat(200)}`, status: 'sent' });
+      await conversations.appendMessage({ conversationId, role: 'assistant', content: `EARLIER-ANSWER-${i} ${'y'.repeat(200)}`, status: 'sent' });
+    }
+    await conversations.appendMessage({ conversationId, role: 'user', content: SAME_QUESTION, status: 'sent' });
+    const outOfWindow = (): number => (h.chain.storage.getRawDatabase()
+      .prepare('SELECT COUNT(*) AS n FROM agent_messages WHERE conversation_id = ? AND in_window = 0')
+      .get(conversationId) as { n: number }).n;
+    expect(outOfWindow()).toBe(0);
+
+    const summarise = heldStep({ text: '[summary] T1-SUMMARY', toolCalls: [] });
+    const local = serviceWith([summarise.entry, { text: 'T1-ANSWER', toolCalls: [] }], { modelMaxTokens: 200 });
+    const first = runOther(local, ownerId, conversationId);
+    let frames: SseFrame[] = [];
+    try {
+      await waitUntil(() => summarise.options() !== undefined, 'the held summarisation step');
+      await runOther(otherProcess({ text: 'T2-OTHER-PROCESS', toolCalls: [] }), ownerId, conversationId);
+      expect(summarise.options()!.signal.aborted).toBe(false);
+    } finally {
+      summarise.release();
+      frames = await first;
+    }
+
+    expect(contentRows(conversationId).filter((r) => r.content.startsWith('[summary]'))).toEqual([]);
+    expect(outOfWindow()).toBe(0);
+    expect(h.chain.auditRows(conversationId).filter((r) => r.toolName === '__compaction__')).toEqual([]);
+    expect(contentRows(conversationId).filter((r) => r.content === 'T1-ANSWER')).toEqual([]);
+    expect(contentRows(conversationId).at(-1)?.content).toBe('T2-OTHER-PROCESS');
+    expect(frames[frames.length - 1]).toEqual({ type: 'done', aborted: true });
+  });
+
+  it('SESS-02 a run replaced by another process writes no forced final answer at the step limit', async () => {
+    const { ownerId, conversationId } = await start();
+    const forced = heldStep({ text: 'T1-FORCED-ANSWER', toolCalls: [] });
+    h.chain.script([listReports('c1'), listReports('c2'), listReports('c3'), listReports('c4'), listReports('c5'), forced.entry]);
+    const first = h.chain.runTurn(ownerId, h.orgId, SAME_QUESTION, conversationId);
+    let turn: TurnResult | undefined;
+    try {
+      await waitUntil(() => forced.options() !== undefined, 'the held forced final answer');
+      await runOther(otherProcess({ text: 'T2-OTHER-PROCESS', toolCalls: [] }), ownerId, conversationId);
+      expect(forced.options()!.signal.aborted).toBe(false);
+    } finally {
+      forced.release();
+      turn = await first;
+    }
+
+    // Premise: the turn reached the step limit (the five tool runs before the takeover are kept).
+    expect(turn.frames.some((f) => f.type === 'tool_completed' && (f as { toolCallId?: string }).toolCallId === '__loop__')).toBe(true);
+    expect(contentRows(conversationId).filter((r) => r.content === 'T1-FORCED-ANSWER')).toEqual([]);
+    expect(contentRows(conversationId).at(-1)?.content).toBe('T2-OTHER-PROCESS');
+    expect(h.chain.auditRows(conversationId).filter((r) => r.toolName === '__loop__')).toEqual([]);
     endsAborted(turn);
   });
 
