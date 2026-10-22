@@ -38036,7 +38036,7 @@
                           "notices": {},
                           "confirmedViolations": {},
                           "jsonReport": {
-                            "description": "Raw report JSON (a string). Its issue entries omit selector and context unless the caller holds reports.view_technical.",
+                            "description": "Raw report JSON (a string). Present only when the caller holds reports.view_technical; otherwise the key is absent from every list row. Use GET /api/v1/scans/{id} for the report without selector and context.",
                             "type": "string"
                           }
                         }
