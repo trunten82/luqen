@@ -55,7 +55,9 @@ export const schema = `
     type: String!
     code: String!
     message: String!
-    selector: String!
+    """CSS selector of the element. Null unless the caller holds reports.view_technical."""
+    selector: String
+    """HTML of the element. Null unless the caller holds reports.view_technical."""
     context: String
     wcagCriterion: String
     wcagTitle: String
@@ -73,11 +75,13 @@ export const schema = `
   type Assignment {
     id: ID!
     scanId: String!
-    issueFingerprint: String!
+    """Identifies the issue; a per-issue value embeds the selector. Null unless the caller holds reports.view_technical."""
+    issueFingerprint: String
     wcagCriterion: String
     wcagTitle: String
     severity: String!
     message: String!
+    """CSS selector of the element. Null unless the caller holds reports.view_technical."""
     selector: String
     pageUrl: String
     status: String!

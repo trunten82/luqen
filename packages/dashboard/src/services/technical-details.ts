@@ -52,6 +52,24 @@ export function itemsForViewer<T extends object>(
   return viewTechnical ? items : items.map((item) => withoutTechnicalFields(item));
 }
 
+/**
+ * A GraphQL Assignment as a viewer may see it: the same object for an entitled viewer, otherwise a
+ * new object without `selector` and `issueFingerprint`.
+ *
+ * The fingerprint is withheld because the report page builds a per-issue fingerprint as
+ * code + "|" + selector + "|" + message (report-detail.hbs:1365), so serving it serves the selector.
+ * The bulk form (criterion + "||bulk||" + title) carries no selector but is withheld too: any caller
+ * can set a fingerprint to any text through assignIssue, so the rule must not depend on its shape.
+ */
+export function assignmentForViewer<T extends { readonly selector?: unknown; readonly issueFingerprint?: unknown }>(
+  assignment: T,
+  viewTechnical: boolean,
+): T | Omit<T, 'selector' | 'issueFingerprint'> {
+  if (viewTechnical) return assignment;
+  const { selector: _selector, issueFingerprint: _issueFingerprint, ...rest } = assignment;
+  return rest;
+}
+
 // ---------------------------------------------------------------------------
 // Stored report blobs (D-08)
 // ---------------------------------------------------------------------------
