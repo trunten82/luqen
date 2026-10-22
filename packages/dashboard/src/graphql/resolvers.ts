@@ -21,6 +21,10 @@ import {
   getGuidelineInOrg, requireGuidelineInOrg, requireBrandChildInOrg, requireCanManageUser, listOrgsInScope,
 } from './org-scope.js';
 import { isLastActiveAdmin } from '../services/user-scope.js';
+import { auditLogScope } from '../services/audit-log-scope.js';
+import { withActorLabels } from '../services/issue-dismissals/audit-actor-labels.js';
+import { isApiKeyActor } from '../services/issue-dismissals/actor-label.js';
+import { GENERIC_API_KEY_ACTOR } from '../routes/api/issue-dismissals-redaction.js';
 import { deleteScanAndFiles, scanDeleteRefusal, SCAN_DELETE_PERMISSION } from '../services/scan-delete-access.js';
 
 // ---------------------------------------------------------------------------
@@ -369,6 +373,11 @@ export const resolvers = {
       const limit = clamp(args.limit, 1, 200, 50);
       const offset = clamp(args.offset, 0, Number.MAX_SAFE_INTEGER, 0);
 
+      // A caller in no organization reads no rows (services/audit-log-scope.ts, as the Audit Log page).
+      if (auditLogScope({ ...ctx.user, currentOrgId: ctx.orgId }).kind === 'none') {
+        return { nodes: [], totalCount: 0, pageInfo: buildPageInfo(0, limit, offset) };
+      }
+
       const result = await ctx.storage.audit.query({
         actor: args.actor,
         action: args.action,
@@ -380,8 +389,15 @@ export const resolvers = {
         offset,
       });
 
+      // The Actor is the shared actor label, as on the Audit Log page: an API key reads
+      // `API key: <name> (Created <date>)` or `API key`, and its stored row id is not returned.
+      const labelled = await withActorLabels(ctx.storage, ctx.user, result.entries, 'en', ctx.log ?? NO_LOG);
       return {
-        nodes: result.entries,
+        nodes: labelled.map(({ actorLabel, ...entry }) => ({
+          ...entry,
+          actor: actorLabel,
+          actorId: isApiKeyActor(entry.actor, entry.actorId) ? GENERIC_API_KEY_ACTOR : entry.actorId,
+        })),
         totalCount: result.total,
         pageInfo: buildPageInfo(result.total, limit, offset),
       };

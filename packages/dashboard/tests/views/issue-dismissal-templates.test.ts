@@ -220,9 +220,33 @@ describe('mark control — gating and sites', () => {
     expect(disabled[0]).toContain('title="This finding has no specific element and cannot be dismissed."');
     const describedBy = /aria-describedby="([^"]+)"/.exec(disabled[0]);
     expect(describedBy).not.toBeNull();
-    const target = new RegExp(`<span class="sr-only" id="${describedBy![1]}">This finding has no specific element`);
+    // A11Y-01: the description is visible text (a form-hint line under the head row), not screen-reader-only.
+    const target = new RegExp(`<div class="form-hint flex justify-end" id="${describedBy![1]}">This finding has no specific element`);
     expect(html).toMatch(target);
     expect(dismissButtons(html).filter((b) => !b.includes('aria-disabled'))).toHaveLength(2);
+  });
+
+  it.each([
+    ['template item', 'dismiss-refused-ti-'],
+    ['page issue', 'dismiss-refused-pi-'],
+    ['Templates tab', 'dismiss-refused-tt-'],
+  ])('A11Y-01 the reason of a greyed Dismiss button on the %s is visible text in its finding', (_site, idPrefix) => {
+    // A whole-page selector at all three sites greys all three buttons.
+    const html = render({ selectors: ['html'], templateSelector: 'html', tabSelector: 'html' });
+    const doc = new JSDOM(html).window.document;
+    const buttons = [...doc.querySelectorAll('button[aria-disabled="true"]')].filter((b) =>
+      (b.getAttribute('aria-describedby') ?? '').startsWith(idPrefix),
+    );
+    expect(buttons).toHaveLength(1);
+    const button = buttons[0]!;
+    const reason = doc.getElementById(button.getAttribute('aria-describedby')!);
+    expect(reason, 'the element aria-describedby points at').not.toBeNull();
+    expect(reason!.classList.contains('form-hint')).toBe(true);
+    expect(reason!.classList.contains('sr-only')).toBe(false);
+    expect((reason!.textContent ?? '').trim()).toBe('This finding has no specific element and cannot be dismissed.');
+    // In the same finding as the button, on its own line under the head row.
+    expect(reason!.closest('.rpt-issue-item')).toBe(button.closest('.rpt-issue-item'));
+    expect(reason!.closest('.rpt-issue-item__head')).toBeNull();
   });
 
   it('the disabled variants of several refused findings get distinct description ids', () => {

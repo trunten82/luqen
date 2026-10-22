@@ -15,6 +15,7 @@ import { getToken, toastHtml, escapeHtml } from './helpers.js';
 import { t } from '../../i18n/index.js';
 import type { Locale } from '../../i18n/index.js';
 import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
+import { mayBindUserToTeam, TEAM_MEMBER_SCOPE_MESSAGE } from '../../services/team-membership-scope.js';
 
 // ── Phase 32 Plan 08 — agent_display_name Zod schema ───────────────────────
 //
@@ -415,6 +416,14 @@ export async function organizationRoutes(
           .send(toastHtml('Invalid team for this organization.', 'error'));
       }
 
+      // Team membership follows organization membership: the same rule as the team page's Add Member.
+      if (!(await mayBindUserToTeam(storage, team, request.user, userId))) {
+        return reply
+          .code(403)
+          .header('content-type', 'text/html')
+          .send(toastHtml(TEAM_MEMBER_SCOPE_MESSAGE, 'error'));
+      }
+
       try {
         await storage.teams.addTeamMember(teamId, userId);
         const user = await storage.users.getUserById(userId);
@@ -464,6 +473,15 @@ export async function organizationRoutes(
           .code(400)
           .header('content-type', 'text/html')
           .send(toastHtml('Invalid team for this organization.', 'error'));
+      }
+
+      // Team membership follows organization membership: the same rule as the team page's Add Member,
+      // checked before any membership is removed.
+      if (!(await mayBindUserToTeam(storage, newTeam, request.user, userId))) {
+        return reply
+          .code(403)
+          .header('content-type', 'text/html')
+          .send(toastHtml(TEAM_MEMBER_SCOPE_MESSAGE, 'error'));
       }
 
       // Remove user from all teams in this org, then add to the new team

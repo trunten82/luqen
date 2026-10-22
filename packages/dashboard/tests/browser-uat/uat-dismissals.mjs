@@ -37,12 +37,13 @@ import { coreScenarios, CORE_WORLD } from './dismissals/scenarios-core.mjs';
 import { flowScenarios } from './dismissals/scenarios-flow.mjs';
 import { viewScenarios, VIEW_WORLD } from './dismissals/scenarios-view.mjs';
 import { gapScenarios, GAP_WORLD } from './dismissals/scenarios-gap.mjs';
+import { followupsScenarios, FOLLOWUPS_WORLD } from './dismissals/scenarios-followups.mjs';
 import { runRemote, missingVars, REMOTE_VARS } from './dismissals/remote.mjs';
 import { EXPECT_ORG_VAR, EXPECT_SITE_HOST_VAR } from './dismissals/target-guard.mjs';
 
-const SCENARIOS = { ...coreScenarios, ...flowScenarios, ...viewScenarios, ...gapScenarios };
+const SCENARIOS = { ...coreScenarios, ...flowScenarios, ...viewScenarios, ...gapScenarios, ...followupsScenarios };
 // Order matters only for readability: each scenario gets its own world.
-const ORDER = ['tracer', 'permissions', 'dialog', 'refused', 'mark', 'surfaces', 'revoke', 'conflict', 'public', 'mobile', 'longtext', 'locales', 'theme', 'keyboard', 'overflow', 'attribution', 'twins', 'layout'];
+const ORDER = ['tracer', 'permissions', 'dialog', 'refused', 'mark', 'surfaces', 'revoke', 'conflict', 'public', 'mobile', 'longtext', 'locales', 'theme', 'keyboard', 'overflow', 'attribution', 'twins', 'layout', 'followups'];
 
 function parseArgs(argv) {
   const out = { mode: 'local', expect: 'dark', scenario: 'all', leaveActive: false, keepGoing: false, checkTargetOnly: false };
@@ -100,7 +101,7 @@ async function runLocal(browser) {
   // Only a full run clears the screenshots; a single scenario adds to (and overwrites) its own files.
   if (args.scenario === 'all') resetShots();
   for (const n of names) {
-    const world = await bootLocal({ ...(CORE_WORLD[n] ?? {}), ...(GAP_WORLD[n] ?? {}), ...(VIEW_WORLD[n] ?? {}) });
+    const world = await bootLocal({ ...(CORE_WORLD[n] ?? {}), ...(GAP_WORLD[n] ?? {}), ...(VIEW_WORLD[n] ?? {}), ...(FOLLOWUPS_WORLD[n] ?? {}) });
     const { context, page } = await newPersonaPage(browser, world.base, null);
     try {
       await SCENARIOS[n]({ page, browser, world, expect: args.expect });

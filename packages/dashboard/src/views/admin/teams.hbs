@@ -25,7 +25,7 @@
     <label class="form-group form-group--inline">
       <span class="form-label">{{t "common.organization"}}</span>
       <select name="organizationId" class="input">
-        <option value="">{{t "admin.teams.noneGlobal"}}</option>
+        <option value="">{{#if orgContext.currentOrg}}{{t "admin.teams.currentOrgOption" name=orgContext.currentOrg.name}}{{else}}{{t "admin.teams.noneGlobal"}}{{/if}}</option>
         {{#each organizations}}
         <option value="{{id}}">{{name}}</option>
         {{/each}}

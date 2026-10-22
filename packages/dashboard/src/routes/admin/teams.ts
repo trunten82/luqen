@@ -5,6 +5,7 @@ import type { StorageAdapter } from '../../db/index.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { escapeHtml, toastHtml } from './helpers.js';
 import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
+import { addableTeamUsers, TEAM_MEMBER_SCOPE_MESSAGE } from '../../services/team-membership-scope.js';
 
 // Phase 41.1-03 — local TypeBox shapes.
 const TeamCreateBody = Type.Object(
@@ -103,6 +104,18 @@ function sendBindingRefusal(request: FastifyRequest, reply: FastifyReply): Fasti
     return reply.code(403).type('text/html').send(toastHtml(BUILT_IN_ROLE_BINDING_MESSAGE, 'error'));
   }
   return reply.code(403).send({ error: BUILT_IN_ROLE_BINDING_MESSAGE });
+}
+
+/**
+ * Who may be bound to a team is one rule, shared by every route that adds a user to a team
+ * (services/team-membership-scope.ts). The team page lists exactly the users `addableTeamUsers`
+ * returns and its add-member request accepts exactly those users.
+ */
+function sendMemberScopeRefusal(request: FastifyRequest, reply: FastifyReply): FastifyReply {
+  if (request.headers['hx-request'] === 'true') {
+    return reply.code(403).type('text/html').send(toastHtml(TEAM_MEMBER_SCOPE_MESSAGE, 'error'));
+  }
+  return reply.code(403).send({ error: TEAM_MEMBER_SCOPE_MESSAGE });
 }
 
 interface CreateTeamBody {
@@ -317,15 +330,7 @@ export async function teamRoutes(
       }
 
       const isAdmin = bypassesOrgScope(request.user);
-      const memberIds = new Set((team.members ?? []).map((m) => m.userId));
-
-      // Org owners see unbound + own org users; admins see all
-      const allUsers = isAdmin
-        ? (await storage.users.listUsers()).filter((u) => u.active)
-        : team.orgId !== 'system'
-          ? (await storage.users.listUsersForOrg(team.orgId)).filter((u) => u.active)
-          : (await storage.users.listUsers()).filter((u) => u.active);
-      const availableUsers = allUsers.filter((u) => !memberIds.has(u.id));
+      const availableUsers = await addableTeamUsers(storage, team, request.user);
 
       // Org owners only see their own org
       let organizations: Awaited<ReturnType<typeof storage.organizations.listOrgs>>;
@@ -532,6 +537,11 @@ export async function teamRoutes(
         return reply.code(403).send({ error: 'Forbidden: team belongs to a different organization' });
       }
 
+      // Second path: the request accepts exactly the users the team page's list offers.
+      const addable = await addableTeamUsers(storage, team, request.user);
+      if (!addable.some((u) => u.id === userId)) return sendMemberScopeRefusal(request, reply);
+
+      const hadNoMembers = (team.members ?? []).length === 0;
       await storage.teams.addTeamMember(id, userId);
 
       // Return the new member row
@@ -539,7 +549,12 @@ export async function teamRoutes(
       const member = { userId, username: user?.username ?? userId, role: 'member' };
 
       if (request.headers['hx-request'] === 'true') {
-        return reply.type('text/html').send(memberRowHtml(id, member));
+        // The "No members yet." row sits in the same table body; an out-of-band delete (wrapped in
+        // <template> so the table parser keeps the <tr>) removes it after the first member is added.
+        const emptyRowRemoval = hadNoMembers
+          ? '\n<template><tr id="members-empty-row" hx-swap-oob="delete"></tr></template>'
+          : '';
+        return reply.type('text/html').send(`${memberRowHtml(id, member)}${emptyRowRemoval}`);
       }
 
       return reply.redirect(`/admin/teams/${id}`);

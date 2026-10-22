@@ -26,6 +26,7 @@ import { Type, type Static } from '@sinclair/typebox';
 import type { StorageAdapter } from '../../db/index.js';
 import { hasPermission } from '../../permissions.js';
 import { resolveEffectiveRoles } from '../../permissions.js';
+import { mayBindUserToTeam, TEAM_MEMBER_SCOPE_MESSAGE } from '../../services/team-membership-scope.js';
 
 const ErrorResponse = Type.Object({ error: Type.String() });
 
@@ -218,6 +219,12 @@ export async function teamOrgLinkRoutes(
       if (team === null) return reply.code(404).send({ error: 'team not found' });
       if (!(await callerOrgAdminFor(request, team.orgId))) {
         return reply.code(403).send({ error: 'forbidden' });
+      }
+      // Team membership follows organization membership: a new member passes the same rule as the
+      // team page's Add Member. A current member's role may still be changed here.
+      const isMember = (team.members ?? []).some((m) => m.userId === request.body.user_id);
+      if (!isMember && !(await mayBindUserToTeam(storage, team, request.user, request.body.user_id))) {
+        return reply.code(403).send({ error: TEAM_MEMBER_SCOPE_MESSAGE });
       }
       await storage.teams.setTeamMemberRole(team.id, request.body.user_id, request.body.role);
       await audit(storage, request, 'team_role.granted', team.id, {

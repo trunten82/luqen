@@ -348,7 +348,10 @@
     "allActions": "All actions",
     "allResources": "All resource types",
     "noEntries": "No audit log entries found.",
-    "org": "Org"
+    "org": "Org",
+    "actionIssueDismissalMark": "Finding dismissed as false positive",
+    "actionIssueDismissalRevoke": "Dismissal revoked",
+    "resourceIssueDismissal": "Finding dismissal"
   },
   "admin": {
     "jurisdictions": {
@@ -609,6 +612,7 @@
       "remove": "Remove",
       "noMembers": "No members yet. Add dashboard users above.",
       "noneGlobal": "None (global)",
+      "currentOrgOption": "Current organization ({{name}})",
       "noneRole": "None",
       "orgLinkDesc": "Link this team to an organization. Team members will inherit membership in the linked organization.",
       "roleLinkDesc": "Assign an org-scoped role to this team. All team members inherit the role's permissions within the organization.",
@@ -2239,8 +2243,8 @@
         "ruleLabel": "Rule",
         "elementLabel": "Element",
         "messageLabel": "Finding",
-        "scope": "This dismissal applies to this rule on this exact element, on every page of this site, in this scan and in future scans. It stops matching if the element's selector changes.",
-        "effect": "Dismissed findings stop counting in totals, scores and compliance results. Conformance reports (ACR) state how many findings were dismissed as false positives. You can revoke the dismissal later from the Dismissed findings section.",
+        "scope": "This dismissal applies to this rule on this exact element, on every page of this site, in this scan, in earlier completed scans and in future scans. It stops matching if the element's selector changes.",
+        "effect": "Dismissed findings stop counting in totals and scores. In the compliance results, a criterion stops failing only when no finding behind it remains. Conformance reports (ACR) state how many findings were dismissed as false positives. You can revoke the dismissal later from the Dismissed findings section.",
         "reasonLabel": "Reason",
         "reasonHint": "Required. Say why this is a false positive. Your name and this reason are shown to everyone who can view this report.",
         "confirm": "Dismiss as false positive",
@@ -2272,7 +2276,7 @@
     },
     "section": {
       "summary": "Dismissed findings — active: {{active}}, revoked: {{revoked}}",
-      "intro": "Findings dismissed as false positives for this site. They do not count in totals, scores or compliance results. Each dismissal matches one rule on one exact element.",
+      "intro": "Findings dismissed as false positives for this site. They do not count in totals or scores, and in the compliance results a criterion stops failing only when no finding behind it remains. Each dismissal matches one rule on one exact element.",
       "activeHeading": "Active dismissals",
       "revokedHeading": "Revoked dismissals",
       "noActive": "No active dismissals."

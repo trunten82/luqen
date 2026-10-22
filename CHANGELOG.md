@@ -285,6 +285,56 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- The Excel export's Dismissed By column and the Audit Log's Actor column name
+  an API key the way the report page does (`API key: <name> (Created <date>)`,
+  or `API key` for a key that is not the organization's own) and never show the
+  stored key identifier.
+- The Audit Log is in the menu, under More, for every role that holds View audit
+  log (an organization Owner holds it); it was listed only for roles that also
+  hold `admin.system`. Its Action filter lists the two dismissal actions
+  (Finding dismissed as false positive, Dismissal revoked) and shows the filter
+  in use instead of All actions; the Resource Type filter lists the dismissal
+  resource and shows its filter too. Opening the page without permission shows
+  the dashboard error page in a browser instead of raw JSON.
+- A caller of `/admin/audit-log` that does not ask for HTML and lacks View
+  audit log gets the dashboard's JSON error body, `403` `{"error":"Forbidden"}`,
+  which has no `statusCode` or `message` field.
+- The GraphQL `auditLog` query's `actor` field holds the same label as the
+  Audit Log page's Actor column (`API key: <name> (Created <date>)` or
+  `API key` for an API key), and an API key's `actorId` reads `api-key`; the
+  stored key identifier is not returned.
+- The Audit Log's Actor filter finds an API key's entries by the key's name or
+  by the text the Actor column shows (`API key: <name>`, with or without the
+  `(Created <date>)` part), for the keys the page names.
+- A user with View audit log who is in no organization reads no audit entries,
+  on the Audit Log page and through the GraphQL `auditLog` query, and the menu
+  does not show them the Audit Log.
+- On the Audit Log page, the menu marks only Audit Log as the current page.
+- Load More on the Audit Log, Regulations and Jurisdictions pages and the
+  reports list pager keep the page size (the link carried no usable `limit`).
+- A greyed Dismiss button shows its reason as text under the button, on a phone
+  and for keyboard users too, instead of only a tooltip and screen-reader text,
+  and keyboard focus on a Dismiss button leaves room for the reason below it.
+- The dismiss dialog and the Dismissed findings section say that a dismissal
+  covers earlier completed scans and future scans, and that a compliance
+  criterion stops failing only when no finding behind it remains (six languages).
+- On a team's page, Add Member lists the organization's members who are in no
+  team (except a member who also belongs to another organization), and the
+  add-member request accepts only the users the list offers: any other user
+  answers `403` `This user cannot be added to this team`, including a user who
+  is already a member (it used to answer with a redirect). The `No members yet.`
+  row disappears after the first member is added.
+- Team membership follows organization membership on every route that adds a
+  user to a team: the organization members page's add to team and move team,
+  and `POST /api/v1/teams/:teamId/members`, accept the same users as the team
+  page's Add Member. Any other user answers `403`
+  `This user cannot be added to this team` and nothing is changed; move team
+  checks before it removes any membership. The API still changes the role of a
+  current member of the team. A global administrator adds any active user.
+- The team form's empty organization option reads `Current organization (<name>)`
+  and places the team in that organization, instead of `None (global)` (six
+  languages). The team page's own organization form keeps `None (global)`, where
+  an empty value means global.
 - On the report page, a user who can propose fixes (`issues.fix`) but does not
   hold `llm.view` now gets the pattern-based "How to fix" suggestion instead of
   a 403. AI-generated fix suggestions still need `llm.view`.

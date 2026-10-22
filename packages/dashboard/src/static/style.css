@@ -4072,7 +4072,9 @@ html[data-density="plain"] .data-table th {
 .rpt-text--muted { color: var(--text-muted); }
 
 /* Phase 89 — false-positive dismissal controls (89-UI-SPEC.md, "Proposed CSS additions") */
-.rpt-dismiss-btn { margin-left: auto; }
+/* scroll-margin-bottom: when keyboard focus scrolls a Dismiss button into view, leave room below it for its
+   visible reason (a greyed button) and for the fixed assistant launcher, instead of parking it on the window edge. */
+.rpt-dismiss-btn { margin-left: auto; scroll-margin-bottom: calc(var(--space-8) + var(--space-lg)); }
 .rpt-assign-btn ~ .rpt-dismiss-btn { margin-left: 0; }
 .rpt-dismiss-dialog { max-height: calc(100vh - 2 * var(--space-md)); overflow-y: auto; }
 .rpt-dismiss-dialog .modal__title { font-weight: 600; }

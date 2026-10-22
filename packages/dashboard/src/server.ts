@@ -79,6 +79,7 @@ import { VERSION } from './version.js';
 import { buildFixSuggestionHint } from './fix-suggestions.js';
 import { dismissalRefusalReason, type DismissalRefusalReason } from './services/issue-dismissals/validate-input.js';
 import { ALL_PERMISSION_IDS, resolveEffectivePermissions } from './permissions.js';
+import { auditLogScope } from './services/audit-log-scope.js';
 import { roleRoutes } from './routes/admin/roles.js';
 import { teamRoutes } from './routes/admin/teams.js';
 import { emailReportRoutes } from './routes/admin/email-reports.js';
@@ -715,9 +716,11 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // keys, e.g. {{t (concat "exposure.band." exposure.band)}}. Final argument
   // is the Handlebars options object and is dropped.
   handlebars.registerHelper('concat', (...args: unknown[]) => args.slice(0, -1).join(''));
-  // `limit` returns the first n items of an array — used by the digest
-  // what-changed table: {{#each (limit this.criteriaChanges 10)}}.
-  handlebars.registerHelper('limit', (arr: unknown, n: unknown) =>
+  // `limitItems` returns the first n items of an array — used by the digest
+  // what-changed table: {{#each (limitItems this.criteriaChanges 10)}}. It is NOT named `limit`: a
+  // registered helper wins over a context value of the same name, and several views print the page
+  // size as {{limit}} (the Load More links), which rendered empty (Phase 95, TEAM-02).
+  handlebars.registerHelper('limitItems', (arr: unknown, n: unknown) =>
     Array.isArray(arr) ? arr.slice(0, Number(n)) : []);
   // `or` helper used by the Phase 32 agent-drawer partial for a default-fallback
   // on `user.orgAgentDisplayName`. Returns the first truthy argument; final
@@ -1134,6 +1137,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
           llmManage: perms.has('llm.manage') || perms.has('admin.system'),
           reposCredentials: perms.has('repos.credentials'),
           auditView: perms.has('audit.view'),
+          // The Audit Log menu entry: audit view, and an organization to read (services/audit-log-scope.ts).
+          auditLogView: perms.has('audit.view') && auditLogScope(request.user).kind !== 'none',
         },
         isExecutiveView: !perms.has('scans.create') && perms.has('trends.view'),
         pluginAdminPages: pluginManager.getActiveAdminPages().filter((p) => perms.has(p.permission)),
@@ -1265,7 +1270,6 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // ── Phase 82: Digest schedule admin routes ──────────────────────────────
   await digestScheduleRoutes(server, storage, pluginManager);
 
-  await auditRoutes(server, storage);
   await adminBadgeRoutes(server, storage, config.selfScanId);
   await gitHostRoutes(server, storage);
   const uploadsDir = resolve(config.dbPath ? join(config.dbPath, '..', 'uploads') : './uploads');
@@ -1548,6 +1552,12 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     probe: probeChromium,
     atRest: { status: atRestCheckResult.status },
   });
+
+  // Phase 95 (AUD-03, D-05): registered after the last plugin registration (the GraphQL plugin above),
+  // so its routes bind the dashboard error handler set below, which renders the HTML 403 page for a
+  // browser. Fastify binds a route's error handler when the route is built; every route registered
+  // before an awaited plugin registration bypasses setErrorHandler (see the Phase 95 summary).
+  await auditRoutes(server, storage);
 
   // ── Scheduler — start after server is ready ────────────────────────────
   server.addHook('onReady', async () => {
