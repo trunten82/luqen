@@ -121,11 +121,20 @@ export interface AppendMessageInput {
    * turn (a question).
    */
   readonly followsMessageId?: string;
+  /**
+   * The stream run that writes the row (the token `beginRun` returned). When given, the row is
+   * written only while that run is the conversation's current run of a conversation that is not
+   * deleted, checked in the same transaction as the insert; otherwise nothing is written and
+   * {@link WithdrawnAnswerError} is thrown. Absent for writes that are not part of a stream run.
+   */
+  readonly runId?: string;
 }
 
 /**
  * Thrown by `appendMessage` when the row a new row follows is superseded, belongs to a deleted
- * conversation or does not exist: the answer it belongs to was replaced or withdrawn, and nothing was written.
+ * conversation or does not exist, or when the row's stream run is no longer the conversation's
+ * current run (a newer run began, or the conversation was deleted): the answer it belongs to was
+ * replaced or withdrawn, and nothing was written.
  */
 export class WithdrawnAnswerError extends Error {
   constructor() {
@@ -220,6 +229,14 @@ export interface ConversationRepository {
    * {@link WithdrawnAnswerError} and writes nothing.
    */
   appendMessage(input: AppendMessageInput): Promise<Message>;
+
+  /**
+   * Stores a new token as the conversation's current stream run and returns it; a later call
+   * replaces it (takeover). Null when no conversation with that id is live, so a run cannot begin
+   * on a deleted conversation. The token never leaves the server: pass it back as
+   * `AppendMessageInput.runId`, never in a response or a log.
+   */
+  beginRun(conversationId: string): Promise<string | null>;
 
   /**
    * Transitions a message's status. The optional `toolResultJson` is

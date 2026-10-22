@@ -2367,4 +2367,15 @@ ALTER TABLE issue_dismissals ADD COLUMN created_by_key_snapshot TEXT;
 ALTER TABLE oauth_user_consents ADD COLUMN org_id TEXT;
     `,
   },
+  {
+    id: '094',
+    name: 'agent-conversation-active-run',
+    sql: `
+-- Phase 94 (SESS-02) - the token of the answer stream that may write the conversation now.
+-- Nullable. NULL until a stream begins after this migration; each stream replaces it when it
+-- begins, and a row written for any other stream is not stored. No backfill, no index: the
+-- column is read and written by conversation id.
+ALTER TABLE agent_conversations ADD COLUMN active_run_id TEXT;
+    `,
+  },
 ];

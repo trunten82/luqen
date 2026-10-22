@@ -165,6 +165,18 @@ export class SqliteConversationRepository implements ConversationRepository {
     return this.rowToMessage(created);
   }
 
+  async beginRun(conversationId: string): Promise<string | null> {
+    const runId = randomUUID();
+    const result = this.db
+      .prepare(
+        `UPDATE agent_conversations
+         SET active_run_id = @runId
+         WHERE id = @conversationId AND is_deleted = 0`,
+      )
+      .run({ runId, conversationId });
+    return result.changes === 1 ? runId : null;
+  }
+
   async updateMessageStatus(
     messageId: string,
     status: MessageStatus,
