@@ -329,6 +329,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   offered again: a confirmation refused while the conversation was being
   deleted no longer returns it to pending, and a confirmation or a decline of
   it answers 404 `pending_not_found`.
+- A message posted to a deleted conversation (`POST /agent/message` with its
+  id, for example from a tab opened before the deletion) answers 404
+  `conversation_not_found` and stores nothing, where it was stored in the
+  deleted conversation before.
 - The answer stream of a deleted conversation answers 404
   `conversation_not_found` and runs nothing; the edit and retry operations
   refuse a deleted conversation inside their own transactions, not only at the

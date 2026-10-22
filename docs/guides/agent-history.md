@@ -79,10 +79,12 @@ remove any past conversation from a searchable history panel inside the agent dr
 - The rolling 20-turn window is purely an in-memory budget for the live agent — it
   does **not** affect what is searchable or resumable from history.
 - Soft-deleted conversations remain in the DB with `is_deleted = 1` and
-  `deleted_at` set; they are filtered out of every user-facing surface.
-  `GET /agent/stream/:id` of a soft-deleted conversation answers 404
-  `conversation_not_found`, and an answer turn begun on one runs no model and
-  stores nothing.
+  `deleted_at` set. They no longer appear in the list, search or any view of a
+  conversation, and no route stores a row in one: `POST /agent/message` with a
+  soft-deleted conversation's id answers 404 `conversation_not_found` and stores
+  no message (it does not start a new conversation either), `GET /agent/stream/:id`
+  of a soft-deleted conversation answers the same 404, and an answer turn begun on
+  one runs no model and stores nothing.
 
 ## For admins
 

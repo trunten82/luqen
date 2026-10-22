@@ -463,6 +463,7 @@ export async function registerAgentRoutes(
           202: LuqenResponse(Type.Object({ conversationId: Type.String() }, { additionalProperties: true })),
           400: ErrorEnvelope,
           401: ErrorEnvelope,
+          404: ErrorEnvelope,
         },
       },
     }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -519,7 +520,14 @@ export async function registerAgentRoutes(
         // must NOT be treated as "existing" (would otherwise append the new
         // user's message into another user's conversation). Treat foreign
         // ownership as absent so a fresh conversation is created.
-        if (existing === null || existing.userId !== user.id) { convId = undefined; }
+        if (existing === null || existing.userId !== user.id) {
+          convId = undefined;
+        } else if (existing.isDeleted) {
+          // A deleted conversation of the requester takes no new row (SESS-03): the same 404 as its
+          // stream. A foreign deleted conversation already fell through to a fresh one above, so the
+          // answer does not reveal another user's row.
+          return reply.code(404).send({ error: 'conversation_not_found' });
+        }
       }
       if (convId === undefined || convId.length === 0) {
         const created = await storage.conversations.createConversation({

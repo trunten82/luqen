@@ -87,4 +87,37 @@ describe('SESS-01 and SESS-03 a deleted conversation stays ended', () => {
     expect(h.chain.history.length).toBe(modelCalls);
     expect(h.rows(conv.id).length).toBe(rowCount);
   });
+
+  it('SESS-03 a message posted to a deleted conversation answers not found and stores nothing', async () => {
+    const owner = await h.chain.addOrgUser(h.orgId, 'fabrikam-deleted-poster', 'viewer', 'Member');
+    const conv = await h.chain.storage.conversations.createConversation({ userId: owner.userId, orgId: h.orgId });
+    await h.chain.storage.conversations.appendMessage({ conversationId: conv.id, role: 'user', content: 'DELETED-QUESTION', status: 'sent' });
+    const deleted = await h.post(`/agent/conversations/${conv.id}/delete`, owner.userId);
+    expect(deleted.status).toBe(200);
+    const rowCount = h.rows(conv.id).length;
+    const conversationCount = (h.chain.storage.getRawDatabase()
+      .prepare('SELECT COUNT(*) AS n FROM agent_conversations WHERE user_id = ?')
+      .get(owner.userId) as { n: number }).n;
+
+    // The reply of a stored message is an HTML fragment, so the request is injected directly.
+    const res = await h.server.inject({
+      method: 'POST',
+      url: '/agent/message',
+      headers: { 'x-test-user': owner.userId },
+      payload: { conversationId: conv.id, content: 'POSTED-AFTER-DELETE' },
+    });
+
+    expect(res.statusCode).toBe(404);
+    expect(res.json()).toEqual({ error: 'conversation_not_found' });
+    expect(res.headers['x-conversation-id']).toBeUndefined();
+    expect(h.rows(conv.id).length).toBe(rowCount);
+    const posted = h.chain.storage.getRawDatabase()
+      .prepare("SELECT COUNT(*) AS n FROM agent_messages WHERE content = 'POSTED-AFTER-DELETE'")
+      .get() as { n: number };
+    expect(posted.n).toBe(0);
+    const conversationsAfter = (h.chain.storage.getRawDatabase()
+      .prepare('SELECT COUNT(*) AS n FROM agent_conversations WHERE user_id = ?')
+      .get(owner.userId) as { n: number }).n;
+    expect(conversationsAfter).toBe(conversationCount);
+  });
 });
