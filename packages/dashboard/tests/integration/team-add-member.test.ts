@@ -168,6 +168,18 @@ describe('team page: Add Member offers what the add request accepts', () => {
     expect(await memberIdsOf(teamId)).toContain(teamlessId);
   }, 60_000);
 
+  it('TEAM-01 the add member request refuses a user who is already a member', async () => {
+    const teamId = await seedTeam('fabrikam-already', fabrikamOrgId);
+    const reviewerId = userIds.get('fabrikam-reviewer')!;
+    await h.seed.teams.addTeamMember(teamId, reviewerId);
+    const options = await addMemberOptions(owner, teamId);
+    expect(options).not.toContain('fabrikam-reviewer');
+    const res = await addMember(owner, teamId, reviewerId, false);
+    expect(res.statusCode).toBe(403);
+    expect(res.json()).toEqual({ error: 'This user cannot be added to this team' });
+    expect(await memberIdsOf(teamId)).toEqual([reviewerId]);
+  }, 60_000);
+
   it('TEAM-01 a global administrator Add Member still offers every active user', async () => {
     const teamId = await seedTeam('fabrikam-list-admin', fabrikamOrgId);
     const options = await addMemberOptions(globalAdmin, teamId);
