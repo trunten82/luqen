@@ -215,12 +215,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `LUQEN_UAT_EXPECT_SITE_HOST`; `--check-target-only` checks that rule without
   writing anything.
 - Tests: each dark-permission filter is covered by its own test.
-- AI-generated fix drafts need `llm.view` on every path. The report page's
-  "How to fix" already did; the MCP tool `dashboard_generate_fix` and the
+- The generate-fix capability returns AI fix drafts only to `llm.view`
+  holders, on every dashboard path that calls it. The report page's "How to
+  fix" already did; the MCP tool `dashboard_generate_fix` and the
   in-dashboard assistant's fix tool now follow the same rule. A caller who
   holds `issues.fix` but not `llm.view` still gets an answer: the
-  deterministic pattern hint, marked `source: "pattern"`, and the LLM service
-  is not called. An AI answer is marked `source: "ai"`.
+  deterministic pattern hint, marked `source: "pattern"`, and the
+  generate-fix capability is not called for them. An AI answer is marked
+  `source: "ai"`. The assistant's own conversational replies are not gated
+  by `llm.view`.
 - API contract change: `selector` and `context` follow `reports.view_technical`
   on every API surface, as they already did on the report page. A caller whose
   role does not hold `reports.view_technical` receives issue-like objects

@@ -36,7 +36,7 @@ Luqen uses a **database-driven RBAC** (Role-Based Access Control) model. Permiss
 | | `reports.delete` | Delete scan reports |
 | | `reports.compare` | Compare two scan reports side by side |
 | **Issues** | `issues.assign` | Assign issues to team members |
-| | `issues.fix` | View and propose code fixes. The report's "How to fix" hints are pattern-based for `issues.fix` holders; `llm.view` adds AI-generated suggestions. MCP `dashboard_generate_fix` and the in-dashboard assistant follow the same rule as the report page: AI drafts (`source: "ai"`) need `llm.view`; without it the caller receives the pattern hint (`source: "pattern"`) and the LLM service is not called |
+| | `issues.fix` | View and propose code fixes. The report's "How to fix" hints are pattern-based for `issues.fix` holders; `llm.view` adds AI-generated suggestions. The generate-fix capability follows the same rule on every dashboard path that calls it (the report page, MCP `dashboard_generate_fix` and the in-dashboard assistant's fix tool): AI drafts (`source: "ai"`) need `llm.view`; without it the caller receives the pattern hint (`source: "pattern"`) and the generate-fix capability is not called for them. The assistant's own conversational replies are not gated by `llm.view` |
 | | `issues.dismiss` | Mark findings as false positives and revoke those dismissals. Only an organization role can be given it: no global role can, the built-in ones included. The global administrator (`admin`) holds it anyway, because that role holds every permission. On the report page it also needs `reports.view` and `reports.view_technical`; see [Who can dismiss](false-positives.md#who-can-dismiss) |
 | **Testing** | `manual_testing` | Run manual testing checklists |
 | **Repositories** | `repos.manage` | Connect and manage source code repositories |
@@ -46,7 +46,7 @@ Luqen uses a **database-driven RBAC** (Role-Based Access Control) model. Permiss
 | | `users.activate` | Activate and deactivate user accounts |
 | | `users.reset_password` | Reset passwords for other users |
 | | `users.roles` | Change user role assignments |
-| **LLM** | `llm.view` | View LLM providers and configuration. Also required for every AI-generated fix draft (report page "How to fix", MCP `dashboard_generate_fix`, the assistant's fix tool) and for the report's AI summary (`/reports/:id/ai-summary`) |
+| **LLM** | `llm.view` | View LLM providers and configuration. Also required for an AI draft from the generate-fix capability (report page "How to fix", MCP `dashboard_generate_fix`, the assistant's fix tool; the assistant's own conversational replies are not gated by it) and for the report's AI summary (`/reports/:id/ai-summary`) |
 | **Administration** | `admin.users` | Manage compliance service API users |
 | | `admin.roles` | Create, edit, and delete roles |
 | | `admin.system` | System settings, plugins, webhooks, OAuth clients, organisations |
