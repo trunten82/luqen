@@ -94,11 +94,10 @@ export const DismissalEventSchema = Type.Object({
 
 /**
  * A dismissal in the LIST response (D-10). `selector` is optional here: it is present only when the
- * caller holds the technical-details permission, the rule the report page applies. The mark and
- * revoke responses keep the required selector (DismissalSchema): they answer a caller who named it.
+ * caller holds the technical-details permission, the rule the report page applies. The mark
+ * response keeps the required selector (DismissalSchema): it answers a caller who named it. Revoke
+ * uses RevokeMutationResponse, in which `selector` is optional.
  */
-
-
 export const DismissalWithEventsSchema = Type.Object({
   ...dismissalFields(Type.Optional(Type.String({ description: LIST_SELECTOR_DESCRIPTION }))),
   events: Type.Array(DismissalEventSchema),
