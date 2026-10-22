@@ -26,7 +26,7 @@ import { setEncryptionSalt } from '../../src/plugins/crypto.js';
 import { ensureInitialSigningKey } from '../../src/auth/oauth-key-bootstrap.js';
 import { createDashboardSigner } from '../../src/auth/oauth-signer.js';
 import { storedPermissionsOrNone } from '../../src/auth/stored-caller.js';
-import { createDashboardMcpServer } from '../../src/mcp/server.js';
+import { createDashboardMcpServer, type LlmAccess } from '../../src/mcp/server.js';
 import { DASHBOARD_TOOL_METADATA } from '../../src/mcp/metadata.js';
 import { bridgeMcpToolsForAgent } from '../../src/agent/mcp-bridge.js';
 import { ToolDispatcher, type ToolCallInput } from '../../src/agent/tool-dispatch.js';
@@ -109,7 +109,15 @@ export interface AgentChain {
   cleanup(): Promise<void>;
 }
 
-export async function buildAgentChain(): Promise<AgentChain> {
+export interface AgentChainOptions {
+  /**
+   * LLM service access for dashboard_generate_fix. Omitted: the tool is not registered in the chain
+   * (the default every existing caller relies on).
+   */
+  readonly llmAccess?: LlmAccess;
+}
+
+export async function buildAgentChain(options: AgentChainOptions = {}): Promise<AgentChain> {
   setEncryptionSalt('agent-chain-salt');
   const dbPath = join(tmpdir(), `test-agent-chain-${randomUUID()}.db`);
   const storage = new SqliteStorageAdapter(dbPath);
@@ -149,6 +157,7 @@ export async function buildAgentChain(): Promise<AgentChain> {
     storage,
     scanService,
     serviceConnections: serviceConnections as unknown as ServiceConnectionsRepository,
+    ...(options.llmAccess !== undefined ? { llmAccess: options.llmAccess } : {}),
   });
   const { catalog, manifest } = bridgeMcpToolsForAgent(server, DASHBOARD_TOOL_METADATA);
   const dispatcher = new ToolDispatcher({

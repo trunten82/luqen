@@ -1089,3 +1089,87 @@ describe('dashboard_scan_page scan start limit', () => {
     expect(h.scan).not.toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// ENT-02 (phase 93): the MCP HTTP endpoint keeps the fix tool listed for an issues.fix holder
+// without llm.view and answers it with the pattern hint; llm.view yields the AI answer.
+// ---------------------------------------------------------------------------
+
+describe('ENT-02 MCP endpoint entitlement', () => {
+  let app: FastifyInstance | null = null;
+  let fetchedUrls: string[] = [];
+
+  beforeEach(() => {
+    fetchedUrls = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      fetchedUrls.push(String(url));
+      if (String(url).includes('generate-fix')) {
+        return { ok: true, json: async () => FAKE_FIX_RESPONSE };
+      }
+      throw new Error('compliance unreachable');
+    }));
+  });
+
+  afterEach(async () => {
+    if (app !== null) {
+      await app.close();
+      app = null;
+    }
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  async function listToolNames(application: FastifyInstance): Promise<string[]> {
+    const resp = await application.inject({
+      method: 'POST',
+      url: '/api/v1/mcp',
+      headers: {
+        authorization: 'Bearer valid-jwt',
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+      },
+      payload: integrationRpc('tools/list'),
+    });
+    const result = integrationParseSseOrJson(resp.body)['result'] as { tools: Array<{ name: string }> };
+    return result.tools.map((t) => t.name);
+  }
+
+  const FIX_ARGS = {
+    wcagCriterion: '1.1.1',
+    issueMessage: 'Img element missing an alt attribute',
+    htmlContext: '<img src="logo.png">',
+  };
+
+  it('ENT-02 an issues.fix caller without llm.view sees the fix tool and gets the pattern hint over HTTP', async () => {
+    app = await buildIntegrationApp({
+      permissions: ['issues.fix'],
+      complianceAccessReturns: null,
+      llmAccessReturns: { baseUrl: 'http://llm', token: 'tok' },
+    });
+    expect(await listToolNames(app)).toContain('dashboard_generate_fix');
+
+    const parsed = await integrationCallTool(app, 'dashboard_generate_fix', FIX_ARGS);
+
+    expect((parsed['result'] as { isError?: boolean } | undefined)?.isError).not.toBe(true);
+    const body = integrationExtractText(parsed);
+    expect(body['source']).toBe('pattern');
+    expect(body['hint']).not.toBeNull();
+    expect(body['fixedHtml']).toBeUndefined();
+    expect(fetchedUrls.filter((u) => u.includes('generate-fix'))).toEqual([]);
+  });
+
+  it('ENT-02 an issues.fix and llm.view caller gets the AI answer over HTTP', async () => {
+    app = await buildIntegrationApp({
+      permissions: ['issues.fix', 'llm.view'],
+      complianceAccessReturns: null,
+      llmAccessReturns: { baseUrl: 'http://llm', token: 'tok' },
+    });
+
+    const parsed = await integrationCallTool(app, 'dashboard_generate_fix', FIX_ARGS);
+
+    const body = integrationExtractText(parsed);
+    expect(body['source']).toBe('ai');
+    expect(body['fixedHtml']).toBe(FAKE_FIX_RESPONSE.fixedHtml);
+    expect(fetchedUrls.filter((u) => u.includes('generate-fix'))).toHaveLength(1);
+  });
+});

@@ -25,6 +25,18 @@ import {
   toDottedCriterion,
 } from '../../src/mcp/tools/fix.js';
 import { getFixSuggestion } from '../../src/fix-suggestions.js';
+import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { rmSync, existsSync, mkdirSync } from 'node:fs';
+import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
+import { registerSession } from '../../src/auth/session.js';
+import { reportRoutes } from '../../src/routes/reports.js';
+import type { LLMClient } from '../../src/llm-client.js';
+import { loadTranslations, t } from '../../src/i18n/index.js';
+
+loadTranslations();
 
 const FAKE_AI_FIX = {
   fixedHtml: '<img src="logo.png" alt="Fabrikam logo">',
@@ -211,5 +223,120 @@ describe('MCP dashboard_generate_fix entitlement', () => {
     expect(toDottedCriterion('1.1.1 Non-text Content')).toBe('1.1.1');
     expect(toDottedCriterion('WCAG2AA.Principle1.Guideline1_1.1_1_1.H37')).toBe('1.1.1');
     expect(toDottedCriterion('  something else ')).toBe('something else');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ENT-02 agreement: the report route and the MCP tool give a caller without llm.view the same hint.
+// ---------------------------------------------------------------------------
+
+const SESSION_SECRET = 'test-session-secret-at-least-32b';
+
+interface RouteHarness {
+  readonly server: FastifyInstance;
+  readonly scanId: string;
+  readonly generateFix: ReturnType<typeof vi.fn>;
+  cleanup: () => void;
+}
+
+/** Grants exactly the permissions passed; a configured LLM client exists so absent AI is the permission. */
+async function createRouteHarness(permissions: readonly string[]): Promise<RouteHarness> {
+  const dbPath = join(tmpdir(), `test-fixagree-${randomUUID()}.db`);
+  const reportsDir = join(tmpdir(), `test-fixagree-dir-${randomUUID()}`);
+  mkdirSync(reportsDir, { recursive: true });
+
+  const storage = new SqliteStorageAdapter(dbPath);
+  await storage.migrate();
+
+  const generateFix = vi.fn().mockResolvedValue({
+    fixedHtml: '<img src="x.png" alt="ai-marker">',
+    explanation: 'ai-marker-explanation',
+  });
+  const llm = { baseUrl: 'https://llm.test', generateFix, destroy: () => {} } as unknown as LLMClient;
+
+  const server = Fastify({ logger: false });
+  await server.register(import('@fastify/formbody'));
+  await registerSession(server, SESSION_SECRET);
+  server.decorateReply('view', function (this: FastifyReply, template: string, data: unknown) {
+    return this.code(200).header('content-type', 'application/json').send(JSON.stringify({ template, data }));
+  });
+  server.addHook('preHandler', async (request) => {
+    request.user = { id: 'user-1', username: 'fixer', role: 'user', currentOrgId: 'system' };
+    (request as unknown as Record<string, unknown>)['permissions'] = new Set(permissions);
+  });
+  await reportRoutes(server, storage, () => llm, { reportsDir });
+  await server.ready();
+
+  const scanId = randomUUID();
+  await storage.scans.createScan({
+    id: scanId,
+    siteUrl: 'https://example.com',
+    standard: 'WCAG2AA',
+    jurisdictions: [],
+    createdBy: 'fixer',
+    createdAt: new Date().toISOString(),
+    orgId: 'system',
+  });
+
+  return {
+    server,
+    scanId,
+    generateFix,
+    cleanup: () => {
+      void storage.disconnect();
+      if (existsSync(dbPath)) rmSync(dbPath);
+      if (existsSync(reportsDir)) rmSync(reportsDir, { recursive: true });
+      void server.close();
+    },
+  };
+}
+
+describe('ENT-02 report route and MCP tool agree', () => {
+  let harness: RouteHarness | undefined;
+  let close: (() => Promise<void>) | undefined;
+
+  afterEach(async () => {
+    harness?.cleanup();
+    harness = undefined;
+    if (close !== undefined) await close();
+    close = undefined;
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  // The escaping the route applies to the hint text it renders.
+  const esc = (s: string): string =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  it('ENT-02 the report route and the MCP tool give the same pattern hint and the route never calls generateFix', async () => {
+    const permissions = ['reports.view', 'issues.fix'];
+    harness = await createRouteHarness(permissions);
+
+    const route = await harness.server.inject({
+      method: 'GET',
+      url: `/reports/${harness.scanId}/fix-suggestion?criterion=1.1.1&message=${encodeURIComponent(IMG_MESSAGE)}`,
+      headers: { 'hx-request': 'true' },
+    });
+    expect(route.statusCode).toBe(200);
+    expect(harness.generateFix).toHaveBeenCalledTimes(0);
+    expect(route.body).toContain(t('reportDetail.fixSourcePattern'));
+
+    const llmAccess = vi.fn(async () => ({ baseUrl: 'http://llm.test', token: 'tok-fabrikam' }));
+    const built = await makeClient(llmAccess);
+    close = built.close;
+    const mcp = await runInToolContext(contextWith([...permissions, 'mcp.use']), () =>
+      built.client.callTool({
+        name: 'dashboard_generate_fix',
+        arguments: { wcagCriterion: '1.1.1', issueMessage: IMG_MESSAGE, htmlContext: '<img src="logo.png">' },
+      }),
+    );
+    const body = bodyOf(mcp);
+    const hint = body['hint'] as { codeExample: string; description: string } | null;
+
+    expect(body['source']).toBe('pattern');
+    expect(hint).not.toBeNull();
+    expect(route.body).toContain(esc(hint!.codeExample));
+    expect(route.body).toContain(esc(hint!.description));
+    expect(llmAccess).not.toHaveBeenCalled();
   });
 });
