@@ -140,3 +140,42 @@ describe('AUD-02 the Action and Resource Type filters show the active filter', (
     expect(typeSelected.map((o) => (o.textContent ?? '').trim())).toEqual([raw]);
   });
 });
+
+describe('AUD-03 a refusal answers a browser with the dashboard error page', () => {
+  it('AUD-03 opening the Audit Log without permission renders the HTML error page', async () => {
+    const res = await page(member, '/admin/audit-log', { accept: HTML_ACCEPT });
+    expect(res.status).toBe(403);
+    expect(res.contentType).toContain('text/html');
+    expect(res.body).toContain('<h1 class="error-card__title">Access Denied</h1>');
+    expect(res.body).not.toContain('"statusCode"');
+  });
+
+  it('AUD-03 a JSON caller without permission still gets a JSON 403', async () => {
+    const res = await page(member, '/admin/audit-log', { accept: 'application/json' });
+    expect(res.status).toBe(403);
+    expect(res.contentType).toContain('application/json');
+    expect(() => JSON.parse(res.body)).not.toThrow();
+  });
+
+  it('AUD-03 an HTMX caller without permission still gets a JSON 403', async () => {
+    const res = await page(member, '/admin/audit-log', { accept: HTML_ACCEPT, 'hx-request': 'true' });
+    expect(res.status).toBe(403);
+    expect(res.contentType).toContain('application/json');
+    expect(() => JSON.parse(res.body)).not.toThrow();
+  });
+});
+
+describe('TEAM-02 Load More carries the page limit', () => {
+  it('TEAM-02 the Audit Log Load More link carries the page limit', async () => {
+    for (const id of ['fabrikam-scan-2', 'fabrikam-scan-3']) {
+      await h.seed.audit.log({ actor: 'fabrikam-owner', action: 'scan.create', resourceType: 'scan', resourceId: id, orgId: fabrikamOrgId });
+    }
+    const res = await page(owner, '/admin/audit-log?limit=2');
+    expect(res.status).toBe(200);
+    const link = new JSDOM(res.body).window.document.querySelector('.load-more a');
+    expect(link, 'Load More link rendered').not.toBeNull();
+    const href = link?.getAttribute('href') ?? '';
+    expect(href).toContain('limit=2&');
+    expect(href).toContain('offset=2');
+  });
+});
