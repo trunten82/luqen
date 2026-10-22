@@ -586,6 +586,15 @@ drive_prompt() {
   cat "${result}"
 }
 
+define_case prompt-works-without-term
+case_prompt_works_without_term() {
+  new_tmp; require_lib_mode; require_script_or_skip
+  # A terminal with no TERM: the colour setup must not abort the installer.
+  local got
+  got="$(unset TERM; prompt_answer '' '192.0.2.44')"
+  assert_eq "a terminal without TERM still stores the answer" "${got}" "192.0.2.44"
+}
+
 define_case prompts-store-answers-verbatim
 case_prompts_store_answers_verbatim() {
   new_tmp; require_lib_mode; require_script_or_skip

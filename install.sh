@@ -50,8 +50,13 @@ unset __luqen_piped
 # Color helpers
 # ──────────────────────────────────────────────
 if [ -t 1 ] && command -v tput &>/dev/null; then
-  BOLD="$(tput bold)"; GREEN="$(tput setaf 2)"; YELLOW="$(tput setaf 3)"
-  RED="$(tput setaf 1)"; CYAN="$(tput setaf 6)"; DIM="$(tput dim)"; RESET="$(tput sgr0)"
+  # A terminal without TERM (or without one of these capabilities) makes tput
+  # fail; under set -e that would abort the install, so a missing capability is
+  # just no colour.
+  BOLD="$(tput bold 2>/dev/null || true)"; GREEN="$(tput setaf 2 2>/dev/null || true)"
+  YELLOW="$(tput setaf 3 2>/dev/null || true)"; RED="$(tput setaf 1 2>/dev/null || true)"
+  CYAN="$(tput setaf 6 2>/dev/null || true)"; DIM="$(tput dim 2>/dev/null || true)"
+  RESET="$(tput sgr0 2>/dev/null || true)"
 else
   BOLD="" GREEN="" YELLOW="" RED="" CYAN="" DIM="" RESET=""
 fi
