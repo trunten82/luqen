@@ -66,9 +66,13 @@ assert_not_contains() {
 
 # A temp INSTALL_DIR holding a packages symlink to this checkout. Every write
 # the installer functions make lands under $TD.
+# A case that loads the installer more than once gets one directory per load;
+# all of them are removed when the case exits, not only the last.
+TD_ALL=()
 new_tmp() {
   TD="$(mktemp -d)"
-  trap 'rm -rf "${TD}"' EXIT
+  TD_ALL+=("${TD}")
+  trap 'rm -rf "${TD_ALL[@]}"' EXIT
   mkdir -p "${TD}/install"
   ln -s "${REPO_ROOT}/packages" "${TD}/install/packages"
 }
