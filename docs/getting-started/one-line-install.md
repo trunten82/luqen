@@ -105,6 +105,8 @@ curl -fsSL https://raw.githubusercontent.com/trunten82/luqen/master/install.sh |
 | `--with-storage-s3` | `-WithStorageS3` | Install S3 plugin |
 | `--with-storage-azure` | `-WithStorageAzure` | Install Azure Blob plugin |
 | `--with-all-plugins` | `-WithAllPlugins` | Install all plugins |
+| `--trusted-proxies LIST` | — (install.ps1 does not take it) | Proxy addresses whose `X-Forwarded-For` the dashboard trusts. Replaces the dashboard default. Also read from `DASHBOARD_TRUSTED_PROXIES`. See [Production: the trusted-proxy list](./installation.md#production-the-trusted-proxy-list) |
+| `--check-trusted-proxies` | — (install.ps1 does not take it) | Check the list against the dashboard built in `--install-dir`, print what would be written, and install nothing |
 
 ---
 

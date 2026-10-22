@@ -31,6 +31,7 @@ Last reviewed for **v3.1.0** (Phase 40 / DOC-03) — head migration 061.
 | `DASHBOARD_PORT` | `5000` | No | Port the dashboard listens on. | v2.0 |
 | `DASHBOARD_PUBLIC_URL` | `http://localhost:${DASHBOARD_PORT}` | Yes (production) | External URL the dashboard advertises (OAuth issuer, MCP discovery, share-link permalinks). MUST match what external clients hit. | v3.0.0 (Phase 30) |
 | `DASHBOARD_SESSION_SECRET` | (generated) | Yes | 64-hex-char secret for session cookie signing. Auto-generated if absent. | v2.0 |
+| `DASHBOARD_TRUSTED_PROXIES` | (unset: the dashboard default applies) | When behind a proxy outside the default ranges | Proxy addresses whose `X-Forwarded-For` the dashboard trusts. Read from the installer's environment or `--trusted-proxies`; the flag wins. On bare metal the installer checks it with the dashboard's own rules after the checkout and build, before any secret, configuration file or service unit is written, then writes the checked value to the systemd unit (Linux) and the launchd plist (macOS). A Docker install writes it to `.env` unchecked (only the characters compose would rewrite are refused); the dashboard container checks it when it starts. `install.ps1` does not take it. See [Production: the trusted-proxy list](../getting-started/installation.md#production-the-trusted-proxy-list). | v3.10.0 (Phase 96); the dashboard setting itself from v3.9.0 |
 | `DASHBOARD_WEBSERVICE_URL` | (unset) | No | Optional external pa11y webservice URL. Falls back to the built-in pa11y library. | v2.0 |
 | `DASHBOARD_WEBSERVICE_URLS` | (unset) | No | Comma-separated list of pa11y URLs for horizontal scaling. | v2.10.0 |
 | `LLM_API_KEY` | (generated) | No | Static API key for the LLM service. | v2.7.0 |
@@ -40,6 +41,7 @@ Last reviewed for **v3.1.0** (Phase 40 / DOC-03) — head migration 061.
 | `OAUTH_KEY_MAX_AGE_DAYS` | `90` | No | Maximum age before an OAuth signing key is rotated by the dashboard's bootstrap sweep. Increase or decrease per security policy. | v3.0.0 (Phase 31.1) |
 | `OLLAMA_BASE_URL` | (LLM service default) | No | Ollama daemon URL. Only meaningful if the LLM service is configured to use the Ollama provider. | LLM follow-up |
 | `LUQEN_INSTALL_DIR` | `${HOME}/luqen` | No | Override target directory for `install.command`. | v3.1.0 (DOC-03) |
+| `LUQEN_INSTALL_LIB_ONLY` | (unset) | No | Internal. When set to `1`, sourcing `install.sh` defines its functions and returns before it reads its arguments, so it installs nothing and runs no mode (an `--uninstall` passed to the sourced file is ignored). Running `install.sh` with it set, rather than sourcing it, stops with exit 64. Used by `install.test.sh` and `scripts/compare-trusted-proxies.sh`. Do not set it for a real install. | v3.10.0 (Phase 96) |
 | `LUQEN_INSTALL_REEXEC` | (set by installer) | No | Internal flag used by `install.sh` and `install.command` to detect re-execution from `curl | bash` form. Do not set manually. | v2.7.0 |
 
 ## Monitor agent (Phase 42, `--with-monitor`)
@@ -71,6 +73,9 @@ Windows, or the `monitor` service in `docker-compose.yml` under
   signing key sweep).
 - For Docker installs the same variables live in the generated
   `${INSTALL_DIR}/.env` file rather than systemd / launchd unit files.
+- For Docker, `docker-compose.yml` passes `DASHBOARD_TRUSTED_PROXIES` from
+  that `.env` file to the dashboard container; an empty value means unset,
+  so the dashboard default applies.
 
 ## Related documentation
 
