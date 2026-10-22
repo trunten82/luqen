@@ -97,6 +97,15 @@ run_rc() {
   printf '%s' "${captured%$'\n'RC=*}" > "${TD}/out"
 }
 
+# source_installer <flags...> -- source install.sh in source mode and parse the
+# flags with its own parse_args (source mode parses nothing by itself, WR-03).
+# An older revision (LUQEN_INSTALL_SH) without parse_args parsed the flags while
+# it was sourced, so the call is skipped there.
+source_installer() {
+  . "${INSTALL_SH}" "$@"
+  if declare -F parse_args >/dev/null; then parse_args "$@"; fi
+}
+
 # Source install.sh against the temp install dir with the given extra flags.
 # The caller's DASHBOARD_TRUSTED_PROXIES (none, unless the case exports one
 # first) is read by the installer's default, as in a real run.
@@ -104,7 +113,7 @@ load_installer() {
   new_tmp; require_lib_mode
   # The explicit arguments to `.` replace this function's positional
   # parameters for the sourced file, so install.sh's flag loop reads only them.
-  . "${INSTALL_SH}" --install-dir "${TD}/install" "$@"
+  source_installer --install-dir "${TD}/install" "$@"
   OUT=/dev/null   # run_rc and messages_of switch it to a pipe when a case reads messages
 }
 
@@ -151,7 +160,7 @@ case_flag_written_and_read_back() {
   new_tmp; require_lib_mode
   unset DASHBOARD_TRUSTED_PROXIES
   set --
-  . "${INSTALL_SH}" --install-dir "${TD}/install" --trusted-proxies '192.0.2.10, 198.51.100.0/24'
+  source_installer --install-dir "${TD}/install" --trusted-proxies '192.0.2.10, 198.51.100.0/24'
   OUT=/dev/null
   validate_trusted_proxies
   render_unit_to "${TD}/unit"
@@ -167,7 +176,7 @@ case_nothing_given_nothing_written() {
   new_tmp; require_lib_mode
   unset DASHBOARD_TRUSTED_PROXIES
   set --
-  . "${INSTALL_SH}" --install-dir "${TD}/install"
+  source_installer --install-dir "${TD}/install"
   OUT=/dev/null
   validate_trusted_proxies
   render_unit_to "${TD}/unit"
@@ -184,7 +193,7 @@ case_env_var_input_written() {
   new_tmp; require_lib_mode
   export DASHBOARD_TRUSTED_PROXIES='198.51.100.7'
   set --
-  . "${INSTALL_SH}" --install-dir "${TD}/install"
+  source_installer --install-dir "${TD}/install"
   OUT=/dev/null
   validate_trusted_proxies
   render_unit_to "${TD}/unit"
@@ -197,7 +206,7 @@ case_flag_beats_env() {
   new_tmp; require_lib_mode
   export DASHBOARD_TRUSTED_PROXIES='198.51.100.7'
   set --
-  . "${INSTALL_SH}" --install-dir "${TD}/install" --trusted-proxies '192.0.2.10'
+  source_installer --install-dir "${TD}/install" --trusted-proxies '192.0.2.10'
   OUT=/dev/null
   validate_trusted_proxies
   render_unit_to "${TD}/unit"
@@ -420,7 +429,7 @@ case_systemd_parses_written_line() {
     dir="$(mktemp -d "${TD}/unit.XXXXXX")"
     (
       set --
-      . "${INSTALL_SH}" --install-dir "${TD}/install" --trusted-proxies "${val}"
+      source_installer --install-dir "${TD}/install" --trusted-proxies "${val}"
       OUT=/dev/null
       validate_trusted_proxies
       node_path="$(command -v node)"
@@ -508,8 +517,10 @@ prompt_answer() {
     printf '%s\n' 'export LUQEN_INSTALL_LIB_ONLY=1'
     if [ -n "${current}" ]; then
       printf '. %q --install-dir %q --trusted-proxies %q\n' "${INSTALL_SH}" "${TD}/install" "${current}"
+      printf 'if declare -F parse_args >/dev/null; then parse_args --install-dir %q --trusted-proxies %q; fi\n' "${TD}/install" "${current}"
     else
       printf '. %q --install-dir %q\n' "${INSTALL_SH}" "${TD}/install"
+      printf 'if declare -F parse_args >/dev/null; then parse_args --install-dir %q; fi\n' "${TD}/install"
     fi
     printf '%s\n' 'ask_trusted_proxies'
     printf 'printf %%s "${DASHBOARD_TRUSTED_PROXIES}" > %q\n' "${result}"
@@ -741,6 +752,63 @@ case_macos_no_install_modes_leave_launchd_alone() {
   assert_eq "launchctl calls for an unknown option" "$(cat "${LAUNCHCTL_LOG}")" ""
   plists="$(entries_in "${AGENTS_DIR}")"
   assert_eq "plists written for an unknown option" "${plists}" "0"
+}
+
+# stub_destructive_tools <dir> -- PATH-first systemctl, rm, git, npm, sudo and
+# apt-get that log their arguments to <dir>/calls.log and change nothing.
+stub_destructive_tools() {
+  local dir="$1" t
+  mkdir -p "${dir}"
+  : > "${dir}/calls.log"
+  for t in systemctl rm git npm sudo apt-get; do
+    printf '#!/bin/sh\nprintf "%s %%s\\n" "$*" >> %q\nexit 1\n' "${t}" "${dir}/calls.log" > "${dir}/${t}"
+    chmod +x "${dir}/${t}"
+  done
+}
+
+define_case source-mode-dispatches-nothing
+case_source_mode_dispatches_nothing() {
+  new_tmp; require_lib_mode
+  local stubs="${TD}/stubs"
+  stub_destructive_tools "${stubs}"
+  # The stubs must log, or an empty log would prove nothing.
+  PATH="${stubs}:${PATH}" systemctl probe || true
+  assert_eq "stub log after the probe" "$(cat "${stubs}/calls.log")" "systemctl probe"
+  : > "${stubs}/calls.log"
+  mkdir -p "${TD}/home"
+  (
+    PATH="${stubs}:${PATH}"
+    HOME="${TD}/home"
+    . "${INSTALL_SH}" --uninstall --purge --install-dir "${TD}/no-such-install"
+    printf 'sourced\n' > "${TD}/sourced"
+    if declare -F parse_args >/dev/null; then
+      parse_args --uninstall --purge --install-dir "${TD}/no-such-install"
+      printf '%s' "${UNINSTALL}" > "${TD}/uninstall-flag"
+    fi
+  ) >"${TD}/out" 2>&1 || die "sourcing with --uninstall failed: $(tail -n 3 "${TD}/out")"
+  [ -e "${TD}/sourced" ] || die "the sourced file exited (an uninstall dispatch ends in exit 0): $(tail -n 3 "${TD}/out")"
+  assert_eq "systemctl/rm/git/npm calls while sourcing with --uninstall" "$(cat "${stubs}/calls.log")" ""
+  assert_not_contains "installer output" "$(cat "${TD}/out")" "Uninstalling"
+  assert_eq "parse_args read --uninstall (and dispatched nothing)" "$(cat "${TD}/uninstall-flag" 2>/dev/null)" "true"
+}
+
+define_case lib-mode-executed-refuses
+case_lib_mode_executed_refuses() {
+  new_tmp
+  local stubs="${TD}/stubs" rc
+  stub_destructive_tools "${stubs}"
+  mkdir -p "${TD}/home"
+  # Check mode only, so a regression here can at worst run the check, never an install.
+  set +e
+  env PATH="${stubs}:${PATH}" HOME="${TD}/home" LUQEN_INSTALL_LIB_ONLY=1 \
+    bash "${INSTALL_SH}" --non-interactive --check-trusted-proxies --trusted-proxies '192.0.2.10' \
+    --install-dir "${TD}/install" </dev/null >"${TD}/stdout" 2>"${TD}/stderr"
+  rc=$?
+  set -e
+  assert_eq "exit status of an executed install.sh in source mode" "${rc}" "64"
+  assert_contains "the reason" "$(cat "${TD}/stderr")" "LUQEN_INSTALL_LIB_ONLY=1 is for sourcing install.sh"
+  assert_eq "stdout" "$(cat "${TD}/stdout")" ""
+  assert_eq "tool calls" "$(cat "${stubs}/calls.log")" ""
 }
 
 define_case summary-reads-back-written-unit

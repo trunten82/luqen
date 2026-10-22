@@ -54,9 +54,11 @@ prints names, counts, verdict words and hashes, never the value.
 **Not covered:** `install.ps1`, `deploy/templates/` and
 `deploy/docker-setup.sh` do not take the setting.
 
-**Internal:** `LUQEN_INSTALL_LIB_ONLY=1` makes `install.sh` define its
-functions and install nothing, so `install.test.sh` and the comparison script
-can call the installer's own code.
+**Internal:** `LUQEN_INSTALL_LIB_ONLY=1` makes a sourced `install.sh` define
+its functions and return before it reads its arguments, so it installs nothing
+and runs no mode, `--uninstall` included; `install.test.sh` and the comparison
+script call the installer's own code this way. Running `install.sh` with it
+set, rather than sourcing it, stops with exit 64.
 
 **Re-running the installer on an existing install is not the way to add the
 list:** each run writes a new session secret. The linked section gives the

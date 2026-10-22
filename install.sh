@@ -340,90 +340,87 @@ uninstall_luqen() {
   exit 0
 }
 
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --mode)             DEPLOY_MODE="$2"; shift 2 ;;
-    --port)             COMPLIANCE_PORT="$2"; DASHBOARD_PORT=$(( $2 + 1000 )); shift 2 ;;
-    --pa11y-url)        PA11Y_URL="$2"; PA11Y_MODE="external"; shift 2 ;;
-    --db)               DB_ADAPTER="$2"; shift 2 ;;
-    --db-url)           DB_CONNECTION_STRING="$2"; shift 2 ;;
-    --auth)             AUTH_PROVIDER="$2"; shift 2 ;;
-    --auth-tenant-id)   AUTH_TENANT_ID="$2"; shift 2 ;;
-    --auth-client-id)   AUTH_CLIENT_ID="$2"; shift 2 ;;
-    --auth-client-secret) AUTH_CLIENT_SECRET="$2"; shift 2 ;;
-    --auth-org-url)     AUTH_ORG_URL="$2"; shift 2 ;;
-    --auth-hosted-domain) AUTH_HOSTED_DOMAIN="$2"; shift 2 ;;
-    --no-seed)          SEED=false; shift ;;
-    --non-interactive)  INTERACTIVE=false; shift ;;
-    --install-dir)      INSTALL_DIR="$2"; shift 2 ;;
-    --with-notify-slack)   NOTIFY_SLACK=true; shift ;;
-    --with-notify-teams)   NOTIFY_TEAMS=true; shift ;;
-    --with-notify-email)   NOTIFY_EMAIL=true; shift ;;
-    --slack-webhook-url)   SLACK_WEBHOOK_URL="$2"; shift 2 ;;
-    --teams-webhook-url)   TEAMS_WEBHOOK_URL="$2"; shift 2 ;;
-    --smtp-host)        SMTP_HOST="$2"; shift 2 ;;
-    --smtp-port)        SMTP_PORT="$2"; shift 2 ;;
-    --smtp-user)        SMTP_USER="$2"; shift 2 ;;
-    --smtp-pass)        SMTP_PASS="$2"; shift 2 ;;
-    --smtp-from)        SMTP_FROM="$2"; shift 2 ;;
-    --admin-user)       ADMIN_USERNAME="$2"; shift 2 ;;
-    --admin-pass)       ADMIN_PASSWORD="$2"; shift 2 ;;
-    --dashboard-public-url)  DASHBOARD_PUBLIC_URL="$2"; shift 2 ;;
-    --compliance-public-url) COMPLIANCE_PUBLIC_URL="$2"; shift 2 ;;
-    --branding-public-url)   BRANDING_PUBLIC_URL="$2"; shift 2 ;;
-    --llm-public-url)        LLM_PUBLIC_URL="$2"; shift 2 ;;
-    --trusted-proxies)       DASHBOARD_TRUSTED_PROXIES="$2"; shift 2 ;;
-    --check-trusted-proxies) CHECK_TRUSTED_PROXIES_ONLY="true"; shift ;;
-    --oauth-key-max-age-days) OAUTH_KEY_MAX_AGE_DAYS="$2"; shift 2 ;;
-    --ollama-base-url)  OLLAMA_BASE_URL="$2"; shift 2 ;;
-    --uninstall)        UNINSTALL=true; shift ;;
-    --purge)            UNINSTALL_PURGE=true; shift ;;
-    --keep-data)        UNINSTALL_PURGE=false; shift ;;
-    --profile)
-      case "$2" in
-        cli|api|dashboard|docker) PROFILE="$2" ;;
-        *) error "--profile must be one of: cli, api, dashboard, docker"; exit 1 ;;
-      esac
-      shift 2 ;;
-    --api-services)
-      API_SERVICES="$2"
-      # Validate each token in the CSV against an allow-list (T-42-02)
-      IFS=',' read -ra _api_tokens <<< "${API_SERVICES}"
-      for _tok in "${_api_tokens[@]}"; do
-        case "${_tok}" in
-          compliance|branding|llm) ;;
-          *) error "--api-services tokens must be one of: compliance, branding, llm (got: ${_tok})"; exit 1 ;;
+# parse_args "$@" -- sets the option globals from the command line and does
+# nothing else: it never dispatches --uninstall or --check-trusted-proxies (the
+# entry point does, after the source-mode return). install.test.sh calls it
+# explicitly after sourcing this file in source mode.
+parse_args() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --mode)             DEPLOY_MODE="$2"; shift 2 ;;
+      --port)             COMPLIANCE_PORT="$2"; DASHBOARD_PORT=$(( $2 + 1000 )); shift 2 ;;
+      --pa11y-url)        PA11Y_URL="$2"; PA11Y_MODE="external"; shift 2 ;;
+      --db)               DB_ADAPTER="$2"; shift 2 ;;
+      --db-url)           DB_CONNECTION_STRING="$2"; shift 2 ;;
+      --auth)             AUTH_PROVIDER="$2"; shift 2 ;;
+      --auth-tenant-id)   AUTH_TENANT_ID="$2"; shift 2 ;;
+      --auth-client-id)   AUTH_CLIENT_ID="$2"; shift 2 ;;
+      --auth-client-secret) AUTH_CLIENT_SECRET="$2"; shift 2 ;;
+      --auth-org-url)     AUTH_ORG_URL="$2"; shift 2 ;;
+      --auth-hosted-domain) AUTH_HOSTED_DOMAIN="$2"; shift 2 ;;
+      --no-seed)          SEED=false; shift ;;
+      --non-interactive)  INTERACTIVE=false; shift ;;
+      --install-dir)      INSTALL_DIR="$2"; shift 2 ;;
+      --with-notify-slack)   NOTIFY_SLACK=true; shift ;;
+      --with-notify-teams)   NOTIFY_TEAMS=true; shift ;;
+      --with-notify-email)   NOTIFY_EMAIL=true; shift ;;
+      --slack-webhook-url)   SLACK_WEBHOOK_URL="$2"; shift 2 ;;
+      --teams-webhook-url)   TEAMS_WEBHOOK_URL="$2"; shift 2 ;;
+      --smtp-host)        SMTP_HOST="$2"; shift 2 ;;
+      --smtp-port)        SMTP_PORT="$2"; shift 2 ;;
+      --smtp-user)        SMTP_USER="$2"; shift 2 ;;
+      --smtp-pass)        SMTP_PASS="$2"; shift 2 ;;
+      --smtp-from)        SMTP_FROM="$2"; shift 2 ;;
+      --admin-user)       ADMIN_USERNAME="$2"; shift 2 ;;
+      --admin-pass)       ADMIN_PASSWORD="$2"; shift 2 ;;
+      --dashboard-public-url)  DASHBOARD_PUBLIC_URL="$2"; shift 2 ;;
+      --compliance-public-url) COMPLIANCE_PUBLIC_URL="$2"; shift 2 ;;
+      --branding-public-url)   BRANDING_PUBLIC_URL="$2"; shift 2 ;;
+      --llm-public-url)        LLM_PUBLIC_URL="$2"; shift 2 ;;
+      --trusted-proxies)       DASHBOARD_TRUSTED_PROXIES="$2"; shift 2 ;;
+      --check-trusted-proxies) CHECK_TRUSTED_PROXIES_ONLY="true"; shift ;;
+      --oauth-key-max-age-days) OAUTH_KEY_MAX_AGE_DAYS="$2"; shift 2 ;;
+      --ollama-base-url)  OLLAMA_BASE_URL="$2"; shift 2 ;;
+      --uninstall)        UNINSTALL=true; shift ;;
+      --purge)            UNINSTALL_PURGE=true; shift ;;
+      --keep-data)        UNINSTALL_PURGE=false; shift ;;
+      --profile)
+        case "$2" in
+          cli|api|dashboard|docker) PROFILE="$2" ;;
+          *) error "--profile must be one of: cli, api, dashboard, docker"; exit 1 ;;
         esac
-      done
-      unset _api_tokens _tok
-      shift 2 ;;
-    --with-monitor)       WITH_MONITOR="true"; shift ;;
-    --without-compliance) WITHOUT_COMPLIANCE="true"; shift ;;
-    --without-branding)   WITHOUT_BRANDING="true"; shift ;;
-    --without-llm)        WITHOUT_LLM="true"; shift ;;
-    --monitor-port)
-      # T-42-03: validate monitor port is integer in 1024-65535
-      if ! [[ "$2" =~ ^[0-9]+$ ]] || [ "$2" -lt 1024 ] || [ "$2" -gt 65535 ]; then
-        error "--monitor-port must be an integer between 1024 and 65535 (got: $2)"
-        exit 1
-      fi
-      MONITOR_PORT="$2"; shift 2 ;;
-    --help|-h) show_help ;;
-    # An unknown option installs nothing, so it does not exit 0: a caller (CI,
-    # or install.command, which registers launchd agents after an exit 0)
-    # would read that as a finished install.
-    *) error "Unknown option: $1"; show_help 2 ;;
-  esac
-done
-
-if [ "${CHECK_TRUSTED_PROXIES_ONLY}" = "true" ] && [ "${UNINSTALL:-false}" = "true" ]; then
-  error "--check-trusted-proxies installs nothing and cannot be combined with --uninstall"
-  exit 1
-fi
-
-if [ "${UNINSTALL:-false}" = "true" ]; then
-  uninstall_luqen "$([ "${UNINSTALL_PURGE:-false}" = "true" ] && echo yes || echo no)"
-fi
+        shift 2 ;;
+      --api-services)
+        API_SERVICES="$2"
+        # Validate each token in the CSV against an allow-list (T-42-02)
+        IFS=',' read -ra _api_tokens <<< "${API_SERVICES}"
+        for _tok in "${_api_tokens[@]}"; do
+          case "${_tok}" in
+            compliance|branding|llm) ;;
+            *) error "--api-services tokens must be one of: compliance, branding, llm (got: ${_tok})"; exit 1 ;;
+          esac
+        done
+        unset _api_tokens _tok
+        shift 2 ;;
+      --with-monitor)       WITH_MONITOR="true"; shift ;;
+      --without-compliance) WITHOUT_COMPLIANCE="true"; shift ;;
+      --without-branding)   WITHOUT_BRANDING="true"; shift ;;
+      --without-llm)        WITHOUT_LLM="true"; shift ;;
+      --monitor-port)
+        # T-42-03: validate monitor port is integer in 1024-65535
+        if ! [[ "$2" =~ ^[0-9]+$ ]] || [ "$2" -lt 1024 ] || [ "$2" -gt 65535 ]; then
+          error "--monitor-port must be an integer between 1024 and 65535 (got: $2)"
+          exit 1
+        fi
+        MONITOR_PORT="$2"; shift 2 ;;
+      --help|-h) show_help ;;
+      # An unknown option installs nothing, so it does not exit 0: a caller (CI,
+      # or install.command, which registers launchd agents after an exit 0)
+      # would read that as a finished install.
+      *) error "Unknown option: $1"; show_help 2 ;;
+    esac
+  done
+}
 
 resolve_public_url_defaults() {
   # Called after port parsing / wizard so defaults track the real ports.
@@ -2587,9 +2584,28 @@ run_bare_metal_install() {
 
 # Source mode: install.test.sh and scripts/compare-trusted-proxies.sh set
 # LUQEN_INSTALL_LIB_ONLY=1 and source this file to load the functions above
-# without installing anything.
+# without installing anything. Nothing above this line parses the command line
+# or dispatches a mode (parse_args is only defined), so a sourced file with
+# --uninstall among its arguments runs no uninstall. Executed rather than
+# sourced (bash install.sh, curl | bash) with the variable set, it stops with
+# exit 64 instead of exiting 0 having done nothing.
 if [ "${LUQEN_INSTALL_LIB_ONLY:-}" = "1" ]; then
-  return 0 2>/dev/null || exit 0
+  if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    printf 'LUQEN_INSTALL_LIB_ONLY=1 is for sourcing install.sh; unset it to install\n' >&2
+    exit 64
+  fi
+  return 0
+fi
+
+parse_args "$@"
+
+if [ "${CHECK_TRUSTED_PROXIES_ONLY}" = "true" ] && [ "${UNINSTALL:-false}" = "true" ]; then
+  error "--check-trusted-proxies installs nothing and cannot be combined with --uninstall"
+  exit 1
+fi
+
+if [ "${UNINSTALL:-false}" = "true" ]; then
+  uninstall_luqen "$([ "${UNINSTALL_PURGE:-false}" = "true" ] && echo yes || echo no)"
 fi
 
 # --check-trusted-proxies: dispatched here so every function is defined and

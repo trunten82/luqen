@@ -41,7 +41,7 @@ Last reviewed for **v3.1.0** (Phase 40 / DOC-03) — head migration 061.
 | `OAUTH_KEY_MAX_AGE_DAYS` | `90` | No | Maximum age before an OAuth signing key is rotated by the dashboard's bootstrap sweep. Increase or decrease per security policy. | v3.0.0 (Phase 31.1) |
 | `OLLAMA_BASE_URL` | (LLM service default) | No | Ollama daemon URL. Only meaningful if the LLM service is configured to use the Ollama provider. | LLM follow-up |
 | `LUQEN_INSTALL_DIR` | `${HOME}/luqen` | No | Override target directory for `install.command`. | v3.1.0 (DOC-03) |
-| `LUQEN_INSTALL_LIB_ONLY` | (unset) | No | Internal. When set to `1`, sourcing `install.sh` defines its functions and installs nothing. Used by `install.test.sh` and `scripts/compare-trusted-proxies.sh`. Do not set it for a real install. | v3.10.0 (Phase 96) |
+| `LUQEN_INSTALL_LIB_ONLY` | (unset) | No | Internal. When set to `1`, sourcing `install.sh` defines its functions and returns before it reads its arguments, so it installs nothing and runs no mode (an `--uninstall` passed to the sourced file is ignored). Running `install.sh` with it set, rather than sourcing it, stops with exit 64. Used by `install.test.sh` and `scripts/compare-trusted-proxies.sh`. Do not set it for a real install. | v3.10.0 (Phase 96) |
 | `LUQEN_INSTALL_REEXEC` | (set by installer) | No | Internal flag used by `install.sh` and `install.command` to detect re-execution from `curl | bash` form. Do not set manually. | v2.7.0 |
 
 ## Monitor agent (Phase 42, `--with-monitor`)
