@@ -507,10 +507,11 @@ require_script_or_skip() {
   fi
 }
 
-# prompt_answer <current-flag-value-or-empty> <answer> -- prints the value of
-# DASHBOARD_TRUSTED_PROXIES after ask_trusted_proxies has read <answer>.
+# prompt_answer <current-flag-value-or-empty> <answer> [timing] -- prints the
+# value of DASHBOARD_TRUSTED_PROXIES after ask_trusted_proxies [timing] has read
+# <answer>. What the prompt printed is left in ${TD}/script.out.
 prompt_answer() {
-  local current="$1" answer="$2" driver="${TD}/driver.sh" result="${TD}/result"
+  local current="$1" answer="$2" timing="${3:-}" driver="${TD}/driver.sh" result="${TD}/result"
   : > "${result}"
   {
     printf '%s\n' 'set -euo pipefail'
@@ -522,7 +523,7 @@ prompt_answer() {
       printf '. %q --install-dir %q\n' "${INSTALL_SH}" "${TD}/install"
       printf 'if declare -F parse_args >/dev/null; then parse_args --install-dir %q; fi\n' "${TD}/install"
     fi
-    printf '%s\n' 'ask_trusted_proxies'
+    printf 'ask_trusted_proxies %s\n' "${timing}"
     printf 'printf %%s "${DASHBOARD_TRUSTED_PROXIES}" > %q\n' "${result}"
   } > "${driver}"
   printf '%s\n' "${answer}" | timeout 30 script -qec "bash ${driver}" /dev/null >"${TD}/script.out" 2>&1 || true
@@ -535,6 +536,12 @@ case_wizard_prompt_sets_value() {
   assert_eq "typed answer is stored verbatim" "$(prompt_answer '' '198.51.100.0/24, loopback')" "198.51.100.0/24, loopback"
   assert_eq "an empty answer keeps the value from the flag" "$(prompt_answer '192.0.2.10' '')" "192.0.2.10"
   assert_eq "an empty answer with nothing given stays empty" "$(prompt_answer '' '')" ""
+  # When the list is checked, as the prompt states it (WR-01).
+  prompt_answer '' '' bare-metal >/dev/null
+  assert_contains "bare-metal prompt" "$(tr -d '\r' < "${TD}/script.out" | tr '\n' ' ')" "check the list after the checkout and build"
+  prompt_answer '' '' docker >/dev/null
+  assert_contains "docker prompt" "$(tr -d '\r' < "${TD}/script.out" | tr '\n' ' ')" "The installer does not check the list: the dashboard container checks it when it"
+  assert_not_contains "docker prompt" "$(tr -d '\r' < "${TD}/script.out" | tr '\n' ' ')" "before any secret"
   local marker="${TD}/pwned"
   assert_eq "a command-substitution answer is stored literally" \
     "$(prompt_answer '' "\$(touch ${marker})")" "\$(touch ${marker})"

@@ -27,21 +27,21 @@ environment (the flag wins), or at the interactive wizard prompt. It applies
 to profiles that install a dashboard (`dashboard`, `docker`); the others
 refuse it.
 
-**Checked before anything is written (bare-metal):** after the build, the
-installer asks the built dashboard's own rules whether the list is
-acceptable. A refused list stops the install before any secret,
+**Checked after the build, before any secret, configuration or unit
+(bare-metal):** after the checkout and build, the installer asks the built
+dashboard's own rules whether the list is acceptable. A refused list stops the install before any secret,
 configuration or service unit is written. A Docker install has no
 host-side build, so the list is written to `.env` unchecked and the
 dashboard container applies its own rules when it starts; the installer
 refuses only the characters (`#`, `$`, quotes, backtick, backslash) that
 compose would rewrite and the dashboard would refuse anyway.
 
-**Where the checked value is written:**
+**Where the value is written:**
 
 | Install | Sink |
 |---------|------|
-| Linux bare-metal | `Environment=DASHBOARD_TRUSTED_PROXIES=...` line in the dashboard systemd unit |
-| Docker | `DASHBOARD_TRUSTED_PROXIES=` in the generated `.env`; `docker-compose.yml` passes it to the dashboard container |
+| Linux bare-metal | `Environment=DASHBOARD_TRUSTED_PROXIES=...` line in the dashboard systemd unit, the checked canonical value |
+| Docker | `DASHBOARD_TRUSTED_PROXIES=` in the generated `.env`, unchecked by the installer; `docker-compose.yml` passes it to the dashboard container, which checks it when it starts |
 | macOS | the launchd plist that `install.command` generates, from the checked value in `.install-state` |
 
 **New flag:** `--check-trusted-proxies` checks the list against the dashboard

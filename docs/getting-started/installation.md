@@ -375,8 +375,10 @@ proxies and open `/admin/audit-log?action=login.success`; the newest entry must 
 
 ### What the installer does with it
 
-- The dashboard's own rules check the list after the build and before anything is written. A refused list stops the
-  install with exit 1 and the dashboard's message, and no secret, configuration file or service unit has been written.
+- Bare metal: the dashboard's own rules check the list after the checkout and build, before any secret, configuration
+  file or service unit is written. A refused list stops the install there with exit 1 and the dashboard's message: no
+  secret, configuration file or service unit has been written, but the checkout has been cloned or pulled and the
+  dashboard rebuilt.
 - It writes one `Environment=DASHBOARD_TRUSTED_PROXIES=` line into `luqen-dashboard.service`, in canonical form: no
   spaces, named ranges in lower case, and every `%` doubled (systemd reads `%` as a specifier and otherwise drops the
   whole line without an error).

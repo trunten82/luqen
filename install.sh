@@ -275,9 +275,12 @@ Reverse proxy (dashboard):
                               addresses, CIDR ranges, loopback, linklocal, uniquelocal
                               or none. REPLACES the dashboard default. Also read from
                               DASHBOARD_TRUSTED_PROXIES in the installer's environment
-                              (the flag wins). The dashboard's own rules check it after
-                              the build; a refused list stops the install before
-                              anything is written. Default: nothing written.
+                              (the flag wins). Bare metal: the dashboard's own rules
+                              check it after the checkout and build, before any secret,
+                              configuration file or service unit is written; a refused
+                              list stops the install there. Docker: the installer does
+                              not check it; the dashboard container does when it
+                              starts, after .env is written. Default: nothing written.
   --check-trusted-proxies     Check the list against the dashboard built in --install-dir,
                               print what would be written, and install nothing.
 
@@ -781,20 +784,29 @@ ask_choice() {
   echo "${choice:-1}"
 }
 
-# ask_trusted_proxies -- the wizard prompt for the dashboard's trusted-proxy list.
-# NOT built on `ask`, which runs eval on its input: the answer is read with
+# ask_trusted_proxies <bare-metal|docker> -- the wizard prompt for the
+# dashboard's trusted-proxy list. NOT built on `ask`: the answer is read with
 # `read -r` into a local and stored as plain text. An empty answer keeps the
-# value already given by flag or environment. The dashboard's own rules check
-# the list after the build (validate_trusted_proxies).
+# value already given by flag or environment. The argument says when the list is
+# checked: on bare metal by validate_trusted_proxies after the checkout and
+# build, on Docker by the dashboard container when it starts.
 ask_trusted_proxies() {
+  local timing="${1:-bare-metal}"
   local shown="${DASHBOARD_TRUSTED_PROXIES:-dashboard default}" answer=""
   printf "\n  %sTrusted proxies%s (reverse proxy / load balancer)\n" "${BOLD}" "${RESET}" >/dev/tty
   printf "  Set this when the dashboard sits behind a reverse proxy, load balancer or CDN\n" >/dev/tty
   printf "  whose address is not loopback, link-local or unique-local. A list REPLACES the\n" >/dev/tty
   printf "  default, so add loopback (and linklocal, uniquelocal) when a local proxy also\n" >/dev/tty
   printf "  sits in front. Examples: 192.0.2.10, 198.51.100.0/24, loopback. Leave it empty to\n" >/dev/tty
-  printf "  keep the dashboard's default. The dashboard's own rules check the list after the\n" >/dev/tty
-  printf "  build, and a refused list stops the install before anything is written.\n" >/dev/tty
+  printf "  keep the dashboard's default.\n" >/dev/tty
+  if [ "${timing}" = "docker" ]; then
+    printf "  The installer does not check the list: the dashboard container checks it when it\n" >/dev/tty
+    printf "  starts, after .env is written, and a refused list keeps the dashboard down.\n" >/dev/tty
+  else
+    printf "  The dashboard's own rules check the list after the checkout and build, and a\n" >/dev/tty
+    printf "  refused list stops the install before any secret, configuration file or\n" >/dev/tty
+    printf "  service unit is written.\n" >/dev/tty
+  fi
   printf "  %sTrusted proxies%s %s[%s]%s: " "${BOLD}" "${RESET}" "${DIM}" "${shown}" "${RESET}" >/dev/tty
   read -r answer </dev/tty || answer=""
   if [ -n "${answer}" ]; then
@@ -1040,7 +1052,7 @@ run_wizard_docker() {
   ask "Branding port" "${BRANDING_PORT}" BRANDING_PORT
   DASHBOARD_PORT=$(( COMPLIANCE_PORT + 1000 ))
   ask "Dashboard port" "${DASHBOARD_PORT}" DASHBOARD_PORT
-  ask_trusted_proxies
+  ask_trusted_proxies docker
 
   # ── Admin user ───────────────────────────────
   header "3. Admin Account"
@@ -1295,7 +1307,7 @@ run_wizard_bare_metal() {
   DASHBOARD_PORT=$(( COMPLIANCE_PORT + 1000 ))
   ask "Dashboard port" "${DASHBOARD_PORT}" DASHBOARD_PORT
   if [ "${PROFILE}" = "dashboard" ]; then
-    ask_trusted_proxies
+    ask_trusted_proxies bare-metal
   fi
 
   # ── Install dir ──────────────────────────────
@@ -2571,7 +2583,7 @@ run_bare_metal_install() {
   check_prerequisites          # Step 1
   clone_or_pull                # Step 2
   install_and_build            # Step 3
-  validate_trusted_proxies     # Between 3 and 4: the dist exists, nothing is written yet (D-02)
+  validate_trusted_proxies     # Between 3 and 4: after the checkout and build, before any secret, config or unit (D-02)
   generate_secrets             # Step 4
   seed_data                    # Step 5
   create_oauth_client          # Step 6
