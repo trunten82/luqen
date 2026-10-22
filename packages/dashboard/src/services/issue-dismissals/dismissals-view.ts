@@ -6,19 +6,13 @@
  *   - rows are split by status (the repository returns created_at DESC; order is kept);
  *   - no rows at all -> undefined, so the route spreads NO `dismissals` key and the zero-
  *     dismissal render stays byte-identical (UD-06);
- *   - an API-key actor (D-12 `api-key:<id>`, or the legacy bare `api-key`) is flagged so the
- *     (quick 261013-dr7, WR-04: decided from the server-set actor ID - `api-key[:<id>]` for a key,
- *     a uuid for a user - never from the display string, which for a user is a chosen username)
- *     template shows the translated "API key" label. 89-11 (D-15 Q1 reverses the UD-16 title
- *     clause): the stored identifier is never rendered. HARD-08 (D-91-10): a MARKING key is named
- *     from the snapshot stored with the dismissal (its label and its creation time), so the name
- *     survives the key's deletion, and falls back to the caller's live key map; a REVOKING key is
- *     named from the live key map only (built from the SCAN org's own key rows). Each name carries
- *     the key's creation time as a tag ("API key: <label> (Created <time>)"), which tells two keys
- *     with the same label apart. Names and tags appear only when the caller passes showKeyNames
- *     (the viewer may touch the scan's org); otherwise every key reads as the generic label. The
- *     legacy `api-key:session` and bare `api-key` actors name no key. The template never inspects
- *     the actor string itself.
+ *   - an API-key actor is flagged and, when it may be named, carries its label and creation time,
+ *     so the template shows "API key: <label> (Created <time>)" or the generic "API key". The
+ *     actor rules (decided from the server-set actor id, never the display string; a marking key
+ *     named from its stored snapshot first; a revoking key from the live key map only; names only
+ *     when the caller passes showKeyNames; the stored identifier never rendered) live in
+ *     actor-label.ts, the ONE place that decides how an actor reads (Phase 95, ACT-01, D-06): the
+ *     Excel export and the Audit Log use it too. The template never inspects the actor string.
  *
  * Dates (dismissed, revoked, and a named key's creation time) are pre-formatted with
  * toLocaleString(locale), where the route passes the viewer's session UI language (HARD-05); no
@@ -29,18 +23,11 @@
  * (double-brace output only).
  */
 import type { IssueDismissal } from '../../db/interfaces/issue-dismissal-repository.js';
+import { describeActor, isApiKeyActor, type ApiKeyInfo, type ScanOrgKeys } from './actor-label.js';
 
-const API_KEY_ACTOR = 'api-key';
-const API_KEY_PREFIX = `${API_KEY_ACTOR}:`;
-
-/** One key row as the view needs it: label and creation time. Never the id's secret or hash. */
-export interface ApiKeyInfo {
-  readonly label: string;
-  readonly createdAt: string;
-}
-
-/** Key row id -> label and creation time. Callers build it from ONE org's key rows (the scan's). */
-export type ScanOrgKeys = ReadonlyMap<string, ApiKeyInfo>;
+// Kept importable from here for the callers that already import them from this module.
+export { hasApiKeyActor, isApiKeyActor } from './actor-label.js';
+export type { ApiKeyInfo, ScanOrgKeys } from './actor-label.js';
 
 export interface DismissalsViewOptions {
   /** The scan org's live key rows (revokers, and markers written before the snapshot existed). */
@@ -84,39 +71,6 @@ export interface DismissalsView {
   readonly revoked: readonly DismissalViewRow[];
 }
 
-/** Shape test on a SERVER-SET actor id: `api-key:<id>` (D-12) or the legacy bare `api-key`. */
-function isApiKeyId(id: string): boolean {
-  return id === API_KEY_ACTOR || id.startsWith(API_KEY_PREFIX);
-}
-
-/**
- * Was this actor an API key? Decided from the server-set actor id (`created_by_id` /
- * `revoked_by_id`): `api-key[:<id>]` for a key, `randomUUID()` for a user, so a user who CHOSE the
- * username `api-key` is still a user (WR-04). A null id (no current write path produces one; prod
- * 2026-10-13: 0 rows) falls back to the legacy shape of the display string.
- */
-export function isApiKeyActor(actor: string, actorId: string | null = null): boolean {
-  return isApiKeyId(actorId ?? actor);
-}
-
-/** True when at least one row was dismissed or revoked by an API key (the route's lookup gate). */
-export function hasApiKeyActor(rows: readonly IssueDismissal[]): boolean {
-  return rows.some(
-    (r) => isApiKeyActor(r.createdBy, r.createdById) || (r.revokedBy !== null && isApiKeyActor(r.revokedBy, r.revokedById)),
-  );
-}
-
-/**
- * The key row id of a key actor `api-key:<id>`; null for a user, the bare legacy `api-key` and the
- * legacy `api-key:session` (a session opened before the key id was stored names no key).
- */
-function keyIdOf(actor: string, actorId: string | null): string | null {
-  const id = actorId ?? actor;
-  if (!id.startsWith(API_KEY_PREFIX)) return null;
-  const keyId = id.slice(API_KEY_PREFIX.length);
-  return keyId === '' || keyId === 'session' ? null : keyId;
-}
-
 function display(iso: string | null, locale: string | undefined): string {
   return iso === null ? '' : new Date(iso).toLocaleString(locale);
 }
@@ -137,27 +91,21 @@ function named(
   return { name: key.label, createdIso: key.createdAt, createdDisplay: display(key.createdAt, locale) };
 }
 
-/** The marking key: the stored snapshot first (it outlives the key), then the live key map. */
-function markerKey(row: IssueDismissal, ctx: Ctx): ApiKeyInfo | null {
-  if (!ctx.showKeyNames) return null;
-  const keyId = keyIdOf(row.createdBy, row.createdById);
-  if (keyId === null) return null;
-  const snapshot = row.createdByKeySnapshot ?? null;
-  if (snapshot !== null) return { label: snapshot.label, createdAt: snapshot.keyCreatedAt };
-  return ctx.keys.get(keyId) ?? null;
-}
-
-/** The revoking key: the live key map only (a revoke stores no snapshot). */
-function revokerKey(row: IssueDismissal, ctx: Ctx): ApiKeyInfo | null {
-  if (!ctx.showKeyNames || row.revokedBy === null) return null;
-  const keyId = keyIdOf(row.revokedBy, row.revokedById);
-  return keyId === null ? null : ctx.keys.get(keyId) ?? null;
-}
-
 function toViewRow(row: IssueDismissal, ctx: Ctx): DismissalViewRow {
   const revokedBy = row.revokedBy ?? '';
-  const marker = named(markerKey(row, ctx), ctx.locale);
-  const revoker = named(revokerKey(row, ctx), ctx.locale);
+  const markerActor = describeActor({
+    actor: row.createdBy,
+    actorId: row.createdById,
+    snapshot: row.createdByKeySnapshot ?? null,
+    keys: ctx.keys,
+    showKeyNames: ctx.showKeyNames,
+  });
+  const marker = named(markerActor.kind === 'apiKey' ? markerActor.key : null, ctx.locale);
+  const revokerActor =
+    row.revokedBy === null
+      ? null
+      : describeActor({ actor: row.revokedBy, actorId: row.revokedById, keys: ctx.keys, showKeyNames: ctx.showKeyNames });
+  const revoker = named(revokerActor !== null && revokerActor.kind === 'apiKey' ? revokerActor.key : null, ctx.locale);
   return {
     id: row.id,
     code: row.code,
