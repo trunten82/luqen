@@ -71,6 +71,7 @@ services:
       - DASHBOARD_LLM_URL=http://llm:4200
       - DASHBOARD_DB_PATH=/app/data/dashboard.db
       - DASHBOARD_WEBSERVICE_URL=${PA11Y_URL:-}
+      - DASHBOARD_TRUSTED_PROXIES=${DASHBOARD_TRUSTED_PROXIES:-}
       - NODE_ENV=production
     volumes:
       - dashboard-data:/app/data

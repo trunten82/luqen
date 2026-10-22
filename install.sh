@@ -50,8 +50,13 @@ unset __luqen_piped
 # Color helpers
 # ──────────────────────────────────────────────
 if [ -t 1 ] && command -v tput &>/dev/null; then
-  BOLD="$(tput bold)"; GREEN="$(tput setaf 2)"; YELLOW="$(tput setaf 3)"
-  RED="$(tput setaf 1)"; CYAN="$(tput setaf 6)"; DIM="$(tput dim)"; RESET="$(tput sgr0)"
+  # A terminal without TERM (or without one of these capabilities) makes tput
+  # fail; under set -e that would abort the install, so a missing capability is
+  # just no colour.
+  BOLD="$(tput bold 2>/dev/null || true)"; GREEN="$(tput setaf 2 2>/dev/null || true)"
+  YELLOW="$(tput setaf 3 2>/dev/null || true)"; RED="$(tput setaf 1 2>/dev/null || true)"
+  CYAN="$(tput setaf 6 2>/dev/null || true)"; DIM="$(tput dim 2>/dev/null || true)"
+  RESET="$(tput sgr0 2>/dev/null || true)"
 else
   BOLD="" GREEN="" YELLOW="" RED="" CYAN="" DIM="" RESET=""
 fi
@@ -160,6 +165,21 @@ BRANDING_PUBLIC_URL=""
 LLM_PUBLIC_URL=""
 
 # ──────────────────────────────────────────────
+# Dashboard trusted proxies (Phase 96 / OPS-01)
+#
+# The list of proxy addresses whose X-Forwarded-For the dashboard trusts.
+# Given as --trusted-proxies LIST, as DASHBOARD_TRUSTED_PROXIES in the
+# installer's environment (this default honours the environment, like
+# MONITOR_PORT), or at the wizard prompt. The installer holds no parser and no
+# validator of its own: trusted_proxies_check runs the BUILT dashboard's
+# loadConfig and resolveTrustedProxies. Empty means "write nothing", so the
+# dashboard's code default stays the only default.
+# ──────────────────────────────────────────────
+DASHBOARD_TRUSTED_PROXIES="${DASHBOARD_TRUSTED_PROXIES:-}"
+TRUSTED_PROXIES_WRITE=""       # the checked canonical value; empty = write nothing
+CHECK_TRUSTED_PROXIES_ONLY="false"
+
+# ──────────────────────────────────────────────
 # OAuth signing-key rotation (Phase 31.1)
 # ──────────────────────────────────────────────
 OAUTH_KEY_MAX_AGE_DAYS="90"
@@ -255,6 +275,20 @@ Deployment profile (Phase 42):
   --without-llm               Skip llm service (dashboard profile).
   --monitor-port PORT         Monitor agent A2A port (default: 4300; 1024-65535).
 
+Reverse proxy (dashboard):
+  --trusted-proxies LIST      Proxy addresses whose X-Forwarded-For the dashboard trusts:
+                              addresses, CIDR ranges, loopback, linklocal, uniquelocal
+                              or none. REPLACES the dashboard default. Also read from
+                              DASHBOARD_TRUSTED_PROXIES in the installer's environment
+                              (the flag wins). Bare metal: the dashboard's own rules
+                              check it after the checkout and build, before any secret,
+                              configuration file or service unit is written; a refused
+                              list stops the install there. Docker: the installer does
+                              not check it; the dashboard container does when it
+                              starts, after .env is written. Default: nothing written.
+  --check-trusted-proxies     Check the list against the dashboard built in --install-dir,
+                              print what would be written, and install nothing.
+
 Uninstall:
   --uninstall                 Stop services, remove systemd units, delete install dir.
                               Combine with --purge to also delete data (DB, configs, logs).
@@ -264,7 +298,7 @@ Uninstall:
                               dashboard.db, packages/compliance/compliance.db, ~/.luqen.
   --keep-data                 With --uninstall: preserve data files (default).
 EOF
-  exit 0
+  exit "${1:-0}"
 }
 
 uninstall_luqen() {
@@ -314,80 +348,87 @@ uninstall_luqen() {
   exit 0
 }
 
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --mode)             DEPLOY_MODE="$2"; shift 2 ;;
-    --port)             COMPLIANCE_PORT="$2"; DASHBOARD_PORT=$(( $2 + 1000 )); shift 2 ;;
-    --pa11y-url)        PA11Y_URL="$2"; PA11Y_MODE="external"; shift 2 ;;
-    --db)               DB_ADAPTER="$2"; shift 2 ;;
-    --db-url)           DB_CONNECTION_STRING="$2"; shift 2 ;;
-    --auth)             AUTH_PROVIDER="$2"; shift 2 ;;
-    --auth-tenant-id)   AUTH_TENANT_ID="$2"; shift 2 ;;
-    --auth-client-id)   AUTH_CLIENT_ID="$2"; shift 2 ;;
-    --auth-client-secret) AUTH_CLIENT_SECRET="$2"; shift 2 ;;
-    --auth-org-url)     AUTH_ORG_URL="$2"; shift 2 ;;
-    --auth-hosted-domain) AUTH_HOSTED_DOMAIN="$2"; shift 2 ;;
-    --no-seed)          SEED=false; shift ;;
-    --non-interactive)  INTERACTIVE=false; shift ;;
-    --install-dir)      INSTALL_DIR="$2"; shift 2 ;;
-    --with-notify-slack)   NOTIFY_SLACK=true; shift ;;
-    --with-notify-teams)   NOTIFY_TEAMS=true; shift ;;
-    --with-notify-email)   NOTIFY_EMAIL=true; shift ;;
-    --slack-webhook-url)   SLACK_WEBHOOK_URL="$2"; shift 2 ;;
-    --teams-webhook-url)   TEAMS_WEBHOOK_URL="$2"; shift 2 ;;
-    --smtp-host)        SMTP_HOST="$2"; shift 2 ;;
-    --smtp-port)        SMTP_PORT="$2"; shift 2 ;;
-    --smtp-user)        SMTP_USER="$2"; shift 2 ;;
-    --smtp-pass)        SMTP_PASS="$2"; shift 2 ;;
-    --smtp-from)        SMTP_FROM="$2"; shift 2 ;;
-    --admin-user)       ADMIN_USERNAME="$2"; shift 2 ;;
-    --admin-pass)       ADMIN_PASSWORD="$2"; shift 2 ;;
-    --dashboard-public-url)  DASHBOARD_PUBLIC_URL="$2"; shift 2 ;;
-    --compliance-public-url) COMPLIANCE_PUBLIC_URL="$2"; shift 2 ;;
-    --branding-public-url)   BRANDING_PUBLIC_URL="$2"; shift 2 ;;
-    --llm-public-url)        LLM_PUBLIC_URL="$2"; shift 2 ;;
-    --oauth-key-max-age-days) OAUTH_KEY_MAX_AGE_DAYS="$2"; shift 2 ;;
-    --ollama-base-url)  OLLAMA_BASE_URL="$2"; shift 2 ;;
-    --uninstall)        UNINSTALL=true; shift ;;
-    --purge)            UNINSTALL_PURGE=true; shift ;;
-    --keep-data)        UNINSTALL_PURGE=false; shift ;;
-    --profile)
-      case "$2" in
-        cli|api|dashboard|docker) PROFILE="$2" ;;
-        *) error "--profile must be one of: cli, api, dashboard, docker"; exit 1 ;;
-      esac
-      shift 2 ;;
-    --api-services)
-      API_SERVICES="$2"
-      # Validate each token in the CSV against an allow-list (T-42-02)
-      IFS=',' read -ra _api_tokens <<< "${API_SERVICES}"
-      for _tok in "${_api_tokens[@]}"; do
-        case "${_tok}" in
-          compliance|branding|llm) ;;
-          *) error "--api-services tokens must be one of: compliance, branding, llm (got: ${_tok})"; exit 1 ;;
+# parse_args "$@" -- sets the option globals from the command line and does
+# nothing else: it never dispatches --uninstall or --check-trusted-proxies (the
+# entry point does, after the source-mode return). install.test.sh calls it
+# explicitly after sourcing this file in source mode.
+parse_args() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --mode)             DEPLOY_MODE="$2"; shift 2 ;;
+      --port)             COMPLIANCE_PORT="$2"; DASHBOARD_PORT=$(( $2 + 1000 )); shift 2 ;;
+      --pa11y-url)        PA11Y_URL="$2"; PA11Y_MODE="external"; shift 2 ;;
+      --db)               DB_ADAPTER="$2"; shift 2 ;;
+      --db-url)           DB_CONNECTION_STRING="$2"; shift 2 ;;
+      --auth)             AUTH_PROVIDER="$2"; shift 2 ;;
+      --auth-tenant-id)   AUTH_TENANT_ID="$2"; shift 2 ;;
+      --auth-client-id)   AUTH_CLIENT_ID="$2"; shift 2 ;;
+      --auth-client-secret) AUTH_CLIENT_SECRET="$2"; shift 2 ;;
+      --auth-org-url)     AUTH_ORG_URL="$2"; shift 2 ;;
+      --auth-hosted-domain) AUTH_HOSTED_DOMAIN="$2"; shift 2 ;;
+      --no-seed)          SEED=false; shift ;;
+      --non-interactive)  INTERACTIVE=false; shift ;;
+      --install-dir)      INSTALL_DIR="$2"; shift 2 ;;
+      --with-notify-slack)   NOTIFY_SLACK=true; shift ;;
+      --with-notify-teams)   NOTIFY_TEAMS=true; shift ;;
+      --with-notify-email)   NOTIFY_EMAIL=true; shift ;;
+      --slack-webhook-url)   SLACK_WEBHOOK_URL="$2"; shift 2 ;;
+      --teams-webhook-url)   TEAMS_WEBHOOK_URL="$2"; shift 2 ;;
+      --smtp-host)        SMTP_HOST="$2"; shift 2 ;;
+      --smtp-port)        SMTP_PORT="$2"; shift 2 ;;
+      --smtp-user)        SMTP_USER="$2"; shift 2 ;;
+      --smtp-pass)        SMTP_PASS="$2"; shift 2 ;;
+      --smtp-from)        SMTP_FROM="$2"; shift 2 ;;
+      --admin-user)       ADMIN_USERNAME="$2"; shift 2 ;;
+      --admin-pass)       ADMIN_PASSWORD="$2"; shift 2 ;;
+      --dashboard-public-url)  DASHBOARD_PUBLIC_URL="$2"; shift 2 ;;
+      --compliance-public-url) COMPLIANCE_PUBLIC_URL="$2"; shift 2 ;;
+      --branding-public-url)   BRANDING_PUBLIC_URL="$2"; shift 2 ;;
+      --llm-public-url)        LLM_PUBLIC_URL="$2"; shift 2 ;;
+      --trusted-proxies)       DASHBOARD_TRUSTED_PROXIES="$2"; shift 2 ;;
+      --check-trusted-proxies) CHECK_TRUSTED_PROXIES_ONLY="true"; shift ;;
+      --oauth-key-max-age-days) OAUTH_KEY_MAX_AGE_DAYS="$2"; shift 2 ;;
+      --ollama-base-url)  OLLAMA_BASE_URL="$2"; shift 2 ;;
+      --uninstall)        UNINSTALL=true; shift ;;
+      --purge)            UNINSTALL_PURGE=true; shift ;;
+      --keep-data)        UNINSTALL_PURGE=false; shift ;;
+      --profile)
+        case "$2" in
+          cli|api|dashboard|docker) PROFILE="$2" ;;
+          *) error "--profile must be one of: cli, api, dashboard, docker"; exit 1 ;;
         esac
-      done
-      unset _api_tokens _tok
-      shift 2 ;;
-    --with-monitor)       WITH_MONITOR="true"; shift ;;
-    --without-compliance) WITHOUT_COMPLIANCE="true"; shift ;;
-    --without-branding)   WITHOUT_BRANDING="true"; shift ;;
-    --without-llm)        WITHOUT_LLM="true"; shift ;;
-    --monitor-port)
-      # T-42-03: validate monitor port is integer in 1024-65535
-      if ! [[ "$2" =~ ^[0-9]+$ ]] || [ "$2" -lt 1024 ] || [ "$2" -gt 65535 ]; then
-        error "--monitor-port must be an integer between 1024 and 65535 (got: $2)"
-        exit 1
-      fi
-      MONITOR_PORT="$2"; shift 2 ;;
-    --help|-h) show_help ;;
-    *) error "Unknown option: $1"; show_help ;;
-  esac
-done
-
-if [ "${UNINSTALL:-false}" = "true" ]; then
-  uninstall_luqen "$([ "${UNINSTALL_PURGE:-false}" = "true" ] && echo yes || echo no)"
-fi
+        shift 2 ;;
+      --api-services)
+        API_SERVICES="$2"
+        # Validate each token in the CSV against an allow-list (T-42-02)
+        IFS=',' read -ra _api_tokens <<< "${API_SERVICES}"
+        for _tok in "${_api_tokens[@]}"; do
+          case "${_tok}" in
+            compliance|branding|llm) ;;
+            *) error "--api-services tokens must be one of: compliance, branding, llm (got: ${_tok})"; exit 1 ;;
+          esac
+        done
+        unset _api_tokens _tok
+        shift 2 ;;
+      --with-monitor)       WITH_MONITOR="true"; shift ;;
+      --without-compliance) WITHOUT_COMPLIANCE="true"; shift ;;
+      --without-branding)   WITHOUT_BRANDING="true"; shift ;;
+      --without-llm)        WITHOUT_LLM="true"; shift ;;
+      --monitor-port)
+        # T-42-03: validate monitor port is integer in 1024-65535
+        if ! [[ "$2" =~ ^[0-9]+$ ]] || [ "$2" -lt 1024 ] || [ "$2" -gt 65535 ]; then
+          error "--monitor-port must be an integer between 1024 and 65535 (got: $2)"
+          exit 1
+        fi
+        MONITOR_PORT="$2"; shift 2 ;;
+      --help|-h) show_help ;;
+      # An unknown option installs nothing, so it does not exit 0: a caller (CI,
+      # or install.command, which registers launchd agents after an exit 0)
+      # would read that as a finished install.
+      *) error "Unknown option: $1"; show_help 2 ;;
+    esac
+  done
+}
 
 resolve_public_url_defaults() {
   # Called after port parsing / wizard so defaults track the real ports.
@@ -440,21 +481,402 @@ validate_smtp() {
 }
 
 # ──────────────────────────────────────────────
+# Trusted-proxy list (Phase 96 / OPS-01, D-02)
+#
+# One gateway to the dashboard's own rules: trusted_proxies_check runs the BUILT
+# dashboard's loadConfig (config.ts's own split and trim of
+# DASHBOARD_TRUSTED_PROXIES) and resolveTrustedProxies (the rules: no trust-all
+# lists, the public-space ceiling, no hop counts). This file holds no second
+# parser and no second validator, so the installer cannot drift from the
+# dashboard. The value reaches node ONLY through the DASHBOARD_TRUSTED_PROXIES
+# environment variable of one process; it is never spliced into the script text
+# (validate_postgres does that, and it is the anti-pattern) and never appears in
+# any argv.
+#
+# Exit codes of the node helper:
+#   0  checked; stdout holds the answer for the mode
+#   2  the dashboard REFUSES the list; stderr holds its message verbatim
+#   3  the check could not be loaded or run; stderr holds the reason
+# ──────────────────────────────────────────────
+IFS= read -r -d '' TRUSTED_PROXIES_CHECK_JS <<'JS' || true
+import { pathToFileURL } from 'node:url';
+import { join } from 'node:path';
+
+const [dist, mode] = process.argv.slice(1);
+let loadConfig;
+let resolveTrustedProxies;
+try {
+  const cfgMod = await import(pathToFileURL(join(dist, 'config.js')).href);
+  const tpMod = await import(pathToFileURL(join(dist, 'auth', 'trusted-proxies.js')).href);
+  loadConfig = cfgMod.loadConfig;
+  resolveTrustedProxies = tpMod.resolveTrustedProxies;
+  if (typeof loadConfig !== 'function') throw new Error('config.js does not export loadConfig');
+  if (typeof resolveTrustedProxies !== 'function') throw new Error('trusted-proxies.js does not export resolveTrustedProxies');
+} catch (err) {
+  process.stderr.write(`cannot load the dashboard's trusted-proxy check from ${dist}: ${err && err.message ? err.message : err}\n`);
+  process.exit(3);
+}
+
+// A path under a character device never exists, so the file layer is empty and
+// the value is parsed by config.ts's own split and trim.
+let cfg;
+try {
+  cfg = loadConfig('/dev/null/luqen-no-config.json');
+} catch (err) {
+  process.stderr.write(`cannot load the dashboard's trusted-proxy check from ${dist}: loadConfig failed: ${err && err.message ? err.message : err}\n`);
+  process.exit(3);
+}
+
+let resolved;
+try {
+  resolved = resolveTrustedProxies(cfg.trustedProxies);
+} catch (err) {
+  process.stderr.write(`${err && err.message ? err.message : err}\n`);
+  process.exit(2);
+}
+
+const joined = resolved === false ? 'none' : resolved.join(',');
+// The answer is framed, so anything else on stdout (a stray console.log at
+// import time, before or after) makes trusted_proxies_check fail closed instead
+// of passing as the value.
+if (mode === 'canonical') {
+  process.stdout.write('<<TP:' + (cfg.trustedProxies === undefined ? 'unset' : joined) + ':TP>>');
+} else if (mode === 'effective') {
+  process.stdout.write('<<TP:' + joined + ':TP>>');
+} else {
+  process.stderr.write(`unknown mode ${mode}\n`);
+  process.exit(3);
+}
+JS
+
+# The characters a canonical list can hold: digits, letters (hex digits, the
+# named ranges, IPv6 zone ids), . : / % , and - (an IPv6 zone id such as
+# fe80::1%br-lan; MEASURED accepted by the dashboard). Spelled out rather than as
+# ranges, so no locale can widen it.
+TP_CANONICAL_CHARS='0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.:/%,-'
+
+# trusted_proxies_charset_ok <value> [extra-chars] -- 0 when every character of
+# value is in TP_CANONICAL_CHARS (plus extra-chars). The gate in front of every
+# sink: the unit and .install-state (which install.command sources as shell
+# code and copies into an XML plist) take only the canonical set; the Docker
+# .env also takes the space the operator typed. It does not rely on node's
+# address parser to keep shell or XML metacharacters out.
+trusted_proxies_charset_ok() {
+  local allowed="${TP_CANONICAL_CHARS}${2:-}"
+  case "$1" in
+    *[!"${allowed}"]*) return 1 ;;
+  esac
+  return 0
+}
+
+# trusted_proxies_check <dist-dir> <canonical|effective> <value>
+# Runs node in a subshell that drops every exported DASHBOARD_* name first, so
+# no other dashboard setting can reach loadConfig, then hands the value over in
+# the one environment variable. Returns node's exit status. On success it prints
+# the answer only if node's whole stdout was one framed answer (<<TP:...:TP>>);
+# anything else on stdout fails closed with status 3.
+trusted_proxies_check() {
+  local dist="$1" mode="$2" value="$3" framed="" rc=0
+  framed="$(
+    local _name
+    while IFS= read -r _name; do
+      unset "${_name}"
+    done < <(compgen -e | grep '^DASHBOARD_' || true)
+    export DASHBOARD_TRUSTED_PROXIES="${value}"
+    exec node --input-type=module -e "${TRUSTED_PROXIES_CHECK_JS}" "${dist}" "${mode}"
+  )" || rc=$?
+  [ "${rc}" -eq 0 ] || return "${rc}"
+  case "${framed}" in
+    '<<TP:'*':TP>>') framed="${framed#<<TP:}"; framed="${framed%:TP>>}" ;;
+    *) printf 'the dashboard check wrote something other than its framed answer to stdout\n' >&2; return 3 ;;
+  esac
+  case "${framed}" in
+    *'<<TP:'*|*':TP>>'*) printf 'the dashboard check wrote more than one answer to stdout\n' >&2; return 3 ;;
+  esac
+  printf '%s' "${framed}"
+}
+
+# trusted_proxies_evaluate -- the one place that runs the dashboard's check on
+# DASHBOARD_TRUSTED_PROXIES and derives the value to write. validate_trusted_proxies
+# (the install) and check_trusted_proxies_only (--check-trusted-proxies) both call
+# it, so the two cannot disagree about what would be written.
+# Sets: TP_RC   0 checked, 2 refused, 3 or other = could not run the check
+#       TP_ERR  the check's stderr (the dashboard's message when TP_RC is 2)
+#       TP_BLANK  "true" when a non-empty value was blank after the dashboard's trim
+#       TRUSTED_PROXIES_WRITE  the canonical value to write, empty = write nothing
+trusted_proxies_evaluate() {
+  TRUSTED_PROXIES_WRITE=""
+  TP_RC=0
+  TP_ERR=""
+  TP_BLANK="false"
+  [ -n "${DASHBOARD_TRUSTED_PROXIES}" ] || return 0
+
+  local dist="${INSTALL_DIR}/packages/dashboard/dist"
+  local out="" errfile
+  errfile="$(mktemp)"
+  out="$(trusted_proxies_check "${dist}" canonical "${DASHBOARD_TRUSTED_PROXIES}" 2>"${errfile}")" && TP_RC=0 || TP_RC=$?
+  TP_ERR="$(cat "${errfile}")"
+  rm -f "${errfile}"
+  [ "${TP_RC}" -eq 0 ] || return 0
+
+  if [ "${out}" = "unset" ]; then
+    TP_BLANK="true"
+  elif ! trusted_proxies_charset_ok "${out}"; then
+    # WR-07: never write a value outside the canonical character set, whatever
+    # the dashboard's code returned. Fails closed as "could not run the check".
+    TP_RC=3
+    TP_ERR="internal: the dashboard's canonical list holds a character outside [0-9A-Za-z.:/%,-]; nothing written"
+  else
+    TRUSTED_PROXIES_WRITE="${out}"
+  fi
+  return 0
+}
+
+# validate_trusted_proxies -- checks the operator's list with the built
+# dashboard's own code. Runs after install_and_build (the dist exists only then)
+# and before generate_secrets, so a refusal leaves no secret, configuration
+# file or service unit behind. Sets TRUSTED_PROXIES_WRITE to the canonical value
+# to write, or leaves it empty (write nothing). Fails closed: it never
+# re-prompts, loops or falls back to writing the value.
+validate_trusted_proxies() {
+  if [ -z "${DASHBOARD_TRUSTED_PROXIES}" ]; then
+    TRUSTED_PROXIES_WRITE=""
+    info "Trusted proxies: none given, nothing written; the dashboard's default applies"
+    return 0
+  fi
+
+  trusted_proxies_evaluate
+  if [ "${TP_RC}" -eq 2 ]; then
+    error "The dashboard refuses this trusted-proxy list:"
+    error "${TP_ERR}"
+    error "Nothing has been written yet (no secrets, configuration or service units). Correct --trusted-proxies or DASHBOARD_TRUSTED_PROXIES and run the installer again."
+    exit 1
+  fi
+  if [ "${TP_RC}" -ne 0 ]; then
+    error "Could not run the dashboard's trusted-proxy check in ${INSTALL_DIR}/packages/dashboard/dist: ${TP_ERR}"
+    error "The install stops rather than write a list nothing has checked."
+    exit 1
+  fi
+  if [ "${TP_BLANK}" = "true" ]; then
+    warn "The trusted-proxy value was blank; nothing is written and the dashboard's default applies"
+    return 0
+  fi
+  success "Trusted proxies accepted by the dashboard's rules: ${TRUSTED_PROXIES_WRITE}"
+}
+
+# The Environment= line for the dashboard unit, or nothing. systemd treats % as a
+# specifier and DROPS the whole assignment when it meets an unknown one (measured:
+# "Failed to resolve specifiers ... Invalid slot"), so every % is doubled.
+# trusted_proxies_written_value undoes it.
+dashboard_trusted_proxies_unit_line() {
+  if [ -n "${TRUSTED_PROXIES_WRITE}" ]; then
+    if ! trusted_proxies_charset_ok "${TRUSTED_PROXIES_WRITE}"; then
+      printf 'internal: the trusted-proxy value holds a character outside [0-9A-Za-z.:/%%,-]; no unit line written\n' >&2
+      return 1
+    fi
+    printf 'Environment=DASHBOARD_TRUSTED_PROXIES=%s\n' "${TRUSTED_PROXIES_WRITE//%/%%}"
+  fi
+}
+
+# trusted_proxies_written_value <systemd|state|dotenv> <file> -- prints the value
+# the dashboard will receive from a written file, or nothing when the line is
+# absent. The last matching line wins, as it does in systemd.
+trusted_proxies_written_value() {
+  local kind="$1" file="$2" line=""
+  case "${kind}" in
+    systemd)
+      line="$(grep '^Environment=DASHBOARD_TRUSTED_PROXIES=' "${file}" 2>/dev/null | tail -n 1 || true)"
+      line="${line#Environment=DASHBOARD_TRUSTED_PROXIES=}"
+      line="${line//%%/%}"   # undo dashboard_trusted_proxies_unit_line's doubling
+      ;;
+    state|dotenv)
+      line="$(grep '^DASHBOARD_TRUSTED_PROXIES=' "${file}" 2>/dev/null | tail -n 1 || true)"
+      line="${line#DASHBOARD_TRUSTED_PROXIES=}"
+      ;;
+    *)
+      return 2
+      ;;
+  esac
+  printf '%s' "${line}"
+}
+
+# trusted_proxies_readback <kind> <file> -- the list the dashboard will actually
+# use for what is written in the file, resolved by the dashboard's own code.
+trusted_proxies_readback() {
+  local kind="$1" file="$2" value
+  value="$(trusted_proxies_written_value "${kind}" "${file}")"
+  trusted_proxies_check "${INSTALL_DIR}/packages/dashboard/dist" effective "${value}"
+}
+
+# trusted_proxies_summary_value <note> -- the pre-install summary value: the list
+# with how it will be checked, or "dashboard default" when none was given.
+trusted_proxies_summary_value() {
+  if [ -n "${DASHBOARD_TRUSTED_PROXIES}" ]; then
+    printf '%s (%s)' "${DASHBOARD_TRUSTED_PROXIES}" "$1"
+  else
+    printf 'dashboard default'
+  fi
+}
+
+# A unit line that assigns DASHBOARD_TRUSTED_PROXIES (alone or among several
+# assignments on one Environment= line), and an environment-file line that does.
+TP_UNIT_ASSIGN_RE='^[[:space:]]*Environment=(.*[[:space:]"'"'"'])?DASHBOARD_TRUSTED_PROXIES='
+TP_ENVFILE_ASSIGN_RE='^[[:space:]]*(export[[:space:]]+)?DASHBOARD_TRUSTED_PROXIES='
+
+# trusted_proxies_overrides <unit-file|""> <config-file> -- one line per place
+# that can override what the installer wrote, by path and key name only (never
+# a value): a drop-in in <unit-file>.d that assigns DASHBOARD_TRUSTED_PROXIES
+# (systemd applies drop-ins after the unit), an EnvironmentFile= named by the
+# unit or a drop-in that sets it (systemd lets those override every
+# Environment= line), and a trustedProxies key in the dashboard config file
+# (the dashboard uses it whenever the variable is unset or blank). A file it
+# cannot read is reported as unknown. Prints nothing when nothing can override.
+trusted_proxies_overrides() {
+  local unit="$1" config="$2" f envf n rc
+  local -a unit_files=()
+  if [ -n "${unit}" ]; then
+    [ -r "${unit}" ] && unit_files+=("${unit}")
+    for f in "${unit}.d"/*.conf; do
+      [ -e "${f}" ] || continue
+      if [ ! -r "${f}" ]; then
+        printf 'drop-in %s cannot be read, so whether it sets DASHBOARD_TRUSTED_PROXIES is unknown\n' "${f}"
+        continue
+      fi
+      unit_files+=("${f}")
+      n="$(grep -cE -- "${TP_UNIT_ASSIGN_RE}" "${f}" || true)"
+      if [ "${n:-0}" -gt 0 ]; then
+        printf 'drop-in %s sets DASHBOARD_TRUSTED_PROXIES; it overrides %s\n' "${f}" "${unit}"
+      fi
+    done
+    for f in "${unit_files[@]+"${unit_files[@]}"}"; do
+      while IFS= read -r envf; do
+        envf="${envf%"${envf##*[![:space:]]}"}"
+        envf="${envf#-}"
+        [ -n "${envf}" ] || continue
+        if [ ! -r "${envf}" ]; then
+          printf 'EnvironmentFile %s (named in %s) cannot be read here, so whether it sets DASHBOARD_TRUSTED_PROXIES is unknown\n' "${envf}" "${f}"
+          continue
+        fi
+        n="$(grep -cE -- "${TP_ENVFILE_ASSIGN_RE}" "${envf}" || true)"
+        if [ "${n:-0}" -gt 0 ]; then
+          printf 'EnvironmentFile %s (named in %s) sets DASHBOARD_TRUSTED_PROXIES; it overrides every Environment= line\n' "${envf}" "${f}"
+        fi
+      done < <(sed -nE 's/^[[:space:]]*EnvironmentFile=[[:space:]]*//p' "${f}")
+    done
+  fi
+  if [ -n "${config}" ] && [ -e "${config}" ]; then
+    rc=0
+    node -e '
+      let c;
+      try { c = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")); } catch { process.exit(2); }
+      process.exit(c !== null && typeof c === "object" && Object.prototype.hasOwnProperty.call(c, "trustedProxies") ? 0 : 1);
+    ' "${config}" 2>/dev/null || rc=$?
+    case "${rc}" in
+      0) printf '%s sets the trustedProxies key; the dashboard uses it whenever DASHBOARD_TRUSTED_PROXIES is unset or blank\n' "${config}" ;;
+      1) ;;
+      *) printf '%s could not be read as JSON, so whether it sets the trustedProxies key is unknown\n' "${config}" ;;
+    esac
+  fi
+  return 0
+}
+
+# print_trusted_proxies_readback <kind> <file> -- closing-summary line. Reads the
+# FILE the installer wrote (never the in-memory value) and resolves it with the
+# dashboard's own code: it reports what THAT FILE sets. A drop-in, an
+# EnvironmentFile or the config file's trustedProxies key can override it;
+# trusted_proxies_overrides names each one, and a warning follows the line.
+print_trusted_proxies_readback() {
+  local kind="$1" file="$2" written effective="" rc=0
+  if [ ! -r "${file}" ]; then
+    warn "Trusted proxies: could not read back ${file} (file not readable)"
+    return 0
+  fi
+  written="$(trusted_proxies_written_value "${kind}" "${file}")"
+  effective="$(trusted_proxies_readback "${kind}" "${file}" 2>&1)" && rc=0 || rc=$?
+  if [ "${rc}" -ne 0 ]; then
+    warn "Trusted proxies: could not read back ${file} through the dashboard's check: ${effective}"
+    return 0
+  fi
+  if [ -n "${written}" ]; then
+    printf "  Trusted proxies (read back from %s): %s (set by this install)\n" "${file}" "${effective}"
+  else
+    printf "  Trusted proxies (read back from %s): %s (dashboard default, nothing written)\n" "${file}" "${effective}"
+  fi
+  local unit="" line
+  [ "${kind}" = "systemd" ] && unit="${file}"
+  while IFS= read -r line; do
+    [ -n "${line}" ] && warn "Trusted proxies: the line above may not be what the dashboard uses: ${line}"
+  done < <(trusted_proxies_overrides "${unit}" "${CONFIG_FILE:-${INSTALL_DIR}/dashboard.config.json}")
+  return 0
+}
+
+# print_docker_trusted_proxies_result -- the Docker closing line. A Docker
+# install has no host-side dashboard build, so this does NOT run the check: it
+# reports what was written to .env, which the dashboard container checks when it
+# starts (docker-compose.yml passes it to the dashboard service only).
+print_docker_trusted_proxies_result() {
+  local written
+  written="$(trusted_proxies_written_value dotenv "${INSTALL_DIR}/.env")"
+  if [ -n "${written}" ]; then
+    printf "  Trusted proxies: %s (written to .env; the dashboard container started with it)\n" "${written}"
+  else
+    printf "  Trusted proxies: nothing written; the dashboard default applies\n"
+  fi
+}
+
+# check_trusted_proxies_only -- the --check-trusted-proxies mode. Checks the
+# list against the dashboard built in --install-dir and prints what an install
+# would write. Installs nothing and runs no installer step. Exit 0 accepted or
+# blank, 2 refused (the dashboard's message on stderr), 3 the check cannot run.
+check_trusted_proxies_only() {
+  local dist="${INSTALL_DIR}/packages/dashboard/dist"
+  local effective="" rc=0
+
+  trusted_proxies_evaluate
+  if [ "${TP_RC}" -eq 2 ]; then
+    printf '%s\n' "${TP_ERR}" >&2
+    exit 2
+  fi
+  if [ "${TP_RC}" -ne 0 ]; then
+    printf '%s\n' "${TP_ERR}" >&2
+    exit 3
+  fi
+
+  effective="$(trusted_proxies_check "${dist}" effective "${TRUSTED_PROXIES_WRITE}")" && rc=0 || rc=$?
+  if [ "${rc}" -ne 0 ]; then
+    printf 'cannot read the effective list from %s\n' "${dist}" >&2
+    exit 3
+  fi
+  if [ -z "${TRUSTED_PROXIES_WRITE}" ]; then
+    printf 'blank: nothing would be written\n'
+  else
+    printf 'accepted: %s\n' "${TRUSTED_PROXIES_WRITE}"
+    printf 'systemd line: %s\n' "$(dashboard_trusted_proxies_unit_line)"
+  fi
+  printf 'effective: %s\n' "${effective}"
+  exit 0
+}
+
+# ──────────────────────────────────────────────
 # Interactive prompt helpers
 # ──────────────────────────────────────────────
+# ask <prompt> <default> <var> / ask_secret <prompt> <var> -- the answer is
+# stored in <var> as plain text with printf -v. No eval: a $, a backtick, a
+# quote or a backslash in an answer (a password, a URL) is kept as typed and
+# never run (IN-07).
 ask() {
-  local prompt="$1" default="$2" var="$3"
+  local prompt="$1" default="$2" var="$3" input=""
   printf "  %s%s%s %s[%s]%s: " "${BOLD}" "${prompt}" "${RESET}" "${DIM}" "${default}" "${RESET}" >/dev/tty
   read -r input </dev/tty
-  eval "${var}=\"${input:-${default}}\""
+  printf -v "${var}" '%s' "${input:-${default}}"
 }
 
 ask_secret() {
-  local prompt="$1" var="$2"
+  local prompt="$1" var="$2" input=""
   printf "  %s%s%s: " "${BOLD}" "${prompt}" "${RESET}" >/dev/tty
   read -rs input </dev/tty
   printf "\n" >/dev/tty
-  eval "${var}=\"${input}\""
+  printf -v "${var}" '%s' "${input}"
 }
 
 ask_yn() {
@@ -482,6 +904,36 @@ ask_choice() {
   printf "\n    %sChoice [1]%s: " "${BOLD}" "${RESET}" >/dev/tty
   read -r choice </dev/tty
   echo "${choice:-1}"
+}
+
+# ask_trusted_proxies <bare-metal|docker> -- the wizard prompt for the
+# dashboard's trusted-proxy list. NOT built on `ask`: the answer is read with
+# `read -r` into a local and stored as plain text. An empty answer keeps the
+# value already given by flag or environment. The argument says when the list is
+# checked: on bare metal by validate_trusted_proxies after the checkout and
+# build, on Docker by the dashboard container when it starts.
+ask_trusted_proxies() {
+  local timing="${1:-bare-metal}"
+  local shown="${DASHBOARD_TRUSTED_PROXIES:-dashboard default}" answer=""
+  printf "\n  %sTrusted proxies%s (reverse proxy / load balancer)\n" "${BOLD}" "${RESET}" >/dev/tty
+  printf "  Set this when the dashboard sits behind a reverse proxy, load balancer or CDN\n" >/dev/tty
+  printf "  whose address is not loopback, link-local or unique-local. A list REPLACES the\n" >/dev/tty
+  printf "  default, so add loopback (and linklocal, uniquelocal) when a local proxy also\n" >/dev/tty
+  printf "  sits in front. Examples: 192.0.2.10, 198.51.100.0/24, loopback. Leave it empty to\n" >/dev/tty
+  printf "  keep the dashboard's default.\n" >/dev/tty
+  if [ "${timing}" = "docker" ]; then
+    printf "  The installer does not check the list: the dashboard container checks it when it\n" >/dev/tty
+    printf "  starts, after .env is written, and a refused list keeps the dashboard down.\n" >/dev/tty
+  else
+    printf "  The dashboard's own rules check the list after the checkout and build, and a\n" >/dev/tty
+    printf "  refused list stops the install before any secret, configuration file or\n" >/dev/tty
+    printf "  service unit is written.\n" >/dev/tty
+  fi
+  printf "  %sTrusted proxies%s %s[%s]%s: " "${BOLD}" "${RESET}" "${DIM}" "${shown}" "${RESET}" >/dev/tty
+  read -r answer </dev/tty || answer=""
+  if [ -n "${answer}" ]; then
+    DASHBOARD_TRUSTED_PROXIES="${answer}"
+  fi
 }
 
 # ──────────────────────────────────────────────
@@ -597,6 +1049,16 @@ run_wizard_api_services() {
 # ──────────────────────────────────────────────
 derive_install_components() {
   PROFILE="${PROFILE:-dashboard}"
+
+  # Phase 96 / OPS-01 sink safety. A line break would start a new line in every
+  # file the list is written to, so it is refused in every mode, before any step.
+  case "${DASHBOARD_TRUSTED_PROXIES}" in
+    *$'\n'*|*$'\r'*)
+      error "--trusted-proxies (or DASHBOARD_TRUSTED_PROXIES) must not contain a line break."
+      exit 1
+      ;;
+  esac
+
   case "${PROFILE}" in
     cli)
       INSTALL_COMPONENTS=(core)
@@ -624,6 +1086,39 @@ derive_install_components() {
   esac
 
   [ "${WITH_MONITOR}" = "true" ] && INSTALL_COMPONENTS+=(monitor)
+
+  # Phase 96 / OPS-01: the trusted-proxy list is a dashboard setting. A profile
+  # that installs no dashboard cannot honour it, so say so rather than drop it
+  # silently (same precedent as --with-monitor below).
+  if [ -n "${DASHBOARD_TRUSTED_PROXIES}" ] && \
+     [[ " ${INSTALL_COMPONENTS[*]} " != *" dashboard "* ]] && \
+     [[ " ${INSTALL_COMPONENTS[*]} " != *" docker "* ]]; then
+    error "--trusted-proxies (or DASHBOARD_TRUSTED_PROXIES in the installer's environment) is a dashboard setting, and profile ${PROFILE} installs no dashboard. Remove it, or choose --profile dashboard or docker."
+    exit 1
+  fi
+
+  # Docker writes the list to .env unchecked (no host-side dist exists, so the
+  # dashboard checks it when the container starts). compose rewrites # $ quotes
+  # backticks and backslashes in .env, and the dashboard can never accept any of
+  # them, so refusing them here is sink safety, NOT a second validator: it
+  # refuses only what the dashboard also refuses.
+  if [[ " ${INSTALL_COMPONENTS[*]} " == *" docker "* ]] && [ -n "${DASHBOARD_TRUSTED_PROXIES}" ]; then
+    local _bad
+    for _bad in '#' '$' "'" '"' '`' '\'; do
+      case "${DASHBOARD_TRUSTED_PROXIES}" in
+        *"${_bad}"*)
+          error "The trusted-proxy list contains ${_bad}: the dashboard would refuse it and compose would rewrite it in .env. Remove it and run the installer again."
+          exit 1
+          ;;
+      esac
+    done
+    # WR-07: then an allow-list, the canonical set plus the space an operator
+    # types after a comma. Every other character is one the dashboard refuses.
+    if ! trusted_proxies_charset_ok "${DASHBOARD_TRUSTED_PROXIES}" ' '; then
+      error "The trusted-proxy list contains a character other than letters, digits, spaces and . : / % , -: the dashboard would refuse it, so it is not written to .env. Correct it and run the installer again."
+      exit 1
+    fi
+  fi
 
   # T-42-06: --with-monitor requires compliance
   if [[ " ${INSTALL_COMPONENTS[*]} " == *" monitor "* ]] && \
@@ -685,6 +1180,7 @@ run_wizard_docker() {
   ask "Branding port" "${BRANDING_PORT}" BRANDING_PORT
   DASHBOARD_PORT=$(( COMPLIANCE_PORT + 1000 ))
   ask "Dashboard port" "${DASHBOARD_PORT}" DASHBOARD_PORT
+  ask_trusted_proxies docker
 
   # ── Admin user ───────────────────────────────
   header "3. Admin Account"
@@ -938,6 +1434,9 @@ run_wizard_bare_metal() {
   ask "Branding port" "${BRANDING_PORT}" BRANDING_PORT
   DASHBOARD_PORT=$(( COMPLIANCE_PORT + 1000 ))
   ask "Dashboard port" "${DASHBOARD_PORT}" DASHBOARD_PORT
+  if [ "${PROFILE}" = "dashboard" ]; then
+    ask_trusted_proxies bare-metal
+  fi
 
   # ── Install dir ──────────────────────────────
   ask "Installation directory" "${INSTALL_DIR}" INSTALL_DIR
@@ -976,6 +1475,9 @@ print_summary_bare_metal() {
   printf "  %-22s %s\n" "Compliance port:" "${COMPLIANCE_PORT}"
   printf "  %-22s %s\n" "Branding port:" "${BRANDING_PORT}"
   printf "  %-22s %s\n" "Dashboard port:" "${DASHBOARD_PORT}"
+  if [ "${PROFILE}" = "dashboard" ]; then
+    printf "  %-22s %s\n" "Trusted proxies:" "$(trusted_proxies_summary_value "checked by the dashboard's rules after the build")"
+  fi
   printf "  %-22s %s\n" "Scanner:" "$([ "${PA11Y_MODE}" = "external" ] && echo "external (${PA11Y_URL})" || echo "built-in (pa11y library)")"
   printf "  %-22s %s\n" "Database:" "${DB_ADAPTER}"
   printf "  %-22s %s\n" "Authentication:" "${AUTH_PROVIDER}"
@@ -1009,6 +1511,7 @@ print_summary_docker() {
   printf "  %-22s %s\n" "Compliance port:" "${COMPLIANCE_PORT}"
   printf "  %-22s %s\n" "Branding port:" "${BRANDING_PORT}"
   printf "  %-22s %s\n" "Dashboard port:" "${DASHBOARD_PORT}"
+  printf "  %-22s %s\n" "Trusted proxies:" "$(trusted_proxies_summary_value "checked when the dashboard container starts")"
   printf "  %-22s %s\n" "Scanner:" "built-in (pa11y library)"
   printf "  %-22s %s\n" "Database:" "SQLite (container volume)"
   [ -n "${ADMIN_USERNAME}" ] && printf "  %-22s %s\n" "Admin user:" "${ADMIN_USERNAME}"
@@ -1366,6 +1869,13 @@ create_oauth_client() {
 # OAuth IDs/secrets are hex/base64).
 write_install_state() {
   local state_file="${INSTALL_DIR}/.install-state"
+  # Only a value the dashboard's rules accepted and trusted_proxies_evaluate
+  # checked against [0-9A-Za-z.:/%,-], so it is safe for `. .install-state` and
+  # for XML. Checked again here, at the sink, before the file is touched.
+  if ! trusted_proxies_charset_ok "${TRUSTED_PROXIES_WRITE}"; then
+    error "internal: the trusted-proxy value holds a character outside [0-9A-Za-z.:/%,-]; ${state_file} not written"
+    exit 1
+  fi
   cat > "${state_file}" <<STATE
 INSTALL_COMPONENTS=${INSTALL_COMPONENTS[*]}
 COMPLIANCE_PORT=${COMPLIANCE_PORT}
@@ -1382,6 +1892,9 @@ MONITOR_CLIENT_SECRET=${MONITOR_CLIENT_SECRET}
 MONITOR_CHECK_INTERVAL=${MONITOR_CHECK_INTERVAL:-manual}
 OAUTH_KEY_MAX_AGE_DAYS=${OAUTH_KEY_MAX_AGE_DAYS}
 STATE
+  if [ -n "${TRUSTED_PROXIES_WRITE}" ]; then
+    printf 'DASHBOARD_TRUSTED_PROXIES=%s\n' "${TRUSTED_PROXIES_WRITE}" >> "${state_file}"
+  fi
   chmod 600 "${state_file}"
 }
 
@@ -1517,8 +2030,14 @@ WantedBy=multi-user.target
 UNIT
 }
 
-write_systemd_unit_dashboard() {
-  cat > /etc/systemd/system/luqen-dashboard.service <<UNIT
+# render_systemd_unit_dashboard -- prints the dashboard unit to stdout. Reads
+# node_path from the caller's scope, as create_systemd_services sets it. Split
+# from write_systemd_unit_dashboard so install.test.sh can render without
+# writing under /etc.
+render_systemd_unit_dashboard() {
+  local dashboard_trusted_proxies_env
+  dashboard_trusted_proxies_env="$(dashboard_trusted_proxies_unit_line)" || return 1
+  cat <<UNIT
 [Unit]
 Description=Luqen Dashboard
 After=network.target luqen-compliance.service luqen-branding.service luqen-llm.service
@@ -1536,6 +2055,7 @@ Environment=OAUTH_KEY_MAX_AGE_DAYS=${OAUTH_KEY_MAX_AGE_DAYS}
 Environment=COMPLIANCE_PUBLIC_URL=${COMPLIANCE_PUBLIC_URL}
 Environment=BRANDING_PUBLIC_URL=${BRANDING_PUBLIC_URL}
 Environment=LLM_PUBLIC_URL=${LLM_PUBLIC_URL}
+${dashboard_trusted_proxies_env}
 ExecStart=${node_path} ${INSTALL_DIR}/packages/dashboard/dist/cli.js serve --config ${CONFIG_FILE}
 Restart=always
 RestartSec=5
@@ -1543,6 +2063,13 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target
 UNIT
+}
+
+write_systemd_unit_dashboard() {
+  # Render first, so a refused value (WR-07) leaves the existing unit as it was.
+  local unit_text
+  unit_text="$(render_systemd_unit_dashboard)" || { error "The dashboard unit was not written."; exit 1; }
+  printf '%s\n' "${unit_text}" > /etc/systemd/system/luqen-dashboard.service
 }
 
 write_systemd_unit_monitor() {
@@ -1906,6 +2433,15 @@ show_summary_bare_metal() {
     printf "\n"
   fi
 
+  if [ "${has_dashboard}" = "1" ]; then
+    if command -v systemctl &>/dev/null && [ -f /etc/systemd/system/luqen-dashboard.service ]; then
+      print_trusted_proxies_readback systemd /etc/systemd/system/luqen-dashboard.service
+    else
+      print_trusted_proxies_readback state "${INSTALL_DIR}/.install-state"
+    fi
+    printf "\n"
+  fi
+
   if command -v systemctl &>/dev/null; then
     # Build space-separated list of installed unit names
     local _units=""
@@ -1957,6 +2493,60 @@ show_summary_bare_metal() {
 
 TOTAL_STEPS_DOCKER=5
 
+# render_docker_env -- prints the Docker Compose .env to stdout. Reads
+# SESSION_SECRET and the port / URL settings from the caller's scope. Split from
+# run_docker_install so install.test.sh can render it without Docker.
+render_docker_env() {
+  local docker_trusted_proxies_line=""
+  if [ -n "${DASHBOARD_TRUSTED_PROXIES}" ]; then
+    docker_trusted_proxies_line="DASHBOARD_TRUSTED_PROXIES=${DASHBOARD_TRUSTED_PROXIES}"
+  fi
+  cat <<ENVFILE
+# Luqen Docker Compose configuration
+# Generated by install.sh on $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+# Last reviewed for v3.1.0 (Phase 40 / DOC-03) — head migration 061
+COMPLIANCE_PORT=${COMPLIANCE_PORT}
+DASHBOARD_PORT=${DASHBOARD_PORT}
+DASHBOARD_SESSION_SECRET=${SESSION_SECRET}
+# OPTIONAL — at-rest AES key, independent of DASHBOARD_SESSION_SECRET above.
+# This installer documents this variable but never generates a value for it
+# (rotating it requires re-keying existing encrypted data first — see the
+# runbook). Defaults to DASHBOARD_SESSION_SECRET when left unset:
+# docs/guides/security-administration.md#rotating-the-session-secret-and-the-at-rest-encryption-key
+# DASHBOARD_ENCRYPTION_KEY=
+LUQEN_WEBSERVICE_URL=
+
+# ── Public URLs (Phase 30/31.1) ──
+# Override these with real hostnames for production installs.
+DASHBOARD_PUBLIC_URL=${DASHBOARD_PUBLIC_URL}
+COMPLIANCE_PUBLIC_URL=${COMPLIANCE_PUBLIC_URL}
+BRANDING_PUBLIC_URL=${BRANDING_PUBLIC_URL}
+LLM_PUBLIC_URL=${LLM_PUBLIC_URL}
+
+# ── OAuth signing key rotation (Phase 31.1) ──
+OAUTH_KEY_MAX_AGE_DAYS=${OAUTH_KEY_MAX_AGE_DAYS}
+
+# ── JWKS discovery (Phase 31.1) ──
+# Either set DASHBOARD_JWKS_URI / DASHBOARD_JWKS_URL (preferred) or
+# DASHBOARD_JWT_PUBLIC_KEY (PEM, "\n" allowed for single-line env form).
+DASHBOARD_JWKS_URI=${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json
+DASHBOARD_JWKS_URL=${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json
+# DASHBOARD_JWT_PUBLIC_KEY=
+
+# ── Optional: Ollama provider for the LLM service ──
+# OLLAMA_BASE_URL=http://localhost:11434
+
+# ── Reverse proxy: trusted proxies (Phase 96 / OPS-01) ──
+# DASHBOARD_TRUSTED_PROXIES lists the proxy addresses whose X-Forwarded-For the
+# dashboard trusts. Unset (the default) means the dashboard's own default
+# applies. A Docker install has no dashboard build on the host, so the
+# dashboard checks this list when its container starts; a refused list keeps the
+# container down and the installer prints the compose logs.
+# See docs/getting-started/installation.md.
+${docker_trusted_proxies_line}
+ENVFILE
+}
+
 run_docker_install() {
   # Step 1: Prerequisites
   step 1 $TOTAL_STEPS_DOCKER "Checking Docker prerequisites"
@@ -1997,41 +2587,7 @@ run_docker_install() {
   SESSION_SECRET=$(node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))" 2>/dev/null || openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | xxd -p 2>/dev/null | tr -d '\n')
 
   local ENV_FILE="${INSTALL_DIR}/.env"
-  cat > "${ENV_FILE}" <<ENVFILE
-# Luqen Docker Compose configuration
-# Generated by install.sh on $(date -u +"%Y-%m-%dT%H:%M:%SZ")
-# Last reviewed for v3.1.0 (Phase 40 / DOC-03) — head migration 061
-COMPLIANCE_PORT=${COMPLIANCE_PORT}
-DASHBOARD_PORT=${DASHBOARD_PORT}
-DASHBOARD_SESSION_SECRET=${SESSION_SECRET}
-# OPTIONAL — at-rest AES key, independent of DASHBOARD_SESSION_SECRET above.
-# This installer documents this variable but never generates a value for it
-# (rotating it requires re-keying existing encrypted data first — see the
-# runbook). Defaults to DASHBOARD_SESSION_SECRET when left unset:
-# docs/guides/security-administration.md#rotating-the-session-secret-and-the-at-rest-encryption-key
-# DASHBOARD_ENCRYPTION_KEY=
-LUQEN_WEBSERVICE_URL=
-
-# ── Public URLs (Phase 30/31.1) ──
-# Override these with real hostnames for production installs.
-DASHBOARD_PUBLIC_URL=${DASHBOARD_PUBLIC_URL}
-COMPLIANCE_PUBLIC_URL=${COMPLIANCE_PUBLIC_URL}
-BRANDING_PUBLIC_URL=${BRANDING_PUBLIC_URL}
-LLM_PUBLIC_URL=${LLM_PUBLIC_URL}
-
-# ── OAuth signing key rotation (Phase 31.1) ──
-OAUTH_KEY_MAX_AGE_DAYS=${OAUTH_KEY_MAX_AGE_DAYS}
-
-# ── JWKS discovery (Phase 31.1) ──
-# Either set DASHBOARD_JWKS_URI / DASHBOARD_JWKS_URL (preferred) or
-# DASHBOARD_JWT_PUBLIC_KEY (PEM, "\n" allowed for single-line env form).
-DASHBOARD_JWKS_URI=${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json
-DASHBOARD_JWKS_URL=${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json
-# DASHBOARD_JWT_PUBLIC_KEY=
-
-# ── Optional: Ollama provider for the LLM service ──
-# OLLAMA_BASE_URL=http://localhost:11434
-ENVFILE
+  render_docker_env > "${ENV_FILE}"
   chmod 600 "${ENV_FILE}"
   success ".env written at ${ENV_FILE}"
 
@@ -2093,6 +2649,8 @@ ENVFILE
   printf "    Compliance:  %s%shttp://localhost:${COMPLIANCE_PORT}%s\n" "${BOLD}" "${CYAN}" "${RESET}"
   printf "    Scanner:     built-in (pa11y library)\n"
   printf "\n"
+  print_docker_trusted_proxies_result
+  printf "\n"
 
   if [ -n "${ADMIN_USERNAME}" ]; then
     printf "  %sLogin:%s\n" "${BOLD}" "${RESET}"
@@ -2148,10 +2706,62 @@ show_v3_whats_new() {
   printf "  %sFor production deployments, set these env vars on the dashboard unit:%s\n" "${BOLD}" "${RESET}"
   printf "    DASHBOARD_PUBLIC_URL    External URL the dashboard advertises (OAuth issuer / MCP discovery)\n"
   printf "    DASHBOARD_JWKS_URI      JWKS endpoint (defaults to \${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json)\n"
-  printf "    OAUTH_KEY_MAX_AGE_DAYS  Signing-key rotation budget (default 90)\n\n"
+  printf "    OAUTH_KEY_MAX_AGE_DAYS  Signing-key rotation budget (default 90)\n"
+  printf "    DASHBOARD_TRUSTED_PROXIES  Proxy addresses whose X-Forwarded-For is trusted (install.sh --trusted-proxies; default: loopback, linklocal, uniquelocal)\n\n"
 
   printf "  %sMore detail:%s docs/deployment/installer-changelog.md\n\n" "${BOLD}" "${RESET}"
 }
+
+# run_bare_metal_install -- the full bare-metal sequence. A function so
+# install.test.sh can run it with every step stubbed and check the order.
+run_bare_metal_install() {
+  resolve_public_url_defaults  # Pre-step: fill in *_PUBLIC_URL defaults
+  check_prerequisites          # Step 1
+  clone_or_pull                # Step 2
+  install_and_build            # Step 3
+  validate_trusted_proxies     # Between 3 and 4: after the checkout and build, before any secret, config or unit (D-02)
+  generate_secrets             # Step 4
+  seed_data                    # Step 5
+  create_oauth_client          # Step 6
+  write_config                 # Step 7
+  create_systemd_services      # Step 8
+  start_services_and_post_install  # Step 9
+  show_summary_bare_metal      # Step 10
+  show_v3_whats_new            # Post: print v3.x changes summary
+}
+
+# Source mode: install.test.sh and scripts/compare-trusted-proxies.sh set
+# LUQEN_INSTALL_LIB_ONLY=1 and source this file to load the functions above
+# without installing anything. Nothing above this line parses the command line
+# or dispatches a mode (parse_args is only defined), so a sourced file with
+# --uninstall among its arguments runs no uninstall. Executed rather than
+# sourced (bash install.sh, curl | bash) with the variable set, it stops with
+# exit 64 instead of exiting 0 having done nothing.
+if [ "${LUQEN_INSTALL_LIB_ONLY:-}" = "1" ]; then
+  if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    printf 'LUQEN_INSTALL_LIB_ONLY=1 is for sourcing install.sh; unset it to install\n' >&2
+    exit 64
+  fi
+  return 0
+fi
+
+parse_args "$@"
+
+if [ "${CHECK_TRUSTED_PROXIES_ONLY}" = "true" ] && [ "${UNINSTALL:-false}" = "true" ]; then
+  error "--check-trusted-proxies installs nothing and cannot be combined with --uninstall"
+  exit 1
+fi
+
+if [ "${UNINSTALL:-false}" = "true" ]; then
+  uninstall_luqen "$([ "${UNINSTALL_PURGE:-false}" = "true" ] && echo yes || echo no)"
+fi
+
+# --check-trusted-proxies: dispatched here so every function is defined and
+# --install-dir is honoured whatever the flag order. Before the wizard, so it
+# never prompts and never installs.
+if [ "${CHECK_TRUSTED_PROXIES_ONLY}" = "true" ]; then
+  check_trusted_proxies_only
+fi
 
 # ══════════════════════════════════════════════
 #  ENTRY POINT
@@ -2208,18 +2818,6 @@ case "${DEPLOY_MODE}" in
     printf "\n"
     ;;
   *)
-    # Full bare metal installation
-    resolve_public_url_defaults  # Pre-step: fill in *_PUBLIC_URL defaults
-    check_prerequisites          # Step 1
-    clone_or_pull                # Step 2
-    install_and_build            # Step 3
-    generate_secrets             # Step 4
-    seed_data                    # Step 5
-    create_oauth_client          # Step 6
-    write_config                 # Step 7
-    create_systemd_services      # Step 8
-    start_services_and_post_install  # Step 9
-    show_summary_bare_metal      # Step 10
-    show_v3_whats_new            # Post: print v3.x changes summary
+    run_bare_metal_install
     ;;
 esac

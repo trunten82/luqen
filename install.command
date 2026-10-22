@@ -144,10 +144,23 @@ fi
 # install.sh, since install.sh handles systemd but not launchd.
 # ──────────────────────────────────────────────
 WANT_UNINSTALL=0
+# Modes in which install.sh installs nothing and exits 0: the trusted-proxy
+# check and the help. After them this wrapper must stop as well, because the
+# launchd block below rewrites every plist and reloads every agent.
+WANT_NO_INSTALL=0
+# --install-dir as passed to install.sh, so the launchd block reads the
+# .install-state of the install this run made (IN-03), not $HOME/luqen's.
+ARG_INSTALL_DIR=""
+prev_arg=""
 for arg in "$@"; do
+    if [ "${prev_arg}" = "--install-dir" ]; then
+        ARG_INSTALL_DIR="${arg}"
+    fi
     case "$arg" in
         --uninstall) WANT_UNINSTALL=1 ;;
+        --check-trusted-proxies|--help|-h) WANT_NO_INSTALL=1 ;;
     esac
+    prev_arg="${arg}"
 done
 
 if [ "${WANT_UNINSTALL}" = "1" ] && [ "$(uname -s)" = "Darwin" ]; then
@@ -179,6 +192,12 @@ if [ "${WANT_UNINSTALL}" = "1" ]; then
     exit 0
 fi
 
+# A mode that installed nothing (--check-trusted-proxies, --help) has nothing
+# to register: stop before the launchd block, which would restart every agent.
+if [ "${WANT_NO_INSTALL}" = "1" ]; then
+    exit 0
+fi
+
 # ──────────────────────────────────────────────
 # macOS post-install: register launchd agents for v3.1.0 daemons
 #
@@ -201,7 +220,10 @@ fi
 
 NODE_PATH="$(command -v node 2>/dev/null || true)"
 INSTALL_DIR_DEFAULT="${HOME}/luqen"
-INSTALL_DIR="${LUQEN_INSTALL_DIR:-${INSTALL_DIR_DEFAULT}}"
+# --install-dir wins, as it does in install.sh; then LUQEN_INSTALL_DIR; then
+# ~/luqen. Both scripts cd to $HOME first, so a relative path means the same
+# directory to each.
+INSTALL_DIR="${ARG_INSTALL_DIR:-${LUQEN_INSTALL_DIR:-${INSTALL_DIR_DEFAULT}}}"
 
 # Resolve installer-default ports (mirrors install.sh defaults).
 COMPLIANCE_PORT="${COMPLIANCE_PORT:-4000}"
@@ -227,10 +249,24 @@ INSTALL_COMPONENTS=""
 MONITOR_CLIENT_ID=""
 MONITOR_CLIENT_SECRET=""
 MONITOR_CHECK_INTERVAL="manual"
+# Reset before .install-state is sourced: only a list install.sh checked with the
+# dashboard's own rules and wrote into .install-state may reach the plist. A value
+# in the caller's environment must not (it was never checked).
+DASHBOARD_TRUSTED_PROXIES=""
 if [ -f "${INSTALL_DIR}/.install-state" ]; then
     # shellcheck disable=SC1090
     . "${INSTALL_DIR}/.install-state"
 fi
+# The plist is XML: only the canonical character set install.sh checked may go
+# in. Refuse anything else rather than write it (WR-07).
+case "${DASHBOARD_TRUSTED_PROXIES}" in
+    *[!0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.:/%,-]*)
+        echo ""
+        echo "  ERROR: DASHBOARD_TRUSTED_PROXIES in ${INSTALL_DIR}/.install-state holds a character"
+        echo "  outside [0-9A-Za-z.:/%,-]; no launchd plist was written. Re-run install.sh."
+        exit 1
+        ;;
+esac
 # Default to the legacy 4-service set when state file is absent or empty.
 if [ -z "${INSTALL_COMPONENTS}" ]; then
     INSTALL_COMPONENTS="core dashboard compliance branding llm"
@@ -321,14 +357,21 @@ for component in "${COMPONENTS_ARR[@]}"; do
                 --ARGS-- "${INSTALL_DIR}/packages/llm/dist/cli.js" "serve" "--port" "${LLM_PORT}"
             ;;
         dashboard)
+            dashboard_env=(
+                DASHBOARD_PUBLIC_URL "${DASHBOARD_PUBLIC_URL}"
+                DASHBOARD_JWKS_URI "${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json"
+                DASHBOARD_JWKS_URL "${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json"
+                OAUTH_KEY_MAX_AGE_DAYS "${OAUTH_KEY_MAX_AGE_DAYS}"
+                COMPLIANCE_PUBLIC_URL "${COMPLIANCE_PUBLIC_URL}"
+                BRANDING_PUBLIC_URL "${BRANDING_PUBLIC_URL}"
+                LLM_PUBLIC_URL "${LLM_PUBLIC_URL}"
+            )
+            # Only the list install.sh validated (from .install-state); empty = not set.
+            if [ -n "${DASHBOARD_TRUSTED_PROXIES}" ]; then
+                dashboard_env+=(DASHBOARD_TRUSTED_PROXIES "${DASHBOARD_TRUSTED_PROXIES}")
+            fi
             write_plist "io.luqen.dashboard" "${INSTALL_DIR}" \
-                DASHBOARD_PUBLIC_URL "${DASHBOARD_PUBLIC_URL}" \
-                DASHBOARD_JWKS_URI "${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json" \
-                DASHBOARD_JWKS_URL "${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json" \
-                OAUTH_KEY_MAX_AGE_DAYS "${OAUTH_KEY_MAX_AGE_DAYS}" \
-                COMPLIANCE_PUBLIC_URL "${COMPLIANCE_PUBLIC_URL}" \
-                BRANDING_PUBLIC_URL "${BRANDING_PUBLIC_URL}" \
-                LLM_PUBLIC_URL "${LLM_PUBLIC_URL}" \
+                "${dashboard_env[@]}" \
                 --ARGS-- "${INSTALL_DIR}/packages/dashboard/dist/cli.js" "serve" "--config" "${CONFIG_FILE}"
             ;;
         monitor)
