@@ -17,6 +17,7 @@ import {
   type ScanOrgKeys,
 } from '../../services/issue-dismissals/actor-label.js';
 import { mayTouchDismissalOrg } from '../../services/issue-dismissals/scan-access.js';
+import { actionOptions, resourceTypeOptions } from './audit-filter-options.js';
 
 // Phase 41.1-03 — TypeBox query shape for OpenAPI fidelity. Single HTML route
 // returns the audit-log page; only schema/querystring required.
@@ -154,6 +155,8 @@ export async function auditRoutes(
         currentPath: '/admin/audit-log',
         user: request.user,
         entries,
+        actionOptions: actionOptions(q.action ?? ''),
+        resourceTypeOptions: resourceTypeOptions(q.resourceType ?? ''),
         total: result.total,
         limit,
         offset,

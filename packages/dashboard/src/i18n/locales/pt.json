@@ -334,7 +334,10 @@
     "allActions": "Todas as ações",
     "allResources": "Todos os tipos de recurso",
     "noEntries": "Nenhuma entrada no log de auditoria encontrada.",
-    "org": "Org"
+    "org": "Org",
+    "actionIssueDismissalMark": "Constatação descartada como falso positivo",
+    "actionIssueDismissalRevoke": "Descarte revogado",
+    "resourceIssueDismissal": "Descarte de constatação"
   },
   "admin": {
     "branding": {

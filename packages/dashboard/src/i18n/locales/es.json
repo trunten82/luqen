@@ -334,7 +334,10 @@
     "allActions": "Todas las acciones",
     "allResources": "Todos los tipos de recurso",
     "noEntries": "No se encontraron entradas en el registro de auditoría.",
-    "org": "Org"
+    "org": "Org",
+    "actionIssueDismissalMark": "Hallazgo descartado como falso positivo",
+    "actionIssueDismissalRevoke": "Descarte revocado",
+    "resourceIssueDismissal": "Descarte de hallazgo"
   },
   "admin": {
     "branding": {

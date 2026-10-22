@@ -102,3 +102,41 @@ describe('AUD-01 the Audit Log menu entry follows the audit view permission', ()
     expect(res.body).not.toContain('northwind-scan');
   });
 });
+
+describe('AUD-02 the Action and Resource Type filters show the active filter', () => {
+  const actionSelect = (html: string): HTMLSelectElement =>
+    new JSDOM(html).window.document.querySelector('select#filter-action') as HTMLSelectElement;
+  const selectedValues = (select: HTMLSelectElement): string[] =>
+    [...select.querySelectorAll('option')].filter((o) => o.hasAttribute('selected')).map((o) => o.getAttribute('value') ?? '');
+
+  it('AUD-02 the rendered Action filter shows the dismissal filter as selected', async () => {
+    const res = await page(owner, '/admin/audit-log?action=issue_dismissal.mark');
+    expect(res.status).toBe(200);
+    const select = actionSelect(res.body);
+    expect(selectedValues(select)).toEqual(['issue_dismissal.mark']);
+    const labels = new Map([...select.querySelectorAll('option')].map((o) => [o.getAttribute('value'), (o.textContent ?? '').trim()]));
+    expect(labels.get('issue_dismissal.mark')).toBe('Finding dismissed as false positive');
+    expect(labels.get('issue_dismissal.revoke')).toBe('Dismissal revoked');
+  });
+
+  it('AUD-02 the rendered All actions option is selected only without an action filter', async () => {
+    const without = actionSelect((await page(owner, '/admin/audit-log')).body);
+    expect(selectedValues(without)).toEqual(['']);
+    const withFilter = actionSelect((await page(owner, '/admin/audit-log?action=login.success')).body);
+    expect(selectedValues(withFilter)).toEqual(['login.success']);
+  });
+
+  it('AUD-02 an unlisted filter value is shown as escaped text', async () => {
+    const raw = '<b>fabrikam</b>';
+    const res = await page(owner, `/admin/audit-log?action=${encodeURIComponent(raw)}&resourceType=${encodeURIComponent(raw)}`);
+    expect(res.status).toBe(200);
+    const doc = new JSDOM(res.body).window.document;
+    const select = doc.querySelector('select#filter-action') as HTMLSelectElement;
+    const selected = [...select.querySelectorAll('option')].filter((o) => o.hasAttribute('selected'));
+    expect(selected.map((o) => (o.textContent ?? '').trim())).toEqual([raw]);
+    expect(doc.querySelector('select#filter-action b')).toBeNull();
+    expect(doc.querySelector('select#filter-resource-type b')).toBeNull();
+    const typeSelected = [...doc.querySelectorAll('select#filter-resource-type option')].filter((o) => o.hasAttribute('selected'));
+    expect(typeSelected.map((o) => (o.textContent ?? '').trim())).toEqual([raw]);
+  });
+});

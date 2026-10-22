@@ -334,7 +334,10 @@
     "allActions": "Alle Aktionen",
     "allResources": "Alle Ressourcentypen",
     "noEntries": "Keine Audit-Protokolleinträge gefunden.",
-    "org": "Org"
+    "org": "Org",
+    "actionIssueDismissalMark": "Befund als Fehlalarm verworfen",
+    "actionIssueDismissalRevoke": "Verwerfen widerrufen",
+    "resourceIssueDismissal": "Verwerfen eines Befunds"
   },
   "admin": {
     "branding": {

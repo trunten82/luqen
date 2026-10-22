@@ -12,6 +12,10 @@ import type {
   RevokeIssueDismissalInput,
   RevokeIssueDismissalResult,
 } from '../../interfaces/issue-dismissal-repository.js';
+import {
+  ISSUE_DISMISSAL_AUDIT_ACTIONS,
+  ISSUE_DISMISSAL_AUDIT_RESOURCE_TYPE,
+} from '../../interfaces/issue-dismissal-repository.js';
 import { insertAuditRow } from './audit-repository.js';
 
 // ---------------------------------------------------------------------------
@@ -168,8 +172,8 @@ export class SqliteIssueDismissalRepository implements IssueDismissalRepository 
         insertAuditRow(this.db, {
           actor: input.actor,
           actorId: input.actorId,
-          action: 'issue_dismissal.mark',
-          resourceType: 'issue_dismissal',
+          action: ISSUE_DISMISSAL_AUDIT_ACTIONS.mark,
+          resourceType: ISSUE_DISMISSAL_AUDIT_RESOURCE_TYPE,
           resourceId: id,
           details: {
             siteUrl: input.siteUrl,
@@ -236,8 +240,8 @@ export class SqliteIssueDismissalRepository implements IssueDismissalRepository 
       insertAuditRow(this.db, {
         actor: input.actor,
         actorId: input.actorId,
-        action: 'issue_dismissal.revoke',
-        resourceType: 'issue_dismissal',
+        action: ISSUE_DISMISSAL_AUDIT_ACTIONS.revoke,
+        resourceType: ISSUE_DISMISSAL_AUDIT_RESOURCE_TYPE,
         resourceId: input.id,
         details: {
           siteUrl: dismissal.siteUrl,

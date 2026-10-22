@@ -334,7 +334,10 @@
     "allActions": "Tutte le azioni",
     "allResources": "Tutti i tipi di risorsa",
     "noEntries": "Nessuna voce nel registro audit trovata.",
-    "org": "Org"
+    "org": "Org",
+    "actionIssueDismissalMark": "Rilevamento escluso come falso positivo",
+    "actionIssueDismissalRevoke": "Esclusione revocata",
+    "resourceIssueDismissal": "Esclusione di rilevamento"
   },
   "admin": {
     "branding": {

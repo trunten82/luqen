@@ -334,7 +334,10 @@
     "allActions": "Toutes les actions",
     "allResources": "Tous les types de ressource",
     "noEntries": "Aucune entrée dans le journal d'audit.",
-    "org": "Org"
+    "org": "Org",
+    "actionIssueDismissalMark": "Constat écarté comme faux positif",
+    "actionIssueDismissalRevoke": "Écartement révoqué",
+    "resourceIssueDismissal": "Écartement de constat"
   },
   "admin": {
     "branding": {

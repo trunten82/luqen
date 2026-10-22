@@ -348,7 +348,10 @@
     "allActions": "All actions",
     "allResources": "All resource types",
     "noEntries": "No audit log entries found.",
-    "org": "Org"
+    "org": "Org",
+    "actionIssueDismissalMark": "Finding dismissed as false positive",
+    "actionIssueDismissalRevoke": "Dismissal revoked",
+    "resourceIssueDismissal": "Finding dismissal"
   },
   "admin": {
     "jurisdictions": {
