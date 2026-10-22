@@ -13,6 +13,13 @@ checklist, not a test suite.
   of every `docker-compose*.yml`: catches deprecated `version:` keys,
   missing healthchecks / restart policies, undeclared volume references,
   missing services in `depends_on`.
+- `bash install.test.sh` — function-level cases against a temporary install
+  prefix, using the installer's own functions (source mode) and the real
+  dashboard trusted-proxy check, plus `systemd-analyze verify` on the unit
+  the installer renders. Covers the trusted-proxy list (Phase 96).
+- `bash scripts/compare-trusted-proxies.test.sh` — the read-only comparison
+  of a host's trusted-proxy setting with what the installer would write,
+  run against a stubbed `systemctl`.
 - CI in `.github/workflows/` runs the dashboard + compliance + llm test
   suites on every push.
 
@@ -71,6 +78,19 @@ Smoke checklist:
 - [ ] Uninstall via `Invoke-LuqenUninstall` removes the install dir + any
       registered scheduled tasks
 - [ ] `Read-Prompt` works under PS Core (not just Windows PowerShell 5.1)
+
+### Trusted-proxy list (Phase 96)
+
+The automated tests above cover the installer's functions on a temporary
+prefix. These end-to-end rows have not been run.
+
+| Platform | What to run | Last verified | Notes |
+|---|---|---|---|
+| macOS | `install.sh --trusted-proxies LIST`, then let `install.command` load the launchd plist; read back that the plist carries the setting | _not verified_ | The plist is generated and linted by the tests; a real `launchctl` load needs a Mac |
+| Docker | `install.sh --mode docker --trusted-proxies LIST` with a list the dashboard refuses; confirm the dashboard container refuses to start and says why | _not verified_ | Docker installs do not check the list on the host; the container does at start |
+| Linux bare-metal | Full `install.sh --trusted-proxies LIST` run on a clean host; read back the unit's setting with `scripts/compare-trusted-proxies.sh` | _not verified_ | `systemd-analyze verify` on the rendered unit is automated; a full run on a clean host is not |
+
+See [Production: the trusted-proxy list](../getting-started/installation.md#production-the-trusted-proxy-list).
 
 ### Carry-forward known gaps
 

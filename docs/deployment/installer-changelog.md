@@ -11,6 +11,59 @@ Last reviewed for **v3.1.0** (Phase 40 / DOC-03).
 
 ---
 
+## v3.10.0 — Trusted-proxy list (Phase 96)
+
+> The dashboard has trusted a configurable list of proxy addresses for
+> `X-Forwarded-For` since v3.9.0. Phase 96 lets `install.sh` set it. A
+> flag-less install is unchanged: nothing is written and the dashboard
+> default applies. How to choose the list, and how to set it on an existing
+> install, is in
+> [Production: the trusted-proxy list](../getting-started/installation.md#production-the-trusted-proxy-list);
+> this section lists only what changed in the installer.
+
+**New input** (`install.sh` only): the list can be given as
+`--trusted-proxies LIST`, as `DASHBOARD_TRUSTED_PROXIES` in the installer's
+environment (the flag wins), or at the interactive wizard prompt. It applies
+to profiles that install a dashboard (`dashboard`, `docker`); the others
+refuse it.
+
+**Checked before anything is written (bare-metal):** after the build, the
+installer asks the built dashboard's own rules whether the list is
+acceptable. A refused list stops the install before any secret,
+configuration or service unit is written. A Docker install has no
+host-side build, so the list is written to `.env` unchecked and the
+dashboard container applies its own rules when it starts; the installer
+refuses only the characters (`#`, `$`, quotes, backtick, backslash) that
+compose would rewrite and the dashboard would refuse anyway.
+
+**Where the checked value is written:**
+
+| Install | Sink |
+|---------|------|
+| Linux bare-metal | `Environment=DASHBOARD_TRUSTED_PROXIES=...` line in the dashboard systemd unit |
+| Docker | `DASHBOARD_TRUSTED_PROXIES=` in the generated `.env`; `docker-compose.yml` passes it to the dashboard container |
+| macOS | the launchd plist that `install.command` generates, from the checked value in `.install-state` |
+
+**New flag:** `--check-trusted-proxies` checks the list against the dashboard
+built in `--install-dir`, prints what would be written and installs nothing.
+
+**New script:** `scripts/compare-trusted-proxies.sh` compares a host's
+running setting with what the installer would write. It is read-only and
+prints names, counts, verdict words and hashes, never the value.
+
+**Not covered:** `install.ps1`, `deploy/templates/` and
+`deploy/docker-setup.sh` do not take the setting.
+
+**Internal:** `LUQEN_INSTALL_LIB_ONLY=1` makes `install.sh` define its
+functions and install nothing, so `install.test.sh` and the comparison script
+can call the installer's own code.
+
+**Re-running the installer on an existing install is not the way to add the
+list:** each run writes a new session secret. The linked section gives the
+drop-in recipe for an existing install.
+
+---
+
 ## v3.1.x — Installer Wizard Redesign (Phase 42)
 
 > Phase 42 reshapes the installer wizard around four explicit deployment
