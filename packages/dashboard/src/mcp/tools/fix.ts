@@ -178,7 +178,7 @@ export function registerFixTools(
           'Returns the fixed HTML snippet, a unified diff, WCAG criterion, effort estimate, legal context (EU/US by default), and a conservative draft disclaimer.',
           'Output is a DRAFT for human review — never auto-applied.',
           'Non-destructive: no file writes, no code commits. The caller must review, test, and merge manually.',
-          'AI output requires the llm.view permission and is marked source "ai".',
+          'An AI fix draft requires the llm.view permission and is marked source "ai".',
           'A caller with issues.fix but without llm.view receives the deterministic pattern-based hint the report page shows, marked source "pattern", and the LLM service is not called.',
         ].join(' '),
       inputSchema: z.object({

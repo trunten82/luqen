@@ -1,6 +1,7 @@
 /**
- * D-04 (phase 93): the LLM fix capability has exactly three source files that name it, and each
- * has an entitlement test. A fourth file turns this test red.
+ * D-04 (phase 93): the generate-fix capability (AI fix drafts) has exactly three source files that
+ * name it, and each has an entitlement test. Scope: AI fix drafts only. The vision pass's suggested
+ * alt text is not an AI fix draft, is not gated by llm.view, and is outside this inventory. A fourth file turns this test red.
  *
  * The three files, and where the llm.view rule is pinned for each:
  *   - src/llm-client.ts       the definition (LLMClient.generateFix and its generate-fix URL);
@@ -41,12 +42,12 @@ function filesNamingTheLlmFixCapability(): string[] {
     .sort();
 }
 
-describe('D-04 AI fix entry points', () => {
-  it('D-04 the LLM fix capability is called from exactly the inventoried files', () => {
+describe('D-04 generate-fix capability call sites (AI fix drafts)', () => {
+  it('D-04 the generate-fix capability is called from exactly the inventoried files', () => {
     expect(filesNamingTheLlmFixCapability()).toEqual([...INVENTORIED].sort());
   });
 
-  it('D-04 the inventory matcher finds the known call sites', () => {
+  it('D-04 the generate-fix inventory matcher finds the known call sites', () => {
     const found = filesNamingTheLlmFixCapability();
     expect(found.length).toBeGreaterThan(0);
     expect(found).toContain('routes/reports.ts');
