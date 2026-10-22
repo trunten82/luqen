@@ -22,6 +22,9 @@ import {
 } from './org-scope.js';
 import { isLastActiveAdmin } from '../services/user-scope.js';
 import { auditLogScope } from '../services/audit-log-scope.js';
+import { withActorLabels } from '../services/issue-dismissals/audit-actor-labels.js';
+import { isApiKeyActor } from '../services/issue-dismissals/actor-label.js';
+import { GENERIC_API_KEY_ACTOR } from '../routes/api/issue-dismissals-redaction.js';
 import { deleteScanAndFiles, scanDeleteRefusal, SCAN_DELETE_PERMISSION } from '../services/scan-delete-access.js';
 
 // ---------------------------------------------------------------------------
@@ -386,8 +389,15 @@ export const resolvers = {
         offset,
       });
 
+      // The Actor is the shared actor label, as on the Audit Log page: an API key reads
+      // `API key: <name> (Created <date>)` or `API key`, and its stored row id is not returned.
+      const labelled = await withActorLabels(ctx.storage, ctx.user, result.entries, 'en', ctx.log ?? NO_LOG);
       return {
-        nodes: result.entries,
+        nodes: labelled.map(({ actorLabel, ...entry }) => ({
+          ...entry,
+          actor: actorLabel,
+          actorId: isApiKeyActor(entry.actor, entry.actorId) ? GENERIC_API_KEY_ACTOR : entry.actorId,
+        })),
         totalCount: result.total,
         pageInfo: buildPageInfo(result.total, limit, offset),
       };

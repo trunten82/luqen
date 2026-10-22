@@ -1,7 +1,8 @@
 /**
  * SC3 / ACT-01 (D-06): an API-key actor reads the same on every surface that names it. Measured
  * through the REAL createServer and the real cookie routes: the report page's Dismissed by cell and
- * the Excel export's Dismissed By cell, and (plan 95-02, ACT-02) the Audit Log Actor cell.
+ * the Excel export's Dismissed By cell, and (plan 95-02, ACT-02) the Audit Log Actor cell and the
+ * GraphQL `auditLog` actor.
  *
  * Public repo: Fabrikam labels only. One login per file (the login route is rate limited).
  */
@@ -238,5 +239,25 @@ describe('the Audit Log Actor column reads the same label (ACT-02)', () => {
     });
     if (result.kind !== 'created') throw new Error('user mark: already active');
     expect(await auditCell(result.dismissal.id)).toBe(ADMIN);
+  }, 60_000);
+
+  it('ACT-02 GraphQL auditLog reads the same Actor label as the Audit Log page', async () => {
+    const { keyId, createdAt, dismissalId } = await markAsKey({ code: CODE_ALT, selector: '#fabrikam-audit-graphql' }, 'Fabrikam GraphQL CI');
+    const inAudit = await auditCell(dismissalId);
+    const res = await app.inject({
+      method: 'POST', url: '/graphql', cookies: { session: cookie },
+      headers: { 'content-type': 'application/json' },
+      payload: { query: '{ auditLog(action: "issue_dismissal.mark", limit: 200) { nodes { resourceId actor actorId } } }' },
+    });
+    expect(res.statusCode, res.body).toBe(200);
+    const nodes = (res.json() as { data?: { auditLog?: { nodes: { resourceId: string; actor: string; actorId: string | null }[] } } })
+      .data?.auditLog?.nodes ?? [];
+    const node = nodes.find((n) => n.resourceId === dismissalId);
+    expect(node, 'GraphQL row for the dismissal').toBeDefined();
+    expect(node!.actor).toBe(namedText('Fabrikam GraphQL CI', createdAt));
+    expect(node!.actor).toBe(inAudit);
+    expect(node!.actorId).toBe('api-key');
+    expect(res.body).not.toContain('api-key:');
+    expect(res.body).not.toContain(keyId);
   }, 60_000);
 });

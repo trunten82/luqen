@@ -25,6 +25,11 @@ import { mayTouchDismissalOrg } from './scan-access.js';
 const API_KEY_ACTOR = 'api-key';
 const API_KEY_PREFIX = `${API_KEY_ACTOR}:`;
 
+/** The logger the label reads need: a warning with fields. A Fastify request logger is one. */
+export interface ActorLabelLog {
+  warn(fields: Record<string, unknown>, message: string): void;
+}
+
 /** One key row as the label needs it: label and creation time. Never the id's secret or hash. */
 export interface ApiKeyInfo {
   readonly label: string;
@@ -107,7 +112,7 @@ export function actorLabelText(description: ActorDescription, locale: Locale): s
 export async function orgKeyMap(
   storage: StorageAdapter,
   orgId: string,
-  log: FastifyBaseLogger,
+  log: ActorLabelLog,
   scanId: string,
 ): Promise<ScanOrgKeys> {
   try {

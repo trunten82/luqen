@@ -296,6 +296,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   in use instead of All actions; the Resource Type filter lists the dismissal
   resource and shows its filter too. Opening the page without permission shows
   the dashboard error page in a browser instead of raw JSON.
+- The GraphQL `auditLog` query's `actor` field holds the same label as the
+  Audit Log page's Actor column (`API key: <name> (Created <date>)` or
+  `API key` for an API key), and an API key's `actorId` reads `api-key`; the
+  stored key identifier is not returned.
 - A user with View audit log who is in no organization reads no audit entries,
   on the Audit Log page and through the GraphQL `auditLog` query, and the menu
   does not show them the Audit Log.
