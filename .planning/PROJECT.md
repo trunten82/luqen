@@ -8,6 +8,28 @@ Luqen is a WCAG accessibility compliance platform built as a monorepo of Fastify
 
 AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control of the whole stack through the dashboard, not config files.
 
+## Current Milestone: v3.10.0 Dismissal and session follow-ups
+
+**Status:** STARTED 2026-10-22. Approved by Alessandro, who answered directly in Allanon's session via question
+cards on 2026-10-21 (relayed on a2a thread 01M5FA9PKS1RP4T19MNNH5NA9G).
+
+**Goal:** Close the follow-ups v3.9.0 recorded, so that dismissal, permission and assistant-session behaviour is
+accurate on every surface and API. Make the trusted-proxy setting part of a normal install.
+
+**Target features:**
+- The trusted-proxy setting is installed and documented, instead of being configured by hand on one host
+- AI fix suggestions require `llm.view` on every path; `issues.fix` alone gets the pattern hint (owner ruling)
+- JSON APIs omit element selectors for callers without `reports.view_technical`, a documented API contract change (owner ruling)
+- Dismissal UI copy matches what a dismissal actually does
+- Org Owners can reach the Audit Log, and its action filter lists every dismissal action
+- API-key actors render the same way in exports and the audit log as on the report page
+- A greyed-out Dismiss button tells touch and keyboard users why it is unavailable
+- Assistant conversation streams and transactions stay consistent after an abort or a delete
+- Small team-page defects are fixed
+- A UAT fixture pack covers the v3.9.0 owner checks (a)-(g), and check 2 includes an org switch (owner ruling)
+
+Detail on unfixed weaknesses is kept only in gitignored files, because the repo is public.
+
 ## Last Milestone (shipped 2026-10-21): v3.9.0 Dismissal follow-through
 
 **Status:** SHIPPED 2026-10-21 (PRs #8-#14). Scope approved by Alessandro 2026-10-15 (question card to Allanon).
@@ -19,8 +41,7 @@ AI-powered accessibility compliance that adapts to each organization's jurisdict
   tokens that follow the stored user on every request (Phase 91, HARD-01..21).
 - A user guide for false-positive dismissals, every procedure executed cold by a non-author (Phase 92).
 
-**Next milestone:** not yet defined. The candidate follow-ups are recorded privately; the proposal goes to the
-owner through the orchestrator.
+**Next milestone:** v3.10.0 Dismissal and session follow-ups (approved 2026-10-21).
 
 ## Earlier Milestone (shipped 2026-10-13): v3.8.0 Mark as false positive
 
@@ -230,7 +251,8 @@ but it ADDS a capability while this milestone protects the ones already shipped 
 
 ### Active
 
-None in flight (v3.9.0 shipped 2026-10-21). Unchanged and still pending with the owner:
+v3.10.0 Dismissal and session follow-ups (see Current Milestone; requirements in REQUIREMENTS.md).
+Unchanged and still pending with the owner:
 a pre-registered, noise-aware v2 false-PASS gate (register 01M3K97VY409DDC376SWQ2YK09).
 
 ### Out of Scope
@@ -319,4 +341,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-21 after the v3.9.0 milestone*
+*Last updated: 2026-10-22 at the start of milestone v3.10.0*

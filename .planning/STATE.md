@@ -1,19 +1,16 @@
 ---
 gsd_state_version: "1.0"
-milestone: v3.9.0
-milestone_name: Dismissal follow-through
-status: Awaiting next milestone
-stopped_at: "v3.9.0 shipped 2026-10-21 (PRs #8-#14, plus the HARD-02 brand drilldown closure); milestone archived"
-last_updated: "2026-10-21T11:09:48.994Z"
-last_activity: 2026-10-21
-last_activity_desc: Milestone v3.9.0 completed and archived
-state_head: d7f6a04d9cf69ef8ceed3428a531adc719bc27ee
+milestone: v3.10.0
+milestone_name: Dismissal and session follow-ups
+status: planning
+last_updated: "2026-10-22T00:03:05.367Z"
+last_activity: 2026-10-22
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 57
-  completed_plans: 57
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -125,10 +122,10 @@ See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
 
 ## Current Position
 
-Phase: Milestone v3.9.0 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-10-21 — Milestone v3.9.0 completed and archived
+Status: Defining requirements
+Last activity: 2026-10-22 — Milestone v3.10.0 started
 
 ## Phase Map (v3.9.0 — Dismissal follow-through)
 
