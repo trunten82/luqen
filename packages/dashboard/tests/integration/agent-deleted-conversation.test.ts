@@ -88,6 +88,29 @@ describe('SESS-01 and SESS-03 a deleted conversation stays ended', () => {
     expect(h.rows(conv.id).length).toBe(rowCount);
   });
 
+  it('SESS-03 a retry whose conversation is deleted after the owner check answers not found and changes nothing', async () => {
+    const owner = await h.chain.addOrgUser(h.orgId, 'fabrikam-deleted-retrier', 'viewer', 'Member');
+    const conversations = h.chain.storage.conversations;
+    const conv = await conversations.createConversation({ userId: owner.userId, orgId: h.orgId });
+    const question = await conversations.appendMessage({ conversationId: conv.id, role: 'user', content: 'RETRY-QUESTION', status: 'sent' });
+    const answer = await conversations.appendMessage({
+      conversationId: conv.id, role: 'assistant', content: 'RETRY-ANSWER', status: 'sent', followsMessageId: question.id,
+    });
+    // The delete lands after the route's owner check, before the retry's own transaction.
+    const realSupersede = conversations.supersedeLatestAnswer.bind(conversations);
+    const supersede = vi.spyOn(conversations, 'supersedeLatestAnswer').mockImplementationOnce(async (input) => {
+      expect(await conversations.softDeleteConversation(conv.id, h.orgId, owner.userId)).toBe(true);
+      return realSupersede(input);
+    });
+
+    const res = await h.post(`/agent/conversations/${conv.id}/messages/${answer.id}/retry`, owner.userId);
+
+    expect(supersede).toHaveBeenCalledTimes(1);
+    expect([res.status, res.body]).toEqual([404, { error: 'conversation_not_found' }]);
+    expect(h.row(answer.id)?.status).toBe('sent');
+    expect(h.chain.auditRows(conv.id).filter((r) => r.toolName === 'message_retried')).toEqual([]);
+  });
+
   it('SESS-03 a message posted to a deleted conversation answers not found and stores nothing', async () => {
     const owner = await h.chain.addOrgUser(h.orgId, 'fabrikam-deleted-poster', 'viewer', 'Member');
     const conv = await h.chain.storage.conversations.createConversation({ userId: owner.userId, orgId: h.orgId });
