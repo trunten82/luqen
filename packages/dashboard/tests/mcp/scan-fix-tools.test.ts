@@ -309,6 +309,18 @@ describe('dashboard_generate_fix', () => {
     vi.restoreAllMocks();
   });
 
+  // Contract (phase 93): LLM output reaches only a caller holding llm.view.
+  // These tests exercise the AI path, so the caller holds issues.fix and llm.view.
+  const AI_FIX_CALLER: ToolContext = {
+    orgId: 'org-fabrikam',
+    userId: 'user-northwind',
+    scopes: ['read'],
+    permissions: new Set<string>(['issues.fix', 'llm.view', 'mcp.use']),
+    authType: 'jwt',
+  };
+  const callAsAiCaller = (c: Client, request: Parameters<Client['callTool']>[0]) =>
+    runInToolContext(AI_FIX_CALLER, () => c.callTool(request));
+
   afterEach(async () => {
     if (closeAll !== undefined) await closeAll();
     vi.restoreAllMocks();
@@ -360,7 +372,7 @@ describe('dashboard_generate_fix', () => {
       });
     }));
 
-    const result = await client.callTool({
+    const result = await callAsAiCaller(client, {
       name: 'dashboard_generate_fix',
       arguments: {
         wcagCriterion: '1.1.1',
@@ -398,7 +410,7 @@ describe('dashboard_generate_fix', () => {
       });
     }));
 
-    const result = await client.callTool({
+    const result = await callAsAiCaller(client, {
       name: 'dashboard_generate_fix',
       arguments: {
         wcagCriterion: '1.1.1',
@@ -442,7 +454,7 @@ describe('dashboard_generate_fix', () => {
       });
     }));
 
-    await client.callTool({
+    await callAsAiCaller(client, {
       name: 'dashboard_generate_fix',
       arguments: {
         wcagCriterion: '1.1.1',
@@ -464,7 +476,7 @@ describe('dashboard_generate_fix', () => {
       });
     }));
 
-    const result = await client.callTool({
+    const result = await callAsAiCaller(client, {
       name: 'dashboard_generate_fix',
       arguments: {
         wcagCriterion: '1.1.1',
@@ -901,7 +913,7 @@ describe('Agent MCP tools — authorized happy path (MCPFIX-01..04 + D-10)', () 
     }));
 
     app = await buildIntegrationApp({
-      permissions: ['scans.create', 'issues.fix'],
+      permissions: ['scans.create', 'issues.fix', 'llm.view'],
       complianceAccessReturns: { baseUrl: 'http://compliance', token: 'comp-tok' },
       llmAccessReturns: { baseUrl: 'http://llm', token: 'llm-tok' },
     });
@@ -946,7 +958,7 @@ describe('Agent MCP tools — authorized happy path (MCPFIX-01..04 + D-10)', () 
     }));
 
     app = await buildIntegrationApp({
-      permissions: ['scans.create', 'issues.fix'],
+      permissions: ['scans.create', 'issues.fix', 'llm.view'],
       complianceAccessReturns: null,  // no compliance configured
       llmAccessReturns: { baseUrl: 'http://llm', token: 'llm-tok' },
     });
