@@ -744,7 +744,8 @@ export async function registerAgentRoutes(
         });
         // The dispatcher resolves the confirming user's permissions now: a user who may no
         // longer use the tool gets 403, nothing runs, and the action returns to pending with the
-        // arguments it was paused with (it can still be confirmed later or declined).
+        // arguments it was paused with (it can still be confirmed later or declined), and only while
+        // its conversation is not deleted: the store's reopen carries that condition itself.
         if (audited.outcome === 'denied') {
           await storage.conversations.reopenPendingMessage(messageId, pending.toolCallJson ?? JSON.stringify(call));
           return reply.code(403).send({ error: 'denied' });
@@ -1784,6 +1785,8 @@ async function findPendingMessage(
   // Naive first-cut: the messageId must exist; we find the conversation by
   // querying agent_messages directly via the raw DB. This is a dashboard
   // service-layer concern — not a new public repo method.
+  //
+  // An action of a deleted conversation is not found, the same answer a missing one gets.
   const raw = (storage as unknown as { getRawDatabase?: () => {
     prepare(sql: string): { get(...args: unknown[]): unknown };
   } }).getRawDatabase?.();
@@ -1793,7 +1796,7 @@ async function findPendingMessage(
       `SELECT m.id, m.conversation_id, c.user_id, m.status, m.tool_call_json, m.created_at
          FROM agent_messages m
          INNER JOIN agent_conversations c ON c.id = m.conversation_id
-         WHERE m.id = ? AND c.org_id = ?`,
+         WHERE m.id = ? AND c.org_id = ? AND c.is_deleted = 0`,
     )
     .get(messageId, orgId) as
       | { id: string; conversation_id: string; user_id: string; status: string; tool_call_json: string | null; created_at: string }

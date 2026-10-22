@@ -247,13 +247,20 @@ export class SqliteConversationRepository implements ConversationRepository {
     }));
   }
 
+  /**
+   * Returns a claimed action to pending, with the arguments it was paused with, only while its
+   * conversation is live: the condition is part of the same UPDATE, so a conversation deleted while
+   * the confirmation was deciding keeps the action closed and its redacted call untouched.
+   */
   async reopenPendingMessage(messageId: string, toolCallJson: string): Promise<void> {
     this.db
       .prepare(
         `UPDATE agent_messages
          SET status = 'pending_confirmation',
              tool_call_json = @toolCallJson
-         WHERE id = @messageId AND status = 'sent'`,
+         WHERE id = @messageId AND status = 'sent'
+           AND EXISTS (SELECT 1 FROM agent_conversations c
+                        WHERE c.id = agent_messages.conversation_id AND c.is_deleted = 0)`,
       )
       .run({ messageId, toolCallJson });
   }
