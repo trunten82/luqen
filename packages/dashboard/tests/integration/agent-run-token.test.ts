@@ -259,3 +259,82 @@ describe('SESS-03 a turn on a deleted conversation runs nothing', () => {
     expect(h.rows(conv.id).length).toBe(rowCount);
   });
 });
+
+describe('SESS-02 and SESS-03 a refused question write ends the turn cleanly', () => {
+  let h: RouteHarness;
+  beforeEach(async () => {
+    h = await buildRouteHarness('Fabrikam Run Token Question');
+  });
+  afterEach(async () => {
+    await h.close();
+    vi.restoreAllMocks();
+  });
+
+  /**
+   * A turn on an empty conversation, so the turn writes its question itself. `between` runs on the turn's
+   * first read of the window, after the turn began its run and before it writes the question: the state a
+   * second process, or a storage with real I/O, reaches when the run changes in that gap.
+   */
+  async function turnWithGap(between: (ownerId: string, conversationId: string) => Promise<void>): Promise<{
+    conversationId: string;
+    frames: SseFrame[];
+    thrown: unknown;
+    detached: boolean;
+  }> {
+    const owner = await h.chain.addOrgUser(h.orgId, 'fabrikam-run-question-owner', 'viewer', 'Member');
+    const conv = await h.chain.storage.conversations.createConversation({ userId: owner.userId, orgId: h.orgId });
+    const conversations = h.chain.storage.conversations;
+    const realGetWindow = conversations.getWindow.bind(conversations);
+    vi.spyOn(conversations, 'getWindow').mockImplementationOnce(async (id: string) => {
+      await between(owner.userId, conv.id);
+      return realGetWindow(id);
+    });
+    h.chain.script([{ text: 'MUST-NOT-BE-ASKED', toolCalls: [] }]);
+    const controller = new AbortController();
+    const removed = vi.spyOn(controller.signal, 'removeEventListener');
+    const frames: SseFrame[] = [];
+    let thrown: unknown;
+    try {
+      await h.chain.service.runTurn({
+        conversationId: conv.id,
+        userId: owner.userId,
+        orgId: h.orgId,
+        userMessage: 'A-NEW-QUESTION',
+        emit: (f: SseFrame) => frames.push(f),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      thrown = err;
+    }
+    const detached = removed.mock.calls.some(([type]) => type === 'abort');
+    return { conversationId: conv.id, frames, thrown, detached };
+  }
+
+  it('SESS-02 a question write refused because a newer run began ends with done aborted and releases the turn', async () => {
+    const modelCalls = h.chain.history.length;
+    const turn = await turnWithGap(async (_ownerId, conversationId) => {
+      expect(await h.chain.storage.conversations.beginRun(conversationId)).not.toBeNull();
+    });
+
+    expect(turn.thrown).toBeUndefined();
+    expect(turn.frames).toEqual([{ type: 'done', aborted: true }]);
+    expect(h.chain.turnRegistry.isActive(turn.conversationId)).toBe(false);
+    expect(turn.detached).toBe(true);
+    expect(h.chain.history.length).toBe(modelCalls);
+    expect(h.rows(turn.conversationId)).toEqual([]);
+  });
+
+  it('SESS-03 a question write refused because the conversation was deleted ends with done aborted and releases the turn', async () => {
+    const modelCalls = h.chain.history.length;
+    const turn = await turnWithGap(async (ownerId, conversationId) => {
+      expect(await h.chain.storage.conversations.softDeleteConversation(conversationId, h.orgId, ownerId)).toBe(true);
+    });
+
+    expect(turn.thrown).toBeUndefined();
+    expect(turn.frames).toEqual([{ type: 'done', aborted: true }]);
+    expect(h.chain.turnRegistry.isActive(turn.conversationId)).toBe(false);
+    expect(turn.detached).toBe(true);
+    expect(h.chain.history.length).toBe(modelCalls);
+    expect(h.rows(turn.conversationId)).toEqual([]);
+  });
+});

@@ -393,20 +393,11 @@ export class AgentService {
     // refuses the turn's next row (WithdrawnAnswerError) and the turn ends without writing more. A row
     // is also refused once the run is no longer the conversation's current run (a newer stream of the
     // same conversation began, in this process or another); the refusal ends the turn the same way.
-    const preWindow = await this.storage.conversations.getWindow(conversationId);
-    const storedQuestion = [...preWindow].reverse().find(
-      (row) => row.role === 'user' && (row.content ?? '') === userMessage,
-    );
-    let lastRowId = storedQuestion !== undefined
-      ? storedQuestion.id
-      : (await writeRow({
-          conversationId,
-          role: 'user',
-          content: userMessage,
-          status: 'sent',
-        })).id;
-
-    const agentDisplayName = await this.resolveDisplayName(orgId);
+    //
+    // The question is read and written inside the turn's `try`: a refused question write (the run was
+    // replaced, or the conversation deleted, after beginRun) ends the turn with done aborted, and the
+    // `finally` releases the registry entry and the signal listener.
+    let lastRowId = '';
 
     // Plan 33-02 (AGENT-04): context hints are collected once per runTurn so every
     // iteration shares the same snapshot, read in the conversation's org with the
@@ -429,6 +420,21 @@ export class AgentService {
     const turnStart = Date.now();
 
     try {
+      const preWindow = await this.storage.conversations.getWindow(conversationId);
+      const storedQuestion = [...preWindow].reverse().find(
+        (row) => row.role === 'user' && (row.content ?? '') === userMessage,
+      );
+      lastRowId = storedQuestion !== undefined
+        ? storedQuestion.id
+        : (await writeRow({
+            conversationId,
+            role: 'user',
+            content: userMessage,
+            status: 'sent',
+          })).id;
+
+      const agentDisplayName = await this.resolveDisplayName(orgId);
+
       const turnPermissions = await this.resolvePermissions(userId, orgId);
       if (turnPermissions.size > 0) {
         try {
