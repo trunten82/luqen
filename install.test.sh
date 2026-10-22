@@ -942,6 +942,31 @@ case_docker_env_allow_list() {
   done
 }
 
+define_case macos-plist-follows-install-dir
+case_macos_plist_follows_install_dir() {
+  new_tmp
+  local mac="${TD}/mac" plist
+  mkdir -p "${mac}/bin" "${mac}/home/luqen/packages/dashboard/dist" "${mac}/other/packages/dashboard/dist"
+  cp "${REPO_ROOT}/install.command" "${mac}/install.command"
+  printf '#!/usr/bin/env bash\nexit 0\n' > "${mac}/install.sh"
+  printf '#!/bin/sh\necho Darwin\n' > "${mac}/bin/uname"
+  printf '#!/bin/sh\nexit 0\n' > "${mac}/bin/launchctl"
+  chmod +x "${mac}/bin/uname" "${mac}/bin/launchctl" "${mac}/install.sh"
+  # An older install in ~/luqen and this run's install in --install-dir.
+  printf 'INSTALL_COMPONENTS=dashboard\nDASHBOARD_TRUSTED_PROXIES=198.51.100.1\n' > "${mac}/home/luqen/.install-state"
+  printf 'INSTALL_COMPONENTS=dashboard\nDASHBOARD_TRUSTED_PROXIES=192.0.2.10\n' > "${mac}/other/.install-state"
+  env -u LUQEN_INSTALL_DIR PATH="${mac}/bin:${PATH}" HOME="${mac}/home" \
+    bash "${mac}/install.command" --non-interactive --install-dir "${mac}/other" </dev/null >"${mac}/out" 2>&1 \
+    || die "install.command failed: $(tail -n 5 "${mac}/out")"
+  plist="${mac}/home/Library/LaunchAgents/io.luqen.dashboard.plist"
+  [ -f "${plist}" ] || die "no dashboard plist was written: $(tail -n 5 "${mac}/out")"
+  grep -qF '<key>DASHBOARD_TRUSTED_PROXIES</key><string>192.0.2.10</string>' "${plist}" \
+    || die "the plist does not carry the --install-dir install's value"
+  assert_eq "plist lines naming ~/luqen" "$(count_lines_matching "${mac}/home/luqen" "${plist}")" "0"
+  grep -qF "<string>${mac}/other/packages/dashboard/dist/cli.js</string>" "${plist}" \
+    || die "the plist does not point at the --install-dir install"
+}
+
 define_case macos-plist-refuses-unsafe-state
 case_macos_plist_refuses_unsafe_state() {
   new_tmp

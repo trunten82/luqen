@@ -148,11 +148,19 @@ WANT_UNINSTALL=0
 # check and the help. After them this wrapper must stop as well, because the
 # launchd block below rewrites every plist and reloads every agent.
 WANT_NO_INSTALL=0
+# --install-dir as passed to install.sh, so the launchd block reads the
+# .install-state of the install this run made (IN-03), not $HOME/luqen's.
+ARG_INSTALL_DIR=""
+prev_arg=""
 for arg in "$@"; do
+    if [ "${prev_arg}" = "--install-dir" ]; then
+        ARG_INSTALL_DIR="${arg}"
+    fi
     case "$arg" in
         --uninstall) WANT_UNINSTALL=1 ;;
         --check-trusted-proxies|--help|-h) WANT_NO_INSTALL=1 ;;
     esac
+    prev_arg="${arg}"
 done
 
 if [ "${WANT_UNINSTALL}" = "1" ] && [ "$(uname -s)" = "Darwin" ]; then
@@ -212,7 +220,10 @@ fi
 
 NODE_PATH="$(command -v node 2>/dev/null || true)"
 INSTALL_DIR_DEFAULT="${HOME}/luqen"
-INSTALL_DIR="${LUQEN_INSTALL_DIR:-${INSTALL_DIR_DEFAULT}}"
+# --install-dir wins, as it does in install.sh; then LUQEN_INSTALL_DIR; then
+# ~/luqen. Both scripts cd to $HOME first, so a relative path means the same
+# directory to each.
+INSTALL_DIR="${ARG_INSTALL_DIR:-${LUQEN_INSTALL_DIR:-${INSTALL_DIR_DEFAULT}}}"
 
 # Resolve installer-default ports (mirrors install.sh defaults).
 COMPLIANCE_PORT="${COMPLIANCE_PORT:-4000}"
