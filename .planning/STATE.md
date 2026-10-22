@@ -2,15 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v3.10.0
 milestone_name: Dismissal and session follow-ups
-status: planning
-last_updated: "2026-10-22T00:07:51.000Z"
+current_phase: 97
+current_phase_name: Owner UAT pack
+status: waiting-owner
+stopped_at: Phase 97 plan 05 task 2 — owner walkthrough pending (owner starts it himself)
+last_updated: "2026-10-22T19:00:00.000Z"
 last_activity: 2026-10-22
+last_activity_desc: UAT pack fixtures created on prod; read-backs pass; waiting for the owner walkthrough
+state_head: c5fc82788c3d7245eb009f0be542c0f84497db39
 progress:
   total_phases: 5
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 18
+  completed_plans: 13
+  percent: 20
 ---
 
 # Project State
@@ -122,10 +127,10 @@ See: .planning/PROJECT.md (updated 2026-10-22 — v3.10.0 started)
 
 ## Current Position
 
-Phase: 93 of 97 (Entitlement and API contract) — not started
-Plan: —
-Status: Ready to plan
-Last activity: 2026-10-22 — Roadmap created for v3.10.0 (Phases 93-97, 26/26 requirements mapped)
+Phase: 97 — Owner UAT pack
+Plan: 97-05 (orchestrator-only), Task 2 of 3
+Status: Waiting for the owner walkthrough. Phases 93-96 code is merged and deployed; 93/94 are marked complete in ROADMAP, 95/96/97 get marked at milestone close.
+Last activity: 2026-10-22 — fixtures created on prod, read-backs all PASS, ask sent; owner will start the walkthrough himself (do not chase)
 
 ## Phase Map (v3.10.0 — Dismissal and session follow-ups)
 
@@ -228,9 +233,9 @@ measures a candidate model — that is explicitly next-milestone work.
 ## Session Continuity
 
 Last session: 2026-10-22
-Stopped at: Roadmap for v3.10.0 created (Phases 93-97); no phase started
-Resume file: None
-Next action: /gsd-discuss-phase 93 (or /gsd-plan-phase 93) — Entitlement and API contract.
+Stopped at: 97-05 Task 2 — waiting for the owner walkthrough
+Resume file: .planning/HANDOFF.json
+Next action: when the owner starts the walkthrough in this session, follow 97-UAT-PACK.md Walkthrough order, filling 97-UAT-EVIDENCE.md section 9 onward; after his "done", run 97-05 Task 3 (cleanup dry-run, cleanup, post-cleanup preflight), then close the milestone.
 
 ## Operator Next Steps
 

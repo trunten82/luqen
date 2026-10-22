@@ -31,8 +31,8 @@
 
 ## Phases
 
-- [ ] **Phase 93: Entitlement and API contract** - AI fix output requires `llm.view` on every path, and JSON APIs omit element selectors for callers without technical-details permission, documented as a contract change
-- [ ] **Phase 94: Assistant session consistency** - Assistant conversation writes stay consistent after an abort or a delete
+- [x] **Phase 93: Entitlement and API contract** - AI fix output requires `llm.view` on every path, and JSON APIs omit element selectors for callers without technical-details permission, documented as a contract change (completed 2026-10-22)
+- [x] **Phase 94: Assistant session consistency** - Assistant conversation writes stay consistent after an abort or a delete (completed 2026-10-22)
 - [ ] **Phase 95: Dismissal, audit and team follow-ups** - Dismissal copy, the Audit Log, actor labels, the disabled Dismiss button and the team page say and do what the product does
 - [ ] **Phase 96: Trusted-proxy install and docs** - The trusted-proxy setting is part of a normal install and is documented
 - [ ] **Phase 97: Owner UAT pack** - The owner can walk every v3.9.0 open check and every user-visible change of this milestone on fixtures, and the fixtures are cleaned up afterwards
@@ -52,7 +52,18 @@
   4. A request authenticated with an org API key gets the redaction that key's resolved permissions give, pinned by a test
   5. The permission docs and the MCP tool description state the `llm.view` rule, and the selector omission is recorded as an API contract change in the OpenAPI spec (field optionality and a description), the API docs and the CHANGELOG
 
-**Plans**: TBD
+**Plans**: 5/4 plans complete (waves: 1 = 93-01 + 93-02, 2 = 93-03, 3 = 93-04)
+
+Plans:
+**Wave 1**
+- [x] 93-01-PLAN.md — AI fix output needs `llm.view` on MCP and the assistant; pattern hint for `issues.fix` holders; entry-point inventory guard (ENT-01..03)
+- [x] 93-02-PLAN.md — One shared technical-details helper; REST data API, report page and drilldown on it; API-key resolution pinned (API-01, API-02, API-03, API-04)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [x] 93-03-PLAN.md — GraphQL, MCP data tools and resource, issues Excel export and dismissals list on the helper (API-01, API-03, API-04)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [x] 93-04-PLAN.md — OpenAPI/MCP/RBAC snapshots regenerated, CHANGELOG, permission, MCP, REST and GraphQL docs (ENT-03, API-04)
 
 ### Phase 94: Assistant session consistency
 
@@ -65,7 +76,13 @@
   2. After an assistant answer is aborted, a second stream of the same question starts clean and the aborted stream writes nothing further: no orphaned tool result and no kept stopped partial answer
   3. Each assistant write path (the answer stream and the edit and retry branches) refuses a deleted conversation by its own check, so correctness does not depend on the route-level not-found answer
 
-**Plans**: TBD
+**Plans**: 3/3 plans complete (waves 1, 2, 3; sequential: shared store files)
+
+Plans:
+- [x] 94-01-PLAN.md — A deleted conversation stays ended at the store: no refused confirmation returns its action to pending; the stream route and the edit and retry transactions refuse it (SESS-01, SESS-03)
+- [x] 94-02-PLAN.md — The D-02 design recorded first, then migration 094 and the store's run token: a row of a replaced run is refused in the insert's transaction (SESS-02, SESS-03)
+- [x] 94-03-PLAN.md — runTurn writes every row through the run token, the model input leaves out unanswered tool calls, and the phase is documented (SESS-02, SESS-03)
+
 **Note**: the design decision for SESS-02 (assistant rows are tied to the stream that writes them) is recorded in the phase before any code relies on it.
 
 ### Phase 95: Dismissal, audit and team follow-ups
@@ -81,8 +98,18 @@
   4. A greyed-out Dismiss button shows its reason in a form touch and keyboard users can see, not only as a hover tooltip, checked by eye at phone width and by keyboard
   5. On the team page, Add Member lists the org users who are in no team, Load More carries a real limit, the "No members yet." row disappears after a member is added, and the team form's org option says an empty value places the team in the current organization
 
-**Plans**: TBD
+**Plans**: 3 plans (waves: 1 = 95-01, 2 = 95-02, 3 = 95-03; sequential because each touches the six locale files)
 **UI hint**: yes
+
+Plans:
+**Wave 1**
+- [ ] 95-01-PLAN.md — Shared actor label on the Excel export and the report page; visible reason on a greyed Dismiss; dismissal copy in six locales (ACT-01, A11Y-01, COPY-01, COPY-02)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 95-02-PLAN.md — Audit Log: Owner menu entry, Actor column on the shared label, dismissal actions in the filter, HTML error page, real Load More limit (AUD-01, AUD-02, AUD-03, ACT-02, TEAM-02)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 95-03-PLAN.md — Team page (teamless members, request matches the list, empty row, org option), browser check at 375 px and by keyboard with screenshots, docs and CHANGELOG (TEAM-01, TEAM-03, TEAM-04, A11Y-01)
 
 ### Phase 96: Trusted-proxy install and docs
 
