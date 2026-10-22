@@ -140,6 +140,30 @@ describe('SESS-02 an answer stream that a newer stream replaced writes nothing f
     endsAborted(turn);
   });
 
+  it('SESS-02 a second stream of the same question starts from the question alone', async () => {
+    const { ownerId, conversationId } = await start();
+    const dispatch = holdDispatchOnce(h.chain.dispatcher);
+    h.chain.script([listReports('l1'), { text: 'T2-ANSWER', toolCalls: [] }]);
+    const first = h.chain.runTurn(ownerId, h.orgId, SAME_QUESTION, conversationId);
+    try {
+      await waitUntil(() => dispatch.ctx() !== undefined, 'the held tool run');
+      await h.chain.runTurn(ownerId, h.orgId, SAME_QUESTION, conversationId);
+    } finally {
+      dispatch.release();
+      await first;
+    }
+
+    const roles = (messages: readonly unknown[]): unknown[] => messages.map((m) => (m as { role?: unknown }).role);
+    // The second stream's model call (the second of the test) saw the question alone.
+    expect(roles(h.chain.history[1]!)).toEqual(['user']);
+
+    h.chain.script([{ text: 'T3-ANSWER', toolCalls: [] }]);
+    await h.chain.runTurn(ownerId, h.orgId, 'NEXT-QUESTION', conversationId);
+    const next = h.chain.history[h.chain.history.length - 1]!;
+    expect(roles(next)).toEqual(['user', 'assistant', 'user']);
+    expect(next.some((m) => 'toolCalls' in (m as object))).toBe(false);
+  });
+
   it('SESS-02 a run replaced by another process writes no final answer', async () => {
     const { ownerId, conversationId } = await start();
     const held = heldStep({ text: 'T1-LATE-ANSWER', toolCalls: [] });

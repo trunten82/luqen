@@ -1248,6 +1248,45 @@ function buildManifest(
     });
 }
 
+/**
+ * The ids of the calls of one tool row, read the way the loop reads them (a single call or a batch).
+ * An unreadable call yields none.
+ */
+function toolRowCallIds(m: Message): string[] {
+  if (m.toolCallJson == null || m.toolCallJson.length === 0) return [];
+  try {
+    const parsed = JSON.parse(m.toolCallJson) as { id: string } | Array<{ id: string }>;
+    const call = Array.isArray(parsed) ? parsed[0] : parsed;
+    return call !== undefined ? [call.id] : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * The ids of the calls of the assistant batch at `index` that a tool row directly after it answers: the
+ * consecutive tool rows that follow, skipping a row with no result (the loop below drops those too).
+ */
+function answeredCallIds(window: readonly Message[], index: number): Set<string> {
+  const answered = new Set<string>();
+  for (let i = index + 1; i < window.length; i++) {
+    const row = window[i]!;
+    if (row.role !== 'tool') break;
+    if (row.toolResultJson == null || row.toolResultJson.length === 0) continue;
+    for (const id of toolRowCallIds(row)) answered.add(id);
+  }
+  return answered;
+}
+
+/**
+ * Builds the model input from the window's rows. An assistant tool-call row is sent with only the calls
+ * that a tool row directly after it answers; a row none of whose calls is answered is left out whole,
+ * its text too. A tool call with no tool message is rejected by the OpenAI and Anthropic message
+ * contracts (CONCLUDED from the contracts, not run against a provider), and a history that ends with an
+ * assistant message is read by Anthropic as a prefill to continue. A stream that another stream replaced
+ * leaves such a row, so without this rule every later turn of the conversation would be rejected. The
+ * stored row is unchanged and the panel still shows it.
+ */
 export function windowToChatMessages(window: readonly Message[]): AgentChatMessage[] {
   const out: AgentChatMessage[] = [];
   // Track which tool_call ids the most recent assistant(tool_calls) row
@@ -1268,7 +1307,7 @@ export function windowToChatMessages(window: readonly Message[]): AgentChatMessa
   // in tool results".
   let coveredIds: Set<string> = new Set();
 
-  for (const m of window) {
+  for (const [index, m] of window.entries()) {
     const role = m.role;
     if (role === 'tool') {
       // Destructive-pause flow leaves the original `pending_confirmation` tool
@@ -1317,12 +1356,19 @@ export function windowToChatMessages(window: readonly Message[]): AgentChatMessa
         try {
           const calls = JSON.parse(m.toolCallJson) as Array<{ id: string; name: string; args: Record<string, unknown> }>;
           if (Array.isArray(calls) && calls.length > 0) {
+            const answered = answeredCallIds(window, index);
+            const sent = calls.filter((c) => answered.has(c.id));
+            if (sent.length === 0) {
+              // No call of this row has a tool result: nothing of the row is sent.
+              coveredIds = new Set();
+              continue;
+            }
             out.push({
               role: 'assistant' as const,
               content: m.content ?? '',
-              toolCalls: calls.map((c) => ({ id: c.id, name: c.name, args: c.args })),
+              toolCalls: sent.map((c) => ({ id: c.id, name: c.name, args: c.args })),
             });
-            coveredIds = new Set(calls.map((c) => c.id));
+            coveredIds = new Set(sent.map((c) => c.id));
             continue;
           }
         } catch { /* fall through to plain assistant */ }
