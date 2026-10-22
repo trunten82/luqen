@@ -23,7 +23,7 @@ import {
 } from './org-scope.js';
 import { isLastActiveAdmin } from '../services/user-scope.js';
 import { auditLogScope } from '../services/audit-log-scope.js';
-import { withActorLabels } from '../services/issue-dismissals/audit-actor-labels.js';
+import { actorFilterValues, withActorLabels } from '../services/issue-dismissals/audit-actor-labels.js';
 import { isApiKeyActor } from '../services/issue-dismissals/actor-label.js';
 import { GENERIC_API_KEY_ACTOR } from '../routes/api/issue-dismissals-redaction.js';
 import { deleteScanAndFiles, scanDeleteRefusal, SCAN_DELETE_PERMISSION } from '../services/scan-delete-access.js';
@@ -377,12 +377,16 @@ export const resolvers = {
       const offset = clamp(args.offset, 0, Number.MAX_SAFE_INTEGER, 0);
 
       // A caller in no organization reads no rows (services/audit-log-scope.ts, as the Audit Log page).
-      if (auditLogScope({ ...ctx.user, currentOrgId: ctx.orgId }).kind === 'none') {
+      const scope = auditLogScope({ ...ctx.user, currentOrgId: ctx.orgId });
+      if (scope.kind === 'none') {
         return { nodes: [], totalCount: 0, pageInfo: buildPageInfo(0, limit, offset) };
       }
 
+      // The actor filter matches the way the Audit Log page's does (WR-04): the label this query
+      // returns, a key's name, or `API key: <name>` with or without `(Created ...)` all find that
+      // key's rows, through the one helper both paths share.
       const result = await ctx.storage.audit.query({
-        actor: args.actor,
+        actors: await actorFilterValues(ctx.storage, scope, args.actor, 'en', ctx.log ?? NO_LOG),
         action: args.action,
         resourceType: args.resourceType,
         from: args.from,

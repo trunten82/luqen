@@ -304,6 +304,19 @@ case_compare_set_in_two_places() {
   assert_line "one place" "set_in_more_than_one_place=yes"
 }
 
+# The STOP signal: systemd holds unit files it has not reloaded, so the running
+# process may not reflect the files the script read.
+define compare-need-daemon-reload-reported
+case_compare_need_daemon_reload_reported() {
+  new_fixture; write_dropin "${DROPIN_LINE}"; write_environ "${VALUE}"
+  printf 'yes\n' > "${TD}/needreload"
+  run_compare
+  assert_eq "exit status" "${RC}" "0"
+  assert_line "daemon reload" "need_daemon_reload=yes"
+  assert_absent "the no form" "need_daemon_reload=no"
+  assert_eq "last line" "$(tail -n 1 "${OUTD}/out")" "result=compared"
+}
+
 define compare-writes-nothing
 case_compare_writes_nothing() {
   local before after git_before git_after tmp_listing

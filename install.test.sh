@@ -815,6 +815,15 @@ case_macos_no_install_modes_leave_launchd_alone() {
   plists="$(entries_in "${AGENTS_DIR}")"
   assert_eq "plists written for --help" "${plists}" "0"
 
+  # -h is the short help: install.sh shows the help for it too, so the wrapper
+  # must stop after it exactly as after --help.
+  run_install_command_mode -h
+  assert_eq "-h exit status" "${RC}" "0"
+  assert_contains "-h ran the real install.sh help" "$(cat "${MAC_OUT}")" "Usage:"
+  assert_eq "launchctl calls for -h" "$(cat "${LAUNCHCTL_LOG}")" ""
+  plists="$(entries_in "${AGENTS_DIR}")"
+  assert_eq "plists written for -h" "${plists}" "0"
+
   run_install_command_mode --no-such-option
   assert_eq "unknown option exit status" "${RC}" "2"
   assert_eq "launchctl calls for an unknown option" "$(cat "${LAUNCHCTL_LOG}")" ""

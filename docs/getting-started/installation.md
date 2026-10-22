@@ -430,9 +430,11 @@ For a blank list it prints `blank: nothing would be written` and the `effective:
 | 3 | the check could not run (no install on this host, the dashboard is not built in `--install-dir`, or `node` is missing) |
 
 The check needs a built dashboard, so it cannot run on a host before the install: it exits 3 there. A fresh install
-does not need it, because the install runs the same check after its build and before it writes anything, and stops
-with exit 1 on a refused list. An install whose `install.sh` predates `--check-trusted-proxies` updates its checkout
-first: see step 1 of [Existing install (systemd)](#existing-install-systemd).
+does not need it on bare metal, because the install runs the same check after its build and before it writes any
+secret, configuration file or service unit, and stops with exit 1 on a refused list. On Docker the container start is
+the check (see [What the installer does with it](#what-the-installer-does-with-it)). An install whose `install.sh`
+predates `--check-trusted-proxies` updates its checkout first: see step 1 of
+[Existing install (systemd)](#existing-install-systemd).
 
 ### Existing install (systemd)
 
@@ -508,8 +510,8 @@ paths and verdict words only.
   drop-in is gone again (step 7 to no drop-in, or the removal below), the key's list applies, not the default, and the
   comparison reports `running=absent` either way. `unreadable`: the file is missing or not valid JSON.
 - `build: too old`: the running dashboard does not read the list at all. Upgrade the install first, the way you
-  normally deploy it (update the checkout, `npm install`, rebuild, restart). That is outside this recipe; come back to
-  step 1 afterwards.
+  normally deploy it (update the checkout, `npm install`, rebuild, restart), and run step 4's drain before that restart,
+  because a restart fails every queued or running scan. That is outside this recipe; come back to step 1 afterwards.
 - `build: reads DASHBOARD_TRUSTED_PROXIES` and `checkout: too old`: update the checkout only, with the command the
   installer itself uses to fetch the source. The block saves the commit the checkout is on first (the first time only),
   and after the pull the commit the pull produced (every time), so that step 7 can put the checkout back, and refuses to
@@ -1046,7 +1048,9 @@ roll back (steps 6 and 4).
 
 `image_reads_list=no`: the image's dashboard predates the setting, so the line in `.env` has no effect and the
 dashboard runs with its default. Do not leave a setting in place that does nothing: roll back (steps 6 and 4), upgrade
-the image (rebuild it from an updated checkout, outside this recipe), and start again at step 1.
+the image (rebuild it from an updated checkout, outside this recipe, running step 4's drain step before you recreate
+the container on the rebuilt image, because recreating it fails every queued or running scan), and start again at
+step 1.
 
 **Step 6. Roll back.** The block puts the saved state back; step 4 then waits for running scans and recreates the
 container. A saved commit is restored with `git reset --keep` only while the checkout is still on the commit the pull
@@ -1174,8 +1178,9 @@ second name, prints its help and exits 0 without installing anything. So an exit
 anything was installed: `install.sh` exits 0 on every unknown option (a known installer defect, not fixed in this
 release). Automation that runs the installer must check the result afterwards: `systemctl show -p LoadState --value
 luqen-dashboard` prints `loaded` once the unit exists and `not-found` before (Docker: `docker compose ps -q dashboard`,
-in the install directory, prints a container id). A Docker install writes a quoted `*` into `.env`
-and the dashboard container refuses it at start (see [What the installer does with it](#what-the-installer-does-with-it)).
+in the install directory, prints a container id). A Docker install refuses a quoted `*` up front, before it writes
+`.env`, with exit 1: `*` is outside the characters it lets through (see
+[What the installer does with it](#what-the-installer-does-with-it)).
 
 ### The accepted residual
 

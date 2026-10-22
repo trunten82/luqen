@@ -143,4 +143,40 @@ describe('SESS-01 and SESS-03 a deleted conversation stays ended', () => {
       .get(owner.userId) as { n: number }).n;
     expect(conversationsAfter).toBe(conversationCount);
   });
+
+  it("SESS-03 another user's deleted conversation id starts a fresh conversation and reveals nothing", async () => {
+    const owner = await h.chain.addOrgUser(h.orgId, 'fabrikam-deleted-owner-a', 'viewer', 'Member');
+    const other = await h.chain.addOrgUser(h.orgId, 'fabrikam-deleted-other-b', 'viewer', 'Member');
+    const conversations = h.chain.storage.conversations;
+    const conv = await conversations.createConversation({ userId: owner.userId, orgId: h.orgId });
+    await conversations.appendMessage({ conversationId: conv.id, role: 'user', content: 'OWNER-QUESTION', status: 'sent' });
+    const deleted = await h.post(`/agent/conversations/${conv.id}/delete`, owner.userId);
+    expect(deleted.status).toBe(200);
+    const contentsOf = (id: string): string[] => (h.chain.storage.getRawDatabase()
+      .prepare('SELECT content FROM agent_messages WHERE conversation_id = ? ORDER BY created_at, id')
+      .all(id) as { content: string }[]).map((r) => r.content);
+    const ownerRows = h.rows(conv.id);
+    expect(contentsOf(conv.id)).toEqual(['OWNER-QUESTION']);
+
+    const res = await h.server.inject({
+      method: 'POST',
+      url: '/agent/message',
+      headers: { 'x-test-user': other.userId },
+      payload: { conversationId: conv.id, content: 'POSTED-BY-ANOTHER-USER' },
+    });
+
+    // The same answer as for an id that does not exist: a fresh conversation of the poster.
+    expect(res.statusCode).toBe(202);
+    const freshId = res.headers['x-conversation-id'];
+    expect(typeof freshId).toBe('string');
+    expect(freshId).not.toBe(conv.id);
+    const fresh = await conversations.getConversation(freshId as string, h.orgId);
+    expect(fresh?.userId).toBe(other.userId);
+    expect(contentsOf(freshId as string)).toEqual(['POSTED-BY-ANOTHER-USER']);
+    // The owner's deleted conversation is unchanged.
+    expect(h.rows(conv.id)).toEqual(ownerRows);
+    expect(contentsOf(conv.id)).toEqual(['OWNER-QUESTION']);
+    const ownerConv = await conversations.getConversation(conv.id, h.orgId);
+    expect([ownerConv?.userId, ownerConv?.isDeleted]).toEqual([owner.userId, true]);
+  });
 });
