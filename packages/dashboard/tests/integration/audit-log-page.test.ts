@@ -146,6 +146,23 @@ describe('AUD-01 the Audit Log menu entry follows the audit view permission', ()
   });
 });
 
+describe('the sidebar marks one current page', () => {
+  const currentLinks = (html: string): (string | null)[] =>
+    [...new JSDOM(html).window.document.querySelectorAll('a[aria-current="page"]')].map((a) => a.getAttribute('href'));
+
+  it('the Audit Log page marks only the Audit Log entry as the current page', async () => {
+    const res = await page(owner, '/admin/audit-log');
+    expect(res.status).toBe(200);
+    expect(currentLinks(res.body)).toEqual(['/admin/audit-log']);
+  });
+
+  it('the Agent audit page marks only the Agent audit entry as the current page', async () => {
+    const res = await page(owner, '/admin/audit');
+    expect(res.status).toBe(200);
+    expect(currentLinks(res.body)).toEqual(['/admin/audit']);
+  });
+});
+
 describe('AUD-02 the Action and Resource Type filters show the active filter', () => {
   const actionSelect = (html: string): HTMLSelectElement =>
     new JSDOM(html).window.document.querySelector('select#filter-action') as HTMLSelectElement;

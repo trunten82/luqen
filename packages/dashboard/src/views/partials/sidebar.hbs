@@ -412,9 +412,10 @@
 
       {{!-- Audit + agent trails — visible to users with audit view permission. --}}
       {{#if (or perm.adminSystem perm.adminOrg)}}
-      <a class="sidebar__item {{#if (startsWith currentPath '/admin/audit')}}is-active{{/if}}"
+      {{!-- /admin/audit and its sub-pages only: /admin/audit-log is its own entry below. --}}
+      <a class="sidebar__item {{#if (or (eq currentPath '/admin/audit') (startsWith currentPath '/admin/audit/'))}}is-active{{/if}}"
          href="/admin/audit"
-         aria-current="{{#if (startsWith currentPath '/admin/audit')}}page{{/if}}">
+         aria-current="{{#if (or (eq currentPath '/admin/audit') (startsWith currentPath '/admin/audit/'))}}page{{/if}}">
         <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
           <path d="M10 2a8 8 0 100 16 8 8 0 000-16zM10 6v4l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
