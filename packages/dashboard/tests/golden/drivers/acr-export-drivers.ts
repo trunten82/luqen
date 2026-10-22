@@ -52,7 +52,9 @@ async function loadScanAndVpat(ctx: SurfaceContext) {
 
 /** GET /api/v1/export/scans/:id/issues.xlsx, every worksheet parsed to cell arrays (never raw bytes). */
 export async function driveIssuesXlsx(ctx: SurfaceContext, scanId: string) {
-  const server = await makeServer(ctx, (s) => exportRoutes(s, ctx.storage));
+  // Phase 93: the Selector/Context columns reach only a caller holding reports.view_technical; the
+  // baseline was captured for an entitled caller, so this identity holds it (baseline not edited).
+  const server = await makeServer(ctx, (s) => exportRoutes(s, ctx.storage), ['reports.view_technical']);
   try {
     const res = await server.inject({ method: 'GET', url: `/api/v1/export/scans/${scanId}/issues.xlsx` });
     ok(res.statusCode, 'issues.xlsx');

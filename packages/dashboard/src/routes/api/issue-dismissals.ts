@@ -58,6 +58,7 @@ import {
   type RevokePayload,
 } from './issue-dismissals-schemas.js';
 import { redactDismissalJson } from './issue-dismissals-redaction.js';
+import { itemsForViewer, requestMayViewTechnicalDetails } from '../../services/technical-details.js';
 
 const NOT_SUPPORTED = 'Dismissals are not supported by this storage adapter';
 
@@ -391,7 +392,10 @@ export async function issueDismissalRoutes(
       const visible = mayTouchDismissalOrg(request.user, scan.orgId)
         ? withEvents
         : withEvents.map(redactDismissalJson);
-      return reply.code(200).send({ dismissals: visible });
+      // Phase 93 (D-08): the element selector only for a caller holding the technical-details permission.
+      return reply.code(200).send({
+        dismissals: itemsForViewer(visible, requestMayViewTechnicalDetails(request)),
+      });
     },
   );
 }

@@ -75,7 +75,9 @@ interface ParsedSheet {
 }
 
 async function getIssuesXlsx(query = ''): Promise<{ sheets: ParsedSheet[]; text: string }> {
-  const server = await makeServer(ctx, (s) => exportRoutes(s, ctx.storage));
+  // Contract (phase 93): the Selector columns reach only a caller holding reports.view_technical.
+  // These tests read them, so the caller holds it; the rule itself is pinned in technical-details-exports.test.ts.
+  const server = await makeServer(ctx, (s) => exportRoutes(s, ctx.storage), ['reports.view_technical']);
   try {
     const res = await server.inject({
       method: 'GET',
