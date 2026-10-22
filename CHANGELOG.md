@@ -310,6 +310,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   answers `403` `This user cannot be added to this team`, including a user who
   is already a member (it used to answer with a redirect). The `No members yet.`
   row disappears after the first member is added.
+- Team membership follows organization membership on every route that adds a
+  user to a team: the organization members page's add to team and move team,
+  and `POST /api/v1/teams/:teamId/members`, accept the same users as the team
+  page's Add Member. Any other user answers `403`
+  `This user cannot be added to this team` and nothing is changed; move team
+  checks before it removes any membership. The API still changes the role of a
+  current member of the team. A global administrator adds any active user.
 - The team form's empty organization option reads `Current organization (<name>)`
   and places the team in that organization, instead of `None (global)` (six
   languages). The team page's own organization form keeps `None (global)`, where

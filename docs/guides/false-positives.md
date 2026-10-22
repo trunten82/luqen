@@ -301,7 +301,7 @@ Before you start:
 
 - You are an Owner of the organization or a global administrator. Creating a role needs **Manage roles** and changing teams needs **Manage teams**; the default Owner role holds both and the default Admin role neither.
 - You are working in the organization (see [Who can dismiss](#who-can-dismiss) for how to choose it).
-- The person already has an account in the dashboard. For an Owner, **Add Member** lists the people who are already in one of the organization's teams and the organization's members who are in no team. It leaves out a member who also belongs to another organization, and a person who is already in this team. A global administrator's list holds every active user, and a global administrator adds a person an Owner's list leaves out (see step 20).
+- The person already has an account in the dashboard. For an Owner, **Add Member** lists the people who are already in one of the organization's teams and the organization's members who are in no team. It leaves out a member who also belongs to another organization, and a person who is already in this team. A global administrator's list holds every active user, and a global administrator adds a person an Owner's list leaves out (see step 20). The same rule applies wherever a person is added to a team: the organization's members page (add to team, move team) and the REST API accept the same people as **Add Member**.
 
 Steps:
 
