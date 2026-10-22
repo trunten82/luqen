@@ -29,12 +29,15 @@ refuse it.
 
 **Checked after the build, before any secret, configuration or unit
 (bare-metal):** after the checkout and build, the installer asks the built
-dashboard's own rules whether the list is acceptable. A refused list stops the install before any secret,
-configuration or service unit is written. A Docker install has no
-host-side build, so the list is written to `.env` unchecked and the
+dashboard's own rules whether the list is acceptable. A refused list stops
+the install before any secret, configuration or service unit is written.
+Whatever the dashboard's code returns, the installer writes a value only if
+every character is a letter, a digit or one of `. : / % , -`. A Docker install
+has no host-side build, so the list is written to `.env` unchecked and the
 dashboard container applies its own rules when it starts; the installer
-refuses only the characters (`#`, `$`, quotes, backtick, backslash) that
-compose would rewrite and the dashboard would refuse anyway.
+refuses up front the characters (`#`, `$`, quotes, backtick, backslash) that
+compose would rewrite, and any character other than letters, digits, spaces
+and `. : / % , -`, all of which the dashboard would refuse anyway.
 
 **Where the value is written:**
 

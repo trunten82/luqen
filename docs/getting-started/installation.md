@@ -393,7 +393,8 @@ proxies and open `/admin/audit-log?action=login.success`; the newest entry must 
   the check, and it comes after `.env` is written and the containers are started: a refused list keeps the dashboard
   container down, and the installer prints the compose logs and exits 1 once the health endpoint has not answered for
   about 60 seconds. The characters `#`, `$`, `'`, `"`, a backtick and `\` are refused up front (exit 1, nothing
-  written), because compose would rewrite them in `.env`. To recover from a refused list, run the same installer
+  written), because compose would rewrite them in `.env`, and so is any character other than letters, digits, spaces
+  and `. : / % , -`, none of which the dashboard accepts. To recover from a refused list, run the same installer
   command again with the list corrected: the dashboard refused it in its configuration check, which runs before the
   dashboard opens its database, so nothing was stored under the session secret that the second run generates, and the
   second run creates the admin user that the first run never reached.

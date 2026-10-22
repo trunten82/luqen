@@ -246,6 +246,16 @@ if [ -f "${INSTALL_DIR}/.install-state" ]; then
     # shellcheck disable=SC1090
     . "${INSTALL_DIR}/.install-state"
 fi
+# The plist is XML: only the canonical character set install.sh checked may go
+# in. Refuse anything else rather than write it (WR-07).
+case "${DASHBOARD_TRUSTED_PROXIES}" in
+    *[!0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.:/%,-]*)
+        echo ""
+        echo "  ERROR: DASHBOARD_TRUSTED_PROXIES in ${INSTALL_DIR}/.install-state holds a character"
+        echo "  outside [0-9A-Za-z.:/%,-]; no launchd plist was written. Re-run install.sh."
+        exit 1
+        ;;
+esac
 # Default to the legacy 4-service set when state file is absent or empty.
 if [ -z "${INSTALL_COMPONENTS}" ]; then
     INSTALL_COMPONENTS="core dashboard compliance branding llm"

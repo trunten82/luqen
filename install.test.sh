@@ -869,6 +869,100 @@ case_summary_warns_about_overrides() {
   assert_not_contains "state: no drop-in check" "${msgs}" "drop-in"
 }
 
+define_case written-value-charset-enforced
+case_written_value_charset_enforced() {
+  local bad
+  for bad in '192.0.2.10;touch x' '192.0.2.10$(id)' '192.0.2.10</string>' '192.0.2.10 loopback' $'192.0.2.10\tx'; do
+    load_installer --trusted-proxies '192.0.2.10'
+    # The dashboard's answer is replaced by a crafted one: the installer must
+    # not trust it.
+    CRAFTED="${bad}"
+    trusted_proxies_check() { printf '%s' "${CRAFTED}"; }
+    run_rc validate_and_report
+    assert_eq "value [${bad}]: exit status" "${RC}" "1"
+    assert_contains "value [${bad}]" "$(cat "${TD}/out")" "outside [0-9A-Za-z.:/%,-]"
+    assert_eq "value [${bad}]: value to write" "$(cat "${TD}/write")" ""
+    # Each sink refuses it on its own as well.
+    TRUSTED_PROXIES_WRITE="${bad}"
+    run_rc dashboard_trusted_proxies_unit_line
+    assert_eq "value [${bad}]: unit line exit status" "${RC}" "1"
+    assert_not_contains "value [${bad}]: unit line" "$(cat "${TD}/out")" "Environment="
+    INSTALL_COMPONENTS=(core dashboard)
+    run_rc write_install_state
+    assert_eq "value [${bad}]: .install-state exit status" "${RC}" "1"
+    [ ! -e "${TD}/install/.install-state" ] || die "value [${bad}]: .install-state was written"
+  done
+  # A value the dashboard accepts, with a zone id holding -, is still written.
+  load_installer --trusted-proxies 'fe80::1%br-lan'
+  validate_trusted_proxies
+  assert_eq "zone id with -" "${TRUSTED_PROXIES_WRITE}" "fe80::1%br-lan"
+}
+
+# fake_dist <dir> <config.js body> -- a stand-in dashboard dist whose loadConfig
+# splits the variable and whose resolveTrustedProxies returns the list.
+fake_dist() {
+  mkdir -p "$1/auth"
+  printf '{"type":"module"}\n' > "$1/package.json"
+  printf '%s\nexport function loadConfig() { return { trustedProxies: process.env.DASHBOARD_TRUSTED_PROXIES.split(",") }; }\n' "$2" > "$1/config.js"
+  printf 'export function resolveTrustedProxies(l) { return l; }\n' > "$1/auth/trusted-proxies.js"
+}
+
+define_case stray-stdout-fails-closed
+case_stray_stdout_fails_closed() {
+  load_installer
+  local out rc
+  # Control: a clean stand-in answers, so a failure below is the stray output.
+  fake_dist "${TD}/clean" ''
+  out="$(trusted_proxies_check "${TD}/clean" canonical '192.0.2.10')" && rc=0 || rc=$?
+  assert_eq "clean stand-in exit status" "${rc}" "0"
+  assert_eq "clean stand-in answer" "${out}" "192.0.2.10"
+  fake_dist "${TD}/before" 'console.log("198.51.100.66");'
+  out="$(trusted_proxies_check "${TD}/before" canonical '192.0.2.10' 2>/dev/null)" && rc=0 || rc=$?
+  assert_eq "stray output before the answer: exit status" "${rc}" "3"
+  assert_eq "stray output before the answer: stdout" "${out}" ""
+  fake_dist "${TD}/after" 'process.on("exit", () => process.stdout.write("x"));'
+  out="$(trusted_proxies_check "${TD}/after" canonical '192.0.2.10' 2>/dev/null)" && rc=0 || rc=$?
+  assert_eq "stray output after the answer: exit status" "${rc}" "3"
+  assert_eq "stray output after the answer: stdout" "${out}" ""
+}
+
+define_case docker-env-allow-list
+case_docker_env_allow_list() {
+  local bad good
+  for bad in '192.0.2.10;x' '192.0.2.*' '<x>' 'a|b' '192.0.2.10&' $'192.0.2.10\tloopback'; do
+    load_installer --profile docker --trusted-proxies "${bad}"
+    run_rc derive_install_components
+    [ "${RC}" -eq 1 ] || die "value [${bad}]: expected exit 1 but got ${RC}"
+    assert_contains "value [${bad}]" "$(cat "${TD}/out")" "not written to .env"
+  done
+  for good in 'fe80::1%br-lan' '2001:db8::/32, loopback' '192.0.2.10 , LoopBack'; do
+    load_installer --profile docker --trusted-proxies "${good}"
+    run_rc derive_install_components
+    [ "${RC}" -eq 0 ] || die "value [${good}]: expected exit 0 but got ${RC}: $(cat "${TD}/out")"
+  done
+}
+
+define_case macos-plist-refuses-unsafe-state
+case_macos_plist_refuses_unsafe_state() {
+  new_tmp
+  local mac="${TD}/mac" rc
+  mkdir -p "${mac}/bin" "${mac}/home" "${mac}/luqen/packages/dashboard/dist"
+  cp "${REPO_ROOT}/install.command" "${mac}/install.command"
+  printf '#!/usr/bin/env bash\nexit 0\n' > "${mac}/install.sh"
+  printf '#!/bin/sh\necho Darwin\n' > "${mac}/bin/uname"
+  printf '#!/bin/sh\nexit 0\n' > "${mac}/bin/launchctl"
+  chmod +x "${mac}/bin/uname" "${mac}/bin/launchctl" "${mac}/install.sh"
+  printf "INSTALL_COMPONENTS=dashboard\nDASHBOARD_TRUSTED_PROXIES='192.0.2.10</string><key>X</key><string>y'\n" > "${mac}/luqen/.install-state"
+  set +e
+  PATH="${mac}/bin:${PATH}" HOME="${mac}/home" LUQEN_INSTALL_DIR="${mac}/luqen" \
+    bash "${mac}/install.command" --non-interactive </dev/null >"${mac}/out" 2>&1
+  rc=$?
+  set -e
+  assert_eq "exit status" "${rc}" "1"
+  assert_contains "reason" "$(cat "${mac}/out")" "no launchd plist was written"
+  assert_eq "plists written" "$(entries_in "${mac}/home/Library/LaunchAgents")" "0"
+}
+
 # Always runs last, whatever cases were selected: nothing in the checkout may
 # differ after the run from before it.
 repo_snapshot() {

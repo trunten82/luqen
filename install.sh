@@ -531,30 +531,64 @@ try {
 }
 
 const joined = resolved === false ? 'none' : resolved.join(',');
+// The answer is framed, so anything else on stdout (a stray console.log at
+// import time, before or after) makes trusted_proxies_check fail closed instead
+// of passing as the value.
 if (mode === 'canonical') {
-  process.stdout.write(cfg.trustedProxies === undefined ? 'unset' : joined);
+  process.stdout.write('<<TP:' + (cfg.trustedProxies === undefined ? 'unset' : joined) + ':TP>>');
 } else if (mode === 'effective') {
-  process.stdout.write(joined);
+  process.stdout.write('<<TP:' + joined + ':TP>>');
 } else {
   process.stderr.write(`unknown mode ${mode}\n`);
   process.exit(3);
 }
 JS
 
+# The characters a canonical list can hold: digits, letters (hex digits, the
+# named ranges, IPv6 zone ids), . : / % , and - (an IPv6 zone id such as
+# fe80::1%br-lan; MEASURED accepted by the dashboard). Spelled out rather than as
+# ranges, so no locale can widen it.
+TP_CANONICAL_CHARS='0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.:/%,-'
+
+# trusted_proxies_charset_ok <value> [extra-chars] -- 0 when every character of
+# value is in TP_CANONICAL_CHARS (plus extra-chars). The gate in front of every
+# sink: the unit and .install-state (which install.command sources as shell
+# code and copies into an XML plist) take only the canonical set; the Docker
+# .env also takes the space the operator typed. It does not rely on node's
+# address parser to keep shell or XML metacharacters out.
+trusted_proxies_charset_ok() {
+  local allowed="${TP_CANONICAL_CHARS}${2:-}"
+  case "$1" in
+    *[!"${allowed}"]*) return 1 ;;
+  esac
+  return 0
+}
+
 # trusted_proxies_check <dist-dir> <canonical|effective> <value>
-# Runs in a subshell that drops every exported DASHBOARD_* name first, so no
-# other dashboard setting can reach loadConfig, then hands the value over in the
-# one environment variable. `exec` makes node's exit status the function's.
+# Runs node in a subshell that drops every exported DASHBOARD_* name first, so
+# no other dashboard setting can reach loadConfig, then hands the value over in
+# the one environment variable. Returns node's exit status. On success it prints
+# the answer only if node's whole stdout was one framed answer (<<TP:...:TP>>);
+# anything else on stdout fails closed with status 3.
 trusted_proxies_check() {
-  local dist="$1" mode="$2" value="$3"
-  (
+  local dist="$1" mode="$2" value="$3" framed="" rc=0
+  framed="$(
     local _name
     while IFS= read -r _name; do
       unset "${_name}"
     done < <(compgen -e | grep '^DASHBOARD_' || true)
     export DASHBOARD_TRUSTED_PROXIES="${value}"
     exec node --input-type=module -e "${TRUSTED_PROXIES_CHECK_JS}" "${dist}" "${mode}"
-  )
+  )" || rc=$?
+  [ "${rc}" -eq 0 ] || return "${rc}"
+  case "${framed}" in
+    '<<TP:'*':TP>>') framed="${framed#<<TP:}"; framed="${framed%:TP>>}" ;;
+    *) printf 'the dashboard check wrote something other than its framed answer to stdout\n' >&2; return 3 ;;
+  esac
+  case "${framed}" in
+    *'<<TP:'*|*':TP>>'*) printf 'the dashboard check wrote more than one answer to stdout\n' >&2; return 3 ;;
+  esac
+  printf '%s' "${framed}"
 }
 
 # trusted_proxies_evaluate -- the one place that runs the dashboard's check on
@@ -582,6 +616,11 @@ trusted_proxies_evaluate() {
 
   if [ "${out}" = "unset" ]; then
     TP_BLANK="true"
+  elif ! trusted_proxies_charset_ok "${out}"; then
+    # WR-07: never write a value outside the canonical character set, whatever
+    # the dashboard's code returned. Fails closed as "could not run the check".
+    TP_RC=3
+    TP_ERR="internal: the dashboard's canonical list holds a character outside [0-9A-Za-z.:/%,-]; nothing written"
   else
     TRUSTED_PROXIES_WRITE="${out}"
   fi
@@ -626,6 +665,10 @@ validate_trusted_proxies() {
 # trusted_proxies_written_value undoes it.
 dashboard_trusted_proxies_unit_line() {
   if [ -n "${TRUSTED_PROXIES_WRITE}" ]; then
+    if ! trusted_proxies_charset_ok "${TRUSTED_PROXIES_WRITE}"; then
+      printf 'internal: the trusted-proxy value holds a character outside [0-9A-Za-z.:/%%,-]; no unit line written\n' >&2
+      return 1
+    fi
     printf 'Environment=DASHBOARD_TRUSTED_PROXIES=%s\n' "${TRUSTED_PROXIES_WRITE//%/%%}"
   fi
 }
@@ -1060,6 +1103,12 @@ derive_install_components() {
           ;;
       esac
     done
+    # WR-07: then an allow-list, the canonical set plus the space an operator
+    # types after a comma. Every other character is one the dashboard refuses.
+    if ! trusted_proxies_charset_ok "${DASHBOARD_TRUSTED_PROXIES}" ' '; then
+      error "The trusted-proxy list contains a character other than letters, digits, spaces and . : / % , -: the dashboard would refuse it, so it is not written to .env. Correct it and run the installer again."
+      exit 1
+    fi
   fi
 
   # T-42-06: --with-monitor requires compliance
@@ -1811,6 +1860,13 @@ create_oauth_client() {
 # OAuth IDs/secrets are hex/base64).
 write_install_state() {
   local state_file="${INSTALL_DIR}/.install-state"
+  # Only a value the dashboard's rules accepted and trusted_proxies_evaluate
+  # checked against [0-9A-Za-z.:/%,-], so it is safe for `. .install-state` and
+  # for XML. Checked again here, at the sink, before the file is touched.
+  if ! trusted_proxies_charset_ok "${TRUSTED_PROXIES_WRITE}"; then
+    error "internal: the trusted-proxy value holds a character outside [0-9A-Za-z.:/%,-]; ${state_file} not written"
+    exit 1
+  fi
   cat > "${state_file}" <<STATE
 INSTALL_COMPONENTS=${INSTALL_COMPONENTS[*]}
 COMPLIANCE_PORT=${COMPLIANCE_PORT}
@@ -1827,8 +1883,6 @@ MONITOR_CLIENT_SECRET=${MONITOR_CLIENT_SECRET}
 MONITOR_CHECK_INTERVAL=${MONITOR_CHECK_INTERVAL:-manual}
 OAUTH_KEY_MAX_AGE_DAYS=${OAUTH_KEY_MAX_AGE_DAYS}
 STATE
-  # Only a value the dashboard's rules accepted (canonical, characters from
-  # [0-9A-Za-z.:/%,-]), so it is safe for `. .install-state` and for XML.
   if [ -n "${TRUSTED_PROXIES_WRITE}" ]; then
     printf 'DASHBOARD_TRUSTED_PROXIES=%s\n' "${TRUSTED_PROXIES_WRITE}" >> "${state_file}"
   fi
@@ -1973,7 +2027,7 @@ UNIT
 # writing under /etc.
 render_systemd_unit_dashboard() {
   local dashboard_trusted_proxies_env
-  dashboard_trusted_proxies_env="$(dashboard_trusted_proxies_unit_line)"
+  dashboard_trusted_proxies_env="$(dashboard_trusted_proxies_unit_line)" || return 1
   cat <<UNIT
 [Unit]
 Description=Luqen Dashboard
@@ -2003,7 +2057,10 @@ UNIT
 }
 
 write_systemd_unit_dashboard() {
-  render_systemd_unit_dashboard > /etc/systemd/system/luqen-dashboard.service
+  # Render first, so a refused value (WR-07) leaves the existing unit as it was.
+  local unit_text
+  unit_text="$(render_systemd_unit_dashboard)" || { error "The dashboard unit was not written."; exit 1; }
+  printf '%s\n' "${unit_text}" > /etc/systemd/system/luqen-dashboard.service
 }
 
 write_systemd_unit_monitor() {
