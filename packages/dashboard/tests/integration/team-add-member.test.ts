@@ -195,11 +195,24 @@ describe('team page: Add Member offers what the add request accepts', () => {
 describe('team page: the empty members row', () => {
   it('TEAM-03 adding the first member removes the empty members row', async () => {
     const teamId = await seedTeam('fabrikam-first', fabrikamOrgId);
+    // The team page (team-detail.hbs) renders the empty row the out-of-band delete targets.
+    const pageRes = await h.app.inject({ method: 'GET', url: `/admin/teams/${teamId}`, cookies: { session: owner.cookie } });
+    expect(pageRes.statusCode).toBe(200);
+    const emptyRow = new JSDOM(pageRes.body).window.document.querySelector('#members-empty-row');
+    expect(emptyRow, 'the team page renders id="members-empty-row"').not.toBeNull();
+    expect(emptyRow!.tagName).toBe('TR');
+
     const reviewerId = userIds.get('fabrikam-reviewer')!;
     const res = await addMember(owner, teamId, reviewerId, true);
     expect(res.statusCode).toBe(200);
     expect(res.body).toContain(`<tr id="member-row-${reviewerId}">`);
     expect(res.body).toContain('<template><tr id="members-empty-row" hx-swap-oob="delete"></tr></template>');
+    // The delete names the element the page rendered.
+    const fragment = new JSDOM(`<table><tbody>${res.body}</tbody></table>`).window.document;
+    const oobIds = [...fragment.querySelectorAll('template')]
+      .flatMap((tpl) => [...(tpl as HTMLTemplateElement).content.querySelectorAll('[hx-swap-oob="delete"]')])
+      .map((el) => el.id);
+    expect(oobIds).toEqual([emptyRow!.id]);
   }, 60_000);
 
   it('TEAM-03 adding a further member sends no empty row removal', async () => {
