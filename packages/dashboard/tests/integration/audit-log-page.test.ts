@@ -146,6 +146,52 @@ describe('AUD-01 the Audit Log menu entry follows the audit view permission', ()
   });
 });
 
+describe('the Actor filter finds what the Actor column shows', () => {
+  const resourceIds = (html: string): string[] => {
+    const doc = new JSDOM(html).window.document;
+    return [...doc.querySelectorAll('tbody tr td')].map((td) => (td.textContent ?? '').trim());
+  };
+  let seeded = false;
+  async function seedKeyRows(): Promise<void> {
+    if (seeded) return;
+    seeded = true;
+    const fabrikamKey = await h.seed.apiKeys.storeKey('fabrikam-filter-placeholder', 'Fabrikam Filter CI', fabrikamOrgId, 'admin');
+    await h.seed.audit.log({ actor: `api-key:${fabrikamKey}`, actorId: `api-key:${fabrikamKey}`, action: 'scan.create', resourceType: 'scan', resourceId: 'fabrikam-key-row', orgId: fabrikamOrgId });
+    const otherKey = await h.seed.apiKeys.storeKey('fabrikam-filter-other-placeholder', 'Fabrikam Other CI', fabrikamOrgId, 'admin');
+    await h.seed.audit.log({ actor: `api-key:${otherKey}`, actorId: `api-key:${otherKey}`, action: 'scan.create', resourceType: 'scan', resourceId: 'fabrikam-other-key-row', orgId: fabrikamOrgId });
+  }
+
+  for (const typed of ['Fabrikam Filter CI', 'API key: Fabrikam Filter CI']) {
+    it(`the Actor filter "${typed}" finds that API key's rows`, async () => {
+      await seedKeyRows();
+      const res = await page(owner, `/admin/audit-log?actor=${encodeURIComponent(typed)}`);
+      expect(res.status).toBe(200);
+      const cells = resourceIds(res.body);
+      expect(cells).toContain('fabrikam-key-row');
+      expect(cells).not.toContain('fabrikam-other-key-row');
+      expect(cells).not.toContain('fabrikam-scan');
+    });
+  }
+
+  it('the Actor filter finds an API key by the full text the Actor column shows', async () => {
+    await seedKeyRows();
+    const all = new JSDOM((await page(owner, '/admin/audit-log')).body).window.document;
+    const row = [...all.querySelectorAll('tbody tr')].find((tr) => (tr.textContent ?? '').includes('fabrikam-key-row'));
+    expect(row, 'the key row is listed').toBeDefined();
+    const shown = [...row!.querySelectorAll('td')].map((td) => (td.textContent ?? '').trim()).find((c) => c.startsWith('API key: Fabrikam Filter CI'));
+    expect(shown, 'the Actor cell names the key').toBeDefined();
+    const cells = resourceIds((await page(owner, `/admin/audit-log?actor=${encodeURIComponent(shown!)}`)).body);
+    expect(cells).toContain('fabrikam-key-row');
+    expect(cells).not.toContain('fabrikam-other-key-row');
+  });
+
+  it('the Actor filter still finds a user by user name', async () => {
+    const cells = resourceIds((await page(owner, '/admin/audit-log?actor=fabrikam-owner')).body);
+    expect(cells).toContain('fabrikam-scan');
+    expect(cells).not.toContain('fabrikam-key-row');
+  });
+});
+
 describe('the sidebar marks one current page', () => {
   const currentLinks = (html: string): (string | null)[] =>
     [...new JSDOM(html).window.document.querySelectorAll('a[aria-current="page"]')].map((a) => a.getAttribute('href'));

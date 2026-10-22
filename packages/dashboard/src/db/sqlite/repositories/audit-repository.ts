@@ -43,7 +43,11 @@ export class SqliteAuditRepository implements AuditRepository {
     const conditions: string[] = [];
     const params: Record<string, unknown> = {};
 
-    if (q.actor) { conditions.push('actor = @actor'); params.actor = q.actor; }
+    if (q.actors !== undefined && q.actors.length > 0) {
+      const names = q.actors.map((_, i) => `@actor${i}`);
+      conditions.push(`actor IN (${names.join(', ')})`);
+      q.actors.forEach((a, i) => { params[`actor${i}`] = a; });
+    } else if (q.actor) { conditions.push('actor = @actor'); params.actor = q.actor; }
     if (q.action) { conditions.push('action = @action'); params.action = q.action; }
     if (q.resourceType) { conditions.push('resource_type = @resourceType'); params.resourceType = q.resourceType; }
     if (q.from) { conditions.push('timestamp >= @from'); params.from = q.from; }

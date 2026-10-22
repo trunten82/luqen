@@ -6,7 +6,7 @@ import { HtmlPageSchema } from '../../api/schemas/envelope.js';
 import type { AuditEntry } from '../../db/types.js';
 import type { Locale } from '../../i18n/index.js';
 import { resolveLocale } from '../../services/vpat-share-service.js';
-import { withActorLabels } from '../../services/issue-dismissals/audit-actor-labels.js';
+import { actorFilterValues, withActorLabels } from '../../services/issue-dismissals/audit-actor-labels.js';
 import { actionOptions, resourceTypeOptions } from './audit-filter-options.js';
 import { auditLogScope } from '../../services/audit-log-scope.js';
 
@@ -65,10 +65,11 @@ export async function auditRoutes(
       // A caller in no organization reads no rows; everyone else reads their organization's rows, and a
       // global administrator reads them all (services/audit-log-scope.ts).
       const scope = auditLogScope(request.user);
+      const locale = sessionLocale(request);
       const result = scope.kind === 'none'
         ? { entries: [] as AuditEntry[], total: 0 }
         : await storage.audit.query({
-          actor: q.actor || undefined,
+          actors: await actorFilterValues(storage, scope, q.actor, locale, request.log),
           action: q.action || undefined,
           resourceType: q.resourceType || undefined,
           from: q.from || undefined,
@@ -79,7 +80,7 @@ export async function auditRoutes(
         });
 
       const hasMore = offset + limit < result.total;
-      const entries = await withActorLabels(storage, request.user, result.entries, sessionLocale(request), request.log);
+      const entries = await withActorLabels(storage, request.user, result.entries, locale, request.log);
 
       return reply.view('admin/audit-log.hbs', {
         pageTitle: 'Audit Log',

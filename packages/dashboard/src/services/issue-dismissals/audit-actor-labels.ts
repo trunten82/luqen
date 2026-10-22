@@ -8,7 +8,8 @@ import type { StorageAdapter } from '../../db/index.js';
 import type { AuditEntry } from '../../db/types.js';
 import type { AuthUser } from '../../auth/middleware.js';
 import { ISSUE_DISMISSAL_AUDIT_ACTIONS, type DismissalKeySnapshot } from '../../db/interfaces/issue-dismissal-repository.js';
-import type { Locale } from '../../i18n/index.js';
+import { t, type Locale } from '../../i18n/index.js';
+import type { AuditLogScope } from '../audit-log-scope.js';
 import {
   actorLabelText,
   describeActor,
@@ -79,4 +80,38 @@ export async function withActorLabels(
     rows.push({ ...entry, actorLabel: actorLabelText(description, locale) });
   }
   return rows;
+}
+
+/**
+ * The stored actors an Actor filter matches. The page shows an API key by its label, never by the
+ * stored `api-key:<row id>`, so the filter matches what the page shows: typing a key's name, or the
+ * page's `API key: <name>` text (with or without the `(Created ...)` part), also finds that key's
+ * rows. Only keys the viewer's page would name are looked up: the keys of their organization, or
+ * every key for a global administrator. An empty filter returns undefined (no actor condition).
+ */
+export async function actorFilterValues(
+  storage: StorageAdapter,
+  scope: AuditLogScope,
+  typed: string | undefined,
+  locale: Locale,
+  log: ActorLabelLog,
+): Promise<readonly string[] | undefined> {
+  const text = (typed ?? '').trim();
+  if (text === '' || scope.kind === 'none') return text === '' ? undefined : [text];
+  let keys: readonly { readonly id: string; readonly label: string; readonly orgId: string }[];
+  try {
+    keys = scope.kind === 'org'
+      ? (await storage.apiKeys.listKeys(scope.orgId)).filter((k) => k.orgId === scope.orgId)
+      : await storage.apiKeys.listKeys();
+  } catch (err) {
+    log.warn({ errorName: err instanceof Error ? err.name : 'UnknownError' }, 'Audit Log: API key labels not readable, actor filter matches the stored actor only');
+    return [text];
+  }
+  const keyActors = keys
+    .filter((k) => {
+      const named = t('issueDismissals.actor.apiKeyNamed', locale, { name: k.label });
+      return text === k.label || text === named || text.startsWith(`${named} (`);
+    })
+    .map((k) => `api-key:${k.id}`);
+  return [text, ...keyActors];
 }
