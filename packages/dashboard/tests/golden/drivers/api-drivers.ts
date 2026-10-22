@@ -396,7 +396,8 @@ export async function driveGraphqlScanIssues(ctx: SurfaceContext, scanId: string
   const gqlCtx = {
     storage: ctx.storage,
     user: { id: 'user-fabrikam-admin', username: 'fabrikam-admin', role: 'admin' },
-    permissions: new Set<string>(['reports.view']),
+    // reports.view_technical: the zero-dismissal goldens pin an entitled caller's output.
+    permissions: new Set<string>(['reports.view', 'reports.view_technical']),
     orgId: ctx.orgs.fabrikamOrgId,
   } as unknown as GraphQLContext;
   return {

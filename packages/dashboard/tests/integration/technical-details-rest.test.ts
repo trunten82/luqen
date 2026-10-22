@@ -79,6 +79,8 @@ let scanId: string;
 /** The same report stored in the 'system' org: a system key without an org header acts there. */
 let systemScanId: string;
 let storedBlob: string;
+/** A scan whose findings the fix-suggestion engine recognises, so /fixes has rows. */
+let fixScanId: string;
 const keys = new Map<string, string>();
 
 const tokenOf = (html: string): string | undefined =>
@@ -173,6 +175,21 @@ beforeAll(async () => {
   const report = canaryReport(siteUrl);
   scanId = await seedSurfaceScan(seed, { orgId, siteUrl, report, location: 'both', reportsDir });
   storedBlob = JSON.stringify(report);
+  const fixSite = `https://fabrikam.example/fix-${HEX.slice(0, 8)}/`;
+  fixScanId = await seedSurfaceScan(seed, {
+    orgId, siteUrl: fixSite, location: 'both', reportsDir,
+    report: {
+      summary: { pagesScanned: 1, totalIssues: 1, byLevel: { error: 1, warning: 0, notice: 0 } },
+      pages: [{
+        url: fixSite, issueCount: 1,
+        issues: [{
+          type: 'error', code: CODE, wcagCriterion: '1.4.3',
+          message: 'Insufficient contrast: the contrast ratio on the note is less than 4.5:1',
+          selector: SELECTOR, context: `<p id="${CONTEXT_ID}">x</p>`,
+        }],
+      }],
+    },
+  });
   systemScanId = await seedSurfaceScan(seed, { orgId: 'system', siteUrl, report, location: 'both', reportsDir });
 }, 120_000);
 
@@ -219,4 +236,97 @@ describe('what an API key resolves to (D-09 pin)', () => {
   }
 });
 
-export { storedBlob };
+describe('GET /api/v1/scans/:id serves the embedded raw report', () => {
+  it('API-02 an Analyst gets no selector or context canary anywhere and the message canary inside data.jsonReport', async () => {
+    const res = await asSession('fabrikam-analyst', `/api/v1/scans/${scanId}`);
+    expect(res.status).toBe(200);
+    expect(res.body).not.toContain(SELECTOR_ID);
+    expect(res.body).not.toContain(CONTEXT_ID);
+    const blob = (JSON.parse(res.body) as { data: { jsonReport: string } }).data.jsonReport;
+    expect(typeof blob).toBe('string');
+    expect(blob).toContain(MESSAGE);
+    expect(() => JSON.parse(blob)).not.toThrow();
+  }, 60_000);
+
+  it('API-02 an Owner gets data.jsonReport byte-identical to the stored row blob', async () => {
+    const res = await asSession('fabrikam-owner', `/api/v1/scans/${scanId}`);
+    expect(res.status).toBe(200);
+    expect((JSON.parse(res.body) as { data: { jsonReport: string } }).data.jsonReport).toBe(storedBlob);
+  }, 60_000);
+
+  it('API-02 an API key without the permission gets no canary from the detail route', async () => {
+    const kr = KEY_ROLES.find((k) => k.label === 'org read-only')!;
+    const res = await asKey(kr, '');
+    expect(res.status).toBe(200);
+    expect(res.body).not.toContain(SELECTOR_ID);
+    expect(res.body).not.toContain(CONTEXT_ID);
+    expect(res.body).toContain(MESSAGE);
+  }, 60_000);
+});
+
+describe('GET /api/v1/scans lists rows with their raw report', () => {
+  const rowFor = (body: string): Record<string, unknown> =>
+    rowsOf(body).find((r) => r['id'] === scanId)!;
+
+  it('D-08 an Analyst gets no selector or context canary in any row', async () => {
+    const res = await asSession('fabrikam-analyst', '/api/v1/scans');
+    expect(res.status).toBe(200);
+    expect(res.body).not.toContain(SELECTOR_ID);
+    expect(res.body).not.toContain(CONTEXT_ID);
+    expect(String(rowFor(res.body)['jsonReport'])).toContain(MESSAGE);
+  }, 60_000);
+
+  it('D-08 an Owner gets the stored blob in the list row', async () => {
+    const res = await asSession('fabrikam-owner', '/api/v1/scans');
+    expect(res.status).toBe(200);
+    expect(rowFor(res.body)['jsonReport']).toBe(storedBlob);
+  }, 60_000);
+});
+
+describe('GET /api/v1/scans/:id/fixes', () => {
+  it('D-08 an Analyst gets fix rows with no selector key', async () => {
+    const res = await asSession('fabrikam-analyst', `/api/v1/scans/${fixScanId}/fixes`);
+    expect(res.status).toBe(200);
+    const rows = rowsOf(res.body);
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) expect('selector' in row, 'selector key present').toBe(false);
+    expect(res.body).not.toContain(SELECTOR_ID);
+    expect(res.body).toContain('Insufficient contrast');
+  }, 60_000);
+
+  it('D-08 an Owner gets fix rows with the selector', async () => {
+    const res = await asSession('fabrikam-owner', `/api/v1/scans/${fixScanId}/fixes`);
+    expect(res.status).toBe(200);
+    const rows = rowsOf(res.body);
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) expect(row['selector']).toBe(SELECTOR);
+  }, 60_000);
+});
+
+describe('the published OpenAPI document', () => {
+  type Schema = { description?: string; anyOf?: Schema[]; properties?: Record<string, Schema> };
+  type Spec = { paths: Record<string, { get?: { responses: Record<string, { content: Record<string, { schema: Schema }> }> } }> };
+
+  function responseSchema(spec: Spec, path: string): Schema {
+    return spec.paths[path]!.get!.responses['200']!.content['application/json']!.schema;
+  }
+  /** The row schema: data is an array of rows, or (scan detail) an object. */
+  function rowSchema(root: Schema): Schema {
+    const data = root.properties!['data']! as Schema & { items?: Schema };
+    return data.items ?? data;
+  }
+  const describes = (schema: Schema | undefined): boolean =>
+    schema?.description !== undefined && schema.description.includes('reports.view_technical');
+
+  it('D-10 the swagger document describes selector and jsonReport as present only with reports.view_technical', () => {
+    const spec = app.swagger() as unknown as Spec;
+    const issues = rowSchema(responseSchema(spec, '/api/v1/scans/{id}/issues'));
+    const fixes = rowSchema(responseSchema(spec, '/api/v1/scans/{id}/fixes'));
+    const list = rowSchema(responseSchema(spec, '/api/v1/scans'));
+    const detail = rowSchema(responseSchema(spec, '/api/v1/scans/{id}'));
+    expect(describes(issues.properties?.['selector'])).toBe(true);
+    expect(describes(fixes.properties?.['selector'])).toBe(true);
+    expect(describes(list.properties?.['jsonReport'])).toBe(true);
+    expect(describes(detail.properties?.['jsonReport'])).toBe(true);
+  });
+});

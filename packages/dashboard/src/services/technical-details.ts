@@ -51,3 +51,58 @@ export function itemsForViewer<T extends object>(
 ): readonly T[] | ReadonlyArray<Omit<T, TechnicalIssueField>> {
   return viewTechnical ? items : items.map((item) => withoutTechnicalFields(item));
 }
+
+// ---------------------------------------------------------------------------
+// Stored report blobs (D-08)
+// ---------------------------------------------------------------------------
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** An issue copy: a plain object with a string `code` that carries a technical field. */
+function isIssueCopy(value: Record<string, unknown>): boolean {
+  return typeof value['code'] === 'string' && TECHNICAL_ISSUE_FIELDS.some((field) => field in value);
+}
+
+function redactDeep(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(redactDeep);
+  if (!isPlainObject(value)) return value;
+  const walked: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value)) walked[key] = redactDeep(child);
+  return isIssueCopy(walked) ? withoutTechnicalFields(walked) : walked;
+}
+
+/**
+ * A raw scan report as a viewer may see it: the same reference for an entitled viewer, otherwise a
+ * structural copy with the technical fields removed from EVERY issue copy, at any depth.
+ *
+ * Generic on purpose: a nested copy nobody listed (a future shape) cannot carry a selector out.
+ * The locations known today are `pages[].issues[]`, `templateIssues[]`, flat `issues[]`,
+ * `results[].issues[]` and `compliance.annotatedIssues[].originalIssue` (report-service.ts,
+ * filter-compliance.ts). An object counts as an issue copy when it has a string `code` and one of
+ * the technical keys; `errors[]` entries and layout objects without a string code are left as they are.
+ */
+export function reportForViewer<T>(report: T, viewTechnical: boolean): T {
+  return viewTechnical ? report : (redactDeep(report) as T);
+}
+
+/**
+ * A scan row whose `jsonReport` blob follows {@link reportForViewer}. The same row for an entitled
+ * viewer or a row without a blob; otherwise a new row with the blob parsed, redacted and
+ * re-serialised compactly. A blob that cannot be parsed cannot be redacted, so it is dropped from
+ * the copy (fail closed).
+ */
+export function reportBlobForViewer<T extends { readonly jsonReport?: string }>(
+  row: T,
+  viewTechnical: boolean,
+): T {
+  if (viewTechnical || row.jsonReport === undefined) return row;
+  const { jsonReport, ...rest } = row;
+  try {
+    const redacted = reportForViewer(JSON.parse(jsonReport) as unknown, false);
+    return { ...(rest as unknown as T), jsonReport: JSON.stringify(redacted) };
+  } catch {
+    return rest as unknown as T;
+  }
+}
