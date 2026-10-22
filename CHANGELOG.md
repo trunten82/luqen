@@ -370,6 +370,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - The Audit Log's Actor filter finds an API key's entries by the key's name or
   by the text the Actor column shows (`API key: <name>`, with or without the
   `(Created <date>)` part), for the keys the page names.
+- The GraphQL `auditLog` query's `actor` argument matches the way the Audit
+  Log's Actor filter does: the `actor` label the query returns, the key's name
+  or `API key: <name>` finds that API key's entries, where it found none.
 - A user with View audit log who is in no organization reads no audit entries,
   on the Audit Log page and through the GraphQL `auditLog` query, and the menu
   does not show them the Audit Log.

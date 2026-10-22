@@ -260,4 +260,30 @@ describe('the Audit Log Actor column reads the same label (ACT-02)', () => {
     expect(res.body).not.toContain('api-key:');
     expect(res.body).not.toContain(keyId);
   }, 60_000);
+
+  it('WR-04 GraphQL auditLog filtered by the Actor label it returned finds that row', async () => {
+    const { dismissalId } = await markAsKey({ code: CODE_ALT, selector: '#fabrikam-graphql-filter' }, 'Fabrikam GraphQL Filter');
+    const other = await markAsKey({ code: CODE_ALT, selector: '#fabrikam-graphql-other' }, 'Fabrikam GraphQL Other');
+    type Node = { resourceId: string; actor: string };
+    const auditNodes = async (actor?: string): Promise<Node[]> => {
+      const res = await app.inject({
+        method: 'POST', url: '/graphql', cookies: { session: cookie },
+        headers: { 'content-type': 'application/json' },
+        payload: {
+          query: 'query($actor: String) { auditLog(actor: $actor, action: "issue_dismissal.mark", limit: 200) { nodes { resourceId actor } } }',
+          variables: { actor },
+        },
+      });
+      expect(res.statusCode, res.body).toBe(200);
+      return (res.json() as { data?: { auditLog?: { nodes: Node[] } } }).data?.auditLog?.nodes ?? [];
+    };
+    const returned = (await auditNodes()).find((n) => n.resourceId === dismissalId)?.actor;
+    expect(returned, 'GraphQL row for the dismissal').toBeDefined();
+    const named = t('issueDismissals.actor.apiKeyNamed', 'en', { name: 'Fabrikam GraphQL Filter' });
+    for (const typed of [returned!, named, 'Fabrikam GraphQL Filter']) {
+      const ids = (await auditNodes(typed)).map((n) => n.resourceId);
+      expect(ids, `filtered by ${typed}`).toContain(dismissalId);
+      expect(ids, `filtered by ${typed}`).not.toContain(other.dismissalId);
+    }
+  }, 60_000);
 });

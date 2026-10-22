@@ -639,8 +639,10 @@ describe('GraphQL resolvers', () => {
         offset: 10,
       }, ctx);
 
+      // The actor goes through the Audit Log page's filter helper (WR-04); this mock has no key
+      // store, so the helper matches the typed actor only.
       expect(ctx.storage.audit.query).toHaveBeenCalledWith({
-        actor: 'bob',
+        actors: ['bob'],
         action: 'login',
         resourceType: 'scan',
         from: '2024-01-01',
