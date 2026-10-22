@@ -37,7 +37,7 @@
  */
 
 import type { StorageAdapter } from '../db/index.js';
-import { isWithdrawnAnswer, WithdrawnAnswerError, type Message } from '../db/interfaces/conversation-repository.js';
+import { isWithdrawnAnswer, WithdrawnAnswerError, type AppendMessageInput, type Message } from '../db/interfaces/conversation-repository.js';
 import type { ToolMetadata } from '@luqen/core/mcp';
 import type { SseFrame } from './sse-frames.js';
 import { parsePlanBlock } from './plan-parser.js';
@@ -184,6 +184,13 @@ export interface TitleGeneratorFn {
   }): Promise<string>;
 }
 
+/**
+ * The one writer of a stream run's rows: it adds the run's token to every row it appends, so the store
+ * refuses the row once a newer run of the conversation (in this process or another) has replaced the
+ * run, or the conversation is deleted.
+ */
+type RunWriter = (input: Omit<AppendMessageInput, 'runId'>) => Promise<Message>;
+
 export interface AgentServiceOptions {
   readonly storage: StorageAdapter;
   readonly llm: LlmAgentTransport;
@@ -324,6 +331,21 @@ export class AgentService {
   async runTurn(input: AgentTurnInput): Promise<void> {
     const { conversationId, userId, orgId, userMessage, emit } = input;
 
+    // The run begins in the store first. The token changes before the in-memory registry aborts an
+    // older run of this conversation, so the older run's stop handler cannot write a row ahead of the
+    // change, even over a storage that does real I/O. A conversation that is deleted (or unknown) gets
+    // no token: the turn calls no model, writes nothing and registers nothing.
+    const runId = await this.storage.conversations.beginRun(conversationId);
+    if (runId === null) {
+      try {
+        emit({ type: 'done', aborted: true });
+      } catch {
+        /* stream gone; nothing to do */
+      }
+      return;
+    }
+    const writeRow: RunWriter = (row) => this.storage.conversations.appendMessage({ ...row, runId });
+
     // Phase 43 Plan 02 (AGENT-02) — register an internal AbortController
     // for this turn so the `POST /agent/cancel/:conversationId` route can
     // interrupt the loop. The controller is the sole source-of-truth for
@@ -368,14 +390,16 @@ export class AgentService {
     // Every row the turn writes follows the row it wrote before (the first one follows the question,
     // the most recent window row of the turn's text) and is written only while that row is on the
     // conversation's active branch: once an edit, a retry or a delete withdraws the answer, the store
-    // refuses the turn's next row (WithdrawnAnswerError) and the turn ends without writing more.
+    // refuses the turn's next row (WithdrawnAnswerError) and the turn ends without writing more. A row
+    // is also refused once the run is no longer the conversation's current run (a newer stream of the
+    // same conversation began, in this process or another); the refusal ends the turn the same way.
     const preWindow = await this.storage.conversations.getWindow(conversationId);
     const storedQuestion = [...preWindow].reverse().find(
       (row) => row.role === 'user' && (row.content ?? '') === userMessage,
     );
     let lastRowId = storedQuestion !== undefined
       ? storedQuestion.id
-      : (await this.storage.conversations.appendMessage({
+      : (await writeRow({
           conversationId,
           role: 'user',
           content: userMessage,
@@ -464,6 +488,7 @@ export class AgentService {
             agentDisplayName,
             signal,
             followsMessageId: lastRowId,
+            writeRow,
           });
           window = await this.storage.conversations.getWindow(conversationId);
           messages = windowToChatMessages(window);
@@ -513,7 +538,7 @@ export class AgentService {
           // exception is NOT a stream abort and must follow the existing
           // error path.
           accumulatedText = '';
-          await this.storage.conversations.appendMessage({
+          await writeRow({
             conversationId,
             role: 'assistant',
             content: assistantText,
@@ -564,13 +589,14 @@ export class AgentService {
               retryBudget,
               isOffered,
               followsMessageId: lastRowId,
+              writeRow,
             });
           }
           const meta = this.allTools.find((t) => t.name === destructive.name);
           const confirmationText = meta?.confirmationTemplate?.(destructive.args);
           // Persist BEFORE emit so reload recovery has the row regardless of
           // when the client receives the frame (D-29).
-          const pending = await this.storage.conversations.appendMessage({
+          const pending = await writeRow({
             conversationId,
             role: 'tool',
             status: 'pending_confirmation',
@@ -593,7 +619,7 @@ export class AgentService {
         //     user → assistant(tool_calls) → tool (per call) order that
         //     Ollama / OpenAI / Anthropic all require for conversation
         //     history. See Plan 32.1-08.
-        lastRowId = (await this.storage.conversations.appendMessage({
+        lastRowId = (await writeRow({
           conversationId,
           role: 'assistant',
           content: assistantText,
@@ -613,6 +639,7 @@ export class AgentService {
           retryBudget,
           isOffered,
           followsMessageId: lastRowId,
+          writeRow,
           ...(input.groupId !== undefined ? { groupId: input.groupId } : {}),
         });
         // Fall through to next iteration.
@@ -639,6 +666,7 @@ export class AgentService {
         signal,
         agentDisplayName,
         followsMessageId: lastRowId,
+        writeRow,
       });
       await this.storage.agentAudit.append({
         userId,
@@ -676,6 +704,7 @@ export class AgentService {
           accumulatedText,
           turnStartMs: turnStart,
           followsMessageId: lastRowId,
+          writeRow,
         });
         // Phase 43 Plan 02 — emit a terminal aborted-done so the client
         // can render the cancelled-state UI. Best-effort: emit() may
@@ -699,7 +728,7 @@ export class AgentService {
         retryable: false,
       });
       try {
-        await this.storage.conversations.appendMessage({
+        await writeRow({
           conversationId,
           role: 'assistant',
           content: `Error: ${message}`,
@@ -744,10 +773,12 @@ export class AgentService {
     readonly turnStartMs: number;
     /** The row the turn wrote last; the stopped reply follows it. */
     readonly followsMessageId: string;
+    /** The run's writer: a stopped reply of a replaced run is refused. */
+    readonly writeRow: RunWriter;
   }): Promise<void> {
     let row: Message;
     try {
-      row = await this.storage.conversations.appendMessage({
+      row = await args.writeRow({
         conversationId: args.conversationId,
         role: 'assistant',
         content: args.accumulatedText,
@@ -799,8 +830,9 @@ export class AgentService {
     readonly signal: AbortSignal;
     /** The row the turn wrote last; the summary follows it. */
     readonly followsMessageId: string;
+    readonly writeRow: RunWriter;
   }): Promise<string> {
-    const { conversationId, orgId, userId, agentDisplayName, signal, followsMessageId } = args;
+    const { conversationId, orgId, userId, agentDisplayName, signal, followsMessageId, writeRow } = args;
 
     const window = await this.storage.conversations.getWindow(conversationId);
     // Identify user-anchored turn boundaries.
@@ -856,7 +888,7 @@ export class AgentService {
       : `[summary] ${summaryText}`;
 
     // Persist the summary FIRST so the new row's created_at > boundary.
-    const summary = await this.storage.conversations.appendMessage({
+    const summary = await writeRow({
       conversationId,
       role: 'assistant',
       content: prefixed,
@@ -953,8 +985,9 @@ export class AgentService {
     readonly groupId?: string;
     /** The row the turn wrote last; the first result follows it, each later result the one before. */
     readonly followsMessageId: string;
+    readonly writeRow: RunWriter;
   }): Promise<string> {
-    const { turn, conversationId, userId, orgId, signal, emit, retryBudget, isOffered, groupId } = args;
+    const { turn, conversationId, userId, orgId, signal, emit, retryBudget, isOffered, groupId, writeRow } = args;
     const calls = turn.toolCalls;
 
     // (a) Capture rationale BEFORE dispatching — same string applied to every
@@ -1081,7 +1114,7 @@ export class AgentService {
       const stored = truncateResultForStorage(persistedShape);
       if (!withdrawn) {
         try {
-          lastRowId = (await this.storage.conversations.appendMessage({
+          lastRowId = (await writeRow({
             conversationId,
             role: 'tool',
             toolCallJson: JSON.stringify(s.call),
@@ -1119,8 +1152,9 @@ export class AgentService {
     readonly agentDisplayName: string;
     /** The row the turn wrote last; the final answer follows it. */
     readonly followsMessageId: string;
+    readonly writeRow: RunWriter;
   }): Promise<void> {
-    const { conversationId, emit, signal, agentDisplayName, orgId, userId, followsMessageId } = args;
+    const { conversationId, emit, signal, agentDisplayName, orgId, userId, followsMessageId, writeRow } = args;
     const window = await this.storage.conversations.getWindow(conversationId);
     const messages: AgentChatMessage[] = [
       ...windowToChatMessages(window),
@@ -1139,7 +1173,7 @@ export class AgentService {
         },
       },
     );
-    await this.storage.conversations.appendMessage({
+    await writeRow({
       conversationId,
       role: 'assistant',
       content: turn.text,
