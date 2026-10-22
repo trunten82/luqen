@@ -855,19 +855,23 @@ check_trusted_proxies_only() {
 # ──────────────────────────────────────────────
 # Interactive prompt helpers
 # ──────────────────────────────────────────────
+# ask <prompt> <default> <var> / ask_secret <prompt> <var> -- the answer is
+# stored in <var> as plain text with printf -v. No eval: a $, a backtick, a
+# quote or a backslash in an answer (a password, a URL) is kept as typed and
+# never run (IN-07).
 ask() {
-  local prompt="$1" default="$2" var="$3"
+  local prompt="$1" default="$2" var="$3" input=""
   printf "  %s%s%s %s[%s]%s: " "${BOLD}" "${prompt}" "${RESET}" "${DIM}" "${default}" "${RESET}" >/dev/tty
   read -r input </dev/tty
-  eval "${var}=\"${input:-${default}}\""
+  printf -v "${var}" '%s' "${input:-${default}}"
 }
 
 ask_secret() {
-  local prompt="$1" var="$2"
+  local prompt="$1" var="$2" input=""
   printf "  %s%s%s: " "${BOLD}" "${prompt}" "${RESET}" >/dev/tty
   read -rs input </dev/tty
   printf "\n" >/dev/tty
-  eval "${var}=\"${input}\""
+  printf -v "${var}" '%s' "${input}"
 }
 
 ask_yn() {

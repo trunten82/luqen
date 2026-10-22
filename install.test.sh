@@ -548,6 +548,40 @@ case_wizard_prompt_sets_value() {
   [ ! -e "${marker}" ] || die "the prompt executed its answer: ${marker} exists"
 }
 
+# drive_prompt <call> <answer> <expected> -- runs <call> (an ask/ask_secret line
+# that stores into ANSWER) under script(1) with <answer> on stdin, and prints
+# only "same" or "differ": whether ANSWER equals <expected> byte for byte. The
+# answer itself is never printed.
+drive_prompt() {
+  local call="$1" answer="$2" expected="$3" driver="${TD}/pdriver.sh" result="${TD}/presult"
+  printf '%s' "${expected}" > "${TD}/pexpected"
+  : > "${result}"
+  {
+    printf '%s\n' 'set -euo pipefail'
+    printf '%s\n' 'export LUQEN_INSTALL_LIB_ONLY=1'
+    printf '. %q\n' "${INSTALL_SH}"
+    printf '%s\n' 'ANSWER=""'
+    printf '%s\n' "${call}"
+    printf 'if [ "${ANSWER}" = "$(cat %q)" ]; then printf same > %q; else printf differ > %q; fi\n' "${TD}/pexpected" "${result}" "${result}"
+  } > "${driver}"
+  printf '%s\n' "${answer}" | timeout 30 script -qec "bash ${driver}" /dev/null >/dev/null 2>&1 || true
+  cat "${result}"
+}
+
+define_case prompts-store-answers-verbatim
+case_prompts_store_answers_verbatim() {
+  new_tmp; require_lib_mode; require_script_or_skip
+  local marker="${TD}/pwned" a
+  for a in "\$(touch ${marker})" "a\`touch ${marker}\`b" 'say "hi"' 'back\slash' 'pa$$w0rd!$HOME'; do
+    assert_eq "ask stores the answer as typed" "$(drive_prompt 'ask "Admin username" "admin" ANSWER' "${a}" "${a}")" "same"
+    assert_eq "ask_secret stores the answer as typed" "$(drive_prompt 'ask_secret "SMTP password" ANSWER' "${a}" "${a}")" "same"
+  done
+  [ ! -e "${marker}" ] || die "a prompt executed its answer: ${marker} exists"
+  assert_eq "an empty answer takes the default" "$(drive_prompt 'ask "Admin username" "admin" ANSWER' '' 'admin')" "same"
+  # Control: the comparison can say differ.
+  assert_eq "control" "$(drive_prompt 'ask "Admin username" "admin" ANSWER' 'typed' 'something else')" "differ"
+}
+
 define_case docker-env-written
 case_docker_env_written() {
   load_installer --profile docker --trusted-proxies '192.0.2.10, 198.51.100.0/24'
