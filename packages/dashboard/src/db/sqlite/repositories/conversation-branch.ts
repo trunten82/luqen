@@ -228,7 +228,7 @@ export function activeBranchUpTo(
 
 /** The steps of {@link replaceLatestQuestion}, run inside its transaction. */
 function replaceInTransaction(db: Database.Database, input: ReplaceQuestionInput): ReplaceQuestionRowResult {
-  const conversation = db.prepare('SELECT id FROM agent_conversations WHERE id = ? AND org_id = ?')
+  const conversation = db.prepare('SELECT id FROM agent_conversations WHERE id = ? AND org_id = ? AND is_deleted = 0')
     .get(input.conversationId, input.orgId);
   if (conversation === undefined) return { ok: false, reason: 'conversation_not_found' };
   const latest = lastActiveRow(db, input.conversationId, 'user');
@@ -259,12 +259,17 @@ export function replaceLatestQuestion(db: Database.Database, input: ReplaceQuest
 }
 
 /**
- * Supersedes the conversation's latest answer in one transaction, only when `messageId` is an active row
- * of the conversation, is its newest assistant row and is its newest row of any role (a reply that a tool
+ * Supersedes the conversation's latest answer in one transaction, only when the conversation is in
+ * `orgId` and not deleted and `messageId` is an active row of the conversation, is its newest assistant row and is its newest row of any role (a reply that a tool
  * result or an action awaiting confirmation follows is not retried). A refusal writes nothing.
  */
 export function supersedeLatestAnswer(db: Database.Database, input: RetryAnswerInput): RetryAnswerResult {
   return db.transaction((): RetryAnswerResult => {
+    // The conversation is checked first, here and not only by the route: a deleted conversation is
+    // refused with nothing written, whatever deleted it between the route's check and this transaction.
+    const conversation = db.prepare('SELECT id FROM agent_conversations WHERE id = ? AND org_id = ? AND is_deleted = 0')
+      .get(input.conversationId, input.orgId);
+    if (conversation === undefined) return { ok: false, reason: 'conversation_not_found' };
     if (activeMessageRow(db, input.conversationId, input.messageId) === undefined) {
       return { ok: false, reason: 'message_not_found' };
     }

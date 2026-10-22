@@ -79,3 +79,44 @@ describe('SESS-01 a claimed action returns to pending only while its conversatio
     expect(after.tool_call_json).not.toContain('fabrikam-token-live');
   });
 });
+
+describe('SESS-03 the edit and retry transactions refuse a deleted conversation', () => {
+  // The state a transaction sees when a delete lands between the route's owner check and the
+  // transaction (another dashboard process, or a storage with real I/O). Through the routes the owner
+  // check answers 404 first; the store does not rely on it.
+  async function deletedConversation(): Promise<{ conversationId: string; questionId: string; answerId: string }> {
+    const conv = await storage.conversations.createConversation({ userId, orgId });
+    const question = await storage.conversations.appendMessage({ conversationId: conv.id, role: 'user', content: 'Q1', status: 'sent' });
+    const answer = await storage.conversations.appendMessage({ conversationId: conv.id, role: 'assistant', content: 'A1', status: 'sent' });
+    expect(await storage.conversations.softDeleteConversation(conv.id, orgId, userId)).toBe(true);
+    return { conversationId: conv.id, questionId: question.id, answerId: answer.id };
+  }
+
+  function snapshot(conversationId: string): unknown[] {
+    return storage.getRawDatabase()
+      .prepare('SELECT id, status, content FROM agent_messages WHERE conversation_id = ? ORDER BY created_at, rowid')
+      .all(conversationId);
+  }
+
+  it('SESS-03 an edit of a deleted conversation is refused by the store and writes nothing', async () => {
+    const { conversationId, questionId } = await deletedConversation();
+    const before = snapshot(conversationId);
+
+    const result = await storage.conversations.replaceLatestQuestion({
+      conversationId, orgId, messageId: questionId, content: 'EDIT-IN-DELETED',
+    });
+
+    expect(result).toEqual({ ok: false, reason: 'conversation_not_found' });
+    expect(snapshot(conversationId)).toEqual(before);
+  });
+
+  it('SESS-03 a retry in a deleted conversation is refused by the store and writes nothing', async () => {
+    const { conversationId, answerId } = await deletedConversation();
+    const before = snapshot(conversationId);
+
+    const result = await storage.conversations.supersedeLatestAnswer({ conversationId, orgId, messageId: answerId });
+
+    expect(result).toEqual({ ok: false, reason: 'conversation_not_found' });
+    expect(snapshot(conversationId)).toEqual(before);
+  });
+});

@@ -169,7 +169,7 @@ export interface RetryAnswerInput {
 
 export type RetryAnswerResult =
   | { readonly ok: true }
-  | { readonly ok: false; readonly reason: 'message_not_found' | 'not_most_recent_assistant' | 'not_last_message' };
+  | { readonly ok: false; readonly reason: 'conversation_not_found' | 'message_not_found' | 'not_most_recent_assistant' | 'not_last_message' };
 
 /** A paused action (a `pending_confirmation` row) with the conversation it belongs to. */
 export interface PendingMessageRef {
@@ -254,8 +254,9 @@ export interface ConversationRepository {
    * Returns a paused action whose confirmation did not run (the dispatcher
    * refused it) to `pending_confirmation`, with the arguments it was paused
    * with (`toolCallJson`, as read from the paused row before the attempt).
-   * Only a row the confirmation claimed (status `sent`) is restored; any
-   * other row is left as it is.
+   * Only a row the confirmation claimed (status `sent`) is restored, and
+   * only while its conversation is not deleted; any other row is left as it
+   * is.
    */
   reopenPendingMessage(messageId: string, toolCallJson: string): Promise<void>;
 
@@ -289,8 +290,8 @@ export interface ConversationRepository {
   ): Promise<{ readonly anchor: Message; readonly messages: readonly Message[] } | null>;
 
   /**
-   * Edits the conversation's latest question in one transaction: the conversation is in `orgId`
-   * (else conversation_not_found), its newest active user row is `messageId` (else
+   * Edits the conversation's latest question in one transaction: the conversation is in `orgId` and
+   * not deleted (else conversation_not_found), its newest active user row is `messageId` (else
    * not_most_recent_user), the question and every active row after it are superseded (a paused
    * action among them stored redacted) and the new question is stored. A refusal writes nothing;
    * when the new question cannot be stored nothing is superseded.
@@ -298,7 +299,8 @@ export interface ConversationRepository {
   replaceLatestQuestion(input: ReplaceQuestionInput): Promise<ReplaceQuestionResult>;
 
   /**
-   * Retries the conversation's latest answer in one transaction: `messageId` is an active row of the
+   * Retries the conversation's latest answer in one transaction: the conversation, checked first, is in
+   * `orgId` and not deleted (else conversation_not_found); `messageId` is an active row of the
    * conversation (else message_not_found), its newest assistant row (else not_most_recent_assistant)
    * and its newest row of any role (else not_last_message); it is superseded only in `orgId` (else
    * message_not_found). A refusal writes nothing.

@@ -586,7 +586,8 @@ export async function registerAgentRoutes(
         // would otherwise drive the LLM with another user's history. Same
         // 404 shape as a missing conversation so we don't leak the existence
         // of someone else's row.
-        if (conv === null || conv.userId !== user.id) {
+        // A deleted conversation's stream runs nothing (SESS-03): it answers the same 404.
+        if (conv === null || conv.isDeleted || conv.userId !== user.id) {
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
 
@@ -1409,7 +1410,7 @@ export async function registerAgentRoutes(
         // leaves a running turn to finish.
         const retried = await storage.conversations.supersedeLatestAnswer({ conversationId: cid, orgId, messageId: mid });
         if (!retried.ok) {
-          const code = retried.reason === 'message_not_found' ? 404 : retried.reason === 'not_last_message' ? 409 : 400;
+          const code = retried.reason === 'conversation_not_found' || retried.reason === 'message_not_found' ? 404 : retried.reason === 'not_last_message' ? 409 : 400;
           return reply.code(code).send({ error: retried.reason });
         }
         // A retried answer's running turn ends; the store refuses any row it would still write.
