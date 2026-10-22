@@ -285,6 +285,35 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- The Excel export's Dismissed By column and the Audit Log's Actor column name
+  an API key the way the report page does (`API key: <name> (Created <date>)`,
+  or `API key` for a key that is not the organization's own) and never show the
+  stored key identifier.
+- The Audit Log is in the menu, under More, for every role that holds View audit
+  log (an organization Owner holds it); it was listed only for roles that also
+  hold `admin.system`. Its Action filter lists the two dismissal actions
+  (Finding dismissed as false positive, Dismissal revoked) and shows the filter
+  in use instead of All actions; the Resource Type filter lists the dismissal
+  resource and shows its filter too. Opening the page without permission shows
+  the dashboard error page in a browser instead of raw JSON.
+- Load More on the Audit Log, Regulations and Jurisdictions pages and the
+  reports list pager keep the page size (the link carried no usable `limit`).
+- A greyed Dismiss button shows its reason as text under the button, on a phone
+  and for keyboard users too, instead of only a tooltip and screen-reader text,
+  and keyboard focus on a Dismiss button leaves room for the reason below it.
+- The dismiss dialog and the Dismissed findings section say that a dismissal
+  covers earlier completed scans and future scans, and that a compliance
+  criterion stops failing only when no finding behind it remains (six languages).
+- On a team's page, Add Member lists the organization's members who are in no
+  team (except a member who also belongs to another organization), and the
+  add-member request accepts only the users the list offers: any other user
+  answers `403` `This user cannot be added to this team`, including a user who
+  is already a member (it used to answer with a redirect). The `No members yet.`
+  row disappears after the first member is added.
+- The team form's empty organization option reads `Current organization (<name>)`
+  and places the team in that organization, instead of `None (global)` (six
+  languages). The team page's own organization form keeps `None (global)`, where
+  an empty value means global.
 - On the report page, a user who can propose fixes (`issues.fix`) but does not
   hold `llm.view` now gets the pattern-based "How to fix" suggestion instead of
   a 403. AI-generated fix suggestions still need `llm.view`.
