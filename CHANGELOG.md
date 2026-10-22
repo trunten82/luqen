@@ -325,6 +325,31 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   running Chromium uses, and deletes nothing if it cannot read the process
   table. The sweep is the only cleanup for profiles created by plugins that
   launch puppeteer themselves (the axe scanner plugin).
+- An assistant action awaiting confirmation in a deleted conversation is never
+  offered again: a confirmation refused while the conversation was being
+  deleted no longer returns it to pending, and a confirmation or a decline of
+  it answers 404 `pending_not_found`.
+- A message posted to a deleted conversation (`POST /agent/message` with its
+  id, for example from a tab opened before the deletion) answers 404
+  `conversation_not_found` and stores nothing, where it was stored in the
+  deleted conversation before.
+- The answer stream of a deleted conversation answers 404
+  `conversation_not_found` and runs nothing; the edit and retry operations
+  refuse a deleted conversation inside their own transactions, not only at the
+  route.
+- When a second answer stream of the same conversation starts while an answer
+  is still being written (another tab, or another dashboard process), the
+  earlier stream stores nothing more: no tool result, no stopped reply and no
+  error row. It normally ends with `done {aborted:true}`; when its model call
+  fails after it was replaced, it may still send an `error` frame first. The history sent to the model leaves out an
+  assistant tool call that has no tool result. Migration 094 adds the nullable
+  column `agent_conversations.active_run_id` that holds the current stream's
+  token (no backfill).
+- An answer stream's row is checked against the current stream and stored
+  under the database write lock (an immediate transaction). A stream replaced
+  by another dashboard process on the same database file now ends like one
+  replaced in the same process, where it could fail with "database is locked"
+  before.
 
 ### Security
 

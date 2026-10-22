@@ -1,19 +1,16 @@
 ---
 gsd_state_version: "1.0"
-milestone: v3.9.0
-milestone_name: Dismissal follow-through
-status: Awaiting next milestone
-stopped_at: "v3.9.0 shipped 2026-10-21 (PRs #8-#14, plus the HARD-02 brand drilldown closure); milestone archived"
-last_updated: "2026-10-21T11:09:48.994Z"
-last_activity: 2026-10-21
-last_activity_desc: Milestone v3.9.0 completed and archived
-state_head: d7f6a04d9cf69ef8ceed3428a531adc719bc27ee
+milestone: v3.10.0
+milestone_name: Dismissal and session follow-ups
+status: planning
+last_updated: "2026-10-22T00:07:51.000Z"
+last_activity: 2026-10-22
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 57
-  completed_plans: 57
-  percent: 100
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -118,17 +115,27 @@ verdict and resurfaces automatically if its file changes.
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-13 — v3.8.0 archived)
+See: .planning/PROJECT.md (updated 2026-10-22 — v3.10.0 started)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** Phase 91 — Dismissal and permission hardening
+**Current focus:** Phase 93 — Entitlement and API contract
 
 ## Current Position
 
-Phase: Milestone v3.9.0 complete
+Phase: 93 of 97 (Entitlement and API contract) — not started
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-10-21 — Milestone v3.9.0 completed and archived
+Status: Ready to plan
+Last activity: 2026-10-22 — Roadmap created for v3.10.0 (Phases 93-97, 26/26 requirements mapped)
+
+## Phase Map (v3.10.0 — Dismissal and session follow-ups)
+
+| # | Phase | Requirements | Depends on |
+|---|-------|--------------|------------|
+| 93 | Entitlement and API contract | ENT-01..ENT-03, API-01..API-04 | — (first phase; carries the two owner rulings) |
+| 94 | Assistant session consistency | SESS-01..SESS-03 | — (functionally independent of 93) |
+| 95 | Dismissal, audit and team follow-ups | COPY-01..02, AUD-01..03, ACT-01..02, A11Y-01, TEAM-01..04 | — (functionally independent of 93 and 94) |
+| 96 | Trusted-proxy install and docs | OPS-01, OPS-02 | — (functionally independent of 93-95) |
+| 97 | Owner UAT pack | UAT-01, UAT-02 | 93, 94, 95, 96 (the pack exercises their user-visible changes) |
 
 ## Phase Map (v3.9.0 — Dismissal follow-through)
 
@@ -163,6 +170,8 @@ measures a candidate model — that is explicitly next-milestone work.
 - 2026-09-05: **v3.7.0 roadmap created.** 16 requirements (EVALSET/HARNESS/BASELINE/BARS) mapped 1:1 onto the four requirement groups from the approved brief, giving 4 phases (83-86), coarse granularity, zero orphans. Bars (Phase 85) deliberately sequenced BEFORE baseline (Phase 86) — a stronger guarantee than the literal requirement text ("before any candidate measurement"), chosen so neither the non-inferiority margin nor the `analyse-visual` bar can be shaped by having already seen any real measurement, including the baseline's own.
 
 - 2026-10-15: **v3.9.0 roadmap created.** 18 requirements (SCAN/HARD/DOCS) mapped onto the owner-approved 3-phase shape (90 GraphQL createScan, 91 hardening, 92 docs), coarse granularity, zero orphans. Docs sequenced last so they describe the hardened permission behaviour. HARD-08 flagged: raise with the owner before building if it needs a schema change.
+
+- 2026-10-22: **v3.10.0 roadmap created.** 26 requirements (OPS/ENT/API/COPY/AUD/ACT/A11Y/SESS/TEAM/UAT) mapped onto 5 phases (93-97), zero orphans. Grouped by surface and ship risk because each phase ships as its own PR that auto-deploys: the two owner rulings first (93), assistant sessions (94), dismissal/audit/team UI follow-ups (95), trusted-proxy install (96), owner UAT last (97, depends on all four). Five phases is one above the coarse band of 2-4; kept because the surfaces differ in risk and none could fold without mixing installer or docs work with application logic, or authorization work with UI copy.
 
 ### Decisions (v3.7.0 — AI output quality)
 
@@ -218,14 +227,14 @@ measures a candidate model — that is explicitly next-milestone work.
 
 ## Session Continuity
 
-Last session: 2026-10-21T03:30:00.000Z
-Stopped at: Completed 91-22h-PLAN.md (PR4 plan 10: an edit, a retry or a delete that lands while the assistant is still answering ends that turn and the store refuses every later row of the withdrawn answer, the result of an action resolved meanwhile included; no status writer moves a superseded row; edit and retry decide on the conversation's newest rows in one transaction each, retry only of the last message when it is a reply (409 otherwise), and only that reply offers Retry in the panel; the message read, edit form and share work in conversations of any length; 29 breaks MATCH; final PR4 gates green, UAT GREEN 238; not pushed)
+Last session: 2026-10-22
+Stopped at: Roadmap for v3.10.0 created (Phases 93-97); no phase started
 Resume file: None
-Next action: Phase 91 PR4 continues with the focused re-review of the 91-22h delta, then 91-23 (branch fix/v3.9.0-phase-91-session-freshness).
+Next action: /gsd-discuss-phase 93 (or /gsd-plan-phase 93) — Entitlement and API contract.
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Plan the first phase with /gsd-discuss-phase 93 (or /gsd-plan-phase 93)
 
 ## Performance Metrics
 

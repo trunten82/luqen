@@ -10,9 +10,118 @@
 - ✅ **v3.7.0 AI output quality — eval harness + labelled reference sets** — Phases 83-86 (shipped 2026-09-07; archived 2026-09-28)
 - ✅ **v3.8.0 Mark as false positive** — Phases 87-89 (shipped 2026-10-13; prod 23c40aaf) — dormant-by-choice after close (closure ruling 2026-10-12)
 - ✅ **v3.9.0 Dismissal follow-through** — Phases 90-92 (shipped 2026-10-21; PRs #8-#14)
-- 📋 **Next milestone** — not yet defined (proposal goes to the owner via the orchestrator)
+- 🚧 **v3.10.0 Dismissal and session follow-ups** — Phases 93-97 (opened 2026-10-22; scope approved by the owner 2026-10-21)
 
 > **Milestone redefined (v3.5.0).** The original v3.5.0 "Commercial positioning & agency monetization" (Pro/Agency gates, credit-metered fixes) was **reversed by the single-product decision** ([[project_single_tier_decision]]). Only its Phase 78 (anti-overlay positioning) survives. The dead monetization phases that were numbered 79-82 (GATE/CREDIT/AGENCY/PRICE) are **retired** — their concepts must NOT be reused. v3.5.0 is now the **Anti-overlay wedge**: convert the verified 2026-06 market-positioning brief into product. Phase numbering continues from 78 (no reset).
+
+---
+
+## Current Milestone: v3.10.0 Dismissal and session follow-ups
+
+**Goal:** Close the follow-ups v3.9.0 recorded, so that dismissal, permission and assistant-session behaviour is accurate on every surface and API, and make the trusted-proxy setting part of a normal install. No new product features. Two owner rulings shape the work: AI fix output requires `llm.view` on every path, and JSON APIs omit element selectors for callers without technical-details permission.
+
+**Granularity:** coarse · **Phases:** 5 (93-97) · **Requirements:** 26/26 mapped
+
+**Standing rules for every phase (not repeated per criterion):**
+
+- Every new guard is watched failing before it lands: break the guard, confirm that ONLY the targeted test goes red (name the isolation command and read the test NAME on the result line, not the count), then restore.
+- Every phase ships the same way: merged to master via PR, CI green, auto-deploy to prod succeeded (the deploy drains in-flight scans first, up to 30 minutes), and a read-back on prod of what the system now holds, not just the deploy exit code.
+- Planning artifacts under `.planning/` are not committed (`commit_docs: false`); copy new SUMMARY/VERIFICATION files out of any executor worktree before it is removed.
+- This repository is public: roadmap, state and summaries describe behaviour only. Detail on any unfixed weakness stays in gitignored planning files.
+
+## Phases
+
+- [ ] **Phase 93: Entitlement and API contract** - AI fix output requires `llm.view` on every path, and JSON APIs omit element selectors for callers without technical-details permission, documented as a contract change
+- [ ] **Phase 94: Assistant session consistency** - Assistant conversation writes stay consistent after an abort or a delete
+- [ ] **Phase 95: Dismissal, audit and team follow-ups** - Dismissal copy, the Audit Log, actor labels, the disabled Dismiss button and the team page say and do what the product does
+- [ ] **Phase 96: Trusted-proxy install and docs** - The trusted-proxy setting is part of a normal install and is documented
+- [ ] **Phase 97: Owner UAT pack** - The owner can walk every v3.9.0 open check and every user-visible change of this milestone on fixtures, and the fixtures are cleaned up afterwards
+
+## Phase Details
+
+### Phase 93: Entitlement and API contract
+
+**Goal**: AI fix output and technical element data reach only the callers entitled to them, on every API and tool path, and the API contract says so.
+**Depends on**: Nothing (first phase; carries the two owner rulings, so it ships first)
+**Requirements**: ENT-01, ENT-02, ENT-03, API-01, API-02, API-03, API-04
+**Success Criteria** (what must be TRUE):
+
+  1. A caller without `llm.view` never receives LLM-generated fix output from any entry point that can produce one; an inventory of entry points is taken first and each one is pinned by a test, so the rule matches the report page everywhere
+  2. A caller holding `issues.fix` without `llm.view` still gets the deterministic pattern hint on MCP, the same answer the report page gives, and the MCP fix tool stays listed for that caller
+  3. The scan-issues endpoint, the scan-detail endpoint (for the issues it embeds) and the GraphQL `scanIssues` query omit element selectors, and any other field the report page hides, for callers without `reports.view_technical`; all three paths and the report page apply one shared redaction rule
+  4. A request authenticated with an org API key gets the redaction that key's resolved permissions give, pinned by a test
+  5. The permission docs and the MCP tool description state the `llm.view` rule, and the selector omission is recorded as an API contract change in the OpenAPI spec (field optionality and a description), the API docs and the CHANGELOG
+
+**Plans**: TBD
+
+### Phase 94: Assistant session consistency
+
+**Goal**: An assistant conversation stays consistent after an abort or a delete: nothing is revived in, written to, or kept from a conversation or stream that has ended.
+**Depends on**: Nothing functionally (independent of Phase 93; sequenced after it because Phase 93 carries the owner rulings)
+**Requirements**: SESS-01, SESS-02, SESS-03
+**Success Criteria** (what must be TRUE):
+
+  1. Deleting an assistant conversation ends it for good: none of its paused actions or messages can be reopened, resumed or returned to pending afterwards, including after a refused confirmation
+  2. After an assistant answer is aborted, a second stream of the same question starts clean and the aborted stream writes nothing further: no orphaned tool result and no kept stopped partial answer
+  3. Each assistant write path (the answer stream and the edit and retry branches) refuses a deleted conversation by its own check, so correctness does not depend on the route-level not-found answer
+
+**Plans**: TBD
+**Note**: the design decision for SESS-02 (assistant rows are tied to the stream that writes them) is recorded in the phase before any code relies on it.
+
+### Phase 95: Dismissal, audit and team follow-ups
+
+**Goal**: The wording of a dismissal, the Audit Log, actor labels, the disabled Dismiss button and the team page all say and do what the product actually does.
+**Depends on**: Nothing functionally (independent of Phases 93 and 94)
+**Requirements**: COPY-01, COPY-02, AUD-01, AUD-02, AUD-03, ACT-01, ACT-02, A11Y-01, TEAM-01, TEAM-02, TEAM-03, TEAM-04
+**Success Criteria** (what must be TRUE):
+
+  1. The dismiss dialog says a dismissal also applies to earlier completed scans of the site, and the matrix and compliance copy says a criterion stops failing only when nothing behind it remains; all six locales carry the new wording
+  2. An org Owner who holds `audit.view` sees an Audit Log menu entry without needing System settings; the Audit Log Action filter lists every dismissal action and shows the active filter instead of "All actions"; opening the Audit Log address without permission renders the dashboard error page, not a raw JSON body
+  3. An API-key actor reads the same on the report page, in the Excel export's "Dismissed By" column and in the Audit Log Actor column; the raw stored identifier never appears
+  4. A greyed-out Dismiss button shows its reason in a form touch and keyboard users can see, not only as a hover tooltip, checked by eye at phone width and by keyboard
+  5. On the team page, Add Member lists the org users who are in no team, Load More carries a real limit, the "No members yet." row disappears after a member is added, and the team form's org option says an empty value places the team in the current organization
+
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 96: Trusted-proxy install and docs
+
+**Goal**: The trusted-proxy setting is part of a normal install and is documented, so an operator no longer depends on a hand-written service override kept outside the repo.
+**Depends on**: Nothing functionally (independent of Phases 93-95)
+**Requirements**: OPS-01, OPS-02
+**Success Criteria** (what must be TRUE):
+
+  1. An operator running `install.sh` can give a trusted-proxy list, and gets the loopback, link-local and unique-local default when giving none, shown by an installer run that reads back the resulting setting
+  2. The install and security docs state when to set the list, its default, the refusal rules (no trust-all lists, the public-address ceiling) and the accepted residual on private networks, and an agent other than the author can follow them cold
+  3. Production's trusted-proxy setting is reconciled with what the installer produces, confirmed by comparing without printing the service unit's environment
+
+**Plans**: TBD
+
+### Phase 97: Owner UAT pack
+
+**Goal**: The owner can walk the v3.9.0 checks that are still open and every user-visible change of this milestone on fixtures in a dedicated UAT org, record a verdict per check, and have the fixtures removed afterwards.
+**Depends on**: Phases 93, 94, 95 and 96 (the pack exercises their user-visible changes)
+**Requirements**: UAT-01, UAT-02
+**Success Criteria** (what must be TRUE):
+
+  1. A UAT fixture pack exists, built like the v3.9.0 pack: it writes only into the dedicated UAT org, keeps fixture ids outside the repo, and ships a dry-run and a real cleanup script
+  2. The pack covers the v3.9.0 owner checks (a)-(g) and each user-visible change of Phases 93-96; check 2 includes an org switch
+  3. The owner's verdict on each check is recorded together with its channel (who answered, where, when)
+  4. Cleanup runs only after the owner says the walkthrough is done, and a read-back confirms the UAT org holds no fixture from the pack
+
+**Plans**: TBD
+
+## Progress (v3.10.0)
+
+**Execution Order:** 93 → 94 → 95 → 96 → 97 (93-96 are functionally independent of each other; 97 must follow all four)
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 93. Entitlement and API contract | v3.10.0 | 0/0 | Not started | - |
+| 94. Assistant session consistency | v3.10.0 | 0/0 | Not started | - |
+| 95. Dismissal, audit and team follow-ups | v3.10.0 | 0/0 | Not started | - |
+| 96. Trusted-proxy install and docs | v3.10.0 | 0/0 | Not started | - |
+| 97. Owner UAT pack | v3.10.0 | 0/0 | Not started | - |
 
 ---
 

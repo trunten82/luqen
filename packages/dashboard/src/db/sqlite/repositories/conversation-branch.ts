@@ -6,6 +6,9 @@
  * The active branch of a conversation is its rows whose status is not `superseded`, ordered by
  * created_at and then rowid (rows written in the same millisecond keep their insert order). "Latest"
  * always means the newest active row of that order, however long the conversation is.
+ *
+ * A row of an answer stream is written only while that stream is the conversation's current run
+ * (agent_conversations.active_run_id), checked in the insert's own transaction.
  */
 import type Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
@@ -47,14 +50,28 @@ export type ReplaceQuestionRowResult =
 
 /**
  * Inserts one message row and bumps its conversation's timestamps; a user row also maintains the rolling
- * window. Runs inside the caller's transaction. With `followsMessageId` the row is written only while the
- * followed row is on the active branch of a conversation that is not deleted; otherwise nothing is
- * written and WithdrawnAnswerError is thrown. Returns the new row's id.
+ * window. Runs inside the caller's transaction. With `runId` the row is written only while that run is
+ * the conversation's current run of a conversation that is not deleted. With `followsMessageId` the row
+ * is written only while the followed row is on the active branch of a conversation that is not deleted.
+ * Otherwise nothing is written and WithdrawnAnswerError is thrown. Returns the new row's id.
  */
 export function insertMessageRow(db: Database.Database, input: AppendMessageInput): string {
   const id = randomUUID();
   const now = new Date().toISOString();
   const status: MessageStatus = input.status ?? 'sent';
+
+  // A row of a stream run is written only while that run is the conversation's current run of a
+  // conversation that is not deleted (a newer run replaces the token). Same error as the predecessor
+  // rule below, so every handler that ends a turn on a withdrawn answer ends it here too.
+  if (input.runId !== undefined) {
+    const current = db.prepare(`
+      SELECT 1 FROM agent_conversations
+      WHERE id = @conversationId
+        AND active_run_id = @runId
+        AND is_deleted = 0
+    `).get({ conversationId: input.conversationId, runId: input.runId });
+    if (current === undefined) throw new WithdrawnAnswerError();
+  }
 
   // A row of an answer is written after the row it follows, and only while that row is on the active
   // branch (not superseded) of a conversation that is not deleted; otherwise nothing is written.
@@ -228,7 +245,7 @@ export function activeBranchUpTo(
 
 /** The steps of {@link replaceLatestQuestion}, run inside its transaction. */
 function replaceInTransaction(db: Database.Database, input: ReplaceQuestionInput): ReplaceQuestionRowResult {
-  const conversation = db.prepare('SELECT id FROM agent_conversations WHERE id = ? AND org_id = ?')
+  const conversation = db.prepare('SELECT id FROM agent_conversations WHERE id = ? AND org_id = ? AND is_deleted = 0')
     .get(input.conversationId, input.orgId);
   if (conversation === undefined) return { ok: false, reason: 'conversation_not_found' };
   const latest = lastActiveRow(db, input.conversationId, 'user');
@@ -259,12 +276,17 @@ export function replaceLatestQuestion(db: Database.Database, input: ReplaceQuest
 }
 
 /**
- * Supersedes the conversation's latest answer in one transaction, only when `messageId` is an active row
- * of the conversation, is its newest assistant row and is its newest row of any role (a reply that a tool
+ * Supersedes the conversation's latest answer in one transaction, only when the conversation is in
+ * `orgId` and not deleted and `messageId` is an active row of the conversation, is its newest assistant row and is its newest row of any role (a reply that a tool
  * result or an action awaiting confirmation follows is not retried). A refusal writes nothing.
  */
 export function supersedeLatestAnswer(db: Database.Database, input: RetryAnswerInput): RetryAnswerResult {
   return db.transaction((): RetryAnswerResult => {
+    // The conversation is checked first, here and not only by the route: a deleted conversation is
+    // refused with nothing written, whatever deleted it between the route's check and this transaction.
+    const conversation = db.prepare('SELECT id FROM agent_conversations WHERE id = ? AND org_id = ? AND is_deleted = 0')
+      .get(input.conversationId, input.orgId);
+    if (conversation === undefined) return { ok: false, reason: 'conversation_not_found' };
     if (activeMessageRow(db, input.conversationId, input.messageId) === undefined) {
       return { ok: false, reason: 'message_not_found' };
     }

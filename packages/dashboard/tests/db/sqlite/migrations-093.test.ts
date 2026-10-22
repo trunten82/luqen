@@ -63,10 +63,9 @@ function insertConsent(db: Database.Database, id: string, clientId: string): voi
 }
 
 describe('migration 093: the consent organization column', () => {
-  it('093 is registered as the last migration', () => {
+  it('093 is registered', () => {
     const mig = DASHBOARD_MIGRATIONS.find((m) => m.id === '093');
     expect(mig?.name).toBe('oauth-consent-organization');
-    expect(DASHBOARD_MIGRATIONS[DASHBOARD_MIGRATIONS.length - 1]!.id).toBe('093');
     // Exactly one statement changes the schema, and it adds this one column.
     const statements = mig!.sql.split('\n').filter((l) => l.trim() !== '' && !l.trim().startsWith('--'));
     expect(statements).toEqual([`ALTER TABLE oauth_user_consents ADD COLUMN ${COLUMN} TEXT;`]);

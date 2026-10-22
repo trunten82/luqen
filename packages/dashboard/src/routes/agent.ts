@@ -463,6 +463,7 @@ export async function registerAgentRoutes(
           202: LuqenResponse(Type.Object({ conversationId: Type.String() }, { additionalProperties: true })),
           400: ErrorEnvelope,
           401: ErrorEnvelope,
+          404: ErrorEnvelope,
         },
       },
     }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -519,7 +520,14 @@ export async function registerAgentRoutes(
         // must NOT be treated as "existing" (would otherwise append the new
         // user's message into another user's conversation). Treat foreign
         // ownership as absent so a fresh conversation is created.
-        if (existing === null || existing.userId !== user.id) { convId = undefined; }
+        if (existing === null || existing.userId !== user.id) {
+          convId = undefined;
+        } else if (existing.isDeleted) {
+          // A deleted conversation of the requester takes no new row (SESS-03): the same 404 as its
+          // stream. A foreign deleted conversation already fell through to a fresh one above, so the
+          // answer does not reveal another user's row.
+          return reply.code(404).send({ error: 'conversation_not_found' });
+        }
       }
       if (convId === undefined || convId.length === 0) {
         const created = await storage.conversations.createConversation({
@@ -586,7 +594,8 @@ export async function registerAgentRoutes(
         // would otherwise drive the LLM with another user's history. Same
         // 404 shape as a missing conversation so we don't leak the existence
         // of someone else's row.
-        if (conv === null || conv.userId !== user.id) {
+        // A deleted conversation's stream runs nothing (SESS-03): it answers the same 404.
+        if (conv === null || conv.isDeleted || conv.userId !== user.id) {
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
 
@@ -744,7 +753,8 @@ export async function registerAgentRoutes(
         });
         // The dispatcher resolves the confirming user's permissions now: a user who may no
         // longer use the tool gets 403, nothing runs, and the action returns to pending with the
-        // arguments it was paused with (it can still be confirmed later or declined).
+        // arguments it was paused with (it can still be confirmed later or declined), and only while
+        // its conversation is not deleted: the store's reopen carries that condition itself.
         if (audited.outcome === 'denied') {
           await storage.conversations.reopenPendingMessage(messageId, pending.toolCallJson ?? JSON.stringify(call));
           return reply.code(403).send({ error: 'denied' });
@@ -1408,7 +1418,7 @@ export async function registerAgentRoutes(
         // leaves a running turn to finish.
         const retried = await storage.conversations.supersedeLatestAnswer({ conversationId: cid, orgId, messageId: mid });
         if (!retried.ok) {
-          const code = retried.reason === 'message_not_found' ? 404 : retried.reason === 'not_last_message' ? 409 : 400;
+          const code = retried.reason === 'conversation_not_found' || retried.reason === 'message_not_found' ? 404 : retried.reason === 'not_last_message' ? 409 : 400;
           return reply.code(code).send({ error: retried.reason });
         }
         // A retried answer's running turn ends; the store refuses any row it would still write.
@@ -1784,6 +1794,8 @@ async function findPendingMessage(
   // Naive first-cut: the messageId must exist; we find the conversation by
   // querying agent_messages directly via the raw DB. This is a dashboard
   // service-layer concern — not a new public repo method.
+  //
+  // An action of a deleted conversation is not found, the same answer a missing one gets.
   const raw = (storage as unknown as { getRawDatabase?: () => {
     prepare(sql: string): { get(...args: unknown[]): unknown };
   } }).getRawDatabase?.();
@@ -1793,7 +1805,7 @@ async function findPendingMessage(
       `SELECT m.id, m.conversation_id, c.user_id, m.status, m.tool_call_json, m.created_at
          FROM agent_messages m
          INNER JOIN agent_conversations c ON c.id = m.conversation_id
-         WHERE m.id = ? AND c.org_id = ?`,
+         WHERE m.id = ? AND c.org_id = ? AND c.is_deleted = 0`,
     )
     .get(messageId, orgId) as
       | { id: string; conversation_id: string; user_id: string; status: string; tool_call_json: string | null; created_at: string }

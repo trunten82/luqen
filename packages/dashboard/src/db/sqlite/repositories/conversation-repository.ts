@@ -157,12 +157,27 @@ export class SqliteConversationRepository implements ConversationRepository {
   async appendMessage(input: AppendMessageInput): Promise<Message> {
     // One insert for every writer (src/db/sqlite/repositories/conversation-branch.ts): a row that
     // follows another is written only while that row is on the active branch of a conversation that is
-    // not deleted, in the same transaction.
-    const id = this.db.transaction(() => insertMessageRow(this.db, input))();
+    // not deleted, in the same transaction. The transaction is IMMEDIATE: it takes the write lock
+    // before it reads the run token and the followed row, so another connection (another dashboard
+    // process) cannot commit between the checks and the insert. A run replaced through another
+    // connection is then refused as WithdrawnAnswerError, never as SQLITE_BUSY_SNAPSHOT.
+    const id = this.db.transaction(() => insertMessageRow(this.db, input)).immediate();
     const created = this.db
       .prepare('SELECT * FROM agent_messages WHERE id = ?')
       .get(id) as MessageRow;
     return this.rowToMessage(created);
+  }
+
+  async beginRun(conversationId: string): Promise<string | null> {
+    const runId = randomUUID();
+    const result = this.db
+      .prepare(
+        `UPDATE agent_conversations
+         SET active_run_id = @runId
+         WHERE id = @conversationId AND is_deleted = 0`,
+      )
+      .run({ runId, conversationId });
+    return result.changes === 1 ? runId : null;
   }
 
   async updateMessageStatus(
@@ -247,13 +262,20 @@ export class SqliteConversationRepository implements ConversationRepository {
     }));
   }
 
+  /**
+   * Returns a claimed action to pending, with the arguments it was paused with, only while its
+   * conversation is live: the condition is part of the same UPDATE, so a conversation deleted while
+   * the confirmation was deciding keeps the action closed and its redacted call untouched.
+   */
   async reopenPendingMessage(messageId: string, toolCallJson: string): Promise<void> {
     this.db
       .prepare(
         `UPDATE agent_messages
          SET status = 'pending_confirmation',
              tool_call_json = @toolCallJson
-         WHERE id = @messageId AND status = 'sent'`,
+         WHERE id = @messageId AND status = 'sent'
+           AND EXISTS (SELECT 1 FROM agent_conversations c
+                        WHERE c.id = agent_messages.conversation_id AND c.is_deleted = 0)`,
       )
       .run({ messageId, toolCallJson });
   }
