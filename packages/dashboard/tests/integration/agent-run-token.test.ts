@@ -6,16 +6,20 @@
  * the user does not replace the run, so the stopped reply is still kept (tests/agent/agent-service-stop-persist.test.ts).
  *
  * The routes and the assistant are the real in-process chain (tests/helpers/agent-route-chain.ts); only
- * the model is scripted, and the holds come from tests/helpers/agent-turn-holds.ts. A second AgentService
- * with its own registry of running turns over the same database stands in for a second dashboard
- * process: its registry cannot abort a turn of this process, so only the store can end that turn, which
- * is the reason the run is recorded in the store and not in a map in memory.
+ * the model is scripted, and the holds come from tests/helpers/agent-turn-holds.ts. Most tests replace
+ * the run through a second AgentService with its own registry of running turns over the SAME database
+ * connection: a caller that this process's registry does not reach, so only the store can end the
+ * first turn. That is the reason the run is recorded in the store and not in a map in memory, but it
+ * is not a second process. One test replaces the run through a second connection on the same database
+ * file, the shape a second dashboard process has; the store-level two-connection interleaving is in
+ * tests/db/conversation-run-token-two-connections.test.ts.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { AgentService, type AgentStreamOptions, type AgentStreamTurn } from '../../src/agent/agent-service.js';
 import { ActiveTurnRegistry } from '../../src/agent/active-turn-registry.js';
 import { storedPermissionsOrNone } from '../../src/auth/stored-caller.js';
 import { DASHBOARD_TOOL_METADATA } from '../../src/mcp/metadata.js';
+import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import type { SseFrame } from '../../src/agent/sse-frames.js';
 import type { ScriptEntry, ScriptStep, TurnResult } from '../helpers/agent-chain.js';
 import { buildRouteHarness, ROUTE_SITE, type RouteHarness } from '../helpers/agent-route-chain.js';
@@ -57,18 +61,21 @@ describe('SESS-02 an answer stream that a newer stream replaced writes nothing f
     return contentRows(conversationId).map((r) => `${r.role}:${r.status}:${r.content}`);
   }
 
-  /** A second dashboard process: its own registry of running turns, the same database, a model answering `answer`. */
-  function otherProcess(answer: ScriptStep): AgentService {
+  /**
+   * A caller this process's registry does not reach: its own registry of running turns, a model answering
+   * `answer`, over `storage` (by default the same connection as the harness).
+   */
+  function outsideCaller(answer: ScriptStep, storage: SqliteStorageAdapter = h.chain.storage): AgentService {
     const llm = {
       streamAgentConversation: async (): Promise<AgentStreamTurn> =>
         ({ text: answer.text, toolCalls: [...answer.toolCalls] }) as AgentStreamTurn,
     };
     return new AgentService({
-      storage: h.chain.storage,
+      storage,
       llm: llm as never,
       allTools: DASHBOARD_TOOL_METADATA,
       dispatcher: h.chain.dispatcher,
-      resolvePermissions: (userId, orgId) => storedPermissionsOrNone(h.chain.storage, userId, orgId),
+      resolvePermissions: (userId, orgId) => storedPermissionsOrNone(storage, userId, orgId),
       config: { agentDisplayNameDefault: 'Assistant' },
       titleGenerator: async () => {
         throw new Error('no title in the run token tests');
@@ -164,7 +171,7 @@ describe('SESS-02 an answer stream that a newer stream replaced writes nothing f
     expect(next.some((m) => 'toolCalls' in (m as object))).toBe(false);
   });
 
-  it('SESS-02 a run replaced by another process writes no final answer', async () => {
+  it('SESS-02 a run replaced by a caller this registry does not reach writes no final answer', async () => {
     const { ownerId, conversationId } = await start();
     const held = heldStep({ text: 'T1-LATE-ANSWER', toolCalls: [] });
     h.chain.script([held.entry]);
@@ -172,19 +179,41 @@ describe('SESS-02 an answer stream that a newer stream replaced writes nothing f
     let turn: TurnResult | undefined;
     try {
       await waitUntil(() => held.options() !== undefined, 'the held model step');
-      await runOther(otherProcess({ text: 'T2-OTHER-PROCESS', toolCalls: [] }), ownerId, conversationId);
-      // Premise: nothing in this process ended the first run.
+      await runOther(outsideCaller({ text: 'T2-OUTSIDE', toolCalls: [] }), ownerId, conversationId);
+      // Premise: nothing in this process's registry ended the first run.
       expect(held.options()!.signal.aborted).toBe(false);
     } finally {
       held.release();
       turn = await first;
     }
 
-    expect(shapeWithText(conversationId)).toEqual([`user:sent:${SAME_QUESTION}`, 'assistant:sent:T2-OTHER-PROCESS']);
+    expect(shapeWithText(conversationId)).toEqual([`user:sent:${SAME_QUESTION}`, 'assistant:sent:T2-OUTSIDE']);
     endsAborted(turn);
   });
 
-  it('SESS-02 a run replaced by another process leaves no action awaiting confirmation', async () => {
+  it('SESS-02 a run replaced through a second database connection writes no final answer', async () => {
+    const { ownerId, conversationId } = await start();
+    // A second connection on the same database file: the shape a second dashboard process has.
+    const secondConnection = new SqliteStorageAdapter(h.chain.storage.getRawDatabase().name);
+    const held = heldStep({ text: 'T1-LATE-ANSWER', toolCalls: [] });
+    h.chain.script([held.entry]);
+    const first = h.chain.runTurn(ownerId, h.orgId, SAME_QUESTION, conversationId);
+    let turn: TurnResult | undefined;
+    try {
+      await waitUntil(() => held.options() !== undefined, 'the held model step');
+      await runOther(outsideCaller({ text: 'T2-SECOND-CONNECTION', toolCalls: [] }, secondConnection), ownerId, conversationId);
+      expect(held.options()!.signal.aborted).toBe(false);
+    } finally {
+      held.release();
+      turn = await first;
+      await secondConnection.disconnect();
+    }
+
+    expect(shapeWithText(conversationId)).toEqual([`user:sent:${SAME_QUESTION}`, 'assistant:sent:T2-SECOND-CONNECTION']);
+    endsAborted(turn);
+  });
+
+  it('SESS-02 a run replaced by a caller this registry does not reach leaves no action awaiting confirmation', async () => {
     const { ownerId, conversationId } = await start();
     const held = heldStep({ text: '', toolCalls: [{ id: 's1', name: 'dashboard_scan_site', args: { siteUrl: ROUTE_SITE } }] });
     h.chain.script([held.entry]);
@@ -192,7 +221,7 @@ describe('SESS-02 an answer stream that a newer stream replaced writes nothing f
     let turn: TurnResult | undefined;
     try {
       await waitUntil(() => held.options() !== undefined, 'the held model step');
-      await runOther(otherProcess({ text: 'T2-OTHER-PROCESS', toolCalls: [] }), ownerId, conversationId);
+      await runOther(outsideCaller({ text: 'T2-OUTSIDE', toolCalls: [] }), ownerId, conversationId);
       expect(held.options()!.signal.aborted).toBe(false);
     } finally {
       held.release();
@@ -231,7 +260,7 @@ describe('SESS-02 an answer stream that a newer stream replaced writes nothing f
     });
   }
 
-  it('SESS-02 a run replaced by another process writes no error row when its model call then fails', async () => {
+  it('SESS-02 a run replaced by a caller this registry does not reach writes no error row when its model call then fails', async () => {
     const { ownerId, conversationId } = await start();
     const failing = gate();
     let reached = false;
@@ -244,19 +273,19 @@ describe('SESS-02 an answer stream that a newer stream replaced writes nothing f
     let turn: TurnResult | undefined;
     try {
       await waitUntil(() => reached, 'the held failing model step');
-      await runOther(otherProcess({ text: 'T2-OTHER-PROCESS', toolCalls: [] }), ownerId, conversationId);
+      await runOther(outsideCaller({ text: 'T2-OUTSIDE', toolCalls: [] }), ownerId, conversationId);
     } finally {
       failing.open();
       turn = await first;
     }
 
-    expect(shapeWithText(conversationId)).toEqual([`user:sent:${SAME_QUESTION}`, 'assistant:sent:T2-OTHER-PROCESS']);
+    expect(shapeWithText(conversationId)).toEqual([`user:sent:${SAME_QUESTION}`, 'assistant:sent:T2-OUTSIDE']);
     expect(contentRows(conversationId).filter((r) => r.status === 'failed')).toEqual([]);
     // The replaced run may still send its error frame (the frame is sent before the refused row).
     expect(turn.frames.filter((f) => f.type === 'error')).toHaveLength(1);
   });
 
-  it('SESS-02 a run replaced by another process writes no compaction summary and moves no row out of the window', async () => {
+  it('SESS-02 a run replaced by a caller this registry does not reach writes no compaction summary and moves no row out of the window', async () => {
     const { ownerId, conversationId } = await start();
     const conversations = h.chain.storage.conversations;
     // Seven earlier turns, one more than compaction keeps, then the question of this turn.
@@ -276,7 +305,7 @@ describe('SESS-02 an answer stream that a newer stream replaced writes nothing f
     let frames: SseFrame[] = [];
     try {
       await waitUntil(() => summarise.options() !== undefined, 'the held summarisation step');
-      await runOther(otherProcess({ text: 'T2-OTHER-PROCESS', toolCalls: [] }), ownerId, conversationId);
+      await runOther(outsideCaller({ text: 'T2-OUTSIDE', toolCalls: [] }), ownerId, conversationId);
       expect(summarise.options()!.signal.aborted).toBe(false);
     } finally {
       summarise.release();
@@ -287,11 +316,11 @@ describe('SESS-02 an answer stream that a newer stream replaced writes nothing f
     expect(outOfWindow()).toBe(0);
     expect(h.chain.auditRows(conversationId).filter((r) => r.toolName === '__compaction__')).toEqual([]);
     expect(contentRows(conversationId).filter((r) => r.content === 'T1-ANSWER')).toEqual([]);
-    expect(contentRows(conversationId).at(-1)?.content).toBe('T2-OTHER-PROCESS');
+    expect(contentRows(conversationId).at(-1)?.content).toBe('T2-OUTSIDE');
     expect(frames[frames.length - 1]).toEqual({ type: 'done', aborted: true });
   });
 
-  it('SESS-02 a run replaced by another process writes no forced final answer at the step limit', async () => {
+  it('SESS-02 a run replaced by a caller this registry does not reach writes no forced final answer at the step limit', async () => {
     const { ownerId, conversationId } = await start();
     const forced = heldStep({ text: 'T1-FORCED-ANSWER', toolCalls: [] });
     h.chain.script([listReports('c1'), listReports('c2'), listReports('c3'), listReports('c4'), listReports('c5'), forced.entry]);
@@ -299,7 +328,7 @@ describe('SESS-02 an answer stream that a newer stream replaced writes nothing f
     let turn: TurnResult | undefined;
     try {
       await waitUntil(() => forced.options() !== undefined, 'the held forced final answer');
-      await runOther(otherProcess({ text: 'T2-OTHER-PROCESS', toolCalls: [] }), ownerId, conversationId);
+      await runOther(outsideCaller({ text: 'T2-OUTSIDE', toolCalls: [] }), ownerId, conversationId);
       expect(forced.options()!.signal.aborted).toBe(false);
     } finally {
       forced.release();
@@ -309,12 +338,12 @@ describe('SESS-02 an answer stream that a newer stream replaced writes nothing f
     // Premise: the turn reached the step limit (the five tool runs before the takeover are kept).
     expect(turn.frames.some((f) => f.type === 'tool_completed' && (f as { toolCallId?: string }).toolCallId === '__loop__')).toBe(true);
     expect(contentRows(conversationId).filter((r) => r.content === 'T1-FORCED-ANSWER')).toEqual([]);
-    expect(contentRows(conversationId).at(-1)?.content).toBe('T2-OTHER-PROCESS');
+    expect(contentRows(conversationId).at(-1)?.content).toBe('T2-OUTSIDE');
     expect(h.chain.auditRows(conversationId).filter((r) => r.toolName === '__loop__')).toEqual([]);
     endsAborted(turn);
   });
 
-  it('SESS-02 a run replaced by another process records no tool call and runs no tool', async () => {
+  it('SESS-02 a run replaced by a caller this registry does not reach records no tool call and runs no tool', async () => {
     const { ownerId, conversationId } = await start();
     const held = heldStep(listReports('l9'));
     h.chain.script([held.entry]);
@@ -323,7 +352,7 @@ describe('SESS-02 an answer stream that a newer stream replaced writes nothing f
     let turn: TurnResult | undefined;
     try {
       await waitUntil(() => held.options() !== undefined, 'the held model step');
-      await runOther(otherProcess({ text: 'T2-OTHER-PROCESS', toolCalls: [] }), ownerId, conversationId);
+      await runOther(outsideCaller({ text: 'T2-OUTSIDE', toolCalls: [] }), ownerId, conversationId);
       expect(held.options()!.signal.aborted).toBe(false);
     } finally {
       held.release();

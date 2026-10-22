@@ -344,6 +344,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   assistant tool call that has no tool result. Migration 094 adds the nullable
   column `agent_conversations.active_run_id` that holds the current stream's
   token (no backfill).
+- An answer stream's row is checked against the current stream and stored
+  under the database write lock (an immediate transaction). A stream replaced
+  by another dashboard process on the same database file now ends like one
+  replaced in the same process, where it could fail with "database is locked"
+  before.
 
 ### Security
 

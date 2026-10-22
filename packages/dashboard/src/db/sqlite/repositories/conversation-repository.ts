@@ -157,8 +157,11 @@ export class SqliteConversationRepository implements ConversationRepository {
   async appendMessage(input: AppendMessageInput): Promise<Message> {
     // One insert for every writer (src/db/sqlite/repositories/conversation-branch.ts): a row that
     // follows another is written only while that row is on the active branch of a conversation that is
-    // not deleted, in the same transaction.
-    const id = this.db.transaction(() => insertMessageRow(this.db, input))();
+    // not deleted, in the same transaction. The transaction is IMMEDIATE: it takes the write lock
+    // before it reads the run token and the followed row, so another connection (another dashboard
+    // process) cannot commit between the checks and the insert. A run replaced through another
+    // connection is then refused as WithdrawnAnswerError, never as SQLITE_BUSY_SNAPSHOT.
+    const id = this.db.transaction(() => insertMessageRow(this.db, input)).immediate();
     const created = this.db
       .prepare('SELECT * FROM agent_messages WHERE id = ?')
       .get(id) as MessageRow;
