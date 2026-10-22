@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
 # compare-trusted-proxies.sh -- where a host's DASHBOARD_TRUSTED_PROXIES lives,
-# and whether install.sh would write the same value.
+# and whether the running value is in the canonical form install.sh writes.
 #
 # Usage (as root, on the dashboard host):
 #   bash scripts/compare-trusted-proxies.sh [--unit NAME] [--install-dir DIR]
 #                                           [--systemctl CMD] [--proc-root DIR]
 #
-# READ-ONLY. Output is variable names, file paths, counts, verdict words and
-# sha256 hashes: never a value. The script never asks systemd for the unit's
-# Environment property (it asks only for FragmentPath, DropInPaths,
-# EnvironmentFiles, MainPID, WorkingDirectory and NeedDaemonReload), never
-# prints a unit file, and creates no file: every captured value lives in a shell
-# variable and is hashed with sha256sum. Never run it with -x.
+# READ-ONLY. Output is variable names, file paths, counts and verdict words: no
+# value, and no hash of one (a trusted-proxy list has so little entropy that an
+# unsalted hash is reversed by guessing). Every comparison happens inside this
+# run, on shell variables, and only its yes/no verdict is printed. The script
+# never asks systemd for the unit's Environment property (it asks only for
+# FragmentPath, DropInPaths, EnvironmentFiles, MainPID, WorkingDirectory and
+# NeedDaemonReload), never prints a unit file, and creates no file. Never run it
+# with -x.
 #
 # The value is read from the running dashboard's process environment
 # (<proc-root>/<MainPID>/environ), which is what the dashboard actually uses.
@@ -23,13 +25,16 @@
 #
 # Keys printed (one fact per line, last line is result=compared):
 #   file=P role=fragment|dropin environment_lines=N trusted_proxies_lines=M simple_form_lines=K
-#   file=P file_line_sha256=H            (one per simple-form line)
 #   envfile=P trusted_proxies_lines=M | envfile=P unreadable
-#   running=present|absent|not-running   running_sha256=H
-#   validator=accepted|blank|refused|unavailable
-#   installer_value_sha256=H  installer_line_sha256=H  installer_would_write=nothing
-#   running_equals_installer_value=yes|no  running_semantically_equal=yes|no
-#   file=P file_line_equals_installer_line=yes|no
+#   running=present|absent|not-running
+#   validator=accepted|blank|refused|unavailable   installer_would_write=nothing
+#   running_is_canonical=yes|no
+#       the running value is byte-equal to the canonical form the installer
+#       writes for it. It says nothing about intent: the installer writes
+#       whatever list the operator types, which this script never sees.
+#   file=P file_line_equals_installer_line=yes|no   (one per simple-form line)
+#       that line is byte-equal to the line the installer writes for the
+#       running value
 #   installer_writes_to=fragment  configured_in=P,P|none  location_differs=yes|no
 #   set_in_more_than_one_place=yes|no  need_daemon_reload=yes|no
 #
@@ -75,8 +80,6 @@ unavailable() {
   exit 69
 }
 
-sha() { printf '%s' "$1" | sha256sum | cut -d' ' -f1; }
-
 # prop <Name> -- one systemd property value for the unit. Only the six names
 # listed in the header are ever passed here.
 prop() {
@@ -106,7 +109,7 @@ fi
 
 CONFIGURED_IN=()       # paths that set the name
 FRAGMENT_SETS="no"
-FILE_LINE_HASHES=()    # "path<TAB>hash" for each simple-form line
+FILE_LINES=()          # "path<TAB>line" for each simple-form line, in memory only
 
 # scan_unit_file <path> <fragment|dropin>
 scan_unit_file() {
@@ -125,8 +128,7 @@ scan_unit_file() {
   fi
   while IFS= read -r line; do
     [ -n "${line}" ] || continue
-    FILE_LINE_HASHES+=("${path}"$'\t'"$(sha "${line}")")
-    emit "file=${path} file_line_sha256=$(sha "${line}")"
+    FILE_LINES+=("${path}"$'\t'"${line}")
   done < <(grep -E -- "${SIMPLE_FORM}" "${path}" || true)
 }
 
@@ -150,7 +152,7 @@ while IFS= read -r envfile; do
   fi
 done < <(printf '%s\n' "${ENVFILES_RAW}" | sed -E 's/ \(ignore_errors=[a-z]+\)[[:space:]]*/\n/g')
 
-# ── The running value (hashed, never printed) ───────────────────────────────
+# ── The running value (compared in memory, never printed) ───────────────────
 
 RUNNING=""
 RUNNING_STATE="absent"
@@ -171,7 +173,6 @@ else
   done < "${environ}" || unavailable "cannot read the dashboard process environment (run as root on the dashboard host)"
 fi
 emit "running=${RUNNING_STATE}"
-[ "${RUNNING_STATE}" = "present" ] && emit "running_sha256=$(sha "${RUNNING}")"
 
 # ── What the installer would write, through the installer's own code ────────
 
@@ -242,24 +243,15 @@ if [ "${RUNNING_STATE}" = "present" ]; then
       installer_line="$(installer_unit_line "${INSTALLER_VALUE}" 2>/dev/null)" \
         || unavailable "install.sh could not render its unit line"
       installer_line="${installer_line%$'\n'}"
-      running_effective="$(installer_call trusted_proxies_check "${DIST}" effective "${RUNNING}" 2>/dev/null)" \
-        || unavailable "the dashboard's own check could not resolve the running value"
-      installer_effective="$(installer_call trusted_proxies_check "${DIST}" effective "${INSTALLER_VALUE}" 2>/dev/null)" \
-        || unavailable "the dashboard's own check could not resolve the installer value"
-      emit "installer_value_sha256=$(sha "${INSTALLER_VALUE}")"
-      emit "installer_line_sha256=$(sha "${installer_line}")"
-      if [ "$(sha "${RUNNING}")" = "$(sha "${INSTALLER_VALUE}")" ]; then
-        emit "running_equals_installer_value=yes"
+      # INSTALLER_VALUE is the canonical form of RUNNING, so this measures form,
+      # not whether RUNNING is the list anyone meant (WR-05).
+      if [ "${RUNNING}" = "${INSTALLER_VALUE}" ]; then
+        emit "running_is_canonical=yes"
       else
-        emit "running_equals_installer_value=no"
+        emit "running_is_canonical=no"
       fi
-      if [ "$(sha "${running_effective}")" = "$(sha "${installer_effective}")" ]; then
-        emit "running_semantically_equal=yes"
-      else
-        emit "running_semantically_equal=no"
-      fi
-      for pair in "${FILE_LINE_HASHES[@]+"${FILE_LINE_HASHES[@]}"}"; do
-        if [ "${pair#*$'\t'}" = "$(sha "${installer_line}")" ]; then eq="yes"; else eq="no"; fi
+      for pair in "${FILE_LINES[@]+"${FILE_LINES[@]}"}"; do
+        if [ "${pair#*$'\t'}" = "${installer_line}" ]; then eq="yes"; else eq="no"; fi
         emit "file=${pair%%$'\t'*} file_line_equals_installer_line=${eq}"
       done
       ;;

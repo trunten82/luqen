@@ -47,9 +47,10 @@ compose would rewrite and the dashboard would refuse anyway.
 **New flag:** `--check-trusted-proxies` checks the list against the dashboard
 built in `--install-dir`, prints what would be written and installs nothing.
 
-**New script:** `scripts/compare-trusted-proxies.sh` compares a host's
-running setting with what the installer would write. It is read-only and
-prints names, counts, verdict words and hashes, never the value.
+**New script:** `scripts/compare-trusted-proxies.sh` reports where a host's
+running setting is set and whether it is accepted and in the canonical form
+the installer writes. It is read-only and prints names, counts and yes/no
+verdicts: no value, and no hash of one.
 
 **Not covered:** `install.ps1`, `deploy/templates/` and
 `deploy/docker-setup.sh` do not take the setting.

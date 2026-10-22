@@ -164,24 +164,20 @@ define() { CASES+=("$1"); }
 VALUE='192.0.2.10,198.51.100.0/24'
 DROPIN_LINE="Environment=DASHBOARD_TRUSTED_PROXIES=${VALUE}"
 
-define compare-reports-location-and-hashes
-case_compare_reports_location_and_hashes() {
-  local h lh dropin
+define compare-reports-location-and-verdicts
+case_compare_reports_location_and_verdicts() {
+  local dropin
   new_fixture; write_dropin "${DROPIN_LINE}"; write_environ "${VALUE}"
   dropin="${TD}/units/luqen-dashboard.service.d/trusted-proxies.conf"
-  h="$(sha "${VALUE}")"; lh="$(sha "${DROPIN_LINE}")"
   run_compare
   assert_eq "exit status" "${RC}" "0"
   assert_match "fragment line" "^file=.*luqen-dashboard\.service role=fragment environment_lines=2 trusted_proxies_lines=0 simple_form_lines=0$"
   assert_match "drop-in line" "^file=.*trusted-proxies\.conf role=dropin environment_lines=1 trusted_proxies_lines=1 simple_form_lines=1$"
-  assert_line "file line hash" "file=${dropin} file_line_sha256=${lh}"
   assert_line "running" "running=present"
-  assert_line "running hash" "running_sha256=${h}"
   assert_line "validator" "validator=accepted"
-  assert_line "installer value hash" "installer_value_sha256=${h}"
-  assert_line "installer line hash" "installer_line_sha256=${lh}"
-  assert_line "value equality" "running_equals_installer_value=yes"
-  assert_line "semantic equality" "running_semantically_equal=yes"
+  assert_line "canonical form" "running_is_canonical=yes"
+  assert_absent "the old key that read as intent" "running_equals_installer_value"
+  assert_absent "the key that was yes by construction" "running_semantically_equal"
   assert_line "file line equality" "file=${dropin} file_line_equals_installer_line=yes"
   assert_line "writes to" "installer_writes_to=fragment"
   assert_line "configured in" "configured_in=${dropin}"
@@ -200,6 +196,31 @@ case_compare_prints_no_value() {
   for needle in "${CANARY}" 192.0.2.10 198.51.100 192.0.2 '2001:db8' "${VALUE}" 'DASHBOARD_SESSION_SECRET='; do
     assert_absent "output" "${needle}"
   done
+}
+
+# assert_no_hash <label> -- no run of 32 or more hex digits anywhere in the
+# output: neither a sha256 (64) nor a shorter digest of a value.
+assert_no_hash() {
+  if grep -qE -- '[0-9A-Fa-f]{32,}' "${OUTD}/out"; then
+    die "$1: the output holds a hex string of 32 or more digits: $(grep -oE -- '[0-9A-Fa-f]{32,}' "${OUTD}/out" | head -n 1 | cut -c1-12)..."
+  fi
+}
+
+define compare-prints-no-hash
+case_compare_prints_no_hash() {
+  # The control: the check can see a sha256 line when one is there.
+  new_fixture
+  printf 'running_sha256=%s\n' "$(sha "${VALUE}")" > "${OUTD}/out"
+  if (assert_no_hash control) 2>/dev/null; then die "assert_no_hash is blind to a sha256 line"; fi
+  # Accepted value in a drop-in, a spaced value, an env file, two places.
+  write_dropin "${DROPIN_LINE}"; write_environ "${VALUE}"
+  run_compare; assert_eq "exit status" "${RC}" "0"; assert_no_hash "drop-in"
+  write_environ "192.0.2.10, 198.51.100.0/24"
+  run_compare; assert_eq "exit status" "${RC}" "0"; assert_no_hash "spaced value"
+  printf 'DASHBOARD_TRUSTED_PROXIES=%s\n' "${VALUE}" > "${TD}/dashboard.env"
+  printf '%s (ignore_errors=no)\n' "${TD}/dashboard.env" > "${TD}/envfiles"
+  run_compare; assert_eq "exit status" "${RC}" "0"; assert_no_hash "env file"
+  assert_line "result" "result=compared"
 }
 
 define compare-never-asks-for-unit-environment
@@ -229,16 +250,15 @@ case_compare_refused_value_message_suppressed() {
   assert_eq "last line" "$(tail -n 1 "${OUTD}/out")" "result=compared"
 }
 
-define compare-spaced-value-semantic-equal
-case_compare_spaced_value_semantic_equal() {
+define compare-spaced-value-not-canonical
+case_compare_spaced_value_not_canonical() {
   new_fixture; write_dropin "Environment=DASHBOARD_TRUSTED_PROXIES=192.0.2.10,198.51.100.0/24"
   write_environ "192.0.2.10, 198.51.100.0/24"
   run_compare
   assert_eq "exit status" "${RC}" "0"
   assert_line "validator" "validator=accepted"
-  assert_line "value equality" "running_equals_installer_value=no"
-  assert_line "semantic equality" "running_semantically_equal=yes"
-  assert_line "running hash" "running_sha256=$(sha '192.0.2.10, 198.51.100.0/24')"
+  assert_line "canonical form" "running_is_canonical=no"
+  assert_line "file line equality" "file=${TD}/units/luqen-dashboard.service.d/trusted-proxies.conf file_line_equals_installer_line=yes"
   assert_absent "output" "192.0.2.10"
   assert_absent "output" "198.51.100"
 }

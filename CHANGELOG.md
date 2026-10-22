@@ -233,8 +233,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   new section, "Production: the trusted-proxy list", with the steps for an
   existing install (a systemd drop-in, not a re-run of the installer).
   `scripts/compare-trusted-proxies.sh` reports where a host's setting lives and
-  whether the installer would write the same value, printing hashes and never a
-  value.
+  whether the running value is accepted and in the canonical form the installer
+  writes, printing yes/no verdicts and no value or hash of one.
 - Live discovery progress: a full-site scan's progress page now shows
   "Discovering pages… N found (sitemap / crawl / browser fallback)" while
   discovery runs, instead of sitting on "Discovering pages…" until it

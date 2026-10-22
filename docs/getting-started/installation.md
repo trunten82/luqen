@@ -225,8 +225,8 @@ Conventions for every command below:
 - Example addresses are documentation ranges (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24, 2001:db8::/32). Replace
   them with your proxies' own addresses.
 - Never print the dashboard unit's environment (no `systemctl cat`, no `systemctl show -p Environment`, no `cat` of
-  a unit file or of `.env`): it holds secrets. The checks below print paths, counts, verdict words and hashes only (and
-  the Docker gateway lookup, a network address).
+  a unit file or of `.env`): it holds secrets. The checks below print paths, counts and verdict words only, no value and
+  no hash of one (and the Docker gateway lookup, a network address).
 
 ### When to set it
 
@@ -350,7 +350,8 @@ A Docker install prints `Trusted proxies: <list> (written to .env; the dashboard
 `Trusted proxies: nothing written; the dashboard default applies`.
 
 Verify a systemd install afterwards. The block waits for the dashboard's health endpoint (port 5000 is the default; use
-yours if you changed it), then runs the comparison, which prints names, paths, counts and sha256 only:
+yours if you changed it), then runs the comparison, which prints names, paths, counts and yes/no verdicts only, no
+value and no hash of one:
 
 ```bash
 (
@@ -362,14 +363,15 @@ yours if you changed it), then runs the comparison, which prints names, paths, c
 )
 ```
 
-With a list, expect among the lines `running=present`, `validator=accepted`, `running_equals_installer_value=yes`,
+With a list, expect among the lines `running=present`, `validator=accepted`, `running_is_canonical=yes`,
 `configured_in=/etc/systemd/system/luqen-dashboard.service`, `location_differs=no`, `set_in_more_than_one_place=no`,
 `need_daemon_reload=no`, and a last line `result=compared`. With no list, expect `running=absent`,
 `installer_would_write=nothing`, `configured_in=none` and `result=compared`. An exit status of 124 means the dashboard
 did not answer within 90 seconds.
 
-The comparison confirms the FORM and the LOCATION of the list: the dashboard accepts the running value, it is in the
-installer's canonical form, and it is set in the unit the installer wrote. It does not confirm that it is the list you
+The comparison confirms the FORM and the LOCATION of the list: the dashboard accepts the running value
+(`validator=accepted`), it is byte-equal to its own canonical form (`running_is_canonical=yes`), and it is set in the
+unit the installer wrote. It does not confirm that it is the list you
 meant, because it never sees what you typed. The check of intent is the Audit Log: sign in from a browser behind your
 proxies and open `/admin/audit-log?action=login.success`; the newest entry must show your own address, not a proxy's.
 
@@ -631,8 +633,8 @@ can be running (scans run inside the dashboard process), and the block restarts 
 ```
 
 **Step 5. Verify.** The dashboard answers on its health endpoint (port 5000 is the default; use yours if you changed
-it), and the comparison script reports whether the running value is the one the installer would write. It prints names,
-paths, counts and sha256 only, never a value.
+it), and the comparison script reports whether the running value is accepted, in canonical form, and where it is set.
+It prints names, paths, counts and yes/no verdicts only: no value, and no hash of one.
 
 ```bash
 (
@@ -645,7 +647,7 @@ paths, counts and sha256 only, never a value.
 )
 ```
 
-Expect `active`, then among the lines: `validator=accepted`, `running_equals_installer_value=yes`,
+Expect `active`, then among the lines: `validator=accepted`, `running_is_canonical=yes`,
 `configured_in=/etc/systemd/system/luqen-dashboard.service.d/trusted-proxies.conf`, `location_differs=yes` (the setting
 lives in the drop-in, where the installer would have written it into the main unit), `need_daemon_reload=no`, and a
 last line `result=compared`. Exit status 124 means the health endpoint did not answer within 90 seconds: go to step 6.
@@ -832,7 +834,7 @@ with `sed -i` (mode and owner kept). It stops when no file or more than one sets
 ```
 
 Then run steps 4 and 5: systemd reads an environment file at every start, so a restart is enough and no
-`daemon-reload` is needed. Expect `envfile=<file> trusted_proxies_lines=1`, `running_equals_installer_value=yes`,
+`daemon-reload` is needed. Expect `envfile=<file> trusted_proxies_lines=1`, `running_is_canonical=yes`,
 `configured_in=<file>`, `location_differs=yes` and `result=compared`. To undo, run the block again with the earlier list
 (`grep '^[[:space:]]*DASHBOARD_TRUSTED_PROXIES=' <file>.trusted-proxies.bak` prints that one line), then steps 4 and 5.
 Do not copy the backup back over a file that has changed since: it holds every line, and every secret, as it was.
