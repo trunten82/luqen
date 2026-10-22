@@ -1744,8 +1744,8 @@
         "ruleLabel": "Regra",
         "elementLabel": "Elemento",
         "messageLabel": "Constatação",
-        "scope": "Este descarte se aplica a esta regra neste elemento exato, em todas as páginas deste site, nesta varredura e em varreduras futuras. Ele deixa de corresponder se o seletor do elemento mudar.",
-        "effect": "As constatações descartadas deixam de contar nos totais, nas pontuações e nos resultados de conformidade. Os relatórios de conformidade (ACR) informam quantas constatações foram descartadas como falsos positivos. Você pode revogar o descarte depois, na seção Constatações descartadas.",
+        "scope": "Este descarte se aplica a esta regra neste elemento exato, em todas as páginas deste site, nesta varredura, nas varreduras anteriores concluídas e em varreduras futuras. Ele deixa de corresponder se o seletor do elemento mudar.",
+        "effect": "As constatações descartadas deixam de contar nos totais e nas pontuações. Nos resultados de conformidade, um critério deixa de falhar somente quando não lhe resta nenhuma constatação. Os relatórios de conformidade (ACR) informam quantas constatações foram descartadas como falsos positivos. Você pode revogar o descarte depois, na seção Constatações descartadas.",
         "reasonLabel": "Motivo",
         "reasonHint": "Obrigatório. Explique por que isto é um falso positivo. Seu nome e este motivo são exibidos para todos que podem ver este relatório.",
         "confirm": "Descartar como falso positivo",
@@ -1777,7 +1777,7 @@
     },
     "section": {
       "summary": "Constatações descartadas — ativas: {{active}}, revogadas: {{revoked}}",
-      "intro": "Constatações descartadas como falsos positivos para este site. Elas não contam nos totais, nas pontuações nem nos resultados de conformidade. Cada descarte corresponde a uma regra em um elemento exato.",
+      "intro": "Constatações descartadas como falsos positivos para este site. Elas não contam nos totais nem nas pontuações, e nos resultados de conformidade um critério deixa de falhar somente quando não lhe resta nenhuma constatação. Cada descarte corresponde a uma regra em um elemento exato.",
       "activeHeading": "Descartes ativos",
       "revokedHeading": "Descartes revogados",
       "noActive": "Nenhum descarte ativo."

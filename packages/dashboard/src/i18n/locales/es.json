@@ -1744,8 +1744,8 @@
         "ruleLabel": "Regla",
         "elementLabel": "Elemento",
         "messageLabel": "Hallazgo",
-        "scope": "Este descarte se aplica a esta regla en este elemento exacto, en todas las páginas de este sitio, en este escaneo y en escaneos futuros. Deja de coincidir si cambia el selector del elemento.",
-        "effect": "Los hallazgos descartados dejan de contar en los totales, las puntuaciones y los resultados de cumplimiento. Los informes de conformidad (ACR) indican cuántos hallazgos se descartaron como falsos positivos. Puedes revocar el descarte más tarde desde la sección Hallazgos descartados.",
+        "scope": "Este descarte se aplica a esta regla en este elemento exacto, en todas las páginas de este sitio, en este escaneo, en los escaneos anteriores completados y en escaneos futuros. Deja de coincidir si cambia el selector del elemento.",
+        "effect": "Los hallazgos descartados dejan de contar en los totales y las puntuaciones. En los resultados de cumplimiento, un criterio deja de fallar solo cuando ya no le queda ningún hallazgo. Los informes de conformidad (ACR) indican cuántos hallazgos se descartaron como falsos positivos. Puedes revocar el descarte más tarde desde la sección Hallazgos descartados.",
         "reasonLabel": "Motivo",
         "reasonHint": "Obligatorio. Explica por qué es un falso positivo. Tu nombre y este motivo se muestran a todas las personas que pueden ver este informe.",
         "confirm": "Descartar como falso positivo",
@@ -1777,7 +1777,7 @@
     },
     "section": {
       "summary": "Hallazgos descartados — activos: {{active}}, revocados: {{revoked}}",
-      "intro": "Hallazgos descartados como falsos positivos para este sitio. No cuentan en los totales, las puntuaciones ni los resultados de cumplimiento. Cada descarte coincide con una regla en un elemento exacto.",
+      "intro": "Hallazgos descartados como falsos positivos para este sitio. No cuentan en los totales ni en las puntuaciones, y en los resultados de cumplimiento un criterio deja de fallar solo cuando ya no le queda ningún hallazgo. Cada descarte coincide con una regla en un elemento exacto.",
       "activeHeading": "Descartes activos",
       "revokedHeading": "Descartes revocados",
       "noActive": "No hay descartes activos."
