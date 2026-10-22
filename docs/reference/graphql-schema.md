@@ -65,7 +65,7 @@ Resolvers enforce permissions identically to the REST endpoints:
 
 ### Technical details
 
-`selector`, `context` and the assignment fingerprint follow the same rule as the REST data API and the report page: they are returned only to a caller whose role holds `reports.view_technical`, and are `null` for everyone else. A client generated from the schema must accept `null` for `Issue.selector` and `Assignment.issueFingerprint` (both were non-null before this rule). API keys: organization admin and system admin keys hold the permission; read-only and scan-only keys hold no permissions and receive `null`. Input types are unchanged: `AssignIssueInput.issueFingerprint` stays required. See the [REST reference](api-reference.md#technical-details-selector-and-context).
+`selector`, `context` and the assignment fingerprint follow the same rule as the REST data API and the report page: they are returned to a caller whose role holds `reports.view_technical` and to every API key, and are `null` for a user session without the permission. A client generated from the schema must accept `null` for `Issue.selector` and `Assignment.issueFingerprint` (both were non-null before this rule). API keys of every role keep the fields: read-only and scan-only keys resolve to `reports.view_technical`. Input types are unchanged: `AssignIssueInput.issueFingerprint` stays required. See the [REST reference](api-reference.md#technical-details-selector-and-context).
 
 ### Input types
 

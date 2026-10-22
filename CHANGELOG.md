@@ -223,7 +223,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   deterministic pattern hint, marked `source: "pattern"`, and the
   generate-fix capability is not called for them. An AI answer is marked
   `source: "ai"`. The assistant's own conversational replies are not gated
-  by `llm.view`.
+  by `llm.view`. The gate covers AI fix drafts (the generate-fix capability)
+  only: the suggested alt text from the vision pass stays visible to everyone
+  who can read the report.
 - API contract change: `selector` and `context` follow `reports.view_technical`
   on every API surface, as they already did on the report page. A caller whose
   role does not hold `reports.view_technical` receives issue-like objects
@@ -251,15 +253,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
     `dashboard_scan_page` and the resource `scan://report/{id}`. The
     in-dashboard assistant calls these tools with the signed-in user's
     permissions and follows the same rule.
-  - API keys: an organization admin key holds the organization Owner
-    permission set and a system admin key holds every permission, so both
-    keep the fields. Read-only and scan-only keys hold no permissions, so
-    they no longer receive selectors or context. This applies to every
-    integration that reads these fields with such a key, the WordPress
-    plugin's selector matching included. The treatment of read-only and
-    scan-only keys is open for a later decision and this entry will be
-    amended if it changes. A caller that needs the fields uses a credential
-    whose role holds `reports.view_technical`.
+  - API keys: API keys of every role (admin, read-only and scan-only, system
+    and organization) keep `selector` and `context`, so integrations that read
+    them with a key, the WordPress plugin's selector matching included, see no
+    change. Read-only and scan-only keys resolve to `reports.view_technical`
+    alone; what a key may call is still limited by its role. Only a user
+    session whose role does not hold `reports.view_technical` has the fields
+    removed.
   - The OpenAPI snapshot lists `selector` as optional on these responses, with
     a description naming the permission.
 

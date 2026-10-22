@@ -596,9 +596,9 @@ export LUQEN_API_KEY="your-api-key-here"
 
 ### Technical details (`selector` and `context`)
 
-The issue fields `selector` (the CSS selector of the element) and `context` (the element's markup) are returned only to a caller whose role holds `reports.view_technical`, the permission that shows them on the report page. For any other caller the field is absent from the response: the key is not present, it is not `null`. "Absent" means "not entitled", not "the scan has no selector". Each endpoint below states which fields it affects. The same rule applies to GraphQL (the fields return `null`), the MCP tools and the Excel export (the columns are dropped); see the [GraphQL reference](graphql-schema.md), the [MCP guide](../guides/mcp-integration.md) and the [permission matrix](../guides/security-administration.md).
+The issue fields `selector` (the CSS selector of the element) and `context` (the element's markup) are returned to a caller whose role holds `reports.view_technical`, the permission that shows them on the report page, and to every API key. For a user session without the permission the field is absent from the response: the key is not present, it is not `null`. "Absent" means "not entitled", not "the scan has no selector". Each endpoint below states which fields it affects. The same rule applies to GraphQL (the fields return `null`), the MCP tools and the Excel export (the columns are dropped); see the [GraphQL reference](graphql-schema.md), the [MCP guide](../guides/mcp-integration.md) and the [permission matrix](../guides/security-administration.md).
 
-API keys: an organization admin key holds the organization Owner permission set and a system admin key holds every permission, so both receive the fields. Read-only and scan-only keys hold no permissions and receive the fields omitted. A caller that needs them uses a credential whose role holds `reports.view_technical`.
+API keys of every role keep the fields. Admin keys hold the permission through their role (an organization admin key the organization Owner set, a system admin key every permission), and read-only and scan-only keys resolve to `reports.view_technical`. Only a user session whose role does not hold `reports.view_technical` has the fields removed.
 
 ### Rate limiting
 
