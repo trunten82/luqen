@@ -218,6 +218,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- `install.sh` takes the dashboard's trusted-proxy list as `--trusted-proxies LIST`,
+  as `DASHBOARD_TRUSTED_PROXIES` in the installer's environment, or at a new
+  wizard prompt. It checks the list with the dashboard's own rules after the
+  build and before anything is written, so a refused list stops the install
+  with the dashboard's message. Given a list, it writes the `Environment=` line
+  of the dashboard's systemd unit, the Docker `.env` and the macOS launchd
+  plist; given nothing, it writes nothing and the dashboard's default applies.
+  `--check-trusted-proxies` checks a list against an existing build and prints
+  what an install would write, installing nothing. The installation guide has a
+  new section, "Production: the trusted-proxy list", with the steps for an
+  existing install (a systemd drop-in, not a re-run of the installer).
+  `scripts/compare-trusted-proxies.sh` reports where a host's setting lives and
+  whether the installer would write the same value, printing hashes and never a
+  value.
 - Live discovery progress: a full-site scan's progress page now shows
   "Discovering pages… N found (sitemap / crawl / browser fallback)" while
   discovery runs, instead of sitting on "Discovering pages…" until it

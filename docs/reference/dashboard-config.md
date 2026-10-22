@@ -80,7 +80,7 @@ Place in the working directory where you run `luqen-dashboard serve`. All fields
 | `DASHBOARD_WEBSERVICE_URLS` | `webserviceUrls` | **Optional.** Comma-separated list of additional pa11y webservice URLs for horizontal scaling. Only relevant when `DASHBOARD_WEBSERVICE_URL` is set. |
 | `DASHBOARD_CATALOGUE_URL` | `catalogueUrl` | Base URL of the remote plugin catalogue GitHub repository (default: `https://github.com/trunten82/luqen-plugins`). |
 | `DASHBOARD_CATALOGUE_CACHE_TTL` | `catalogueCacheTtl` | Plugin catalogue cache TTL in seconds (default: `3600`). |
-| `DASHBOARD_TRUSTED_PROXIES` | `trustedProxies` | Comma-separated trusted proxies (same entries as `trustedProxies`). Empty is treated as unset. |
+| `DASHBOARD_TRUSTED_PROXIES` | `trustedProxies` | Comma-separated trusted proxies (same entries as `trustedProxies`). Empty is treated as unset. `install.sh` writes it from `--trusted-proxies LIST`, from `DASHBOARD_TRUSTED_PROXIES` in the installer's environment, or from the wizard prompt `Trusted proxies`; `install.sh --check-trusted-proxies` checks a list without installing. See [Production: the trusted-proxy list](../getting-started/installation.md#production-the-trusted-proxy-list). |
 | `DASHBOARD_REDIS_URL` | — | Optional Redis URL for distributed scan queue and SSE pub/sub. |
 | `DASHBOARD_API_KEY` | — | API key for the dashboard data API endpoints (`/api/v1/scans`, `/api/v1/trends`, etc.) and Excel/CSV export. Clients authenticate by sending `X-API-Key: <key>` in the request header. Generate keys from the admin UI at `/admin/api-keys`. |
 

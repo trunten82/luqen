@@ -122,6 +122,7 @@ without an upstream compliance API to post proposals to.
 | `bash install.sh --profile api --api-services compliance` | Headless compliance API. |
 | `bash install.sh --profile dashboard --with-monitor --non-interactive --admin-user X --admin-pass Y` | Default install + monitor agent. |
 | `bash install.sh --profile docker` | Docker Compose stack (5 services, monitor opt-in). |
+| `bash install.sh --non-interactive --admin-user X --admin-pass Y --trusted-proxies 'loopback,198.51.100.20'` | Default install; the dashboard trusts a load balancer at that address and the proxy on the same host. See [Production: the trusted-proxy list](#production-the-trusted-proxy-list). |
 
 For the complete list of installer flags and the env vars each profile
 emits, see [installer-env-vars.md](../deployment/installer-env-vars.md)
@@ -202,6 +203,254 @@ The dashboard advertises itself as the OAuth 2.1 issuer using
 discover the JWKS endpoint at `${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json`.
 Setting the value wrong or leaving it as `localhost` in production will
 break OAuth client credential flows.
+
+---
+
+## Production: the trusted-proxy list
+
+Read this when the dashboard sits behind a reverse proxy, a load balancer or a CDN. It says whether you need to give
+the installer a trusted-proxy list, how to give it on a fresh install, and how to set it on an install that already
+exists.
+
+Conventions for every command below:
+
+- Run as root on the dashboard host, unless a step says otherwise.
+- Each fenced block is one shell invocation. Blocks share nothing, so each one finds the install directory itself:
+  `${INSTALL_DIR}` is the dashboard unit's `WorkingDirectory`, read with `systemctl show -p WorkingDirectory --value luqen-dashboard`
+  (it prints a path only).
+- Example addresses are documentation ranges (192.0.2.0/24, 198.51.100.0/24, 2001:db8::/32). Replace them with your
+  proxies' own addresses.
+- Never print the dashboard unit's environment (no `systemctl cat`, no `systemctl show -p Environment`, no `cat` of
+  a unit file): it holds secrets. The checks below print paths, counts and hashes only.
+
+### When to set it
+
+The dashboard reads the real client address from `X-Forwarded-For`, and only when the connection comes from a proxy it
+trusts. By default it trusts three named ranges, as the `proxy-addr` library that Fastify uses defines them:
+
+| Name | Covers |
+|------|--------|
+| `loopback` | 127.0.0.1/8, ::1/128 |
+| `linklocal` | 169.254.0.0/16, fe80::/10 |
+| `uniquelocal` | 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, fc00::/7 |
+
+- Your proxy connects from an address inside those ranges (for example nginx on the same host, or a load balancer on
+  a private network): you need nothing. Give no list.
+- Your reverse proxy, load balancer or CDN connects from an address outside those ranges: set the list. Without it, every
+  request appears to come from the proxy. The sign-in limit then counts all users together, the per-address request limits
+  do too, and the audit trail records the proxy's address instead of the user's.
+- Nothing sits in front of the dashboard and clients connect to it directly: set the list to `none`, so that no
+  `X-Forwarded-For` header is believed.
+
+### The default
+
+With no list the installer writes nothing, and the dashboard's built-in default (`loopback`, `linklocal`, `uniquelocal`)
+applies. A list you give REPLACES that default. Keep `loopback` in your list when a proxy on the same host also forwards
+requests.
+
+### Fresh install
+
+Give the list in one of three ways. The flag wins over the environment, and the prompt keeps whatever the flag or the
+environment gave when you answer it with nothing.
+
+| Way | Form |
+|-----|------|
+| Flag | `--trusted-proxies LIST` |
+| Installer environment | `DASHBOARD_TRUSTED_PROXIES=LIST` |
+| Wizard prompt | `Trusted proxies (reverse proxy / load balancer)`, asked in the interactive install; an empty answer keeps the default |
+
+```bash
+bash install.sh --non-interactive --admin-user X --admin-pass Y \
+  --trusted-proxies 'loopback,198.51.100.20'
+```
+
+The same list through the environment:
+
+```bash
+DASHBOARD_TRUSTED_PROXIES='loopback,198.51.100.20' \
+  bash install.sh --non-interactive --admin-user X --admin-pass Y
+```
+
+A profile that installs no dashboard (`cli`, `api`) refuses the flag, because the list is a dashboard setting.
+
+### What the installer does with it
+
+- The dashboard's own rules check the list after the build and before anything is written. A refused list stops the
+  install with the dashboard's message, and no secret, configuration file or service unit has been written.
+- It writes one `Environment=DASHBOARD_TRUSTED_PROXIES=` line into `luqen-dashboard.service`, in canonical form: no
+  spaces, named ranges in lower case, and every `%` doubled (systemd reads `%` as a specifier and otherwise drops the
+  whole line without an error).
+- The closing summary prints the list read back from that file, as the dashboard resolves it.
+- Docker: the installer writes the `DASHBOARD_TRUSTED_PROXIES=` line into `.env`, and `docker-compose.yml` passes it to
+  the dashboard container only. A Docker install has no host-side build to check against, so the container start is
+  the check: a refused list keeps the container down and the installer prints the compose logs. The characters
+  `#`, `$`, `'`, `"`, a backtick and `\` are refused up front, because compose would rewrite them in `.env`.
+- macOS: the value goes into the dashboard's launchd plist.
+- Windows: `install.ps1` does not take the list.
+
+### Check a list without installing
+
+```bash
+bash install.sh --trusted-proxies 'loopback,198.51.100.20' --check-trusted-proxies --install-dir "${INSTALL_DIR}"
+```
+
+It checks the list with the dashboard built in `--install-dir`, prints what an install would write, and installs
+nothing. For an accepted list it prints three lines:
+
+```text
+accepted: loopback,198.51.100.20
+systemd line: Environment=DASHBOARD_TRUSTED_PROXIES=loopback,198.51.100.20
+effective: loopback,198.51.100.20
+```
+
+For a blank list it prints `blank: nothing would be written` and the `effective:` line, which is the default.
+
+| Exit status | Meaning |
+|-------------|---------|
+| 0 | accepted, or blank |
+| 2 | refused: the dashboard's message is on stderr and nothing would be written |
+| 3 | the check could not run (the dashboard is not built in `--install-dir`, or `node` is missing) |
+
+This needs an `install.sh` from this release or later. An older install can run a newly downloaded copy of `install.sh`
+pointed at its own `--install-dir`, because the check uses that install's built dashboard.
+
+### Existing install
+
+Do NOT re-run `install.sh` to add the list to an install that is running. A re-run generates a new session secret and
+writes it into `dashboard.config.json`, and it rewrites the service units. That signs every user out and, unless
+`DASHBOARD_ENCRYPTION_KEY` is pinned, changes the at-rest encryption key as well (the key defaults to the session
+secret); see [Rotating the session secret and the at-rest encryption key](../guides/security-administration.md#rotating-the-session-secret-and-the-at-rest-encryption-key).
+
+Set the list with a systemd drop-in instead. A drop-in's assignment applies after the main unit's (systemd's documented
+order). These blocks need the checkout in `${INSTALL_DIR}` to be at this release or later, because they use its
+`install.sh` and `scripts/`.
+
+1. Check the list and write the drop-in. The block writes nothing when the list is refused, blank, or the installer is too
+   old, and it keeps a copy of a drop-in it replaces.
+
+```bash
+(
+  set -euo pipefail
+  INSTALL_DIR="$(systemctl show -p WorkingDirectory --value luqen-dashboard)"
+  LIST='loopback,198.51.100.20'   # replace with your proxies
+  D=/etc/systemd/system/luqen-dashboard.service.d
+  grep -q -- '--check-trusted-proxies' "${INSTALL_DIR}/install.sh" \
+    || { echo "install.sh in ${INSTALL_DIR} predates --check-trusted-proxies: update the checkout first"; exit 1; }
+  OUT="$(bash "${INSTALL_DIR}/install.sh" --trusted-proxies "${LIST}" --check-trusted-proxies --install-dir "${INSTALL_DIR}")"
+  LINE="$(printf '%s\n' "${OUT}" | sed -n 's/^systemd line: //p')"
+  [ -n "${LINE}" ] || { echo "the check printed no systemd line (blank list): nothing to write"; exit 1; }
+  mkdir -p "${D}"
+  rm -f "${D}/.trusted-proxies.conf.previous"
+  [ ! -f "${D}/trusted-proxies.conf" ] || cp -p "${D}/trusted-proxies.conf" "${D}/.trusted-proxies.conf.previous"
+  T="$(mktemp "${D}/.trusted-proxies.XXXXXX")"
+  printf '[Service]\n%s\n' "${LINE}" > "${T}"
+  chmod 644 "${T}"
+  sync "${T}"
+  mv "${T}" "${D}/trusted-proxies.conf"
+  sync "${D}"
+  echo "wrote ${D}/trusted-proxies.conf"
+)
+```
+
+   A refused list stops the block at the check, prints the dashboard's message and exits 2. Correct `LIST` and run it again.
+
+2. Reload systemd and confirm it sees the drop-in. The second command prints paths only:
+
+```bash
+systemctl daemon-reload && systemctl show -p DropInPaths --value luqen-dashboard
+```
+
+   Expect `/etc/systemd/system/luqen-dashboard.service.d/trusted-proxies.conf` in the output.
+
+3. Wait for running scans, then restart straight away. A restart fails every queued or running scan, so
+   `scripts/deploy-drain.mjs` waits for them first (the deploy workflow does the same). It reads the dashboard database
+   from `dashboard.config.json` in the working directory, exits 0 when no scan is active, and exits 3 after
+   `DRAIN_TIMEOUT_SEC` seconds with scans still active. On exit 3, or any other failure, the block stops before the
+   restart. Run it again later.
+
+```bash
+(
+  set -euo pipefail
+  INSTALL_DIR="$(systemctl show -p WorkingDirectory --value luqen-dashboard)"
+  cd "${INSTALL_DIR}"
+  DRAIN_TIMEOUT_SEC=1800 DRAIN_POLL_SEC=15 node scripts/deploy-drain.mjs
+  systemctl restart luqen-dashboard
+)
+```
+
+4. Verify. The dashboard answers on its health endpoint (port 5000 is the default; use yours if you changed it), the unit is
+   active, and the comparison script reports whether the running value is the one the installer would write. It prints
+   names, paths, counts and sha256 only, never a value.
+
+```bash
+(
+  set -euo pipefail
+  INSTALL_DIR="$(systemctl show -p WorkingDirectory --value luqen-dashboard)"
+  timeout 90 bash -c 'until curl -fsS -o /dev/null http://127.0.0.1:5000/health 2>/dev/null; do sleep 2; done'
+  systemctl is-active luqen-dashboard
+  bash "${INSTALL_DIR}/scripts/compare-trusted-proxies.sh"
+)
+```
+
+   Expect `active`, then among the lines: `validator=accepted`, `running_equals_installer_value=yes`,
+   `location_differs=yes` (the setting lives in the drop-in, where the installer would have written it into the main
+   unit), `need_daemon_reload=no`, and a last line `result=compared`.
+   Once it is verified, `rm -f /etc/systemd/system/luqen-dashboard.service.d/.trusted-proxies.conf.previous` removes the
+   saved copy of an earlier drop-in.
+
+5. If the dashboard does not come up, the dashboard refused the list at start. Read the reason (this prints journal
+   lines, which hold the refusal and not the environment):
+
+```bash
+journalctl -u luqen-dashboard -n 20 --no-pager | grep 'Failed to start server'
+```
+
+   Then roll back. The block restores the drop-in it replaced, or removes the one it wrote:
+
+```bash
+(
+  set -euo pipefail
+  D=/etc/systemd/system/luqen-dashboard.service.d
+  if [ -f "${D}/.trusted-proxies.conf.previous" ]; then
+    mv "${D}/.trusted-proxies.conf.previous" "${D}/trusted-proxies.conf"
+  else
+    rm -f "${D}/trusted-proxies.conf"
+  fi
+  systemctl daemon-reload
+  systemctl restart luqen-dashboard
+)
+```
+
+Docker install: the list lives in `.env` next to `docker-compose.yml`. Run this in that directory. It replaces the
+`DASHBOARD_TRUSTED_PROXIES=` line (or adds it) through a temp file, then recreates the dashboard container only. The
+container start is the check; read the logs afterwards.
+
+```bash
+(
+  set -euo pipefail
+  LIST='loopback,198.51.100.20'   # replace with your proxies
+  T="$(mktemp .env.XXXXXX)"
+  { grep -v '^DASHBOARD_TRUSTED_PROXIES=' .env || true; printf 'DASHBOARD_TRUSTED_PROXIES=%s\n' "${LIST}"; } > "${T}"
+  chmod --reference=.env "${T}"
+  sync "${T}"
+  mv "${T}" .env
+  sync .
+  docker compose up -d dashboard
+  docker compose logs --tail 20 dashboard
+)
+```
+
+### What the dashboard refuses
+
+The dashboard refuses, at start, a list that trusts every address or whose public ranges together are too wide, a hop
+count, and a malformed entry. The rules and the counting are stated once, in the Client address row of
+[Session security](../guides/security-administration.md#session-security).
+
+### The accepted residual
+
+A host inside a trusted range can choose the forwarded address the dashboard records, which feeds the sign-in limit,
+the other per-address limits and the audit trail. So list your proxies' own addresses, not whole networks that other
+clients share.
 
 ---
 
