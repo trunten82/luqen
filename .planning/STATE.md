@@ -6,9 +6,9 @@ current_phase: 97
 current_phase_name: Owner UAT pack
 status: waiting-owner
 stopped_at: Phase 97 plan 05 task 2 — owner walkthrough pending (owner starts it himself)
-last_updated: "2026-10-23T00:10:00.000Z"
+last_updated: "2026-10-23T09:00:00.000Z"
 last_activity: 2026-10-23
-last_activity_desc: UAT pack fixtures created on prod; read-backs pass; waiting for the owner walkthrough (2026-10-23 runner-watch healthy; chain armed to 10-30; paused for a2a sleep)
+last_activity_desc: UAT pack fixtures created on prod; read-backs pass; waiting for the owner walkthrough (2026-10-23 loose-ends close-out: this branch pushed as a PR, merge held until after the walkthrough because a master merge auto-deploys)
 state_head: c5fc82788c3d7245eb009f0be542c0f84497db39
 progress:
   total_phases: 5
@@ -131,6 +131,8 @@ Phase: 97 — Owner UAT pack
 Plan: 97-05 (orchestrator-only), Task 2 of 3
 Status: Waiting for the owner walkthrough. Phases 93-96 code is merged and deployed; 93/94 are marked complete in ROADMAP, 95/96/97 get marked at milestone close.
 Last activity: 2026-10-22 — fixtures created on prod, read-backs all PASS, ask sent; owner will start the walkthrough himself (do not chase)
+
+2026-10-23 loose-ends close-out: docs/v3.10.0-planning-state pushed and opened as a PR. Do NOT merge it before the Phase 97 walkthrough and cleanup finish — any merge to master triggers Deploy (deploy.yml workflow_run on CI, branches [master], no path filter), which restarts the dashboard. Local branch/worktree deletions proven redundant but not yet performed (permission classifier refused them); listed in the close-out reply on Allanon's thread.
 
 ## Phase Map (v3.10.0 — Dismissal and session follow-ups)
 
